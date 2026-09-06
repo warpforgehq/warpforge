@@ -263,6 +263,17 @@ pub enum Method {
     /// Delete a task and its persisted session history permanently.
     #[serde(rename = "task.delete")]
     TaskDelete { task_id: String },
+    /// Bulk-delete every settled task (`status == "done"` or manually marked
+    /// handled) — the shelf's "N done" clear-all action. Scoped to `project`
+    /// when given, else every project. A settled task that still holds
+    /// unmerged changes, is running, or has a pending permission request is
+    /// skipped and counted as kept rather than deleted. Returns
+    /// `DeleteSettledResult`.
+    #[serde(rename = "task.deleteSettled")]
+    TaskDeleteSettled {
+        #[serde(default)]
+        project: Option<String>,
+    },
     /// Override a task's title (e.g. after async title generation completes).
     #[serde(rename = "task.setTitle")]
     TaskSetTitle { task_id: String, title: String },
@@ -1386,6 +1397,16 @@ pub struct HistorySettings {
     pub settle_ignored_after_days: u32,
     /// Days before an untouched closed task is deleted outright. `0` = off.
     pub delete_closed_after_days: u32,
+}
+
+/// Result of `task.deleteSettled`: how the bulk shelf-clear split.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteSettledResult {
+    pub deleted: u64,
+    /// Skipped because of unmerged changes, a live run, or a pending
+    /// permission request.
+    pub kept: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -1084,6 +1084,7 @@ async fn dispatch(
                 })?;
             Ok(json!(null))
         }
+        TaskDeleteSettled { project } => Ok(json!(handle.delete_settled_tasks(project).await)),
         TaskSetTitle { task_id, title } => {
             handle.set_task_title(&task_id, &title).await;
             Ok(json!(null))

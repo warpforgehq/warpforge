@@ -286,6 +286,12 @@ export type SidebarRow =
       project: string;
       count: number;
       expanded: boolean;
+      /** Every settled task in the project, safe to delete outright. Scoped
+       *  to the project as a whole (not just the shelved trees above), since
+       *  that is what the bulk-delete action actually removes. */
+      deletableIds: string[];
+      /** Settled tasks skipped because they still hold unmerged changes. */
+      keptCount: number;
     }
   | {
       key: string;
@@ -525,10 +531,19 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
       flattenTaskTree(tree).some((task) => forceVisibleTaskIds.has(task.id)),
     );
     const shelfExpanded = expandedShelves.has(name) || forced;
+    // Mirrors the daemon's keep rule: a stale `filesChanged` with no worktree
+    // left to protect is nothing at risk, so only a live worktree with
+    // unmerged changes is kept.
+    const settledInProject = projectTasks.filter(isSettledTask);
+    const deletableIds = settledInProject
+      .filter((task) => !(Boolean(task.worktree) && task.filesChanged > 0))
+      .map((task) => task.id);
     rows.push({
       count: shelved.length,
+      deletableIds,
       expanded: shelfExpanded,
       key: `shelf:${name}`,
+      keptCount: settledInProject.length - deletableIds.length,
       kind: "shelf",
       project: name,
     });

@@ -454,6 +454,43 @@ describe("Sidebar done shelf", () => {
     expect(screen.queryByRole("button", { name: /done task/ })).not.toBeInTheDocument();
   });
 
+  it("states the real kept split before the user commits to a bulk delete", () => {
+    const onDeleteSettledShelf = vi.fn<(project: string) => Promise<void>>().mockResolvedValue();
+    renderSidebar(
+      makeState([
+        task("finished", { status: "done" }),
+        task("handled", { settledOverride: true }),
+        // Has a live worktree with unmerged changes — the only genuine keep.
+        task("dirty", { settledOverride: true, filesChanged: 3, worktree: "/tmp/wt-dirty" }),
+      ]),
+      { onDeleteSettledShelf },
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /2 finished tasks.*1 kept/ }));
+    expect(
+      screen.getByText(
+        "Delete 2 finished tasks in warpforge? 1 kept because its worktree still has uncommitted changes.",
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(onDeleteSettledShelf).toHaveBeenCalledWith("warpforge");
+  });
+
+  it("deletes a settled task whose files-changed count is stale once its worktree is gone", () => {
+    renderSidebar(makeState([task("stale", { status: "done", filesChanged: 3 })]));
+
+    expect(screen.getByRole("button", { name: /^Delete 1 finished task$/ })).toBeInTheDocument();
+  });
+
+  it("offers no bulk delete when every settled task still has a live worktree with changes", () => {
+    renderSidebar(
+      makeState([task("dirty", { status: "done", filesChanged: 3, worktree: "/tmp/wt-dirty" })]),
+    );
+
+    expect(screen.queryByRole("button", { name: /finished task/ })).not.toBeInTheDocument();
+  });
+
   it("opens the shelf on its own for a task the user was sent to", () => {
     const state = makeState([
       task("live", { prompt: "Still going", status: "running" }),

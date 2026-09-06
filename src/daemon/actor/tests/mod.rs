@@ -1,4 +1,5 @@
 mod automation;
+mod delete_settled;
 mod lifecycle_action;
 mod pending_permissions;
 mod ports;

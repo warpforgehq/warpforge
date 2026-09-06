@@ -329,6 +329,9 @@ impl Daemon {
                 }
                 let _ = reply.send(delete_result);
             }
+            Command::DeleteSettledTasks { project, reply } => {
+                self.delete_settled_tasks(project, reply);
+            }
             Command::SetTaskTitle { id, title } => {
                 if let Some(task) = self.tasks.get_mut(&id) {
                     task.title = title;

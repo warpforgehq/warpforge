@@ -22,6 +22,7 @@ import type {
   DaemonEndpoint,
   DaemonEvent,
   DaemonHandshake,
+  DeleteSettledResult,
   DetectedAgent,
   DetectedLanguageServer,
   ExternalSession,
@@ -1497,6 +1498,11 @@ export class DaemonClient {
 
   async deleteTask(taskId: string) {
     await this.request("task.delete", { task_id: taskId });
+  }
+
+  /** Bulk-delete every settled task on a project's "N done" shelf. */
+  async deleteSettledTasks(project?: string): Promise<DeleteSettledResult> {
+    return (await this.request("task.deleteSettled", { project })) as DeleteSettledResult;
   }
 
   async archiveTask(taskId: string) {

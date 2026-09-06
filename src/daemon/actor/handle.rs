@@ -146,6 +146,15 @@ impl DaemonHandle {
             .map_err(|_| "daemon stopped before the task was deleted".to_string())?
     }
 
+    /// Bulk-delete every settled task, scoped to `project` when given —
+    /// the shelf's "N done" clear-all action.
+    pub async fn delete_settled_tasks(&self, project: Option<String>) -> wire::DeleteSettledResult {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::DeleteSettledTasks { project, reply: tx })
+            .await;
+        rx.await.unwrap_or_default()
+    }
+
     pub async fn set_task_title(&self, id: &str, title: &str) {
         self.send(Command::SetTaskTitle {
             id: id.to_string(),

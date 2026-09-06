@@ -11,9 +11,11 @@ import {
   PanelLeftClose,
   Plus,
   Settings,
+  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { SidebarTaskRow } from "@/components/SidebarTaskRow";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UpdateBanner } from "@/components/UpdateBanner";
@@ -66,31 +68,57 @@ const NAV: { id: View; label: string; icon: typeof LayoutGrid }[] = [
  * archive material, but archive you cannot open is just deletion, so the row
  * stays one click from the tasks — quiet enough to skip, present enough to find.
  */
+/** "Delete N finished tasks?", with the real kept split stated up front — the
+ *  confirmation the user commits to must match what the daemon will actually
+ *  do, not just the count on the shelf's disclosure. */
+function deleteShelfTitle(row: Extract<SidebarRow, { kind: "shelf" }>): string {
+  const count = row.deletableIds.length;
+  const base = `Delete ${count} finished task${count === 1 ? "" : "s"}`;
+  if (row.keptCount === 0) return base;
+  return `${base} (${row.keptCount} kept — worktree still has uncommitted changes)`;
+}
+
 function ShelfRow({
   row,
   onToggle,
+  onDelete,
 }: {
   row: Extract<SidebarRow, { kind: "shelf" }>;
   onToggle: (project: string) => void;
+  onDelete: (row: Extract<SidebarRow, { kind: "shelf" }>) => void;
 }) {
+  const deleteTitle = deleteShelfTitle(row);
   return (
-    <button
-      type="button"
-      data-shelf={row.project}
-      aria-expanded={row.expanded}
-      aria-label={`${row.expanded ? "Hide" : "Show"} ${row.count} done task${
-        row.count === 1 ? "" : "s"
-      } in ${row.project}`}
-      onClick={() => onToggle(row.project)}
-      className="flex h-6 w-full items-center gap-1.5 rounded-md pl-2 pr-2 text-left text-[11px] text-muted-foreground/45 transition-colors hover:bg-accent/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-    >
-      <ChevronRight
-        aria-hidden
-        className={cn("size-3 shrink-0 transition-transform", row.expanded && "rotate-90")}
-      />
-      <span className="tnum">{row.count}</span>
-      <span className="min-w-0 truncate">done</span>
-    </button>
+    <div className="group/shelf relative">
+      <button
+        type="button"
+        data-shelf={row.project}
+        aria-expanded={row.expanded}
+        aria-label={`${row.expanded ? "Hide" : "Show"} ${row.count} done task${
+          row.count === 1 ? "" : "s"
+        } in ${row.project}`}
+        onClick={() => onToggle(row.project)}
+        className="flex h-6 w-full items-center gap-1.5 rounded-md pl-2 pr-7 text-left text-[11px] text-muted-foreground/45 transition-colors hover:bg-accent/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
+        <ChevronRight
+          aria-hidden
+          className={cn("size-3 shrink-0 transition-transform", row.expanded && "rotate-90")}
+        />
+        <span className="tnum">{row.count}</span>
+        <span className="min-w-0 truncate">done</span>
+      </button>
+      {row.deletableIds.length > 0 && (
+        <button
+          type="button"
+          aria-label={deleteTitle}
+          title={deleteTitle}
+          onClick={() => onDelete(row)}
+          className="pointer-events-none absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-muted-foreground/50 opacity-0 transition-opacity hover:bg-accent hover:text-destructive focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/shelf:pointer-events-auto group-hover/shelf:opacity-100"
+        >
+          <Trash2 className="size-3" />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -306,6 +334,8 @@ interface SidebarProps {
   /** Bulk-settle every diff-less finished turn (the same reversible settle
    *  as the per-row check button). */
   onSettleFinishedTurns?: (ids: string[]) => void;
+  /** Bulk-delete every settled task on a project's "N done" shelf. */
+  onDeleteSettledShelf?: (project: string) => Promise<void>;
 }
 
 function Sidebar({
@@ -322,6 +352,7 @@ function Sidebar({
   onOpenProject,
   onOpenSettings,
   onSettleFinishedTurns,
+  onDeleteSettledShelf,
 }: SidebarProps) {
   const pinned = useUi((store) => store.pinnedTaskIds);
   const setPinnedTaskIds = useUi((store) => store.setPinnedTaskIds);
@@ -330,6 +361,10 @@ function Sidebar({
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(() => new Set());
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(() => new Set());
   const [expandedShelves, setExpandedShelves] = useState<Set<string>>(() => new Set());
+  const [deletingShelf, setDeletingShelf] = useState<Extract<
+    SidebarRow,
+    { kind: "shelf" }
+  > | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const handledTargetNonce = useRef<number | null>(null);
 
@@ -661,7 +696,7 @@ function Sidebar({
                       }
                     />
                   ) : row.kind === "shelf" ? (
-                    <ShelfRow row={row} onToggle={toggleShelf} />
+                    <ShelfRow row={row} onToggle={toggleShelf} onDelete={setDeletingShelf} />
                   ) : (
                     <div
                       className={cn(
@@ -709,6 +744,33 @@ function Sidebar({
           </div>
         </footer>
       </aside>
+
+      <ConfirmDialog
+        open={deletingShelf !== null}
+        title="Delete finished tasks?"
+        description={
+          deletingShelf &&
+          `Delete ${deletingShelf.deletableIds.length} finished task${
+            deletingShelf.deletableIds.length === 1 ? "" : "s"
+          } in ${deletingShelf.project}?${
+            deletingShelf.keptCount > 0
+              ? ` ${deletingShelf.keptCount} kept because ${
+                  deletingShelf.keptCount === 1
+                    ? "its worktree still has"
+                    : "their worktrees still have"
+                } uncommitted changes.`
+              : ""
+          }`
+        }
+        confirmLabel="Delete"
+        busyLabel="Deleting…"
+        onCancel={() => setDeletingShelf(null)}
+        onConfirm={async () => {
+          if (!deletingShelf) return;
+          await onDeleteSettledShelf?.(deletingShelf.project);
+          setDeletingShelf(null);
+        }}
+      />
     </TooltipProvider>
   );
 }

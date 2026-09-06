@@ -280,6 +280,16 @@ export default function App() {
     }
   }, []);
 
+  const deleteSettledShelf = useCallback(async (project: string) => {
+    const result = await daemon.deleteSettledTasks(project);
+    toast(`Deleted ${result.deleted} finished task${result.deleted === 1 ? "" : "s"}`, {
+      description:
+        result.kept > 0
+          ? `${result.kept} kept — worktree still has uncommitted changes`
+          : undefined,
+    });
+  }, []);
+
   const handleProjectAdded = useCallback(
     (name: string) => {
       openProject(name);
@@ -318,6 +328,7 @@ export default function App() {
     onNewTask: () => startNewTask(),
     onOpenSettings: () => setSettingsOpen(true),
     onSettleFinishedTurns: settleFinishedTurns,
+    onDeleteSettledShelf: deleteSettledShelf,
     onOpenTask: handleOpenTask,
     onSelectView: handleSelectView,
     onOpenProject: handleOpenProject,

@@ -1,8 +1,9 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 use warpforge_protocol as wire;
 
 use crate::daemon::actor::{Command, Daemon, Event};
+use crate::daemon::task::TaskStatus;
 
 pub(crate) fn is_acp_replay_update(update: &wire::SessionUpdate) -> bool {
     match update {
@@ -269,4 +270,88 @@ impl Daemon {
             }
         });
     }
+
+    /// The shelf's "N done" clear-all action: bulk-delete every settled task
+    /// (`status == "done"` or manually marked handled), scoped to `project`
+    /// when given.
+    ///
+    /// Candidates come from the store, off the actor loop — same shape as
+    /// `history_sweep`'s expiry step. Running tasks and tasks with a pending
+    /// permission request are excluded up front from *this* live state (the
+    /// store's `status` column can lag a moment behind it). A candidate is
+    /// otherwise kept only when it still has a worktree holding unmerged
+    /// changes — `files_changed` alone is a stale count from the task's last
+    /// run, not a live check, and without a worktree there is nothing left to
+    /// lose regardless of what it once recorded. Every survivor is driven
+    /// through the real `DeleteTask` path one at a time, so worktree cleanup,
+    /// backlog refs and workflow runs are handled exactly as they are for a
+    /// manual delete.
+    pub(crate) fn delete_settled_tasks(
+        &self,
+        project: Option<String>,
+        reply: tokio::sync::oneshot::Sender<wire::DeleteSettledResult>,
+    ) {
+        let unsafe_ids: HashSet<String> = self
+            .tasks
+            .values()
+            .filter(|task| {
+                task.status == TaskStatus::Running || self.pending_permissions.has_pending(&task.id)
+            })
+            .map(|task| task.id.clone())
+            .collect();
+        let store = self.store.clone();
+        let cmd_tx = self.cmd_tx.clone();
+        tokio::spawn(async move {
+            let rows = crate::daemon::runtime::store_read(store, move |store| {
+                store
+                    .find_settled_tasks(project.as_deref())
+                    .unwrap_or_default()
+            })
+            .await
+            .unwrap_or_default();
+
+            let mut deleted = 0u64;
+            let mut kept = 0u64;
+            for (task_id, files_changed, has_worktree) in rows {
+                if !settled_candidate_is_deletable(
+                    files_changed,
+                    has_worktree,
+                    unsafe_ids.contains(&task_id),
+                ) {
+                    kept += 1;
+                    continue;
+                }
+                let (tx, rx) = tokio::sync::oneshot::channel();
+                if cmd_tx
+                    .send(Command::DeleteTask {
+                        id: task_id,
+                        reply: tx,
+                    })
+                    .await
+                    .is_err()
+                {
+                    break;
+                }
+                if rx.await.map(|r| r.is_ok()).unwrap_or(false) {
+                    deleted += 1;
+                } else {
+                    kept += 1;
+                }
+            }
+            let _ = reply.send(wire::DeleteSettledResult { deleted, kept });
+        });
+    }
+}
+
+/// Whether a settled-task candidate survives the shelf's bulk-delete. Kept
+/// only when a worktree still exists *and* holds unmerged changes — a stale
+/// `files_changed` with no worktree left is nothing at risk, so it deletes.
+/// Also kept while running or blocked on a permission prompt (`unsafe_state`
+/// covers both — the actor holds those live, not the store).
+pub(crate) fn settled_candidate_is_deletable(
+    files_changed: i64,
+    has_worktree: bool,
+    unsafe_state: bool,
+) -> bool {
+    !(has_worktree && files_changed > 0) && !unsafe_state
 }

@@ -462,4 +462,35 @@ describe("the done shelf", () => {
     expect(rows.some((row) => row.kind === "shelf")).toBe(false);
     expect(taskRows(rows).map((row) => row.task.id)).toEqual(["lead", "child"]);
   });
+
+  it("splits the shelf's bulk-delete candidates from those kept for a live worktree", () => {
+    const rows = build([live, finished, handled]);
+    expect(rows.find((row) => row.kind === "shelf")).toMatchObject({
+      deletableIds: expect.arrayContaining(["finished", "handled"]),
+      keptCount: 0,
+    });
+  });
+
+  it("deletes a settled task with a stale files-changed count once its worktree is gone", () => {
+    const stale = task("stale", { settledOverride: true, filesChanged: 3, updatedAt: 30 });
+    const rows = build([live, finished, handled, stale]);
+    const shelf = rows.find((row) => row.kind === "shelf");
+    expect(shelf).toMatchObject({
+      deletableIds: expect.arrayContaining(["stale"]),
+      keptCount: 0,
+    });
+  });
+
+  it("keeps a settled task with a live worktree still holding unmerged changes", () => {
+    const dirty = task("dirty", {
+      settledOverride: true,
+      filesChanged: 3,
+      worktree: "/tmp/wt-dirty",
+      updatedAt: 30,
+    });
+    const rows = build([live, finished, handled, dirty]);
+    const shelf = rows.find((row) => row.kind === "shelf");
+    expect(shelf).toMatchObject({ keptCount: 1 });
+    expect(shelf?.kind === "shelf" && shelf.deletableIds.includes("dirty")).toBe(false);
+  });
 });

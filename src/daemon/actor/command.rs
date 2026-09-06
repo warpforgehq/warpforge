@@ -244,6 +244,12 @@ pub enum Command {
         id: String,
         reply: oneshot::Sender<Result<(), String>>,
     },
+    /// Bulk-delete every settled task, scoped to `project` when given. Drives
+    /// each survivor through the same `DeleteTask` path one at a time.
+    DeleteSettledTasks {
+        project: Option<String>,
+        reply: oneshot::Sender<wire::DeleteSettledResult>,
+    },
     /// Override a task's title, persist, and emit TaskUpdated.
     SetTaskTitle {
         id: String,

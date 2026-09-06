@@ -167,6 +167,13 @@ export interface HistorySettings {
   deleteClosedAfterDays: number;
 }
 
+/** Result of `task.deleteSettled` (mirrors Rust): how the bulk shelf-clear split. */
+export interface DeleteSettledResult {
+  deleted: number;
+  /** Skipped because of unmerged changes, a live run, or a pending permission request. */
+  kept: number;
+}
+
 export const EMPTY_SNAPSHOT: Snapshot = {
   portforwards: [],
   projects: [],
