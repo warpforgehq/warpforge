@@ -159,23 +159,69 @@ export function NumberInput({
   );
 }
 
+/** A range control with its current value read out beside it. */
+export function Slider({
+  id,
+  value,
+  min,
+  max,
+  step,
+  display,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  display: string;
+  disabled?: boolean;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        id={id}
+        type="range"
+        value={value}
+        min={min}
+        max={max}
+        step={step ?? 1}
+        disabled={disabled}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="h-1 w-32 cursor-pointer appearance-none rounded-full bg-muted-foreground/30 accent-primary disabled:cursor-not-allowed disabled:opacity-50"
+      />
+      <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{display}</span>
+    </div>
+  );
+}
+
 /** A toggle switch styled as a settings row control. */
 export function Toggle({
   id,
   checked,
+  disabled,
   onChange,
 }: {
   id: string;
   checked: boolean;
+  disabled?: boolean;
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label htmlFor={id} className="relative inline-flex cursor-pointer items-center">
+    <label
+      htmlFor={id}
+      className={`relative inline-flex items-center ${
+        disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+      }`}
+    >
       <input
         id={id}
         type="checkbox"
         className="peer sr-only"
         checked={checked}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
       />
       <div className="h-5 w-9 rounded-full bg-muted-foreground/30 transition-colors peer-checked:bg-foreground/80 after:absolute after:left-0.5 after:top-0.5 after:size-4 after:rounded-full after:bg-background after:transition-transform peer-checked:after:translate-x-4" />

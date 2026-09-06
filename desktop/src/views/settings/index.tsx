@@ -55,7 +55,7 @@ export default function SettingsView({ open, onOpenChange }: Props) {
   const Page = PAGES[page] ?? AppearancePage;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+    <div className="glass-opaque fixed inset-0 z-50 flex items-center justify-center bg-background">
       <div className="flex h-full max-h-full w-full max-w-5xl flex-col px-8 py-8">
         <header className="mb-6 flex items-center justify-between">
           <h1 className="text-lg font-semibold">Settings</h1>

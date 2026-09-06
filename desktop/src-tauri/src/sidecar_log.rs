@@ -220,7 +220,10 @@ fn sensitive_separator(word: &str) -> Option<usize> {
             || key.contains("secret")
             || key.contains("cookie")
             || key.contains("session")
-            || matches!(key.as_str(), "authorization" | "auth" | "api_key" | "apikey"))
+            || matches!(
+                key.as_str(),
+                "authorization" | "auth" | "api_key" | "apikey"
+            ))
         .then_some(index)
     })
 }

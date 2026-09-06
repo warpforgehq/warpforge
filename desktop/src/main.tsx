@@ -24,6 +24,20 @@ if (reactScanEnabled) {
   });
 }
 
+// The splash is the opaque cover from index.html. Two frames after the mount
+// commit the app is on screen, so the fade reveals UI — not the desktop blur
+// the window switches to once glass turns on.
+function dismissBootSplash() {
+  const splash = document.getElementById("boot-splash");
+  if (!splash) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      splash.classList.add("boot-splash-out");
+      window.setTimeout(() => splash.remove(), 180);
+    });
+  });
+}
+
 // Paint immediately; connect after the first frame so the daemon client's
 // heavy deps don't extend the white screen before React mounts.
 requestAnimationFrame(() => {
@@ -60,3 +74,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </QueryClientProvider>
   </React.StrictMode>,
 );
+
+dismissBootSplash();

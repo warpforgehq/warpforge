@@ -273,7 +273,32 @@
   --app-mono-font-size: 13px;
   --app-font-scale: 1;
   --app-mono-font-scale: 1;
+
+  /* How much desktop shows through glass surfaces. Written by useTheme from
+     the store, and pre-paint by the boot script in index.html. */
+  --sidebar-opacity: 0.85;
+
+  /* Glass tiers. `--glass-ground` is the body tint — the conversation paints
+     nothing of its own, so that tint is the whole of it, and it is the most
+     transparent surface in the app. Panels (both sidebars, the workspace
+     pane, headers) paint `--glass-panel` on top of that tint, so they always
+     read more solid than the conversation: any alpha above 0 keeps them
+     there. Menus stay near-opaque — text on a blurred desktop is not
+     readable. */
+  --glass-ground: var(--sidebar-opacity);
+  --glass-panel: 0.4;
+  --glass-popover: 0.9;
 }
+
+/* Light palettes run on the same tiers as the dark ones: ground 15% desktop,
+   panels 9%. If they need more, the ground is the only dial — panels paint
+   over it and follow, and can never be clearer than it (`--glass-panel: 0`
+   is exactly the ground). Shift 0.03 → ground 18%, 0.05 → 20%:
+
+     html:not(.dark) {
+       --glass-ground: calc(var(--sidebar-opacity) - 0.03);
+     }
+ */
 
 /* Default colour for a bare `border`/`border-b`: same weight as
    `border-border`, so an unqualified border never outranks a deliberate one.
@@ -295,6 +320,14 @@
  */
 html {
   font-size: calc(16px * var(--app-font-scale));
+  background: hsl(var(--background));
+}
+
+/* Opaque fallback canvas: without this, a translucent body composites over
+ * the browser's white default and the whole app reads whitish. */
+html:not(.native-glass),
+html:not(.native-glass) body {
+  background: hsl(var(--background));
 }
 
 body {
@@ -319,6 +352,85 @@ textarea {
 /* Tabular numerals wherever digits line up (ports, counts, timers). */
 .tnum {
   font-variant-numeric: tabular-nums;
+}
+
+/* Native glass. Opaque is the default; the app only goes translucent under
+ * `.native-glass`, which useTheme sets when the window is actually running
+ * with native blur (macOS and Windows under Tauri — Linux stays opaque).
+ * `transparent: true` in tauri.conf.json makes the WebView surface
+ * alpha-capable so the OS blur behind it shows through. */
+html.native-glass,
+html.native-glass body {
+  background: transparent;
+}
+html.native-glass body {
+  background: hsl(var(--background) / var(--glass-ground));
+}
+
+/* Surfaces assuming opaque ground: thin the tint so the native blur shows
+ * through while text contrast holds. The app root div (App.tsx) is left plain
+ * in glass mode — this is the only ground layer, so it does not stack with the
+ * body's tint above.
+ *
+ * No `backdrop-filter` anywhere under `.native-glass`: the blur is the
+ * WindowServer blur behind the webview. A CSS backdrop-filter over a window
+ * whose backdrop is the desktop resolves against an opaque black root in
+ * WKWebView, which paints the whole app flat black — the exact symptom it
+ * looks like it should fix. */
+html.native-glass .bg-card {
+  background-color: hsl(var(--card) / var(--glass-panel)) !important;
+}
+
+/* Panel surfaces inside a panel paint nothing. Alpha multiplies: a file tree
+ * inside a rail inside a pane is three tints deep, and 0.5³ over the body
+ * lands back at 98% — which is why the diff side read as fully opaque while
+ * the conversation beside it showed the desktop. */
+html.native-glass .bg-card .bg-card,
+html.native-glass .bg-card .cm-editor,
+html.native-glass .bg-card .cm-gutters {
+  background-color: transparent !important;
+}
+
+/* The composer sheet and the other recessed input surfaces. Fully opaque by
+ * default, so under glass the composer was the one solid block in a
+ * translucent conversation; on the panel tier it matches the sidebar and the
+ * workspace pane instead. Nested in a panel it deepens that panel by design —
+ * an input inside a rail should still read as a well. */
+html.native-glass .bg-deep-surface {
+  background-color: hsl(var(--deep-surface, 120 4% 4%) / var(--glass-panel)) !important;
+}
+
+html.native-glass .bg-popover {
+  background-color: hsl(var(--popover) / var(--glass-popover)) !important;
+}
+
+/* The main pane joins the glass only with the body-glass setting on; without
+ * it the chrome is translucent and the work surface stays solid. The outer
+ * pane going opaque is enough — everything nested in it paints nothing. */
+html.native-glass.glass-body .bg-background {
+  background-color: hsl(var(--background) / var(--glass-panel)) !important;
+}
+html.native-glass:not(.glass-body) main .bg-card {
+  background-color: hsl(var(--card)) !important;
+}
+
+/* Surfaces that cover the app rather than sit in it — Settings, the New Task
+ * screen — opt out of glass with `glass-opaque`. Translucency there shows the
+ * conversation and the diff underneath, not the desktop, so two screens' text
+ * reads on top of each other.
+ *
+ * These MUST stay last in this section. Every rule here carries `!important`,
+ * so the winner is decided by specificity and then source order — the root
+ * rule ties with `.glass-body .bg-background` above and only wins by coming
+ * after it. The doubled class is what beats the `main .bg-card` rule. */
+html.native-glass .glass-opaque.glass-opaque,
+html.native-glass .glass-opaque.glass-opaque .bg-background {
+  background-color: hsl(var(--background)) !important;
+}
+html.native-glass .glass-opaque.glass-opaque .bg-card,
+html.native-glass .glass-opaque.glass-opaque .cm-editor,
+html.native-glass .glass-opaque.glass-opaque .cm-gutters {
+  background-color: hsl(var(--card)) !important;
 }
 
 /* Nested input surfaces stay deeper than both the island and app canvas. */

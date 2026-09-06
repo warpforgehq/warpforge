@@ -22,6 +22,7 @@ import Sidebar from "@/components/Sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { daemon } from "@/daemon";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { HAS_NATIVE_GLASS, IS_MAC } from "@/lib/platform";
 import { useUi } from "@/store/ui";
 import { SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX } from "@/store/ui";
 
@@ -247,6 +248,7 @@ export default function App() {
 
   useFontScaling();
   useTheme();
+  const transparentWindow = useUi((s) => s.transparentWindow);
   useDaemonEvents();
   const pendingQuit = useTauriClose();
 
@@ -342,7 +344,16 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={300}>
         {/* Prototype shell: full-height sidebar beside a column of topbar + content. */}
-        <div className="relative flex h-screen bg-background">
+        <div
+          className={`flex h-screen flex-col ${
+            HAS_NATIVE_GLASS && transparentWindow ? "bg-transparent" : "bg-background"
+          }`}
+        >
+          {/* The overlay title bar puts the traffic lights over the content, so
+              macOS reserves a strip for them — and it is the drag handle the
+              hidden native title bar no longer provides. */}
+          {IS_MAC && <div data-tauri-drag-region="deep" className="h-7 shrink-0" />}
+          <div className="relative flex min-h-0 flex-1">
           {showPersistent && (
             <>
               <aside
@@ -503,6 +514,7 @@ export default function App() {
               }}
             />
           )}
+          </div>
         </div>
       </TooltipProvider>
     </QueryClientProvider>

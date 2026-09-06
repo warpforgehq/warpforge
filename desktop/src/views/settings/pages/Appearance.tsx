@@ -1,8 +1,15 @@
 import { Button } from "@/components/ui/button";
+import { HAS_NATIVE_GLASS } from "@/lib/platform";
 import { THEMES } from "@/lib/themes";
-import { useUi } from "@/store/ui";
+import {
+  BLUR_RADIUS_MAX,
+  BLUR_RADIUS_MIN,
+  SIDEBAR_OPACITY_MAX,
+  SIDEBAR_OPACITY_MIN,
+  useUi,
+} from "@/store/ui";
 
-import { hsl, NumberInput, Section, SettingRow, Toggle } from "../primitives";
+import { hsl, NumberInput, Section, SettingRow, Slider, Toggle } from "../primitives";
 
 export default function AppearancePage() {
   const fontSize = useUi((s) => s.fontSize);
@@ -14,8 +21,19 @@ export default function AppearancePage() {
   const setTheme = useUi((s) => s.setTheme);
   const theoMod = useUi((s) => s.theoMod);
   const setTheoMod = useUi((s) => s.setTheoMod);
+  const transparentWindow = useUi((s) => s.transparentWindow);
+  const setTransparentWindow = useUi((s) => s.setTransparentWindow);
+  const sidebarOpacity = useUi((s) => s.sidebarOpacity);
+  const setSidebarOpacity = useUi((s) => s.setSidebarOpacity);
+  const blurRadius = useUi((s) => s.blurRadius);
+  const setBlurRadius = useUi((s) => s.setBlurRadius);
+  const bodyGlass = useUi((s) => s.bodyGlass);
+  const setBodyGlass = useUi((s) => s.setBodyGlass);
 
   const fontDirty = fontSize !== 14 || monoFontSize !== 13;
+  // Linux has no native window blur, so the glass rows would control nothing.
+  const glassOff = !HAS_NATIVE_GLASS || !transparentWindow;
+  const opacityPercent = Math.round(sidebarOpacity * 100);
 
   return (
     <Section title="Appearance">
@@ -82,6 +100,64 @@ export default function AppearancePage() {
         description="Code editor, diffs, terminal. Scales on its own."
         hint="Independent of the UI font. Default 13px."
         control={<NumberInput value={monoFontSize} min={9} max={22} onChange={setMonoFontSize} />}
+      />
+      <SettingRow
+        title="Transparent window"
+        description="Blur the desktop behind the app chrome."
+        hint="macOS and Windows only; Linux stays opaque. Takes effect immediately."
+        control={
+          <Toggle
+            id="transparent-window"
+            checked={transparentWindow}
+            onChange={setTransparentWindow}
+            disabled={!HAS_NATIVE_GLASS}
+          />
+        }
+      />
+      <SettingRow
+        title="Glass opacity"
+        description="How much of the desktop shows through the app."
+        hint="The conversation is the most transparent surface; the sidebar and panels sit halfway between it and solid. Default 85%."
+        control={
+          <Slider
+            id="sidebar-opacity"
+            value={opacityPercent}
+            display={`${opacityPercent}%`}
+            min={Math.round(SIDEBAR_OPACITY_MIN * 100)}
+            max={Math.round(SIDEBAR_OPACITY_MAX * 100)}
+            disabled={glassOff}
+            onChange={(percent) => setSidebarOpacity(percent / 100)}
+          />
+        }
+      />
+      <SettingRow
+        title="Blur radius"
+        description="Background blur behind the window."
+        hint="Higher values cost more to composite. Default 24. macOS only — Windows Acrylic has a fixed radius."
+        control={
+          <Slider
+            id="blur-radius"
+            value={blurRadius}
+            display={String(blurRadius)}
+            min={BLUR_RADIUS_MIN}
+            max={BLUR_RADIUS_MAX}
+            disabled={glassOff}
+            onChange={setBlurRadius}
+          />
+        }
+      />
+      <SettingRow
+        title="Main pane glass"
+        description="Extend the translucent treatment to the work surface."
+        hint="Off keeps diffs, editors and the task pane solid while the chrome stays glass."
+        control={
+          <Toggle
+            id="body-glass"
+            checked={bodyGlass}
+            onChange={setBodyGlass}
+            disabled={glassOff}
+          />
+        }
       />
       <SettingRow
         title="TheoMod"

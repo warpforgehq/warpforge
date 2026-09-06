@@ -15,7 +15,7 @@ description = "Warpforge desktop shell — a thin Tauri client for the warpforge
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-process = "2"
 tauri-plugin-shell = "2"
@@ -34,6 +34,9 @@ env_logger = "0.11"
 # with notifications.
 [target.'cfg(target_os = "macos")'.dependencies]
 mac-usernotifications = "0.3.1"
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSColor", "NSResponder", "NSView", "NSWindow"] }
+raw-window-handle = "0.6"
 
 # Mirrors the root Cargo.toml: this crate is its own workspace, so it needs its
 # own copy. See there for why "packed" matters on macOS.

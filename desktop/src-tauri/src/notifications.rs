@@ -1,9 +1,9 @@
 use serde::Deserialize;
 // `Emitter` is only used inside the macOS body below; importing it
 // unconditionally warns on every other platform.
+use tauri::AppHandle;
 #[cfg(target_os = "macos")]
 use tauri::Emitter;
-use tauri::AppHandle;
 
 /// Payload for a native macOS attention notification raised from the web UI
 /// when the app is backgrounded. `kind` selects which action buttons to offer.
@@ -100,9 +100,9 @@ pub fn init() {
                     eprintln!("warpforge: notification permission request failed: {e}");
                 }
             }
-            Err(e) => eprintln!(
-                "warpforge: native notifications unavailable (unbundled binary): {e}"
-            ),
+            Err(e) => {
+                eprintln!("warpforge: native notifications unavailable (unbundled binary): {e}")
+            }
         }
     }
 }

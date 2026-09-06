@@ -588,7 +588,10 @@ function Sidebar({
         data-testid="sidebar"
         className="flex h-full min-h-0 min-w-0 flex-col border-r border-border bg-card"
       >
-        <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3.5">
+        <div
+          data-tauri-drag-region="deep"
+          className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3.5"
+        >
           <div className="flex items-center gap-1.5">
             <strong className="select-none text-[11px] font-bold uppercase tracking-[0.2em] text-foreground">
               WARP<span className="text-primary">FORGE</span>

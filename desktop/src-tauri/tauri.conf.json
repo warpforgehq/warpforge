@@ -10,6 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "Warpforge",
@@ -17,6 +18,11 @@
         "height": 860,
         "minWidth": 900,
         "minHeight": 600,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "transparent": true,
+        "backgroundColor": "#171717",
+        "shadow": true,
         "dragDropEnabled": false
       }
     ],

@@ -52,6 +52,16 @@ const FONT_SIZE_MAX = 24;
 const MONO_FONT_SIZE_MIN = 9;
 const MONO_FONT_SIZE_MAX = 22;
 
+/** Glass tint of the chrome surfaces — 1 is opaque, 0.15 is nearly all desktop. */
+export const SIDEBAR_OPACITY_MIN = 0.15;
+export const SIDEBAR_OPACITY_MAX = 1;
+export const SIDEBAR_OPACITY_DEFAULT = 0.85;
+
+/** Native background blur radius. Higher costs more to composite. */
+export const BLUR_RADIUS_MIN = 1;
+export const BLUR_RADIUS_MAX = 64;
+export const BLUR_RADIUS_DEFAULT = 24;
+
 export const SIDEBAR_WIDTH_DEFAULT = 340;
 export const SIDEBAR_WIDTH_MIN = 260;
 export const SIDEBAR_WIDTH_MAX = 480;
@@ -84,6 +94,18 @@ export interface SettingsState {
   /** Easter egg: blur email addresses wherever they render. */
   theoMod: boolean;
   setTheoMod: (v: boolean) => void;
+  /** Transparent window + native desktop blur. Off by default. */
+  transparentWindow: boolean;
+  setTransparentWindow: (v: boolean) => void;
+  /** How much desktop shows through the chrome surfaces while glass is on. */
+  sidebarOpacity: number;
+  setSidebarOpacity: (v: number) => void;
+  /** Radius of the native blur behind the window. */
+  blurRadius: number;
+  setBlurRadius: (v: number) => void;
+  /** Extend the translucent treatment to the main pane, not just the chrome. */
+  bodyGlass: boolean;
+  setBodyGlass: (v: boolean) => void;
   /** Last Settings page the user was on — reopening lands where they left. */
   settingsPage: SettingsPage;
   setSettingsPage: (page: SettingsPage) => void;
@@ -233,6 +255,10 @@ export const useUi = create<UiState>()(
       branchWorktree: true,
       newWorkItemExpanded: false,
       theoMod: false,
+      transparentWindow: false,
+      sidebarOpacity: SIDEBAR_OPACITY_DEFAULT,
+      blurRadius: BLUR_RADIUS_DEFAULT,
+      bodyGlass: true,
       lspEnabled: true,
       settingsPage: "appearance",
 
@@ -348,6 +374,16 @@ export const useUi = create<UiState>()(
       setBranchWorktree: (branchWorktree) => set({ branchWorktree }),
       setNewWorkItemExpanded: (newWorkItemExpanded) => set({ newWorkItemExpanded }),
       setTheoMod: (theoMod) => set({ theoMod }),
+      setTransparentWindow: (transparentWindow) => set({ transparentWindow }),
+      setSidebarOpacity: (v) =>
+        set({
+          sidebarOpacity: Math.min(SIDEBAR_OPACITY_MAX, Math.max(SIDEBAR_OPACITY_MIN, v)),
+        }),
+      setBlurRadius: (v) =>
+        set({
+          blurRadius: Math.min(BLUR_RADIUS_MAX, Math.max(BLUR_RADIUS_MIN, Math.round(v))),
+        }),
+      setBodyGlass: (bodyGlass) => set({ bodyGlass }),
       setSettingsPage: (settingsPage) => set({ settingsPage }),
       toggleLsp: () => set((s) => ({ lspEnabled: !s.lspEnabled })),
     }),

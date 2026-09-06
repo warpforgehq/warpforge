@@ -4,8 +4,49 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Warpforge</title>
+    <script>
+      /* Appearance before the bundle runs, so the first painted frame is
+         already the user's glass settings. Values mirror the defaults in
+         src/store/ui.ts; the store is the source of truth once React mounts. */
+      (function () {
+        try {
+          var root = document.documentElement;
+          var raw = localStorage.getItem("wf-ui");
+          var state = (raw && JSON.parse(raw).state) || {};
+          var opacity = typeof state.sidebarOpacity === "number" ? state.sidebarOpacity : 0.85;
+          root.style.setProperty("--sidebar-opacity", String(Math.max(0.15, Math.min(1, opacity))));
+          if (state.bodyGlass !== false) root.classList.add("glass-body");
+          var hasNativeGlass = /Mac|iPhone|iPad|Win/i.test(navigator.platform);
+          if (state.transparentWindow && hasNativeGlass) root.classList.add("native-glass");
+        } catch (_) {}
+      })();
+    </script>
+    <style>
+      /* Opaque cover until React paints — same colour as the window's native
+         backgroundColor, so the dock bounce, the WebView load and the first
+         frame are one solid field rather than a frosted empty desktop. */
+      html,
+      body,
+      #boot-splash {
+        margin: 0;
+        background: #171717;
+      }
+
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        pointer-events: none;
+        transition: opacity 0.16s ease;
+      }
+
+      #boot-splash.boot-splash-out {
+        opacity: 0;
+      }
+    </style>
   </head>
   <body>
+    <div id="boot-splash" aria-hidden="true"></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

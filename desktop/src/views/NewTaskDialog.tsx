@@ -289,7 +289,10 @@ export default function NewTaskDialog({
   if (!open) return null;
 
   return (
-    <div data-testid="new-task-page" className="flex h-full min-h-0 flex-col bg-background">
+    <div
+      data-testid="new-task-page"
+      className="glass-opaque flex h-full min-h-0 flex-col bg-background"
+    >
       <header className="flex shrink-0 items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           New task

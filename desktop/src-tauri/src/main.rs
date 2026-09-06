@@ -11,8 +11,11 @@ use warpforge_protocol::DaemonEndpoint;
 
 mod context_menu;
 mod desktop_env;
+#[cfg(target_os = "macos")]
+mod macos;
 mod notifications;
 mod sidecar_log;
+mod window;
 
 use sidecar_log::SidecarLog;
 
@@ -255,6 +258,9 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             daemon_endpoint,
+            window::set_window_background_blur,
+            window::enable_window_glass,
+            window::disable_window_glass,
             notifications::notify_attention,
             context_menu::show_context_menu
         ])

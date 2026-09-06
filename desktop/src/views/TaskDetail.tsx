@@ -425,7 +425,7 @@ export default function TaskDetail({ task, snapshot, onOpenTask, onOpenPush }: P
 
           {showDiff && (
             <ResizablePanel id="surface" order={2} defaultSize={showChat ? 58 : 100} minSize={30}>
-              <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border bg-card/95 shadow-none">
+              <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border bg-card shadow-none">
                 <TaskSurfaceTabs
                   activeSurface={activeSurface}
                   onSurfaceChange={setActiveSurface}

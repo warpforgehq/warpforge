@@ -64,7 +64,14 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
     : false;
 
   return (
-    <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border/70 bg-card/80 px-2.5">
+    // `deep` so the whole row drags the window, not only its bare background —
+    // the hidden native title bar no longer offers a drag handle. Tauri's
+    // handler stops at buttons, inputs and anything with a role, so the
+    // controls in this row still click.
+    <header
+      data-tauri-drag-region="deep"
+      className="flex h-10 shrink-0 items-center gap-2 border-b border-border/70 bg-card px-2.5"
+    >
       <nav
         aria-label="Breadcrumb"
         className="flex min-w-0 flex-1 items-center gap-2 text-muted-foreground"
