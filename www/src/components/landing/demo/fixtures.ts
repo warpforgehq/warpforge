@@ -227,7 +227,12 @@ export const diff: TaskDiff = {
       status: "modified",
     },
   ],
+  ignored: [],
+  ignoredAvailable: true,
+  ignoredTruncated: false,
   taskId: LEAD_TASK_ID,
+  untrackedAvailable: true,
+  untrackedPaths: ["api/src/middleware/rate-limit.ts", "api/test/rate-limit.test.ts"],
 };
 
 const DOCS: Record<string, string> = {
