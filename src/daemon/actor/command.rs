@@ -302,6 +302,7 @@ pub enum Command {
     /// Compute the task's working-tree diff (git).
     GetDiff {
         task_id: String,
+        include_ignored: bool,
         reply: oneshot::Sender<wire::TaskDiff>,
     },
     /// Old (HEAD) + new (working-tree) text of one file.
@@ -381,6 +382,31 @@ pub enum Command {
         task_id: Option<String>,
         project: Option<String>,
         reply: oneshot::Sender<wire::GitBranchList>,
+    },
+    /// List this repo's root plus any nested git checkouts under it.
+    GitRoots {
+        task_id: Option<String>,
+        project: Option<String>,
+        reply: oneshot::Sender<wire::GitRoots>,
+    },
+    /// `git add` paths without committing (unversioned → tracked).
+    GitAdd {
+        task_id: String,
+        paths: Vec<String>,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
+    /// Append paths to the repo's root `.gitignore`.
+    GitIgnorePaths {
+        task_id: String,
+        paths: Vec<String>,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
+    /// List this repo's `.gitignore`'d paths (the "Show Ignored Files"
+    /// toggle), without recomputing the full working-tree diff.
+    GitIgnored {
+        task_id: Option<String>,
+        project: Option<String>,
+        reply: oneshot::Sender<wire::GitIgnoredFiles>,
     },
     /// Switch the task's repo to `branch` (smart checkout, rollback on conflict).
     GitSwitchBranch {

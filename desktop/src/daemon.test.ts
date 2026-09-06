@@ -154,7 +154,15 @@ describe("DaemonClient connection state", () => {
     client.enableDemoMode({
       snapshot,
       sessionUpdates: {},
-      diffFor: (taskId) => ({ files: [], taskId }),
+      diffFor: (taskId) => ({
+        files: [],
+        ignored: [],
+        ignoredAvailable: true,
+        ignoredTruncated: false,
+        taskId,
+        untrackedAvailable: true,
+        untrackedPaths: [],
+      }),
       fileDocFor: (path) => ({
         newText: "",
         oldText: "",
@@ -260,7 +268,15 @@ describe("DaemonClient connection state", () => {
         ],
       },
       sessionUpdates: {},
-      diffFor: (taskId) => ({ files: [], taskId }),
+      diffFor: (taskId) => ({
+        files: [],
+        ignored: [],
+        ignoredAvailable: true,
+        ignoredTruncated: false,
+        taskId,
+        untrackedAvailable: true,
+        untrackedPaths: [],
+      }),
       fileDocFor: (path) => ({ newText: "", oldText: "", path, status: "modified" }),
     });
     client.demoEvent({

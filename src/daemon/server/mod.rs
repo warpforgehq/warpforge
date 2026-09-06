@@ -689,8 +689,11 @@ async fn dispatch(
                 .collect();
             Ok(json!({ "agents": agents }))
         }
-        DiffGet { task_id } => {
-            let diff = handle.diff(&task_id).await;
+        DiffGet {
+            task_id,
+            include_ignored,
+        } => {
+            let diff = handle.diff(&task_id, include_ignored).await;
             serde_json::to_value(diff).map_err(|e| wire::RpcError {
                 code: wire::ErrorCode::Internal,
                 message: e.to_string(),
@@ -922,6 +925,40 @@ async fn dispatch(
                 code: wire::ErrorCode::Internal,
                 message: e.to_string(),
             })
+        }
+        GitRoots { task_id, project } => {
+            let roots = handle.git_roots(task_id, project).await;
+            serde_json::to_value(roots).map_err(|e| wire::RpcError {
+                code: wire::ErrorCode::Internal,
+                message: e.to_string(),
+            })
+        }
+        GitIgnored { task_id, project } => {
+            let res = handle.git_ignored_files(task_id, project).await;
+            serde_json::to_value(res).map_err(|e| wire::RpcError {
+                code: wire::ErrorCode::Internal,
+                message: e.to_string(),
+            })
+        }
+        GitAdd { task_id, paths } => {
+            handle
+                .git_add(&task_id, paths)
+                .await
+                .map_err(|e| wire::RpcError {
+                    code: wire::ErrorCode::Internal,
+                    message: e,
+                })?;
+            Ok(json!(null))
+        }
+        GitIgnore { task_id, paths } => {
+            handle
+                .git_ignore_paths(&task_id, paths)
+                .await
+                .map_err(|e| wire::RpcError {
+                    code: wire::ErrorCode::Internal,
+                    message: e,
+                })?;
+            Ok(json!(null))
         }
         GitSwitchBranch { task_id, branch } => {
             let result = handle.git_switch_branch(&task_id, &branch).await;
@@ -2164,6 +2201,8 @@ fn method_runs_concurrently(method: &wire::Method) -> bool {
             | FileList { .. }
             | FileSearch { .. }
             | GitBranches { .. }
+            | GitRoots { .. }
+            | GitIgnored { .. }
             | GitPushInfo { .. }
             | GitLastCommitMessage { .. }
             | ServiceLogs { .. }
@@ -2207,6 +2246,8 @@ fn method_is_mutation(method: &wire::Method) -> bool {
             | FileList { .. }
             | FileSearch { .. }
             | GitBranches { .. }
+            | GitRoots { .. }
+            | GitIgnored { .. }
             | GitPushInfo { .. }
             | GitLastCommitMessage { .. }
             | OrchestrateList {}

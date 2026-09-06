@@ -1,30 +1,28 @@
+import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { RefreshCw, Undo2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { toast } from "sonner";
+import { Eye, EyeOff, RefreshCw, Undo2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { useUi } from "@/store/ui";
 
 import { daemon } from "../daemon";
-import { showContextMenu, useNativeContextMenu } from "../hooks/useNativeContextMenu";
-import type { FileDiff } from "../protocol";
+import type { FileDiff, GitIgnoredFiles, GitRoots } from "../protocol";
+import { daemonQuery } from "../query";
+import { buildChangesRoot, ignoredSectionState } from "./changes/changesTree";
 import { CommitBox } from "./changes/CommitBox";
 import { FileTreeRow } from "./changes/FileTreeRow";
-import {
-  buildTree,
-  collectFolderKeys,
-  compact,
-  flattenNode,
-  leaves,
-  type FlatRow,
-  type Node,
-} from "./changes/treeUtils";
+import { IgnoredFiles } from "./changes/IgnoredFiles";
+import { reportGitFailure } from "./changes/reportGitFailure";
+import { collectFolderKeys, flattenNode, type FlatRow } from "./changes/treeUtils";
+import { useChangesContextMenu } from "./changes/useChangesContextMenu";
 
 /**
- * JetBrains-Air "Changes" rail: a grouped tree of changed files with per-file
- * (and per-folder) staging checkboxes and +adds/-dels counts, plus an inline
- * commit box at the bottom. Clicking a file selects it in the diff view.
+ * JetBrains-Air "Changes" rail: changed files grouped into "Changes" and
+ * "Unversioned Files" (once per git root when a project holds several), with
+ * per-file and per-folder staging checkboxes, +adds/-dels counts, an ignored
+ * files toggle, and an inline commit box. Clicking a file selects it in the
+ * diff view.
  *
  * Performance: the tree is flattened into a virtual list — only visible rows
  * are mounted in the DOM, so 900+ files render without jank.
@@ -32,35 +30,15 @@ import {
 
 const ROW_HEIGHT = 28;
 
-/**
- * Git failures arrive with whatever the command printed attached, and a hook
- * that ran first can bury the reason under its own log. Git states why it gave
- * up on the last line, so lead with that and keep the log a click away.
- */
-function reportGitFailure(title: string, cause: unknown) {
-  const detail = cause instanceof Error ? cause.message : String(cause);
-  const lines = detail.split("\n").filter((line) => line.trim().length > 0);
-  const last = lines[lines.length - 1]?.trim() ?? detail;
-  const reason = last.length > 200 ? `${last.slice(0, 200)}…` : last;
-  toast.error(title, {
-    description: reason,
-    duration: 10_000,
-    action:
-      reason === detail
-        ? undefined
-        : {
-            label: "Copy",
-            onClick: () => void navigator.clipboard.writeText(detail),
-          },
-  });
-}
-
 export function ChangesRail({
   project,
   files,
+  untrackedPaths,
+  untrackedAvailable,
   selected,
   onSelect,
   taskId,
+  onOpenFile,
   commitExpanded: controlledCommitExpanded,
   onCommitExpandedChange,
   onCommitted,
@@ -68,9 +46,17 @@ export function ChangesRail({
 }: {
   project: string;
   files: FileDiff[];
+  /** Paths within `files` that git does not track yet. */
+  untrackedPaths: string[];
+  /** False when the untracked scan could not complete — the rail says so
+   * instead of implying the project has no unversioned files. */
+  untrackedAvailable: boolean;
   selected: string | null;
   onSelect: (path: string) => void;
   taskId: string;
+  /** Open an ignored file for reading (it has no diff). Falls back to
+   * `onSelect` when absent. */
+  onOpenFile?: (path: string) => void;
   commitExpanded?: boolean;
   onCommitExpandedChange?: (expanded: boolean) => void;
   onCommitted: () => void;
@@ -93,18 +79,52 @@ export function ChangesRail({
   const textGenModel = useUi((s) => s.textGenModel);
   const [rollbackBusy, setRollbackBusy] = useState(false);
   const [rollbackConfirmation, setRollbackConfirmation] = useState<string | null>(null);
-  // Small change sets: expand all folders. Large ones: start collapsed for performance.
+  const [showIgnored, setShowIgnored] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // A project can hold more than one checkout (nested repos). One root keeps
+  // the flat tree; several group the files under a node per root.
+  const rootsQuery = useQuery({
+    queryFn: daemonQuery<GitRoots>("git.roots", { task_id: taskId }),
+    queryKey: ["gitRoots", taskId],
+  });
+  const roots = useMemo(() => rootsQuery.data?.roots ?? [], [rootsQuery.data]);
+
+  // Ignored files are their own cheap read (`git.ignored` runs one
+  // `ls-files`): the toggle must not recompute the full diff, which on a
+  // large repo means re-parsing every tracked+untracked hunk.
+  const ignoredQuery = useQuery({
+    enabled: showIgnored,
+    queryFn: daemonQuery<GitIgnoredFiles>("git.ignored", { task_id: taskId }),
+    queryKey: ["gitIgnored", taskId],
+  });
+  const ignoredFiles = ignoredQuery.data?.ignored ?? [];
+  // No data and a dead request (not merely pending) also means the scan
+  // never ran — say so instead of implying the repo ignores nothing.
+  const ignoredAvailable = ignoredQuery.data?.available ?? !ignoredQuery.isError;
+  const ignoredTruncated = ignoredQuery.data?.truncated ?? false;
+  const ignoredState = ignoredSectionState(
+    showIgnored,
+    ignoredQuery.isPending,
+    ignoredFiles,
+    ignoredAvailable,
+  );
+
+  const root = useMemo(
+    () => buildChangesRoot({ files, project, roots, untrackedAvailable, untrackedPaths }),
+    [files, project, roots, untrackedAvailable, untrackedPaths],
+  );
+
+  // Small change sets: expand all folders. Large ones: only the top-level
+  // group nodes, so a big diff still opens instantly.
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => {
+    const all = new Set<string>();
+    collectFolderKeys(root, "", all);
     if (files.length <= 50) {
-      const tree = compact(buildTree(files));
-      const root = { children: tree.children, name: project } as Node;
-      const all = new Set<string>();
-      collectFolderKeys(root, "", all);
       return all;
     }
-    return new Set();
+    return new Set([...root.children.values()].map((child) => child.name));
   });
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Re-sync selection as the diff's file set changes (keep prior choices).
   useEffect(() => {
@@ -123,11 +143,22 @@ export function ChangesRail({
   );
   const rollbackConfirm = rollbackConfirmation === rollbackSelectionKey;
 
-  // Wrap the project's files under a single root labelled with the project.
-  const root = useMemo(() => {
-    const tree = compact(buildTree(files));
-    return { children: tree.children, name: project } as Node;
-  }, [files, project]);
+  // Group nodes arrive after the first render (the roots read and the diff
+  // land separately), so open each one the first time it shows up — without
+  // reopening a group the user has since collapsed.
+  const autoOpened = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const fresh = [...root.children.values()]
+      .map((child) => child.name)
+      .filter((name) => !autoOpened.current.has(name));
+    if (fresh.length === 0) {
+      return;
+    }
+    for (const name of fresh) {
+      autoOpened.current.add(name);
+    }
+    setOpenFolders((prev) => new Set([...prev, ...fresh]));
+  }, [root]);
 
   // Flatten visible tree rows.
   const rows = useMemo(() => {
@@ -169,113 +200,15 @@ export function ChangesRail({
     });
   }, []);
 
-  const requestId = useRef(`changes-${taskId}`).current;
-  const targetRef = useRef<{ kind: "file" | "folder"; path?: string; paths: string[] } | null>(
-    null,
-  );
-
-  const handleContextMenu = useCallback(
-    (e: MouseEvent, row: FlatRow) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const path = row.node.path;
-      if (path) {
-        targetRef.current = { kind: "file", path, paths: [path] };
-        void showContextMenu({
-          requestId,
-          items: [
-            {
-              type: "item",
-              id: "toggle",
-              label: staged.has(path) ? "Unstage" : "Stage",
-            },
-            { type: "item", id: "open", label: "Show Diff" },
-            { type: "item", id: "jump", label: "Jump to Source" },
-            { type: "separator" },
-            { type: "item", id: "toggle", label: staged.has(path) ? "Unstage" : "Stage" },
-            { type: "item", id: "rollback", label: "Rollback File" },
-            { type: "separator" },
-            { type: "item", id: "copy", label: "Copy Path" },
-            { type: "item", id: "refresh", label: "Refresh" },
-          ],
-        });
-        return;
-      }
-      const paths = leaves(row.node);
-      targetRef.current = { kind: "folder", paths };
-      const allStaged = paths.every((p) => staged.has(p));
-      void showContextMenu({
-        requestId,
-        items: [
-          { type: "item", id: "toggle", label: allStaged ? "Unstage folder" : "Stage folder" },
-          { type: "separator" },
-          { type: "item", id: "copy", label: "Copy Path" },
-          { type: "item", id: "refresh", label: "Refresh" },
-        ],
-      });
-    },
-    [requestId, staged],
-  );
-
-  const menuHandlers = useMemo(
-    () =>
-      new Map<string, () => void>([
-        [
-          "toggle",
-          () => {
-            const t = targetRef.current;
-            if (!t) return;
-            const on =
-              t.kind === "file" ? !staged.has(t.path!) : !t.paths.every((p) => staged.has(p));
-            toggle(t.paths, on);
-          },
-        ],
-        [
-          "open",
-          () => {
-            const t = targetRef.current;
-            if (t && t.path) onSelect(t.path);
-          },
-        ],
-        [
-          "jump",
-          () => {
-            const t = targetRef.current;
-            if (t?.path) onSelect(t.path);
-          },
-        ],
-        [
-          "copy",
-          () => {
-            const t = targetRef.current;
-            if (t) void navigator.clipboard.writeText(t.paths.join("\n"));
-          },
-        ],
-        ["refresh", onRefresh],
-        [
-          "rollback",
-          () => {
-            const t = targetRef.current;
-            if (!t?.path) return;
-            const file = filesByPath.get(t.path);
-            if (!file) return;
-            const indices = file.status === "added" ? [0] : file.hunks.map((_, i) => i).reverse();
-            void Promise.all(
-              indices.map((hunkIndex) =>
-                daemon.request("diff.resolveHunk", {
-                  file: t.path,
-                  hunk_index: hunkIndex,
-                  resolution: "reject",
-                  task_id: taskId,
-                }),
-              ),
-            ).then(onRefresh);
-          },
-        ],
-      ]),
-    [filesByPath, onRefresh, onSelect, staged, taskId, toggle],
-  );
-  useNativeContextMenu(requestId, menuHandlers);
+  const handleContextMenu = useChangesContextMenu({
+    filesByPath,
+    onRefresh,
+    onSelect,
+    staged,
+    taskId,
+    toggle,
+    untrackedPaths,
+  });
 
   const canCommit = !busy && staged.size > 0 && (message.trim().length > 0 || amend);
 
@@ -410,6 +343,19 @@ export function ChangesRail({
         >
           <Undo2 className="size-3.5" />
         </button>
+        <button
+          type="button"
+          aria-label={showIgnored ? "Hide ignored files" : "Show ignored files"}
+          title={showIgnored ? "Hide ignored files" : "Show ignored files"}
+          aria-pressed={showIgnored}
+          onClick={() => setShowIgnored((on) => !on)}
+          className={cn(
+            "rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground",
+            showIgnored && "text-foreground",
+          )}
+        >
+          {showIgnored ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+        </button>
       </div>
       <div className="flex h-8 items-center gap-2 border-b border-rule bg-secondary/55 px-3 text-xs text-muted-foreground">
         <input
@@ -428,11 +374,17 @@ export function ChangesRail({
         </span>
       </div>
 
+      {!untrackedAvailable && (
+        <p className="border-b border-rule px-3 py-1.5 text-xs text-warn">
+          Unversioned files unavailable.
+        </p>
+      )}
+
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto py-1.5">
         {rows.length === 0 ? (
           <p className="px-3 py-2 text-xs text-muted-foreground">No changes.</p>
         ) : (
-          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+          <div className="relative w-max min-w-full" style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((vi) => {
               const row = rows[vi.index];
               return (
@@ -452,6 +404,15 @@ export function ChangesRail({
             })}
           </div>
         )}
+
+        <IgnoredFiles
+          state={ignoredState}
+          files={ignoredFiles}
+          truncated={ignoredTruncated}
+          selected={selected}
+          onSelect={onSelect}
+          onOpenFile={onOpenFile}
+        />
       </div>
 
       {files.length > 0 && (

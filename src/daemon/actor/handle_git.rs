@@ -69,6 +69,60 @@ impl DaemonHandle {
         rx.await.unwrap_or_default()
     }
 
+    pub async fn git_roots(
+        &self,
+        task_id: Option<String>,
+        project: Option<String>,
+    ) -> wire::GitRoots {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::GitRoots {
+            task_id,
+            project,
+            reply: tx,
+        })
+        .await;
+        rx.await.unwrap_or_default()
+    }
+
+    pub async fn git_ignored_files(
+        &self,
+        task_id: Option<String>,
+        project: Option<String>,
+    ) -> wire::GitIgnoredFiles {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::GitIgnored {
+            task_id,
+            project,
+            reply: tx,
+        })
+        .await;
+        rx.await.unwrap_or_default()
+    }
+
+    pub async fn git_add(&self, task_id: &str, paths: Vec<String>) -> Result<(), String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::GitAdd {
+            task_id: task_id.to_string(),
+            paths,
+            reply: tx,
+        })
+        .await;
+        rx.await
+            .unwrap_or_else(|_| Err("daemon dropped the add request".into()))
+    }
+
+    pub async fn git_ignore_paths(&self, task_id: &str, paths: Vec<String>) -> Result<(), String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::GitIgnorePaths {
+            task_id: task_id.to_string(),
+            paths,
+            reply: tx,
+        })
+        .await;
+        rx.await
+            .unwrap_or_else(|_| Err("daemon dropped the ignore request".into()))
+    }
+
     pub async fn git_switch_branch(&self, task_id: &str, branch: &str) -> wire::GitOpResult {
         let (tx, rx) = oneshot::channel();
         self.send(Command::GitSwitchBranch {

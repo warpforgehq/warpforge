@@ -21,6 +21,7 @@ export function DiffSurface({
   editable,
   localRes,
   onOpenFiles,
+  onOpenFile,
   onResolve,
   onSendToChat,
   onSetDiffView,
@@ -40,6 +41,8 @@ export function DiffSurface({
   editable: boolean;
   localRes: Record<string, HunkResolution>;
   onOpenFiles: () => void;
+  /** Open a file for reading (ignored files have no diff to show). */
+  onOpenFile: (path: string) => void;
   onResolve: (file: string, hunkIndex: number, resolution: HunkResolution) => void;
   onSendToChat: (file: FileDiff) => void;
   onSetDiffView: (v: DiffView) => void;
@@ -115,6 +118,8 @@ export function DiffSurface({
               <ChangesRail
                 project={project}
                 files={diff.files}
+                untrackedPaths={diff.untrackedPaths}
+                untrackedAvailable={diff.untrackedAvailable}
                 selected={selected}
                 taskId={taskId}
                 commitExpanded={commitExpanded}
@@ -122,6 +127,7 @@ export function DiffSurface({
                 onCommitted={onCommitted}
                 onRefresh={onRefresh}
                 onSelect={onSelect}
+                onOpenFile={onOpenFile}
               />
             ) : (
               <p className="p-3 text-sm text-muted-foreground">Loading changes…</p>

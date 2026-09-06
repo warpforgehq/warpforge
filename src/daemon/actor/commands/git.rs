@@ -140,6 +140,95 @@ impl Daemon {
                     let _ = reply.send(list);
                 });
             }
+            Command::GitRoots {
+                task_id,
+                project,
+                reply,
+            } => {
+                let repo = match task_id {
+                    Some(id) => self.task_repo_path(&id),
+                    None => project.as_deref().and_then(|p| self.project_path(p)),
+                };
+                tokio::spawn(async move {
+                    let roots = match repo {
+                        Some(p) => crate::daemon::diff::git_roots(&p).await.unwrap_or_default(),
+                        None => Vec::new(),
+                    };
+                    let _ = reply.send(wire::GitRoots { roots });
+                });
+            }
+            Command::GitIgnored {
+                task_id,
+                project,
+                reply,
+            } => {
+                // One cheap `ls-files` — the toggle must not pay for a full
+                // tracked+untracked recompute (nor invalidate the diff cache).
+                let repo = match task_id {
+                    Some(id) => self.task_repo_path(&id),
+                    None => project.as_deref().and_then(|p| self.project_path(p)),
+                };
+                tokio::spawn(async move {
+                    let res = match repo {
+                        Some(p) => match crate::daemon::diff::ignored_files(&p).await {
+                            Ok((ignored, truncated)) => wire::GitIgnoredFiles {
+                                ignored,
+                                truncated,
+                                available: true,
+                            },
+                            Err(_) => wire::GitIgnoredFiles {
+                                ignored: Vec::new(),
+                                truncated: false,
+                                available: false,
+                            },
+                        },
+                        // No repo to scan: same contract as `diff.get`'s
+                        // untracked flag — nothing failed, there is nothing.
+                        None => wire::GitIgnoredFiles {
+                            ignored: Vec::new(),
+                            truncated: false,
+                            available: true,
+                        },
+                    };
+                    let _ = reply.send(res);
+                });
+            }
+            Command::GitAdd {
+                task_id,
+                paths,
+                reply,
+            } => {
+                // "Add to VCS": stage without committing, so unversioned files
+                // move to Changes on the next diff. Off the loop (ADR 0002).
+                let repo = self.task_repo_path(&task_id);
+                tokio::spawn(async move {
+                    let result = match repo {
+                        Some(p) => crate::daemon::diff::stage_paths(&p, &paths)
+                            .await
+                            .map_err(|e| e.to_string()),
+                        None => Err(format!("no repo for task {task_id}")),
+                    };
+                    let _ = reply.send(result);
+                });
+            }
+            Command::GitIgnorePaths {
+                task_id,
+                paths,
+                reply,
+            } => {
+                // "Add to .gitignore": appends to the root .gitignore, off the
+                // loop like every other tree-mutating op.
+                let repo = self.task_repo_path(&task_id);
+                tokio::spawn(async move {
+                    let result = match repo {
+                        Some(p) => crate::daemon::diff::ignore_paths(&p, &paths)
+                            .await
+                            .map_err(|e| e.to_string()),
+                        None => Err(format!("no repo for task {task_id}")),
+                    };
+                    let _ = reply.send(result);
+                });
+            }
             Command::GitSwitchBranch {
                 task_id,
                 branch,

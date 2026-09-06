@@ -5,7 +5,11 @@ use crate::daemon::actor::{Command, Daemon, GitEffect};
 impl Daemon {
     pub(crate) async fn handle_files_command(&mut self, cmd: Command) {
         match cmd {
-            Command::GetDiff { task_id, reply } => {
+            Command::GetDiff {
+                task_id,
+                include_ignored,
+                reply,
+            } => {
                 // Resolve the repo path from actor state, then run git off the
                 // loop. The diff panel polls this, so awaiting it here put a
                 // pair of git processes between every poll and the next
@@ -15,20 +19,51 @@ impl Daemon {
                     .get(&task_id)
                     .and_then(|_| self.task_repo_path(&task_id));
                 tokio::spawn(async move {
-                    let (files, branch) = match repo {
-                        Some(path) => (
-                            crate::daemon::diff::working_diff(&path)
+                    let diff = match repo {
+                        Some(path) => {
+                            let tracked = crate::daemon::diff::tracked_diff(&path)
                                 .await
-                                .unwrap_or_default(),
-                            crate::daemon::diff::current_branch(&path).await,
-                        ),
-                        None => (Vec::new(), None),
+                                .unwrap_or_default();
+                            let (untracked, untracked_available) =
+                                match crate::daemon::diff::untracked_diff(&path).await {
+                                    Ok(u) => (u, true),
+                                    Err(_) => (Vec::new(), false),
+                                };
+                            let untracked_paths =
+                                untracked.iter().map(|f| f.path.clone()).collect();
+                            let mut files = tracked;
+                            files.extend(untracked);
+                            let (ignored, ignored_truncated, ignored_available) = if include_ignored
+                            {
+                                match crate::daemon::diff::ignored_files(&path).await {
+                                    // A failed scan is "unavailable", not
+                                    // "empty" — same contract as untracked.
+                                    Ok((list, truncated)) => (list, truncated, true),
+                                    Err(_) => (Vec::new(), false, false),
+                                }
+                            } else {
+                                (Vec::new(), false, true)
+                            };
+                            let branch = crate::daemon::diff::current_branch(&path).await;
+                            wire::TaskDiff {
+                                task_id,
+                                files,
+                                untracked_paths,
+                                untracked_available,
+                                ignored,
+                                ignored_truncated,
+                                ignored_available,
+                                branch,
+                            }
+                        }
+                        None => wire::TaskDiff {
+                            task_id,
+                            untracked_available: true,
+                            ignored_available: true,
+                            ..Default::default()
+                        },
                     };
-                    let _ = reply.send(wire::TaskDiff {
-                        task_id,
-                        files,
-                        branch,
-                    });
+                    let _ = reply.send(diff);
                 });
             }
             Command::GetFileContents {

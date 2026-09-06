@@ -511,7 +511,21 @@ export interface EditHunk {
 
 export interface TaskDiff {
   taskId: string;
+  /** Tracked and untracked changes combined, in one flat list. */
   files: FileDiff[];
+  /** Subset of `files`' paths that are untracked (new) files. */
+  untrackedPaths: string[];
+  /** False when the untracked-file scan couldn't complete — show an
+   * "unavailable" message rather than treating it as zero untracked files. */
+  untrackedAvailable: boolean;
+  /** `.gitignore`'d file paths; populated only when `diff.get` was called
+   * with `includeIgnored` (the "Show Ignored Files" toggle). */
+  ignored: string[];
+  /** True when the server capped the listing — the list is incomplete. */
+  ignoredTruncated: boolean;
+  /** False when the ignored-file scan was requested but couldn't complete —
+   * show "unavailable" rather than "no ignored files". */
+  ignoredAvailable: boolean;
   /** Current git branch of the task's project, if it's a repo. */
   branch?: string | null;
 }
@@ -576,6 +590,31 @@ export interface GitBranchList {
   branches: string[];
   /** Remote-tracking refs, e.g. `origin/main`. */
   remotes?: string[];
+}
+
+/** One git checkout under a project (its own root, or a nested repo found
+ * under it). Result of `git.roots`. */
+export interface GitRoot {
+  path: string;
+  /** Display label: the project name for the primary root, or the path
+   * relative to it for a nested one (e.g. "packages/foo"). */
+  name: string;
+  branch?: string | null;
+  remotes: string[];
+}
+
+/** Result of `git.roots`. */
+export interface GitRoots {
+  roots: GitRoot[];
+}
+
+/** Result of `git.ignored` — the toggle's own cheap read, so it never pays
+ * for a full tracked+untracked recompute. */
+export interface GitIgnoredFiles {
+  ignored: string[];
+  /** True when the server capped the listing — the list is incomplete. */
+  truncated: boolean;
+  available: boolean;
 }
 
 export interface GitPushFile {

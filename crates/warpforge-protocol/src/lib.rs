@@ -481,7 +481,13 @@ pub enum Method {
 
     // ── Diff / review ──
     #[serde(rename = "diff.get")]
-    DiffGet { task_id: String },
+    DiffGet {
+        task_id: String,
+        /// Also compute the .gitignore'd file list (the "Show Ignored Files"
+        /// toggle) — skipped by default since most repos never need it.
+        #[serde(default)]
+        include_ignored: bool,
+    },
     #[serde(rename = "diff.resolveHunk")]
     DiffResolveHunk {
         task_id: String,
@@ -566,6 +572,16 @@ pub enum Method {
         #[serde(default)]
         project: Option<String>,
     },
+    /// `git add` paths (the "Add to VCS" menu on unversioned files). Unlike
+    /// `git.commit` this stages without committing, so the files move from
+    /// "Unversioned Files" to "Changes" on the next `diff.get`.
+    #[serde(rename = "git.add")]
+    GitAdd { task_id: String, paths: Vec<String> },
+    /// Append paths to the repo's root `.gitignore` (the "Add to .gitignore"
+    /// menu on unversioned files). Lines already covered stay untouched —
+    /// existing entries are never duplicated.
+    #[serde(rename = "git.ignore")]
+    GitIgnore { task_id: String, paths: Vec<String> },
     /// Pull the task's project repo up to its upstream (rebase + autostash).
     /// Any conflict rolls the working tree back to the exact prior state.
     #[serde(rename = "git.update")]
@@ -574,6 +590,26 @@ pub enum Method {
     /// a task exists, as in New Task — by project name directly.
     #[serde(rename = "git.branches")]
     GitBranches {
+        #[serde(default)]
+        task_id: Option<String>,
+        #[serde(default)]
+        project: Option<String>,
+    },
+    /// List this repo's root plus any nested git repos under it (one entry
+    /// each), with each root's current branch and configured remotes. A repo
+    /// with no nested checkouts returns exactly one root.
+    #[serde(rename = "git.roots")]
+    GitRoots {
+        #[serde(default)]
+        task_id: Option<String>,
+        #[serde(default)]
+        project: Option<String>,
+    },
+    /// `.gitignore`'d paths of a repo, located by task or by project name.
+    /// Separate from `diff.get` so the "Show Ignored Files" toggle costs one
+    /// cheap `ls-files` instead of a full tracked+untracked recompute.
+    #[serde(rename = "git.ignored")]
+    GitIgnored {
         #[serde(default)]
         task_id: Option<String>,
         #[serde(default)]
@@ -2193,6 +2229,47 @@ pub struct GitBranchList {
     pub remotes: Vec<String>,
 }
 
+/// One git checkout under a project — the project's own root, or a nested
+/// repo found under it (e.g. a submodule-like checkout that isn't a git
+/// submodule). Result of `git.roots`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GitRoot {
+    /// Absolute path to this checkout's toplevel.
+    pub path: String,
+    /// Display label: the project name for the primary root, or the path
+    /// relative to it for a nested one (e.g. `"packages/foo"`).
+    pub name: String,
+    /// Current branch, or `None` if detached or unborn.
+    pub branch: Option<String>,
+    /// Configured remote names (e.g. `["origin", "upstream"]`), deduped.
+    pub remotes: Vec<String>,
+}
+
+/// Result of `git.roots`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GitRoots {
+    pub roots: Vec<GitRoot>,
+}
+
+/// Result of `git.ignored`: `.gitignore`'d paths plus whether the scan ran.
+/// `available=false` means the scan itself failed (e.g. the repo became
+/// unreadable) — distinct from "no ignored files", which is an empty list
+/// with `available=true`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GitIgnoredFiles {
+    #[serde(default)]
+    pub ignored: Vec<String>,
+    /// True when the listing hit the server-side cap — the client says "not
+    /// all shown" instead of implying the list is complete.
+    #[serde(default)]
+    pub truncated: bool,
+    #[serde(default = "default_true")]
+    pub available: bool,
+}
+
 /// One file contained in an outgoing commit.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -2263,7 +2340,33 @@ pub struct GitPushInfo {
 #[serde(rename_all = "camelCase")]
 pub struct TaskDiff {
     pub task_id: String,
+    /// Tracked and untracked changes combined (untracked files as whole-file
+    /// additions) — the flat list the file-content editor iterates over.
     pub files: Vec<FileDiff>,
+    /// Subset of `files`' paths that are untracked (new, not yet added to
+    /// git). Lets the Changes rail group "Changes" vs "Unversioned Files"
+    /// without carrying a second copy of every `FileDiff`.
+    #[serde(default)]
+    pub untracked_paths: Vec<String>,
+    /// False when the untracked-file scan couldn't complete (e.g. the repo
+    /// became unreadable mid-scan). The UI must show an "unavailable" message
+    /// rather than treat this as "no untracked files".
+    #[serde(default)]
+    pub untracked_available: bool,
+    /// `.gitignore`'d file paths, populated only when `diff.get` was called
+    /// with `include_ignored` (the "Show Ignored Files" toggle).
+    #[serde(default)]
+    pub ignored: Vec<String>,
+    /// True when `ignored` hit the server-side listing cap (see
+    /// `GitIgnoredFiles.truncated`).
+    #[serde(default)]
+    pub ignored_truncated: bool,
+    /// False when the ignored-file scan couldn't complete while it was
+    /// requested (same "unavailable, not empty" contract as
+    /// `untracked_available`). Defaults to true so payloads written before
+    /// this flag existed still read as "scan ran".
+    #[serde(default = "default_true")]
+    pub ignored_available: bool,
     /// Current git branch of the task's project, if it's a repo.
     #[serde(default)]
     pub branch: Option<String>,
@@ -2777,6 +2880,116 @@ mod tests {
         .unwrap();
         let req: Request = serde_json::from_value(json).unwrap();
         assert!(matches!(req.method, Method::GitLastCommitMessage { task_id } if task_id == "t1"));
+    }
+
+    #[test]
+    fn git_roots_roundtrip() {
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"id":6,"method":"git.roots","params":{"task_id":"t1"}}"#)
+                .unwrap();
+        let req: Request = serde_json::from_value(json).unwrap();
+        assert!(
+            matches!(req.method, Method::GitRoots { task_id, project } if task_id.as_deref() == Some("t1") && project.is_none())
+        );
+    }
+
+    /// The ignored-file scan is opt-in: a client that never asks must not pay
+    /// for it, so the flag has to default to false when the param is absent.
+    #[test]
+    fn diff_get_defaults_to_skipping_ignored_files() {
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"id":7,"method":"diff.get","params":{"task_id":"t1"}}"#)
+                .unwrap();
+        let req: Request = serde_json::from_value(json).unwrap();
+        assert!(matches!(
+            req.method,
+            Method::DiffGet {
+                include_ignored: false,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn task_diff_keeps_the_untracked_split_on_the_wire() {
+        let diff = TaskDiff {
+            task_id: "t1".into(),
+            files: Vec::new(),
+            untracked_paths: vec!["new.txt".into()],
+            untracked_available: true,
+            ignored: vec!["target/app".into()],
+            ignored_truncated: false,
+            ignored_available: true,
+            branch: None,
+        };
+        let json = serde_json::to_value(&diff).unwrap();
+        assert_eq!(json["untrackedPaths"][0], "new.txt");
+        assert_eq!(json["untrackedAvailable"], true);
+        assert_eq!(json["ignored"][0], "target/app");
+        assert_eq!(json["ignoredAvailable"], true);
+    }
+
+    /// Payloads written before `ignored_available` existed must read as
+    /// "the scan ran" — otherwise old caches would flip "no ignored files"
+    /// into "scan failed".
+    #[test]
+    fn task_diff_without_ignored_available_defaults_to_true() {
+        let diff: TaskDiff = serde_json::from_value(serde_json::json!({
+            "taskId": "t1",
+            "files": [],
+            "untrackedPaths": [],
+            "untrackedAvailable": true,
+            "ignored": [],
+        }))
+        .unwrap();
+        assert!(diff.ignored_available);
+    }
+
+    #[test]
+    fn git_ignored_parses_task_or_project_params() {
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"id":8,"method":"git.ignored","params":{"project":"demo"}}"#)
+                .unwrap();
+        let req: Request = serde_json::from_value(json).unwrap();
+        assert!(
+            matches!(req.method, Method::GitIgnored { task_id, project } if task_id.is_none() && project.as_deref() == Some("demo"))
+        );
+    }
+
+    #[test]
+    fn git_add_and_ignore_carry_paths_on_the_wire() {
+        let json: serde_json::Value = serde_json::from_str(
+            r#"{"id":9,"method":"git.add","params":{"task_id":"t1","paths":["new.txt"]}}"#,
+        )
+        .unwrap();
+        let req: Request = serde_json::from_value(json).unwrap();
+        assert!(
+            matches!(req.method, Method::GitAdd { task_id, paths } if task_id == "t1" && paths == vec!["new.txt"])
+        );
+
+        let json: serde_json::Value = serde_json::from_str(
+            r#"{"id":10,"method":"git.ignore","params":{"task_id":"t1","paths":["*.log"]}}"#,
+        )
+        .unwrap();
+        let req: Request = serde_json::from_value(json).unwrap();
+        assert!(
+            matches!(req.method, Method::GitIgnore { task_id, paths } if task_id == "t1" && paths == vec!["*.log"])
+        );
+    }
+
+    /// A failed scan must survive the wire as unavailable, not as an empty
+    /// list — the client shows "unavailable" instead of "no ignored files".
+    #[test]
+    fn git_ignored_files_marks_unavailable_on_the_wire() {
+        let res = GitIgnoredFiles {
+            ignored: Vec::new(),
+            truncated: true,
+            available: false,
+        };
+        let json = serde_json::to_value(&res).unwrap();
+        assert_eq!(json["available"], false);
+        assert_eq!(json["truncated"], true);
+        assert!(json["ignored"].as_array().unwrap().is_empty());
     }
 
     #[test]

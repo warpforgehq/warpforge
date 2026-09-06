@@ -484,6 +484,7 @@ export default function TaskDetail({ task, snapshot, onOpenTask, onOpenPush }: P
                       project={task.project}
                       selected={selectedDiffFile}
                       onSelect={openDiffFile}
+                      onOpenFile={openFileTab}
                       commitExpanded={commitExpanded}
                       onCommitExpandedChange={setCommitExpanded}
                       onCommitted={() => {

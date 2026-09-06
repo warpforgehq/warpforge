@@ -38,8 +38,10 @@ export function FileTreeRow({
     return (
       <div
         key={vi.key}
+        // w-max + min-w-full: the row grows with its content and the rail
+        // scrolls horizontally instead of clipping long paths and counts.
         className={cn(
-          "group absolute left-0 top-0 flex h-7 w-full items-center gap-1.5 pr-2 text-xs",
+          "group absolute left-0 top-0 flex h-7 w-max min-w-full items-center gap-1.5 pr-2 text-xs",
           selected === row.node.path ? "bg-secondary text-foreground" : "hover:bg-secondary/50",
         )}
         style={{ ...pad, transform: `translateY(${vi.start}px)` }}
@@ -81,7 +83,7 @@ export function FileTreeRow({
   return (
     <div
       key={vi.key}
-      className="absolute left-0 top-0 flex h-7 w-full items-center gap-1.5 pr-2 text-xs text-muted-foreground"
+      className="absolute left-0 top-0 flex h-7 w-max min-w-full items-center gap-1.5 pr-2 text-xs text-muted-foreground"
       style={{ ...pad, transform: `translateY(${vi.start}px)` }}
       onContextMenu={(e) => onContextMenu(e, row)}
     >
@@ -107,6 +109,11 @@ export function FileTreeRow({
         <span className="ml-1 shrink-0 text-[10px] text-muted-foreground/70">
           {paths.length} files
         </span>
+        {row.node.suffix && (
+          <span className="ml-1 shrink-0 font-mono text-[10px] text-muted-foreground/70">
+            {row.node.suffix}
+          </span>
+        )}
       </button>
     </div>
   );

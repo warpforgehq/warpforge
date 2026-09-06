@@ -173,10 +173,11 @@ impl DaemonHandle {
         rx.await.unwrap_or_default()
     }
 
-    pub async fn diff(&self, task_id: &str) -> wire::TaskDiff {
+    pub async fn diff(&self, task_id: &str, include_ignored: bool) -> wire::TaskDiff {
         let (tx, rx) = oneshot::channel();
         self.send(Command::GetDiff {
             task_id: task_id.to_string(),
+            include_ignored,
             reply: tx,
         })
         .await;

@@ -25,6 +25,8 @@ export interface Node {
   name: string;
   path?: string;
   stat?: Stat;
+  /** Rendered after a folder row's file count — the git root's branch. */
+  suffix?: string;
   children: Map<string, Node>;
 }
 
