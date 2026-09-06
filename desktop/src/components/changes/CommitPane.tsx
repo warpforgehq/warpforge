@@ -437,7 +437,7 @@ export function CommitPane({
         <button
           type="button"
           aria-label="Shelve silently"
-          title="Shelve checked files without asking (⇧⌘H)"
+          title="Shelve checked files without asking"
           disabled={shelveBusy || staged.size === 0}
           onClick={() => void shelveSilently()}
           className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"

@@ -2332,6 +2332,11 @@ pub struct ShelfEntry {
     /// Repo-relative paths in the bundle, sorted.
     #[serde(default)]
     pub files: Vec<String>,
+    /// Subset of `files` removed from the worktree by shelving: shelved
+    /// untracked files (deleted from disk) and tracked deletions. Shown as
+    /// "Recently Deleted"; a full unshelve restores them.
+    #[serde(default)]
+    pub deleted_files: Vec<String>,
 }
 
 /// Result of `shelf.list`.

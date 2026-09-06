@@ -168,6 +168,18 @@ pub async fn shelf_create(
     let mut files = tracked_paths.clone();
     files.extend(untracked_paths.clone());
     files.sort();
+    // "Recently Deleted": everything shelving removes from the tree — the
+    // untracked originals plus tracked files whose shelved change deletes them.
+    let mut deleted: Vec<String> = untracked_paths.clone();
+    deleted.extend(
+        tracked
+            .iter()
+            .filter(|f| {
+                f.status == wire::FileDiffStatus::Deleted && tracked_paths.contains(&f.path)
+            })
+            .map(|f| f.path.clone()),
+    );
+    deleted.sort();
     let entry = wire::ShelfEntry {
         id: id.clone(),
         name: if name.trim().is_empty() {
@@ -183,6 +195,7 @@ pub async fn shelf_create(
         created_at,
         branch,
         files,
+        deleted_files: deleted,
     };
 
     // Store first, revert second: if the revert fails halfway, the bundle
@@ -536,6 +549,20 @@ mod tests {
                 .is_err()
         );
         assert!(shelf_create(home.path(), &r, "", Some(&[])).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn shelve_records_what_it_deleted_from_the_tree() {
+        let (repo, home, r) = fixture().await;
+        let hp = home.path();
+        let d = repo.path();
+        std::fs::remove_file(d.join("tracked.txt")).unwrap();
+
+        let entry = shelf_create(hp, &r, "del", None).await.unwrap();
+        assert_eq!(
+            entry.deleted_files,
+            vec!["new.txt".to_string(), "tracked.txt".to_string()]
+        );
     }
 
     #[tokio::test]

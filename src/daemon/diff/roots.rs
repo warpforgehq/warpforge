@@ -11,6 +11,10 @@ use super::{git, HEAVY_DIRS};
 /// `node_modules`-free tree can't turn this into an unbounded walk.
 const MAX_NESTED_DEPTH: usize = 4;
 
+/// Warpforge's own worktree dir: task checkouts, never a working root. Without
+/// this, any repo with a live task shows the multi-root tree for no reason.
+const SKIPPED_DIRS: &[&str] = &[".worktrees"];
+
 /// This repo's toplevel plus any nested git checkouts found under it (plain
 /// nested repos, not necessarily submodules), each with its branch and
 /// remotes. A repo with no nested checkouts returns exactly one root. Empty
@@ -33,12 +37,54 @@ pub async fn git_roots(repo: &str) -> Result<Vec<wire::GitRoot>> {
         .unwrap_or_default()
     };
 
+    // Nested checkouts under ignored paths (study clones, vendored trees)
+    // are not working roots — without this, an ignored folder with clones in
+    // it forces the multi-root tree on an otherwise single-root project.
+    let ignored = ignored_paths(&primary, &nested).await;
+    let nested: Vec<_> = nested
+        .into_iter()
+        .filter(|p| !ignored.contains(p.to_string_lossy().as_ref()))
+        .collect();
+
     let mut roots = Vec::with_capacity(1 + nested.len());
     roots.push(root_entry(&primary, &primary).await);
     for path in nested {
         roots.push(root_entry(&primary, &path).await);
     }
     Ok(roots)
+}
+
+/// Nested candidates that git itself ignores (`git check-ignore`). Fail-open:
+/// if the check cannot run, every candidate stays a root (old behavior).
+async fn ignored_paths(
+    repo: &std::path::Path,
+    paths: &[std::path::PathBuf],
+) -> std::collections::HashSet<String> {
+    use std::collections::HashSet;
+    if paths.is_empty() {
+        return HashSet::new();
+    }
+    let repo = repo.to_string_lossy().to_string();
+    let paths = paths.to_vec();
+    let out = match tokio::task::spawn_blocking(move || {
+        let mut cmd = std::process::Command::new("git");
+        cmd.args(["-C", &repo, "check-ignore", "--"]);
+        for p in &paths {
+            cmd.arg(p);
+        }
+        cmd.output()
+    })
+    .await
+    {
+        Ok(Ok(out)) => out,
+        _ => return HashSet::new(),
+    };
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .map(str::to_string)
+        .collect()
 }
 
 fn find_nested_git_dirs(
@@ -60,7 +106,7 @@ fn find_nested_git_dirs(
         }
         let name = entry.file_name();
         let name = name.to_string_lossy();
-        if HEAVY_DIRS.contains(&name.as_ref()) {
+        if HEAVY_DIRS.contains(&name.as_ref()) || SKIPPED_DIRS.contains(&name.as_ref()) {
             continue;
         }
         if path != base && path.join(".git").exists() {
@@ -182,6 +228,47 @@ mod tests {
         let roots = git_roots(repo).await.unwrap();
         assert_eq!(roots.len(), 1);
         assert!(roots[0].remotes.is_empty());
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn git_roots_skips_nested_checkouts_under_ignored_paths() {
+        // Study clones under an ignored folder must not force the multi-root
+        // tree on an otherwise single-root project.
+        let dir = std::env::temp_dir().join(format!("wf-roots-ignored-{}", uuid::Uuid::new_v4()));
+        init_repo(&dir).await;
+        let repo = dir.to_str().unwrap();
+        std::fs::write(dir.join("a.txt"), "one\n").unwrap();
+        git(&dir, &["add", "."]).await;
+        git(&dir, &["commit", "-q", "-m", "init"]).await;
+        std::fs::write(dir.join(".gitignore"), "ref-projects/\n").unwrap();
+
+        let nested = dir.join("ref-projects").join("clone");
+        init_repo(&nested).await;
+
+        let roots = git_roots(repo).await.unwrap();
+        assert_eq!(roots.len(), 1, "ignored nested checkout is not a root");
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn git_roots_skips_warpforge_task_worktrees() {
+        // `.worktrees/` holds task checkouts, not working roots: a live task
+        // must not flip an otherwise single-root project into multi-root.
+        let dir = std::env::temp_dir().join(format!("wf-roots-wt-{}", uuid::Uuid::new_v4()));
+        init_repo(&dir).await;
+        let repo = dir.to_str().unwrap();
+        std::fs::write(dir.join("a.txt"), "one\n").unwrap();
+        git(&dir, &["add", "."]).await;
+        git(&dir, &["commit", "-q", "-m", "init"]).await;
+
+        let nested = dir.join(".worktrees").join("t_abc");
+        init_repo(&nested).await;
+
+        let roots = git_roots(repo).await.unwrap();
+        assert_eq!(roots.len(), 1, "task worktree is not a root");
 
         std::fs::remove_dir_all(&dir).ok();
     }

@@ -5,6 +5,7 @@ import type { MouseEvent } from "react";
 import { cn } from "@/lib/utils";
 
 import { leaves, STATUS, type FlatRow } from "./treeUtils";
+import { CHANGES_LABEL, UNVERSIONED_LABEL } from "./changesTree";
 
 interface FileTreeRowProps {
   row: FlatRow;
@@ -80,6 +81,13 @@ export function FileTreeRow({
   const folderStaged = paths.filter((p) => staged.has(p)).length;
   const state = folderStaged === 0 ? "off" : folderStaged === paths.length ? "on" : "some";
   const isOpen = openFolders.has(row.fKey!);
+  // Section headers ("Changes", "Unversioned Files") and project roots (the
+  // ones carrying a `[branch]` suffix) read brighter and bolder than plain
+  // folders, so the groups scan apart at a glance.
+  const isSection =
+    row.node.name === CHANGES_LABEL ||
+    row.node.name === UNVERSIONED_LABEL ||
+    row.node.suffix !== undefined;
   return (
     <div
       key={vi.key}
@@ -100,7 +108,10 @@ export function FileTreeRow({
       <button
         type="button"
         onClick={() => onToggleFolder(row.fKey!)}
-        className="flex min-w-0 flex-1 items-center gap-1 text-left hover:text-foreground"
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-1 text-left hover:text-foreground",
+          isSection && "font-semibold text-foreground",
+        )}
       >
         <ChevronRight
           className={cn("size-3.5 shrink-0 transition-transform", isOpen && "rotate-90")}

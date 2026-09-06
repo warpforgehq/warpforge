@@ -233,6 +233,19 @@ export function ShelfTab({
               onSelect={(path) => setPreviewPath(path)}
             />
 
+            {/* Guarded: a running daemon older than this field omits it. */
+            /* TODO: drop the fallback once the new daemon is everywhere. */}
+            {(selected.deletedFiles ?? []).length > 0 && (
+              <IgnoredFiles
+                state="list"
+                files={selected.deletedFiles ?? []}
+                heading="Recently Deleted"
+                truncated={false}
+                selected={preview?.path ?? null}
+                onSelect={(path) => setPreviewPath(path)}
+              />
+            )}
+
             {detailQuery.isPending ? (
               <p className="px-3 py-1 text-xs text-muted-foreground">Loading preview…</p>
             ) : (

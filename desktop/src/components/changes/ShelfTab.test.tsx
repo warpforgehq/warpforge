@@ -10,6 +10,7 @@ import { ShelfTab } from "./ShelfTab";
 const entry: ShelfEntry = {
   branch: "main",
   createdAt: 1_786_780_800,
+  deletedFiles: ["gone.txt"],
   files: ["src/a.ts", "new.txt"],
   id: "abc123",
   name: "wip",
@@ -72,6 +73,16 @@ describe("ShelfTab", () => {
     renderTab(<ShelfTab taskId="task-1" onRefresh={vi.fn<() => void>()} />);
 
     expect(await screen.findByText(/No shelved changes yet/)).toBeInTheDocument();
+  });
+
+  it("lists recently deleted files under the bundle", async () => {
+    stubShelf();
+
+    renderTab(<ShelfTab taskId="task-1" onRefresh={vi.fn<() => void>()} />);
+    fireEvent.click(await screen.findByText("wip"));
+
+    expect(await screen.findByText("Recently Deleted")).toBeInTheDocument();
+    expect(screen.getByTitle("gone.txt")).toBeInTheDocument();
   });
 
   it("applies keeping the entry and refreshes the Commit tab", async () => {

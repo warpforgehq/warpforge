@@ -616,6 +616,8 @@ export interface ShelfEntry {
   createdAt: number;
   branch?: string | null;
   files: string[];
+  /** Subset removed from the worktree by shelving — "Recently Deleted". */
+  deletedFiles: string[];
 }
 
 /** Result of `shelf.list`. */

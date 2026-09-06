@@ -1,0 +1,76 @@
+---
+title: Changes rail
+description: Park work in progress on the Shelf or the Stash without leaving the task.
+sidebar:
+  order: 7
+  label: Changes rail
+---
+
+The Changes rail holds three tabs: **Commit**, **Shelf**, and **Stash**. Commit shows what changed. Shelf and Stash hold work you want out of the tree for now. Committing, branching, and push live on their own page — see [Git in Warpforge](/guides/git-in-warpforge/).
+
+## Commit tab
+
+Changed files split into two groups: **Changes** for tracked files and **Unversioned Files** for paths git does not track yet. A project with several checkouts repeats those groups under one node per git root.
+
+Each row carries a checkbox. Checked files go into the commit; folders get a tri-state box that reflects what is under them. The bar above the tree counts checked files (`3/12 files`) and toggles the whole set.
+
+The toolbar above that:
+
+| Button | Effect |
+| --- | --- |
+| **Expand all / Collapse all** | Opens or shuts every folder |
+| **Group by** | Directory tree or flat list |
+| **Shelve silently** | Shelves checked files at once, without asking |
+| **Refresh** | Re-reads the diff |
+| **Rollback** | Discards checked changes. First click arms it, second click discards |
+| **Show ignored** | Reveals the Ignored Files section |
+
+### Ignored files
+
+Ignored paths sit behind the eye toggle. They render as a directory tree with no checkboxes — a checkbox would promise a commit git cannot perform. Wholly-ignored directories (`node_modules/`) appear as one collapsed row and never expand. When the scan cannot complete, the rail says the files are unavailable instead of implying the repo ignores nothing, and a capped listing says it was truncated.
+
+### Right-click menus
+
+Tracked and unversioned files get different menus because the sections mean different things.
+
+A tracked file offers **Stage / Unstage**, **Show Diff**, **Jump to Source**, **Shelve…**, **Stash…**, **Rollback File**, **Copy as Patch to Clipboard**, **Copy Path**, and **Refresh**. An unversioned file offers **Add to VCS** (`git add`, which moves it into Changes), **Add to .gitignore**, **Show Diff**, **Jump to Source**, **Shelve…**, **Stash…**, **Copy as Patch to Clipboard**, **Copy Path**, **Delete…**, and **Refresh**. Folders get the menu matching their contents, plus **Shelve…** and **Stash…**.
+
+## Shelve and Stash dialog
+
+**Shelve…** and **Stash…** open the same dialog in two modes. Type a name or leave the field blank: the Shelf generates one automatically, the Stash falls back to the git default. The sparkle button drafts a name from the selected paths with the text-generation agent. It stays greyed out until a text-generation agent is picked in Settings.
+
+The difference sits underneath. Shelving stores a Warpforge-owned bundle outside the repo (`shelf.create`). Stashing runs git-native `git stash push` (`stash.push`), so the entry belongs to git rather than to Warpforge.
+
+## Shelf tab
+
+The Shelf lists named bundles, newest first. Each row shows the name, creation time, branch, and file count. Pick one to see its files and a read-only unified preview of the selected file.
+
+The header holds four actions:
+
+| Button | Effect |
+| --- | --- |
+| **Apply** | Restores the files into the working tree and keeps the entry |
+| **Apply & Drop** | Restores the files, then deletes the entry. Asks first |
+| **Refresh** | Re-reads the shelf |
+| **Delete** | Deletes the entry. Asks first |
+
+<Aside type="note">
+  Deleting a shelf entry leaves the working tree untouched. Shelved files do not come back.
+</Aside>
+
+A bundle can also carry a **Recently Deleted** section: files the shelving itself removed from the working tree (shelved untracked originals and tracked deletions). A full Apply brings them back. The confirm dialog lists every file involved before an Apply & Drop or a Delete, so a misclick has a chance to stop.
+
+## Stash tab
+
+The Stash lists git-native entries, newest first. Each row shows the message (or `(no message)`), the `stash@{n}` id, creation time, branch, and file count. Pick one to see its files and a read-only unified preview. The preview of each file carries a **Restore this file** button that restores that single file while keeping the entry (`stash.file`).
+
+The header mirrors the Shelf: **Apply** keeps the entry, **Apply & Drop** restores then drops it with confirmation, plus **Refresh** and **Drop** (confirmed, worktree untouched).
+
+<Aside type="note" title="Shared across worktrees">
+  The stash belongs to the repo, not the task. Entries made in another worktree or terminal show up here too.
+</Aside>
+
+## See also
+
+- [Git in Warpforge](/guides/git-in-warpforge/) — branch tree, committing, push and pull requests
+- [Working in a task](/guides/working-in-a-task/) — review, editing, and AI-drafted text

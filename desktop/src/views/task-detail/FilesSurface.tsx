@@ -166,7 +166,7 @@ export function FilesSurface({
           )}
         </div>
         {!collapsed && (
-          <div className="w-64 shrink-0 border-l border-border/70">
+          <div className="w-72 shrink-0 border-l border-border/70">
             <ProjectFilesPanel
               files={projectFiles}
               error={fileListError}
