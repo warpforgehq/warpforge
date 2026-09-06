@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.18.0
+
+### Minor Changes
+
+- [`2405cf6`](https://github.com/warpforgehq/warpforge/commit/2405cf68021c28979cef0392080367e46c966565) Thanks [@ephor](https://github.com/ephor)! - The Changes panel now shows the whole picture of your working copy. Files you have edited stay under "Changes", brand-new files that git isn't tracking yet get their own "Unversioned Files" group instead of hiding among them, and the eye button reveals everything your .gitignore covers when you need to check on a build output or a local config file. Projects that contain more than one checkout get a node per repository, each labelled with its own branch, so it is clear which repository a change belongs to before you commit it.
+
+- [`1efe1d5`](https://github.com/warpforgehq/warpforge/commit/1efe1d510c6ec70f9dd834bb7e73e4f4e33407d4) Thanks [@ephor](https://github.com/ephor)! - You can now clear a project's "done" shelf in one click instead of deleting finished tasks one at a time. Hover the shelf and click the trash icon; it asks you to confirm first, showing exactly how many will go and how many are being kept because their worktree still holds uncommitted changes worth reviewing.
+
+- [`37b4b1f`](https://github.com/warpforgehq/warpforge/commit/37b4b1fa3685ef366da65d74b9ca368d5d258151) Thanks [@ephor](https://github.com/ephor)! - The Changes rail grows Shelf and Stash tabs. Shelve any file or folder with an auto-generated or AI-drafted name, preview shelved bundles, and unshelve them back; git stash entries list with per-file preview, apply/pop, single-file restore, and drop. Destructive actions (apply-and-drop, delete) ask for confirmation showing exactly which files are involved.
+
+### Patch Changes
+
+- [`f898ecf`](https://github.com/warpforgehq/warpforge/commit/f898ecfa0212e7fafd95f3b49122066a7f27f407) Thanks [@ephor](https://github.com/ephor)! - Tasks you mark handled now actually free the space their conversations used. Until now only tasks that finished on their own counted as closed, so anything you closed yourself kept its full transcript forever — invisible in the sidebar but still on disk, which is what made Warpforge slow down and grow over time. The retention window in Settings → Tasks now applies to them too, and counts from the day you closed the task rather than the last time anything touched it.
+
 ## 0.17.0
 
 ### Minor Changes
