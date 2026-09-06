@@ -572,3 +572,171 @@ fn automation_roundtrip_and_run_retention() {
     assert!(store.load_automation("a1").unwrap().is_none());
     assert!(store.load_automation_runs("a1", None).unwrap().is_empty());
 }
+
+/// `find_settled_tasks` backs the shelf's bulk-delete: it must match both ways
+/// a task becomes "settled" — `status = 'done'` and the manual `settled_override`
+/// — while leaving a merely-waiting task alone, and it must respect the
+/// optional project filter.
+#[test]
+fn find_settled_tasks_matches_done_and_manual_override_only() {
+    let store = Store::open_at(std::path::Path::new(":memory:")).unwrap();
+
+    let mut done = Task::new("proj-a", "done task", "claude", vec![]);
+    done.set_status(TaskStatus::Done);
+    done.files_changed = 0;
+    store.upsert_task(&done).unwrap();
+
+    // A settled task can carry a stale `files_changed` from its last run with
+    // no worktree left to protect — the store still has to report both
+    // columns so the caller (not this query) decides what that means.
+    let mut handled = Task::new("proj-a", "handled task", "claude", vec![]);
+    handled.settled_override = Some(true);
+    handled.files_changed = 2;
+    store.upsert_task(&handled).unwrap();
+
+    let mut handled_with_worktree = Task::new("proj-a", "handled with worktree", "claude", vec![]);
+    handled_with_worktree.settled_override = Some(true);
+    handled_with_worktree.files_changed = 5;
+    handled_with_worktree.worktree = Some("/tmp/wt".into());
+    store.upsert_task(&handled_with_worktree).unwrap();
+
+    let mut waiting = Task::new("proj-a", "waiting task", "claude", vec![]);
+    waiting.set_status(TaskStatus::Waiting);
+    store.upsert_task(&waiting).unwrap();
+
+    let mut other_project = Task::new("proj-b", "other project done", "claude", vec![]);
+    other_project.set_status(TaskStatus::Done);
+    store.upsert_task(&other_project).unwrap();
+
+    let all = store.find_settled_tasks(None).unwrap();
+    let ids: Vec<&str> = all.iter().map(|(id, _, _)| id.as_str()).collect();
+    assert!(ids.contains(&done.id.as_str()));
+    assert!(ids.contains(&handled.id.as_str()));
+    assert!(ids.contains(&handled_with_worktree.id.as_str()));
+    assert!(ids.contains(&other_project.id.as_str()));
+    assert!(!ids.contains(&waiting.id.as_str()));
+
+    let row_for = |id: &str| all.iter().find(|(row_id, _, _)| row_id == id).unwrap();
+    let (_, files_changed, has_worktree) = row_for(&handled.id);
+    assert_eq!(*files_changed, 2);
+    assert!(!has_worktree, "no worktree column was ever set");
+
+    let (_, files_changed, has_worktree) = row_for(&handled_with_worktree.id);
+    assert_eq!(*files_changed, 5);
+    assert!(*has_worktree);
+
+    let scoped = store.find_settled_tasks(Some("proj-a")).unwrap();
+    let scoped_ids: Vec<&str> = scoped.iter().map(|(id, _, _)| id.as_str()).collect();
+    assert!(scoped_ids.contains(&done.id.as_str()));
+    assert!(!scoped_ids.contains(&other_project.id.as_str()));
+}
+
+/// Settling a task sets `settled_override` and deliberately leaves `status`
+/// alone, so every retention query that spelled out `status = 'done'` skipped
+/// exactly the tasks the user had closed. They stayed invisible in the UI and
+/// immortal on disk — over half of a real 480 MB database.
+#[test]
+fn retention_reaches_handled_tasks_that_never_left_waiting() {
+    let store = Store::open_at(std::path::Path::new(":memory:")).unwrap();
+    let cutoff = 1_700_000_000i64;
+
+    let mut handled = Task::new("demo", "marked handled", "claude", vec![]);
+    handled.set_status(TaskStatus::Waiting);
+    handled.settled_override = Some(true);
+    handled.settled_at = Some(cutoff as u64 - 1);
+    handled.updated_at = cutoff as u64 - 1;
+    store.upsert_task(&handled).unwrap();
+    store
+        .save_session_update(
+            &handled.id,
+            &wire::SessionUpdate::AgentText { text: "x".into() },
+        )
+        .unwrap();
+
+    let mut open = Task::new("demo", "still open", "claude", vec![]);
+    open.set_status(TaskStatus::Waiting);
+    open.updated_at = cutoff as u64 - 1;
+    store.upsert_task(&open).unwrap();
+    store
+        .save_session_update(
+            &open.id,
+            &wire::SessionUpdate::AgentText { text: "y".into() },
+        )
+        .unwrap();
+
+    let expired: Vec<String> = store
+        .find_expired_closed_tasks(cutoff)
+        .unwrap()
+        .into_iter()
+        .map(|(id, _)| id)
+        .collect();
+    assert!(expired.contains(&handled.id), "handled task must expire");
+    assert!(!expired.contains(&open.id), "open task must survive");
+
+    assert_eq!(store.prune_finished_session_updates(cutoff).unwrap(), 1);
+    assert!(store.load_session_updates(&handled.id).unwrap().is_empty());
+    assert_eq!(store.load_session_updates(&open.id).unwrap().len(), 1);
+}
+
+/// The auto-settle sweep looks for tasks that are *not* settled. Its predicate
+/// is the negation of the one above, and `settled_override` is nullable, so a
+/// never-settled row must not fall into SQL's three-valued hole.
+#[test]
+fn auto_settle_sweep_still_skips_already_handled_tasks() {
+    let store = Store::open_at(std::path::Path::new(":memory:")).unwrap();
+    let cutoff = 1_700_000_000i64;
+
+    let mut never_settled = Task::new("demo", "untouched", "claude", vec![]);
+    never_settled.set_status(TaskStatus::Waiting);
+    never_settled.updated_at = cutoff as u64 - 1;
+    store.upsert_task(&never_settled).unwrap();
+
+    let mut handled = Task::new("demo", "already handled", "claude", vec![]);
+    handled.set_status(TaskStatus::Waiting);
+    handled.settled_override = Some(true);
+    handled.updated_at = cutoff as u64 - 1;
+    store.upsert_task(&handled).unwrap();
+
+    let ids = store.find_ignored_waiting_tasks(cutoff).unwrap();
+    assert_eq!(ids, vec![never_settled.id]);
+}
+
+/// Retention counts from when the user closed the task. Rows written before
+/// `settled_at` existed have none, and must fall back to `updated_at` rather
+/// than comparing NULL and never expiring.
+#[test]
+fn retention_counts_from_settled_at_and_falls_back_to_updated_at() {
+    let store = Store::open_at(std::path::Path::new(":memory:")).unwrap();
+    let cutoff = 1_700_000_000i64;
+
+    // Closed long ago but touched since: the settle date is what counts.
+    let mut closed_early = Task::new("demo", "closed early", "claude", vec![]);
+    closed_early.set_status(TaskStatus::Done);
+    closed_early.settled_at = Some(cutoff as u64 - 1);
+    closed_early.updated_at = cutoff as u64 + 1_000;
+    store.upsert_task(&closed_early).unwrap();
+
+    // Closed after the cutoff: too recent to expire either way.
+    let mut closed_recently = Task::new("demo", "closed recently", "claude", vec![]);
+    closed_recently.set_status(TaskStatus::Done);
+    closed_recently.settled_at = Some(cutoff as u64 + 1);
+    closed_recently.updated_at = cutoff as u64 - 1_000;
+    store.upsert_task(&closed_recently).unwrap();
+
+    // Pre-`settled_at` row: `updated_at` carries the date.
+    let mut legacy = Task::new("demo", "legacy row", "claude", vec![]);
+    legacy.set_status(TaskStatus::Done);
+    legacy.settled_at = None;
+    legacy.updated_at = cutoff as u64 - 1;
+    store.upsert_task(&legacy).unwrap();
+
+    let expired: Vec<String> = store
+        .find_expired_closed_tasks(cutoff)
+        .unwrap()
+        .into_iter()
+        .map(|(id, _)| id)
+        .collect();
+    assert!(expired.contains(&closed_early.id));
+    assert!(expired.contains(&legacy.id));
+    assert!(!expired.contains(&closed_recently.id));
+}

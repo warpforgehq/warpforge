@@ -84,13 +84,21 @@ impl Store {
         Ok(map)
     }
 
-    /// Delete the session history of every finished task (`status = 'done'`)
-    /// whose `updated_at` predates `cutoff` (epoch seconds). Returns the number
-    /// of rows removed. Live work is never touched.
+    /// Delete the session history of every task the user has closed — see
+    /// [`super::SETTLED_TASK`] — that was left alone past `cutoff` (epoch
+    /// seconds). Returns the number of rows removed. Live work is never
+    /// touched.
     pub fn prune_finished_session_updates(&self, cutoff: i64) -> Result<usize> {
         let deleted = self.conn.execute(
-            "DELETE FROM session_updates
-              WHERE task_id IN (SELECT id FROM tasks WHERE status = 'done' AND updated_at < ?1)",
+            &format!(
+                "DELETE FROM session_updates
+                  WHERE task_id IN (
+                    SELECT id FROM tasks
+                     WHERE {settled} AND {since} < ?1
+                  )",
+                settled = super::SETTLED_TASK,
+                since = super::SETTLED_SINCE,
+            ),
             rusqlite::params![cutoff],
         )?;
         Ok(deleted)

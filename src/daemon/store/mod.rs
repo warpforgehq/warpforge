@@ -23,6 +23,23 @@ mod tracker;
 pub use snapshot::fold_for_snapshot;
 pub use tracker::TrackerLink;
 
+/// SQL for "the user considers this task closed", mirroring the desktop's
+/// `isSettledTask` (`status === "done" || settledOverride === true`).
+///
+/// Defined once because it was not: settling a task sets `settled_override`
+/// and deliberately leaves `status` alone, so every retention query that
+/// spelled out `status = 'done'` silently skipped every task the user had
+/// actually closed. They stayed invisible in the UI and immortal on disk.
+/// `settled_override` is nullable, so it is coalesced rather than compared
+/// directly: `NOT (… OR NULL = 1)` is NULL, not true, and would drop exactly
+/// the never-settled rows a negated use of this predicate means to keep.
+const SETTLED_TASK: &str = "(status = 'done' OR COALESCE(settled_override, 0) = 1)";
+
+/// The timestamp retention windows measure from: when the user closed the
+/// task, falling back to its last touch on rows written before `settled_at`
+/// existed.
+const SETTLED_SINCE: &str = "COALESCE(settled_at, updated_at)";
+
 fn db_path() -> PathBuf {
     dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("."))

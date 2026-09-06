@@ -4,7 +4,7 @@ use anyhow::Result;
 
 use warpforge_protocol as wire;
 
-use super::Store;
+use super::{Store, SETTLED_SINCE, SETTLED_TASK};
 use crate::daemon::task::{Task, TaskStatus};
 
 impl Store {
@@ -149,14 +149,14 @@ impl Store {
     /// settled. Timestamps come from the database so the caller can run this
     /// fully off the actor loop.
     pub fn find_ignored_waiting_tasks(&self, cutoff: i64) -> Result<Vec<String>> {
-        let mut stmt = self.conn.prepare(
+        let mut stmt = self.conn.prepare(&format!(
             "SELECT id FROM tasks
               WHERE status = 'waiting'
                 AND files_changed = 0
-                AND (settled_override IS NULL OR settled_override = 0)
+                AND NOT {SETTLED_TASK}
                 AND (snoozed_until IS NULL OR snoozed_until <= strftime('%s','now'))
-                AND updated_at < ?1",
-        )?;
+                AND updated_at < ?1"
+        ))?;
         let ids = stmt
             .query_map(rusqlite::params![cutoff], |row| row.get::<_, String>(0))?
             .filter_map(|r| r.ok())
@@ -164,16 +164,43 @@ impl Store {
         Ok(ids)
     }
 
-    /// Closed tasks untouched past `cutoff`, with their `files_changed` count
+    /// Closed tasks left alone past `cutoff`, with their `files_changed` count
     /// so the caller can keep the ones that still hold unmerged changes.
+    /// "Closed" is the user's notion, not the status column's — see
+    /// [`SETTLED_TASK`].
     pub fn find_expired_closed_tasks(&self, cutoff: i64) -> Result<Vec<(String, i64)>> {
-        let mut stmt = self.conn.prepare(
+        let mut stmt = self.conn.prepare(&format!(
             "SELECT id, files_changed FROM tasks
-              WHERE status = 'done' AND updated_at < ?1",
-        )?;
+              WHERE {SETTLED_TASK} AND {SETTLED_SINCE} < ?1"
+        ))?;
         let rows = stmt
             .query_map(rusqlite::params![cutoff], |row| {
                 Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(rows)
+    }
+
+    /// Every settled task (`status = 'done'` or manually marked handled via
+    /// `settled_override`), with `files_changed` and whether a worktree still
+    /// exists for it — together they tell the caller whether there is
+    /// actually unmerged work at risk, not just a stale count from the last
+    /// run. Scoped to `project` when given. Backs the shelf's bulk-delete
+    /// action.
+    pub fn find_settled_tasks(&self, project: Option<&str>) -> Result<Vec<(String, i64, bool)>> {
+        let mut stmt = self.conn.prepare(&format!(
+            "SELECT id, files_changed, (worktree IS NOT NULL AND worktree <> '') FROM tasks
+              WHERE {SETTLED_TASK}
+                AND (?1 IS NULL OR project = ?1)"
+        ))?;
+        let rows = stmt
+            .query_map(rusqlite::params![project], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, bool>(2)?,
+                ))
             })?
             .filter_map(|r| r.ok())
             .collect();
