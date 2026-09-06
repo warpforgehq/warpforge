@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.0
+
+### Minor Changes
+
+- [`fdb92ae`](https://github.com/warpforgehq/warpforge/commit/fdb92ae4f1427c0b9757dc6969789e9086a57cf3) Thanks [@ephor](https://github.com/ephor)! - Add native glass transparency with Appearance controls. Turn on the frosted-glass look and tune Glass opacity and blur radius, or extend the effect across the whole window with body glass, from Settings → Appearance.
+
 ## 0.18.0
 
 ### Minor Changes
