@@ -123,6 +123,154 @@ impl DaemonHandle {
             .unwrap_or_else(|_| Err("daemon dropped the ignore request".into()))
     }
 
+    pub async fn shelf_list(&self, task_id: &str) -> wire::ShelfList {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::ShelfList {
+            task_id: task_id.to_string(),
+            reply: tx,
+        })
+        .await;
+        rx.await.unwrap_or_default()
+    }
+
+    pub async fn shelf_create(
+        &self,
+        task_id: &str,
+        name: String,
+        paths: Option<Vec<String>>,
+    ) -> Result<wire::ShelfEntry, String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::ShelfCreate {
+            task_id: task_id.to_string(),
+            name,
+            paths,
+            reply: tx,
+        })
+        .await;
+        rx.await
+            .unwrap_or_else(|_| Err("daemon dropped the shelve request".into()))
+    }
+
+    pub async fn shelf_get(&self, task_id: &str, id: &str) -> Result<wire::ShelfDiff, String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::ShelfGet {
+            task_id: task_id.to_string(),
+            id: id.to_string(),
+            reply: tx,
+        })
+        .await;
+        rx.await
+            .unwrap_or_else(|_| Err("daemon dropped the shelf read request".into()))
+    }
+
+    pub async fn shelf_apply(&self, task_id: &str, id: &str, drop: bool) -> Result<(), String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::ShelfApply {
+            task_id: task_id.to_string(),
+            id: id.to_string(),
+            drop,
+            reply: tx,
+        })
+        .await;
+        rx.await
+            .unwrap_or_else(|_| Err("daemon dropped the unshelve request".into()))
+    }
+
+    pub async fn shelf_drop(&self, task_id: &str, id: &str) -> Result<(), String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::ShelfDrop {
+            task_id: task_id.to_string(),
+            id: id.to_string(),
+            reply: tx,
+        })
+        .await;
+        rx.await
+            .unwrap_or_else(|_| Err("daemon dropped the shelf delete request".into()))
+    }
+
+    pub async fn stash_list(&self, task_id: &str) -> wire::StashList {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::StashList {
+            task_id: task_id.to_string(),
+            reply: tx,
+        })
+        .await;
+        rx.await.unwrap_or_default()
+    }
+
+    pub async fn stash_push(
+        &self,
+        task_id: &str,
+        message: String,
+        paths: Option<Vec<String>>,
+    ) -> Result<wire::StashEntry, String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::StashPush {
+            task_id: task_id.to_string(),
+            message,
+            paths,
+            reply: tx,
+        })
+        .await;
+        rx.await
+            .unwrap_or_else(|_| Err("daemon dropped the stash request".into()))
+    }
+
+    pub async fn stash_get(&self, task_id: &str, id: &str) -> Result<wire::StashDiff, String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::StashGet {
+            task_id: task_id.to_string(),
+            id: id.to_string(),
+            reply: tx,
+        })
+        .await;
+        rx.await
+            .unwrap_or_else(|_| Err("daemon dropped the stash read request".into()))
+    }
+
+    pub async fn stash_apply(&self, task_id: &str, id: &str, pop: bool) -> Result<(), String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::StashApply {
+            task_id: task_id.to_string(),
+            id: id.to_string(),
+            pop,
+            reply: tx,
+        })
+        .await;
+        rx.await
+            .unwrap_or_else(|_| Err("daemon dropped the stash apply request".into()))
+    }
+
+    pub async fn stash_checkout_file(
+        &self,
+        task_id: &str,
+        id: &str,
+        paths: Vec<String>,
+    ) -> Result<(), String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::StashFile {
+            task_id: task_id.to_string(),
+            id: id.to_string(),
+            paths,
+            reply: tx,
+        })
+        .await;
+        rx.await
+            .unwrap_or_else(|_| Err("daemon dropped the stash restore request".into()))
+    }
+
+    pub async fn stash_drop(&self, task_id: &str, id: &str) -> Result<(), String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::StashDrop {
+            task_id: task_id.to_string(),
+            id: id.to_string(),
+            reply: tx,
+        })
+        .await;
+        rx.await
+            .unwrap_or_else(|_| Err("daemon dropped the stash delete request".into()))
+    }
+
     pub async fn git_switch_branch(&self, task_id: &str, branch: &str) -> wire::GitOpResult {
         let (tx, rx) = oneshot::channel();
         self.send(Command::GitSwitchBranch {

@@ -1,35 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { Eye, EyeOff, RefreshCw, Undo2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 
 import { cn } from "@/lib/utils";
-import { useUi } from "@/store/ui";
 
-import { daemon } from "../daemon";
-import type { FileDiff, GitIgnoredFiles, GitRoots } from "../protocol";
-import { daemonQuery } from "../query";
-import { buildChangesRoot, ignoredSectionState } from "./changes/changesTree";
-import { CommitBox } from "./changes/CommitBox";
-import { FileTreeRow } from "./changes/FileTreeRow";
-import { IgnoredFiles } from "./changes/IgnoredFiles";
-import { reportGitFailure } from "./changes/reportGitFailure";
-import { collectFolderKeys, flattenNode, type FlatRow } from "./changes/treeUtils";
-import { useChangesContextMenu } from "./changes/useChangesContextMenu";
+import type { FileDiff } from "../protocol";
+import { CommitPane } from "./changes/CommitPane";
+import { ShelveDialog } from "./changes/ShelveDialog";
+import { ShelfTab } from "./changes/ShelfTab";
+import { StashTab } from "./changes/StashTab";
+
+type RailTab = "commit" | "shelf" | "stash";
 
 /**
- * JetBrains-Air "Changes" rail: changed files grouped into "Changes" and
- * "Unversioned Files" (once per git root when a project holds several), with
- * per-file and per-folder staging checkboxes, +adds/-dels counts, an ignored
- * files toggle, and an inline commit box. Clicking a file selects it in the
- * diff view.
- *
- * Performance: the tree is flattened into a virtual list — only visible rows
- * are mounted in the DOM, so 900+ files render without jank.
+ * Changes rail shell: Commit / Shelf / Stash tabs around the panes that do
+ * the work. Shelving is requested from the Commit pane (toolbar button or
+ * context menu) and lands the user on the Shelf tab; the Stash tab is a
+ * placeholder until stash support lands.
  */
-
-const ROW_HEIGHT = 28;
-
 export function ChangesRail({
   project,
   files,
@@ -39,7 +25,7 @@ export function ChangesRail({
   onSelect,
   taskId,
   onOpenFile,
-  commitExpanded: controlledCommitExpanded,
+  commitExpanded,
   onCommitExpandedChange,
   onCommitted,
   onRefresh,
@@ -62,376 +48,75 @@ export function ChangesRail({
   onCommitted: () => void;
   onRefresh: () => void;
 }) {
-  const allPaths = useMemo(() => files.map((f) => f.path), [files]);
-  const filesByPath = useMemo(() => new Map(files.map((f) => [f.path, f])), [files]);
-  const [staged, setStaged] = useState<Set<string>>(() => new Set(allPaths));
-  const [message, setMessage] = useState("");
-  const [amend, setAmend] = useState(false);
-  const [localCommitExpanded, setLocalCommitExpanded] = useState(false);
-  const commitExpanded = controlledCommitExpanded ?? localCommitExpanded;
-  const setCommitExpanded = (expanded: boolean) => {
-    setLocalCommitExpanded(expanded);
-    onCommitExpandedChange?.(expanded);
-  };
-  const [busy, setBusy] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const textGenAgentId = useUi((s) => s.textGenAgentId);
-  const textGenModel = useUi((s) => s.textGenModel);
-  const [rollbackBusy, setRollbackBusy] = useState(false);
-  const [rollbackConfirmation, setRollbackConfirmation] = useState<string | null>(null);
-  const [showIgnored, setShowIgnored] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [tab, setTab] = useState<RailTab>("commit");
+  const [bundleDialog, setBundleDialog] = useState<{
+    mode: "shelf" | "stash";
+    paths: string[];
+  } | null>(null);
 
-  // A project can hold more than one checkout (nested repos). One root keeps
-  // the flat tree; several group the files under a node per root.
-  const rootsQuery = useQuery({
-    queryFn: daemonQuery<GitRoots>("git.roots", { task_id: taskId }),
-    queryKey: ["gitRoots", taskId],
-  });
-  const roots = useMemo(() => rootsQuery.data?.roots ?? [], [rootsQuery.data]);
-
-  // Ignored files are their own cheap read (`git.ignored` runs one
-  // `ls-files`): the toggle must not recompute the full diff, which on a
-  // large repo means re-parsing every tracked+untracked hunk.
-  const ignoredQuery = useQuery({
-    enabled: showIgnored,
-    queryFn: daemonQuery<GitIgnoredFiles>("git.ignored", { task_id: taskId }),
-    queryKey: ["gitIgnored", taskId],
-  });
-  const ignoredFiles = ignoredQuery.data?.ignored ?? [];
-  // No data and a dead request (not merely pending) also means the scan
-  // never ran — say so instead of implying the repo ignores nothing.
-  const ignoredAvailable = ignoredQuery.data?.available ?? !ignoredQuery.isError;
-  const ignoredTruncated = ignoredQuery.data?.truncated ?? false;
-  const ignoredState = ignoredSectionState(
-    showIgnored,
-    ignoredQuery.isPending,
-    ignoredFiles,
-    ignoredAvailable,
-  );
-
-  const root = useMemo(
-    () => buildChangesRoot({ files, project, roots, untrackedAvailable, untrackedPaths }),
-    [files, project, roots, untrackedAvailable, untrackedPaths],
-  );
-
-  // Small change sets: expand all folders. Large ones: only the top-level
-  // group nodes, so a big diff still opens instantly.
-  const [openFolders, setOpenFolders] = useState<Set<string>>(() => {
-    const all = new Set<string>();
-    collectFolderKeys(root, "", all);
-    if (files.length <= 50) {
-      return all;
-    }
-    return new Set([...root.children.values()].map((child) => child.name));
-  });
-
-  // Re-sync selection as the diff's file set changes (keep prior choices).
-  useEffect(() => {
-    setStaged((prev) => {
-      const next = new Set(allPaths.filter((p) => prev.has(p) || prev.size === 0));
-      if (next.size === prev.size && [...next].every((path) => prev.has(path))) {
-        return prev;
-      }
-      return next;
-    });
-  }, [allPaths]);
-
-  const rollbackSelectionKey = useMemo(
-    () => `${allPaths.join("\0")}\n${[...staged].sort().join("\0")}`,
-    [allPaths, staged],
-  );
-  const rollbackConfirm = rollbackConfirmation === rollbackSelectionKey;
-
-  // Group nodes arrive after the first render (the roots read and the diff
-  // land separately), so open each one the first time it shows up — without
-  // reopening a group the user has since collapsed.
-  const autoOpened = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    const fresh = [...root.children.values()]
-      .map((child) => child.name)
-      .filter((name) => !autoOpened.current.has(name));
-    if (fresh.length === 0) {
-      return;
-    }
-    for (const name of fresh) {
-      autoOpened.current.add(name);
-    }
-    setOpenFolders((prev) => new Set([...prev, ...fresh]));
-  }, [root]);
-
-  // Flatten visible tree rows.
-  const rows = useMemo(() => {
-    const out: FlatRow[] = [];
-    flattenNode(root, 0, "", openFolders, out);
-    return out;
-  }, [root, openFolders]);
-
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    estimateSize: () => ROW_HEIGHT,
-    getScrollElement: () => scrollRef.current,
-    overscan: 20,
-  });
-
-  const toggleFolder = useCallback((fk: string) => {
-    setOpenFolders((prev) => {
-      const next = new Set(prev);
-      if (next.has(fk)) {
-        next.delete(fk);
-      } else {
-        next.add(fk);
-      }
-      return next;
-    });
-  }, []);
-
-  const toggle = useCallback((paths: string[], on: boolean) => {
-    setStaged((prev) => {
-      const next = new Set(prev);
-      for (const p of paths) {
-        if (on) {
-          next.add(p);
-        } else {
-          next.delete(p);
-        }
-      }
-      return next;
-    });
-  }, []);
-
-  const handleContextMenu = useChangesContextMenu({
-    filesByPath,
-    onRefresh,
-    onSelect,
-    staged,
-    taskId,
-    toggle,
-    untrackedPaths,
-  });
-
-  const canCommit = !busy && staged.size > 0 && (message.trim().length > 0 || amend);
-
-  /**
-   * Turning on amend fills the box with the commit being rewritten, so the
-   * message is there to edit instead of having to be retyped. Anything the user
-   * wrote themselves is left alone, and unchecking only takes back a message we
-   * put there ourselves.
-   */
-  const prefilledMessage = useRef<string | null>(null);
-  const toggleAmend = async (next: boolean) => {
-    setAmend(next);
-    if (!next) {
-      if (prefilledMessage.current !== null && message === prefilledMessage.current) {
-        setMessage("");
-      }
-      prefilledMessage.current = null;
-      return;
-    }
-    if (message.trim().length > 0) return;
-    try {
-      const last = await daemon.lastCommitMessage(taskId);
-      if (!last) return;
-      prefilledMessage.current = last;
-      setMessage((current) => (current.trim().length > 0 ? current : last));
-    } catch (e) {
-      reportGitFailure("Could not read the last commit message", e);
-    }
-  };
-  const canRollback = !rollbackBusy && staged.size > 0;
-
-  const commit = async () => {
-    setBusy(true);
-    try {
-      const all = staged.size === allPaths.length;
-      await daemon.request("git.commit", {
-        amend,
-        files: all ? null : [...staged],
-        message: message.trim(),
-        task_id: taskId,
-      });
-      setMessage("");
-      setAmend(false);
-      setCommitExpanded(false);
-      onCommitted();
-    } catch (e) {
-      reportGitFailure(amend ? "Could not amend the commit" : "Could not commit", e);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const generateMessage = async () => {
-    if (!textGenAgentId || generating) {
-      return;
-    }
-    setGenerating(true);
-    try {
-      const text = await daemon.generateText(
-        taskId,
-        textGenAgentId,
-        "commit_message",
-        textGenModel ?? undefined,
-      );
-      setMessage(text);
-    } catch (e) {
-      reportGitFailure("Could not draft a commit message", e);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const rollbackChecked = async () => {
-    if (!canRollback) {
-      return;
-    }
-    if (!rollbackConfirm) {
-      setRollbackConfirmation(rollbackSelectionKey);
-      return;
-    }
-    setRollbackBusy(true);
-    try {
-      await Promise.all(
-        [...staged].flatMap((path) => {
-          const file = filesByPath.get(path);
-          if (!file) return [];
-          const indices = file.status === "added" ? [0] : file.hunks.map((_, i) => i).reverse();
-          return indices.map((hunkIndex) =>
-            daemon.request("diff.resolveHunk", {
-              file: path,
-              hunk_index: hunkIndex,
-              resolution: "reject",
-              task_id: taskId,
-            }),
-          );
-        }),
-      );
-      setRollbackConfirmation(null);
-      onRefresh();
-    } catch (e) {
-      reportGitFailure("Could not roll back the selected changes", e);
-    } finally {
-      setRollbackBusy(false);
-    }
-  };
+  const tabs: { id: RailTab; label: string }[] = [
+    { id: "commit", label: "Commit" },
+    { id: "shelf", label: "Shelf" },
+    { id: "stash", label: "Stash" },
+  ];
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-card">
-      <div className="flex h-9 items-center gap-2 border-b border-rule px-3 text-sm font-semibold">
-        <span className="min-w-0 flex-1 truncate">Changes</span>
-        <button
-          type="button"
-          aria-label="Refresh changes"
-          title="Refresh changes"
-          onClick={onRefresh}
-          className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-        >
-          <RefreshCw className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          aria-label={rollbackConfirm ? "Confirm rollback checked files" : "Rollback checked files"}
-          title={
-            rollbackConfirm ? "Click again to rollback checked files" : "Rollback checked files"
-          }
-          disabled={!canRollback}
-          onClick={rollbackChecked}
-          className={cn(
-            "rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40",
-            rollbackConfirm && "text-destructive hover:text-destructive",
-          )}
-        >
-          <Undo2 className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          aria-label={showIgnored ? "Hide ignored files" : "Show ignored files"}
-          title={showIgnored ? "Hide ignored files" : "Show ignored files"}
-          aria-pressed={showIgnored}
-          onClick={() => setShowIgnored((on) => !on)}
-          className={cn(
-            "rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground",
-            showIgnored && "text-foreground",
-          )}
-        >
-          {showIgnored ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
-        </button>
-      </div>
-      <div className="flex h-8 items-center gap-2 border-b border-rule bg-secondary/55 px-3 text-xs text-muted-foreground">
-        <input
-          aria-label="Stage all files"
-          type="checkbox"
-          checked={staged.size === allPaths.length && allPaths.length > 0}
-          disabled={allPaths.length === 0}
-          ref={(el) => {
-            if (el) el.indeterminate = staged.size > 0 && staged.size < allPaths.length;
-          }}
-          onChange={(e) => setStaged(e.target.checked ? new Set(allPaths) : new Set())}
-          className="size-3 accent-primary"
-        />
-        <span className="tnum">
-          {staged.size}/{allPaths.length} files
-        </span>
+      <div className="flex items-center gap-1 border-b border-rule px-2 pt-1" role="tablist">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => setTab(t.id)}
+            className={cn(
+              "rounded-t px-2.5 py-1.5 text-xs font-medium transition-colors",
+              tab === t.id
+                ? "bg-secondary/60 text-foreground"
+                : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {!untrackedAvailable && (
-        <p className="border-b border-rule px-3 py-1.5 text-xs text-warn">
-          Unversioned files unavailable.
-        </p>
-      )}
-
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto py-1.5">
-        {rows.length === 0 ? (
-          <p className="px-3 py-2 text-xs text-muted-foreground">No changes.</p>
-        ) : (
-          <div className="relative w-max min-w-full" style={{ height: virtualizer.getTotalSize() }}>
-            {virtualizer.getVirtualItems().map((vi) => {
-              const row = rows[vi.index];
-              return (
-                <FileTreeRow
-                  key={vi.key}
-                  row={row}
-                  vi={vi}
-                  staged={staged}
-                  selected={selected}
-                  openFolders={openFolders}
-                  onToggle={toggle}
-                  onToggleFolder={toggleFolder}
-                  onSelect={onSelect}
-                  onContextMenu={handleContextMenu}
-                />
-              );
-            })}
-          </div>
+      <div className="min-h-0 flex-1">
+        {tab === "commit" && (
+          <CommitPane
+            project={project}
+            files={files}
+            untrackedPaths={untrackedPaths}
+            untrackedAvailable={untrackedAvailable}
+            selected={selected}
+            onSelect={onSelect}
+            taskId={taskId}
+            onOpenFile={onOpenFile}
+            onShelveRequest={(paths) => setBundleDialog({ mode: "shelf", paths })}
+            onStashRequest={(paths) => setBundleDialog({ mode: "stash", paths })}
+            commitExpanded={commitExpanded}
+            onCommitExpandedChange={onCommitExpandedChange}
+            onCommitted={onCommitted}
+            onRefresh={onRefresh}
+          />
         )}
-
-        <IgnoredFiles
-          state={ignoredState}
-          files={ignoredFiles}
-          truncated={ignoredTruncated}
-          selected={selected}
-          onSelect={onSelect}
-          onOpenFile={onOpenFile}
-        />
+        {tab === "shelf" && <ShelfTab taskId={taskId} onRefresh={onRefresh} />}
+        {tab === "stash" && <StashTab taskId={taskId} onRefresh={onRefresh} />}
       </div>
 
-      {files.length > 0 && (
-        <CommitBox
-          commitExpanded={commitExpanded}
-          setCommitExpanded={setCommitExpanded}
-          stagedSize={staged.size}
-          message={message}
-          setMessage={setMessage}
-          amend={amend}
-          setAmend={(v) => void toggleAmend(v)}
-          busy={busy}
-          generating={generating}
-          canCommit={canCommit}
-          onCommit={commit}
-          onGenerate={generateMessage}
-          textGenAgentId={textGenAgentId}
-        />
-      )}
+      <ShelveDialog
+        mode={bundleDialog?.mode ?? "shelf"}
+        paths={bundleDialog?.paths ?? null}
+        taskId={taskId}
+        onClose={() => setBundleDialog(null)}
+        onShelved={() => {
+          const mode = bundleDialog?.mode ?? "shelf";
+          setBundleDialog(null);
+          setTab(mode === "shelf" ? "shelf" : "stash");
+          onRefresh();
+        }}
+      />
     </div>
   );
 }

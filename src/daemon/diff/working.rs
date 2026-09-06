@@ -23,6 +23,26 @@ pub async fn tracked_diff(repo: &str) -> Result<Vec<wire::FileDiff>> {
     })
 }
 
+/// One untracked path as a whole-file addition. Shared with the shelf, which
+/// rebuilds the same shape when previewing shelved untracked files.
+pub(super) fn added_file_diff(path: &str, content: &str) -> wire::FileDiff {
+    let lines: Vec<String> = content.lines().map(|l| format!("+{l}")).collect();
+    let new_lines = lines.len() as u32;
+    wire::FileDiff {
+        path: path.to_string(),
+        old_path: None,
+        status: wire::FileDiffStatus::Added,
+        hunks: vec![wire::Hunk {
+            old_start: 0,
+            old_lines: 0,
+            new_start: 1,
+            new_lines,
+            lines,
+            resolution: None,
+        }],
+    }
+}
+
 /// Untracked files, each as a whole-file addition. `Err` means the scan
 /// itself failed (e.g. the repo became unreadable) — distinct from "no
 /// untracked files", which is `Ok(vec![])`.
@@ -43,21 +63,7 @@ pub async fn untracked_diff(repo: &str) -> Result<Vec<wire::FileDiff>> {
         let Ok(content) = std::fs::read_to_string(std::path::Path::new(repo).join(name)) else {
             continue;
         };
-        let lines: Vec<String> = content.lines().map(|l| format!("+{l}")).collect();
-        let new_lines = lines.len() as u32;
-        files.push(wire::FileDiff {
-            path: name.to_string(),
-            old_path: None,
-            status: wire::FileDiffStatus::Added,
-            hunks: vec![wire::Hunk {
-                old_start: 0,
-                old_lines: 0,
-                new_start: 1,
-                new_lines,
-                lines,
-                resolution: None,
-            }],
-        });
+        files.push(added_file_diff(name, &content));
     }
     Ok(files)
 }

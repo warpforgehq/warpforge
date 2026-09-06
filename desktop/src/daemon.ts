@@ -1165,7 +1165,7 @@ export class DaemonClient {
   async generateText(
     taskId: string,
     agentId: string,
-    kind: "commit_message" | "pr_description" | "task_title" | "handoff",
+    kind: "commit_message" | "pr_description" | "task_title" | "handoff" | "shelf_name",
     model?: string,
     options?: { accountId?: string; input?: string },
   ): Promise<string> {

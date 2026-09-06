@@ -401,6 +401,75 @@ pub enum Command {
         paths: Vec<String>,
         reply: oneshot::Sender<Result<(), String>>,
     },
+    /// List the task repo's shelf bundles, newest first.
+    ShelfList {
+        task_id: String,
+        reply: oneshot::Sender<wire::ShelfList>,
+    },
+    /// Shelve paths (or every change) and revert the worktree.
+    ShelfCreate {
+        task_id: String,
+        name: String,
+        paths: Option<Vec<String>>,
+        reply: oneshot::Sender<Result<wire::ShelfEntry, String>>,
+    },
+    /// One shelf bundle with its files as diffs.
+    ShelfGet {
+        task_id: String,
+        id: String,
+        reply: oneshot::Sender<Result<wire::ShelfDiff, String>>,
+    },
+    /// Unshelve a bundle back into the worktree.
+    ShelfApply {
+        task_id: String,
+        id: String,
+        drop: bool,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
+    /// Delete a shelf bundle.
+    ShelfDrop {
+        task_id: String,
+        id: String,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
+    /// List the task repo's stash entries, newest first.
+    StashList {
+        task_id: String,
+        reply: oneshot::Sender<wire::StashList>,
+    },
+    /// Stash paths (or everything) with `git stash push`.
+    StashPush {
+        task_id: String,
+        message: String,
+        paths: Option<Vec<String>>,
+        reply: oneshot::Sender<Result<wire::StashEntry, String>>,
+    },
+    /// One stash entry with its files as diffs.
+    StashGet {
+        task_id: String,
+        id: String,
+        reply: oneshot::Sender<Result<wire::StashDiff, String>>,
+    },
+    /// Apply or pop a whole stash entry.
+    StashApply {
+        task_id: String,
+        id: String,
+        pop: bool,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
+    /// Restore paths out of a stash entry into the worktree.
+    StashFile {
+        task_id: String,
+        id: String,
+        paths: Vec<String>,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
+    /// Drop a stash entry.
+    StashDrop {
+        task_id: String,
+        id: String,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
     /// List this repo's `.gitignore`'d paths (the "Show Ignored Files"
     /// toggle), without recomputing the full working-tree diff.
     GitIgnored {

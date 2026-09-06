@@ -608,6 +608,49 @@ export interface GitRoots {
   roots: GitRoot[];
 }
 
+/** One named bundle of shelved uncommitted changes. */
+export interface ShelfEntry {
+  id: string;
+  name: string;
+  /** Unix seconds. */
+  createdAt: number;
+  branch?: string | null;
+  files: string[];
+}
+
+/** Result of `shelf.list`. */
+export interface ShelfList {
+  entries: ShelfEntry[];
+}
+
+/** Result of `shelf.get`: the bundle plus its files as diffs. */
+export interface ShelfDiff {
+  entry: ShelfEntry;
+  files: FileDiff[];
+}
+
+/** One `git stash` entry. */
+export interface StashEntry {
+  /** `stash@{n}`. */
+  id: string;
+  message: string;
+  branch?: string | null;
+  /** Unix seconds. */
+  createdAt: number;
+  files: string[];
+}
+
+/** Result of `stash.list`. */
+export interface StashList {
+  entries: StashEntry[];
+}
+
+/** Result of `stash.get`: the entry plus its files as diffs. */
+export interface StashDiff {
+  entry: StashEntry;
+  files: FileDiff[];
+}
+
 /** Result of `git.ignored` — the toggle's own cheap read, so it never pays
  * for a full tracked+untracked recompute. */
 export interface GitIgnoredFiles {

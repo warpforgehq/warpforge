@@ -28,6 +28,8 @@ export function useChangesContextMenu({
   filesByPath,
   onRefresh,
   onSelect,
+  onShelve,
+  onStash,
   staged,
   taskId,
   toggle,
@@ -36,6 +38,10 @@ export function useChangesContextMenu({
   filesByPath: Map<string, FileDiff>;
   onRefresh: () => void;
   onSelect: (path: string) => void;
+  /** Open the Shelve dialog for these paths. */
+  onShelve: (paths: string[]) => void;
+  /** Open the Stash dialog for these paths. */
+  onStash: (paths: string[]) => void;
   staged: Set<string>;
   taskId: string;
   toggle: (paths: string[], on: boolean) => void;
@@ -65,6 +71,8 @@ export function useChangesContextMenu({
           { type: "separator" },
           ...shared,
           { type: "separator" },
+          { type: "item", id: "shelve", label: "Shelve…" },
+          { type: "item", id: "stash", label: "Stash…" },
           ...tail,
           { type: "item", id: "del", label: "Delete…" },
           { type: "separator" },
@@ -79,6 +87,8 @@ export function useChangesContextMenu({
         },
         ...shared,
         { type: "separator" },
+        { type: "item", id: "shelve", label: "Shelve…" },
+        { type: "item", id: "stash", label: "Stash…" },
         { type: "item", id: "rollback", label: "Rollback File" },
         { type: "separator" },
         ...tail,
@@ -106,6 +116,8 @@ export function useChangesContextMenu({
             { type: "item", id: "addVcs", label: "Add to VCS" },
             { type: "item", id: "ignore", label: "Add to .gitignore" },
             { type: "separator" },
+            { type: "item", id: "shelve", label: "Shelve…" },
+            { type: "item", id: "stash", label: "Stash…" },
             { type: "item", id: "copy", label: "Copy Path" },
             { type: "item", id: "refresh", label: "Refresh" },
           ]
@@ -116,6 +128,8 @@ export function useChangesContextMenu({
               label: paths.every((p) => staged.has(p)) ? "Unstage folder" : "Stage folder",
             },
             { type: "separator" },
+            { type: "item", id: "shelve", label: "Shelve…" },
+            { type: "item", id: "stash", label: "Stash…" },
             { type: "item", id: "copy", label: "Copy Path" },
             { type: "item", id: "refresh", label: "Refresh" },
           ];
@@ -164,6 +178,14 @@ export function useChangesContextMenu({
         ["addVcs", () => {
           const t = targetRef.current;
           if (t) mutate(t.paths, "git.add", "Could not add to VCS");
+        }],
+        ["shelve", () => {
+          const t = targetRef.current;
+          if (t) onShelve(t.paths);
+        }],
+        ["stash", () => {
+          const t = targetRef.current;
+          if (t) onStash(t.paths);
         }],
         ["ignore", () => {
           const t = targetRef.current;
@@ -219,7 +241,7 @@ export function useChangesContextMenu({
           },
         ],
       ]),
-    [filesByPath, mutate, onRefresh, onSelect, staged, taskId, toggle],
+    [filesByPath, mutate, onRefresh, onSelect, onShelve, onStash, staged, taskId, toggle],
   );
   useNativeContextMenu(requestId, menuHandlers);
 

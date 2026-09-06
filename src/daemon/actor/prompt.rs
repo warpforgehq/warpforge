@@ -138,6 +138,17 @@ a single imperative line, at most 60 characters, plain text, no quotes, no trail
 period, no markdown. Reply with ONLY the title — no code fences, no preamble, no \
 closing remarks.";
 
+/// Cap one pasted untracked file in a shelf-name prompt. The whole prompt is
+/// still clamped by `TEXTGEN_DIFF_LIMIT` afterwards.
+pub(crate) const SHELF_UNTRACKED_FILE_LIMIT: usize = 8 * 1024;
+
+pub(crate) const SHELF_NAME_INSTRUCTION: &str = "\
+Given the uncommitted changes below (the output of `git diff HEAD`), write a short \
+name for this shelf bundle. The name must be a single imperative line, at most 60 \
+characters, plain text, no quotes, no trailing period, no markdown — like a commit \
+subject, but naming shelved work in progress. Reply with ONLY the name — no code \
+fences, no preamble, no closing remarks.";
+
 pub(crate) const ENHANCE_PROMPT_INSTRUCTION: &str = "\
 Below is a task description written by a user. Rewrite it into a clear, well-structured \
 task: a strong imperative title on the first line, then a blank line, then a concise \
@@ -192,6 +203,57 @@ pub(crate) async fn build_textgen_prompt(
                 clamp(diff)
             ))
         }
+        wire::TextGenKind::ShelfName => {
+            // The dialog shelves a selection, not the tree: `git diff HEAD`
+            // only covers tracked files, so scope it to the selected paths
+            // and paste untracked selections in verbatim (capped). Without a
+            // selection the whole working diff is described.
+            let selected: Vec<&str> = message
+                .map(|m| {
+                    m.lines()
+                        .map(str::trim)
+                        .filter(|l| !l.is_empty() && !l.contains(".."))
+                        .collect()
+                })
+                .unwrap_or_default();
+            let mut args = vec!["diff", "HEAD"];
+            if !selected.is_empty() {
+                args.push("--");
+                args.extend(selected.iter().copied());
+            }
+            let tracked = git_out(repo, &args).await.unwrap_or_default();
+            let mut parts = Vec::new();
+            if !tracked.trim().is_empty() {
+                parts.push(format!("----- git diff HEAD -----\n{tracked}"));
+            }
+            if !selected.is_empty() {
+                let mut ls = vec!["ls-files", "--others", "--exclude-standard", "--"];
+                ls.extend(selected.iter().copied());
+                let untracked_list = git_out(repo, &ls).await.unwrap_or_default();
+                let untracked: std::collections::HashSet<&str> =
+                    untracked_list.lines().map(str::trim).collect();
+                for p in &selected {
+                    if !untracked.contains(p) {
+                        continue;
+                    }
+                    let content = std::fs::read_to_string(std::path::Path::new(repo).join(p))
+                        .unwrap_or_default();
+                    let mut text = content;
+                    if text.len() > SHELF_UNTRACKED_FILE_LIMIT {
+                        text.truncate(SHELF_UNTRACKED_FILE_LIMIT);
+                        text.push_str("\n… file truncated …\n");
+                    }
+                    parts.push(format!("----- untracked file: {p} -----\n{text}"));
+                }
+            }
+            if parts.iter().all(|p| p.trim().is_empty()) {
+                return Err("no changes to describe".to_string());
+            }
+            Ok(format!(
+                "{SHELF_NAME_INSTRUCTION}\n\n{}",
+                clamp(parts.join("\n\n"))
+            ))
+        }
         wire::TextGenKind::PrDescription => {
             let info = crate::daemon::diff::push_info(repo)
                 .await
@@ -235,5 +297,83 @@ pub(crate) async fn build_textgen_prompt(
         // The caller renders the transcript, since reading it is a store hit
         // rather than the git work the other kinds do here.
         wire::TextGenKind::Handoff => crate::daemon::handoff::cold_prompt(message.unwrap_or("")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::daemon::diff::testsupport::{git, init_repo};
+
+    async fn two_change_repo() -> (tempfile::TempDir, String) {
+        let dir = tempfile::TempDir::new().unwrap();
+        init_repo(dir.path()).await;
+        let d = dir.path();
+        std::fs::write(d.join("apples.txt"), "apples\n").unwrap();
+        git(d, &["add", "."]).await;
+        git(d, &["commit", "-q", "-m", "init"]).await;
+        // Tracked change about apples…
+        std::fs::write(d.join("apples.txt"), "apples\nGREEN APPLES\n").unwrap();
+        // …and an untracked file about oranges.
+        std::fs::write(d.join("oranges.txt"), "oranges are orange\n").unwrap();
+        let r = d.to_str().unwrap().to_string();
+        (dir, r)
+    }
+
+    #[tokio::test]
+    async fn shelf_name_describes_the_selection_not_the_tree() {
+        // The reported bug: shelving one untracked file named the bundle
+        // after the tracked diff instead of the file.
+        let (_dir, r) = two_change_repo().await;
+
+        let prompt = build_textgen_prompt(&r, wire::TextGenKind::ShelfName, Some("oranges.txt"))
+            .await
+            .unwrap();
+        assert!(prompt.contains("oranges are orange"), "got: {prompt}");
+        assert!(
+            !prompt.contains("GREEN APPLES"),
+            "must not describe the rest: {prompt}"
+        );
+    }
+
+    #[tokio::test]
+    async fn shelf_name_scopes_tracked_files_to_the_selection() {
+        let (_dir, r) = two_change_repo().await;
+
+        let prompt = build_textgen_prompt(&r, wire::TextGenKind::ShelfName, Some("apples.txt"))
+            .await
+            .unwrap();
+        assert!(prompt.contains("GREEN APPLES"), "got: {prompt}");
+        assert!(!prompt.contains("oranges are orange"), "got: {prompt}");
+    }
+
+    #[tokio::test]
+    async fn shelf_name_without_selection_describes_everything() {
+        let (_dir, r) = two_change_repo().await;
+
+        let prompt = build_textgen_prompt(&r, wire::TextGenKind::ShelfName, None)
+            .await
+            .unwrap();
+        assert!(prompt.contains("GREEN APPLES"), "got: {prompt}");
+    }
+
+    #[tokio::test]
+    async fn shelf_name_with_nothing_to_describe_errs() {
+        let dir = tempfile::TempDir::new().unwrap();
+        init_repo(dir.path()).await;
+        let d = dir.path();
+        std::fs::write(d.join("a.txt"), "one\n").unwrap();
+        git(d, &["add", "."]).await;
+        git(d, &["commit", "-q", "-m", "init"]).await;
+        let r = d.to_str().unwrap().to_string();
+
+        assert!(
+            build_textgen_prompt(&r, wire::TextGenKind::ShelfName, Some("a.txt"))
+                .await
+                .is_err()
+        );
+        assert!(build_textgen_prompt(&r, wire::TextGenKind::ShelfName, None)
+            .await
+            .is_err());
     }
 }

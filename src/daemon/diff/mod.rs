@@ -5,7 +5,10 @@
 //! - [`roots`] — the project's checkout plus any nested ones (`git.roots`);
 //! - [`listing`], [`files`] — the editor's file tree and single-file reads;
 //! - [`branch`], [`sync`], [`remote`] — branch ops, pull/rebase/merge, push/PR;
-//! - [`commit`], [`parse`] — committing and rejecting hunks, diff parsing.
+//! - [`commit`], [`parse`] — committing and rejecting hunks, diff parsing;
+//! - [`shelf`] — named uncommitted-change bundles ("Shelve…") outside the repo;
+//! - [`stash`] — `git stash` surfaced in the Stash tab (git-native, shared
+//!   across worktrees).
 //!
 //! "Accept" is a no-op on the tree (the change stays); only "reject" touches
 //! files, so review is non-destructive until you deliberately reject.
@@ -21,6 +24,8 @@ mod listing;
 mod parse;
 mod remote;
 mod roots;
+mod shelf;
+mod stash;
 mod sync;
 mod working;
 
@@ -30,6 +35,8 @@ pub use files::{create_file, delete_file, file_doc, rename_file, save_file};
 pub use listing::{is_ignored_path, list_files};
 pub use remote::{create_pr, push, push_info};
 pub use roots::git_roots;
+pub use shelf::{shelf_apply, shelf_create, shelf_drop, shelf_get, shelf_list};
+pub use stash::{stash_apply, stash_checkout_file, stash_drop, stash_get, stash_list, stash_push};
 pub use sync::{merge, rebase, update_project};
 pub use working::{
     current_branch, ignore_paths, ignored_files, tracked_diff, untracked_diff, working_diff,
@@ -118,10 +125,10 @@ fn op_conflict(
 }
 
 #[cfg(test)]
-pub(super) mod testsupport {
+pub(crate) mod testsupport {
     use tokio::process::Command;
 
-    pub(super) async fn git(repo: &std::path::Path, args: &[&str]) {
+    pub(crate) async fn git(repo: &std::path::Path, args: &[&str]) {
         let status = Command::new("git")
             .arg("-C")
             .arg(repo)
@@ -138,7 +145,7 @@ pub(super) mod testsupport {
     }
 
     /// A repo with an identity configured, and no commits yet.
-    pub(super) async fn init_repo(dir: &std::path::Path) {
+    pub(crate) async fn init_repo(dir: &std::path::Path) {
         std::fs::create_dir_all(dir).unwrap();
         git(dir, &["init", "-q"]).await;
         git(dir, &["config", "user.email", "t@t"]).await;

@@ -26,6 +26,7 @@ export function IgnoredFiles({
   selected,
   onSelect,
   onOpenFile,
+  heading = "Ignored Files",
 }: {
   state: IgnoredSectionState;
   files: string[];
@@ -33,9 +34,11 @@ export function IgnoredFiles({
   truncated: boolean;
   selected: string | null;
   onSelect: (path: string) => void;
-  /** Open a file for reading (the files surface). Falls back to `onSelect`
+  /** Open a file for reading (it has no diff). Falls back to `onSelect`
    * when absent — but ignored files have no diff, so callers should pass it. */
   onOpenFile?: (path: string) => void;
+  /** Section title — the tree is reused for shelved files. */
+  heading?: string;
 }) {
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   // Shut by default: an ignored tree is mostly build output you wade through
@@ -75,7 +78,7 @@ export function IgnoredFiles({
           onClick={() => openFile(node.path)}
           style={pad}
           className={cn(
-            "flex h-7 w-max min-w-full items-center pr-2 text-left text-xs text-muted-foreground hover:bg-secondary/50",
+            "flex h-7 w-max min-w-full items-center pr-2 text-left text-xs text-muted-foreground select-none hover:bg-secondary/50",
             selected === node.path && "bg-secondary text-foreground",
           )}
         >
@@ -89,7 +92,7 @@ export function IgnoredFiles({
           key={node.path}
           title={`${node.path}/ — ignored as a whole, not expandable`}
           style={pad}
-          className="flex h-7 w-max min-w-full cursor-default items-center gap-1.5 pr-2 text-xs text-muted-foreground"
+          className="flex h-7 w-max min-w-full cursor-default items-center gap-1.5 pr-2 text-xs text-muted-foreground select-none"
         >
           <Folder className="size-3.5 shrink-0" />
           <span className="whitespace-nowrap">{node.name}</span>
@@ -105,7 +108,7 @@ export function IgnoredFiles({
           onClick={() => toggleFolder(node.path)}
           title={node.path}
           style={pad}
-          className="flex h-7 w-max min-w-full items-center gap-1.5 pr-2 text-left text-xs text-muted-foreground hover:bg-secondary/50"
+          className="flex h-7 w-max min-w-full items-center gap-1.5 pr-2 text-left text-xs text-muted-foreground select-none hover:bg-secondary/50"
         >
           <ChevronRight
             className={cn("size-3.5 shrink-0 transition-transform", open && "rotate-90")}
@@ -125,9 +128,9 @@ export function IgnoredFiles({
     <div className="mt-1.5 border-t border-rule pt-1.5">
       <p
         className="flex items-baseline gap-2 overflow-hidden whitespace-nowrap px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
-        title={state === "list" ? `Ignored Files — ${counts}` : "Ignored Files"}
+        title={state === "list" ? `${heading} — ${counts}` : heading}
       >
-        <span className="shrink-0">Ignored Files</span>
+        <span className="shrink-0">{heading}</span>
         {state === "list" && counts.length > 0 && (
           <span className="truncate font-normal normal-case opacity-70">{counts}</span>
         )}

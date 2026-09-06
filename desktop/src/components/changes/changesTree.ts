@@ -1,5 +1,5 @@
 import type { FileDiff, GitRoot } from "../../protocol";
-import { buildTree, compact, type Node } from "./treeUtils";
+import { buildTree, compact, stat, type Node } from "./treeUtils";
 
 export const CHANGES_LABEL = "Changes";
 export const UNVERSIONED_LABEL = "Unversioned Files";
@@ -25,18 +25,31 @@ export function groupPathsByRoot(paths: string[], roots: GitRoot[]): Map<string,
   return groups;
 }
 
-/** A section ("Changes" / "Unversioned Files") wrapping a compacted file tree. */
-function section(label: string, files: FileDiff[]): Node {
+/** A section ("Changes" / "Unversioned Files") wrapping a compacted file tree —
+ * or, in flat mode, the files listed directly with no folders. */
+function section(label: string, files: FileDiff[], flat: boolean): Node {
+  if (flat) {
+    const children = new Map<string, Node>();
+    for (const f of [...files].sort((a, b) => a.path.localeCompare(b.path))) {
+      children.set(f.path, { children: new Map(), name: f.path, path: f.path, stat: stat(f) });
+    }
+    return { children, name: label };
+  }
   return { children: compact(buildTree(files)).children, name: label };
 }
 
-function sections(tracked: FileDiff[], untracked: FileDiff[], untrackedAvailable: boolean): Node[] {
+function sections(
+  tracked: FileDiff[],
+  untracked: FileDiff[],
+  untrackedAvailable: boolean,
+  flat: boolean,
+): Node[] {
   const out: Node[] = [];
   if (tracked.length > 0) {
-    out.push(section(CHANGES_LABEL, tracked));
+    out.push(section(CHANGES_LABEL, tracked, flat));
   }
   if (untrackedAvailable && untracked.length > 0) {
-    out.push(section(UNVERSIONED_LABEL, untracked));
+    out.push(section(UNVERSIONED_LABEL, untracked, flat));
   }
   return out;
 }
@@ -48,7 +61,8 @@ function toChildren(nodes: Node[]): Map<string, Node> {
 /**
  * Root node for the Changes rail. One git root renders a flat tree split into
  * "Changes" and "Unversioned Files"; several roots wrap those sections under
- * one node per root, labelled with the root's name and branch.
+ * one node per root, labelled with the root's name and branch. `flat` skips
+ * directory grouping and lists files directly under each section.
  */
 export function buildChangesRoot({
   project,
@@ -56,12 +70,14 @@ export function buildChangesRoot({
   untrackedPaths,
   untrackedAvailable,
   roots,
+  flat = false,
 }: {
   project: string;
   files: FileDiff[];
   untrackedPaths: string[];
   untrackedAvailable: boolean;
   roots: GitRoot[];
+  flat?: boolean;
 }): Node {
   const untrackedSet = new Set(untrackedPaths);
   const isUntracked = (file: FileDiff) => untrackedSet.has(file.path);
@@ -73,6 +89,7 @@ export function buildChangesRoot({
           files.filter((f) => !isUntracked(f)),
           files.filter(isUntracked),
           untrackedAvailable,
+          flat,
         ),
       ),
       name: project,
@@ -95,6 +112,7 @@ export function buildChangesRoot({
             owned.filter((f) => !isUntracked(f)),
             owned.filter(isUntracked),
             untrackedAvailable,
+            flat,
           ),
         ),
         name: root.name,

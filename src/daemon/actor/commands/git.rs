@@ -556,7 +556,7 @@ impl Daemon {
                 });
             }
 
-            other => self.handle_files_command(other).await,
+            other => self.handle_shelf_command(other).await,
         }
     }
 }

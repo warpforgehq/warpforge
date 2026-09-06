@@ -200,6 +200,37 @@ describe("ignoredSectionState", () => {
   });
 });
 
+describe("buildChangesRoot flat mode", () => {
+  it("lists files directly under the section with no folders", () => {
+    const node = buildChangesRoot({
+      files: [file("src/a.ts"), file("src/nested/b.ts")],
+      flat: true,
+      project: "warpforge",
+      roots: [],
+      untrackedAvailable: true,
+      untrackedPaths: [],
+    });
+
+    const changes = child(node, CHANGES_LABEL);
+    expect(childNames(changes).sort()).toEqual(["src/a.ts", "src/nested/b.ts"]);
+    const leaf = changes.children.get("src/nested/b.ts")!;
+    expect(leaf.path).toBe("src/nested/b.ts");
+    expect(leaf.stat).toBeDefined();
+  });
+
+  it("defaults to directory grouping", () => {
+    const node = buildChangesRoot({
+      files: [file("src/a.ts"), file("docs/b.md")],
+      project: "warpforge",
+      roots: [],
+      untrackedAvailable: true,
+      untrackedPaths: [],
+    });
+
+    expect(childNames(child(node, CHANGES_LABEL)).sort()).toEqual(["docs", "src"]);
+  });
+});
+
 describe("buildIgnoredTree", () => {
   it("keeps a collapsed dir/ entry as one non-expandable leaf", () => {
     const tree = buildIgnoredTree(["node_modules/", "loose.log"]);

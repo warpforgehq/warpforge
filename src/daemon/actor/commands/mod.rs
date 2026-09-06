@@ -7,6 +7,8 @@ mod git;
 mod memory;
 mod project;
 mod session;
+mod shelf;
+mod stash;
 mod task;
 mod textgen;
 mod tracker;

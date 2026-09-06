@@ -38,6 +38,8 @@ const baseProps = {
   filesByPath: new Map([["src/a.ts", changedFile]]),
   onRefresh: vi.fn<() => void>(),
   onSelect: vi.fn<(path: string) => void>(),
+  onShelve: vi.fn<(paths: string[]) => void>(),
+  onStash: vi.fn<(paths: string[]) => void>(),
   staged: new Set<string>(["src/a.ts"]),
   taskId: "task-1",
   toggle: vi.fn<(paths: string[], on: boolean) => void>(),
@@ -127,6 +129,8 @@ describe("useChangesContextMenu", () => {
       "Unstage",
       "Show Diff",
       "Jump to Source",
+      "Shelve…",
+      "Stash…",
       "Rollback File",
       "Copy as Patch to Clipboard",
       "Copy Path",
@@ -144,11 +148,27 @@ describe("useChangesContextMenu", () => {
       "Add to .gitignore",
       "Show Diff",
       "Jump to Source",
+      "Shelve…",
+      "Stash…",
       "Copy as Patch to Clipboard",
       "Copy Path",
       "Delete…",
       "Refresh",
     ]);
+  });
+
+  it("opens the Shelve dialog for the target, in both sections", () => {
+    const onShelve = vi.fn<(paths: string[]) => void>();
+    const { handler, handlers } = renderHook({ onShelve, staged: new Set() });
+
+    handler(fakeEvent(), fileRow("new.txt"));
+    expect(labels()).toContain("Shelve…");
+    handlers.get("shelve")!();
+    expect(onShelve).toHaveBeenCalledWith(["new.txt"]);
+
+    handler(fakeEvent(), fileRow("src/a.ts"));
+    handlers.get("shelve")!();
+    expect(onShelve).toHaveBeenCalledWith(["src/a.ts"]);
   });
 
   it("adds the file to VCS and refreshes", async () => {
@@ -217,11 +237,23 @@ describe("useChangesContextMenu", () => {
     expect(labels()).toEqual([
       "Add to VCS",
       "Add to .gitignore",
+      "Shelve…",
+      "Stash…",
       "Copy Path",
       "Refresh",
     ]);
 
     handler(fakeEvent(), folderRow(["src/a.ts"]));
-    expect(labels()).toEqual(["Unstage folder", "Copy Path", "Refresh"]);
+    expect(labels()).toEqual(["Unstage folder", "Shelve…", "Stash…", "Copy Path", "Refresh"]);
+  });
+
+  it("opens the Stash dialog for the target", () => {
+    const onStash = vi.fn<(paths: string[]) => void>();
+    const { handler, handlers } = renderHook({ onStash });
+
+    handler(fakeEvent(), fileRow("src/a.ts"));
+    expect(labels()).toContain("Stash…");
+    handlers.get("stash")!();
+    expect(onStash).toHaveBeenCalledWith(["src/a.ts"]);
   });
 });

@@ -40,6 +40,9 @@ impl Daemon {
                                 // A handoff summarises the conversation, and
                                 // the client is what knows where to cut it.
                                 wire::TextGenKind::Handoff => input.as_deref(),
+                                // A shelf name describes the shelved paths, and
+                                // the client is what knows the selection.
+                                wire::TextGenKind::ShelfName => input.as_deref(),
                                 _ => None,
                             };
                             let result = match build_textgen_prompt(&repo, kind, message).await {

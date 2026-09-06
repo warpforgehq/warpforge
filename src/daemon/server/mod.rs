@@ -960,6 +960,130 @@ async fn dispatch(
                 })?;
             Ok(json!(null))
         }
+        ShelfList { task_id } => {
+            let list = handle.shelf_list(&task_id).await;
+            serde_json::to_value(list).map_err(|e| wire::RpcError {
+                code: wire::ErrorCode::Internal,
+                message: e.to_string(),
+            })
+        }
+        ShelfCreate {
+            task_id,
+            name,
+            paths,
+        } => {
+            let entry = handle
+                .shelf_create(&task_id, name, paths)
+                .await
+                .map_err(|e| wire::RpcError {
+                    code: wire::ErrorCode::Internal,
+                    message: e,
+                })?;
+            serde_json::to_value(entry).map_err(|e| wire::RpcError {
+                code: wire::ErrorCode::Internal,
+                message: e.to_string(),
+            })
+        }
+        ShelfGet { task_id, id } => {
+            let diff = handle
+                .shelf_get(&task_id, &id)
+                .await
+                .map_err(|e| wire::RpcError {
+                    code: wire::ErrorCode::Internal,
+                    message: e,
+                })?;
+            serde_json::to_value(diff).map_err(|e| wire::RpcError {
+                code: wire::ErrorCode::Internal,
+                message: e.to_string(),
+            })
+        }
+        ShelfApply { task_id, id, drop } => {
+            handle
+                .shelf_apply(&task_id, &id, drop)
+                .await
+                .map_err(|e| wire::RpcError {
+                    code: wire::ErrorCode::Internal,
+                    message: e,
+                })?;
+            Ok(json!(null))
+        }
+        ShelfDrop { task_id, id } => {
+            handle
+                .shelf_drop(&task_id, &id)
+                .await
+                .map_err(|e| wire::RpcError {
+                    code: wire::ErrorCode::Internal,
+                    message: e,
+                })?;
+            Ok(json!(null))
+        }
+        StashList { task_id } => {
+            let list = handle.stash_list(&task_id).await;
+            serde_json::to_value(list).map_err(|e| wire::RpcError {
+                code: wire::ErrorCode::Internal,
+                message: e.to_string(),
+            })
+        }
+        StashPush {
+            task_id,
+            message,
+            paths,
+        } => {
+            let entry = handle
+                .stash_push(&task_id, message, paths)
+                .await
+                .map_err(|e| wire::RpcError {
+                    code: wire::ErrorCode::Internal,
+                    message: e,
+                })?;
+            serde_json::to_value(entry).map_err(|e| wire::RpcError {
+                code: wire::ErrorCode::Internal,
+                message: e.to_string(),
+            })
+        }
+        StashGet { task_id, id } => {
+            let diff = handle
+                .stash_get(&task_id, &id)
+                .await
+                .map_err(|e| wire::RpcError {
+                    code: wire::ErrorCode::Internal,
+                    message: e,
+                })?;
+            serde_json::to_value(diff).map_err(|e| wire::RpcError {
+                code: wire::ErrorCode::Internal,
+                message: e.to_string(),
+            })
+        }
+        StashApply { task_id, id, pop } => {
+            handle
+                .stash_apply(&task_id, &id, pop)
+                .await
+                .map_err(|e| wire::RpcError {
+                    code: wire::ErrorCode::Internal,
+                    message: e,
+                })?;
+            Ok(json!(null))
+        }
+        StashFile { task_id, id, paths } => {
+            handle
+                .stash_checkout_file(&task_id, &id, paths)
+                .await
+                .map_err(|e| wire::RpcError {
+                    code: wire::ErrorCode::Internal,
+                    message: e,
+                })?;
+            Ok(json!(null))
+        }
+        StashDrop { task_id, id } => {
+            handle
+                .stash_drop(&task_id, &id)
+                .await
+                .map_err(|e| wire::RpcError {
+                    code: wire::ErrorCode::Internal,
+                    message: e,
+                })?;
+            Ok(json!(null))
+        }
         GitSwitchBranch { task_id, branch } => {
             let result = handle.git_switch_branch(&task_id, &branch).await;
             serde_json::to_value(result).map_err(|e| wire::RpcError {

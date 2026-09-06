@@ -582,6 +582,70 @@ pub enum Method {
     /// existing entries are never duplicated.
     #[serde(rename = "git.ignore")]
     GitIgnore { task_id: String, paths: Vec<String> },
+    /// List the repo's shelf bundles (the Shelf tab), newest first.
+    #[serde(rename = "shelf.list")]
+    ShelfList { task_id: String },
+    /// Shelve paths (or every change when `paths` is absent): store the
+    /// bundle and revert the worktree. An empty `name` auto-names the bundle.
+    #[serde(rename = "shelf.create")]
+    ShelfCreate {
+        task_id: String,
+        #[serde(default)]
+        name: String,
+        #[serde(default)]
+        paths: Option<Vec<String>>,
+    },
+    /// One shelf bundle with its files as diffs, for preview.
+    #[serde(rename = "shelf.get")]
+    ShelfGet { task_id: String, id: String },
+    /// Unshelve a bundle back into the worktree. `drop` (default true)
+    /// removes the bundle afterwards.
+    #[serde(rename = "shelf.apply")]
+    ShelfApply {
+        task_id: String,
+        id: String,
+        #[serde(default = "default_true")]
+        drop: bool,
+    },
+    /// Delete a shelf bundle. The worktree is untouched.
+    #[serde(rename = "shelf.drop")]
+    ShelfDrop { task_id: String, id: String },
+    /// List the repo's stash entries (the Stash tab), newest first.
+    #[serde(rename = "stash.list")]
+    StashList { task_id: String },
+    /// Stash paths (or everything when `paths` is absent) with
+    /// `git stash push`. An empty `message` takes git's default.
+    #[serde(rename = "stash.push")]
+    StashPush {
+        task_id: String,
+        #[serde(default)]
+        message: String,
+        #[serde(default)]
+        paths: Option<Vec<String>>,
+    },
+    /// One stash entry with its files as diffs, for preview.
+    #[serde(rename = "stash.get")]
+    StashGet { task_id: String, id: String },
+    /// Apply (`pop=false`) or pop (`pop=true`) a whole stash entry. A
+    /// conflicting pop keeps the entry — that is git's own behavior.
+    #[serde(rename = "stash.apply")]
+    StashApply {
+        task_id: String,
+        id: String,
+        #[serde(default)]
+        pop: bool,
+    },
+    /// Restore paths out of a stash entry into the worktree ("unstash any
+    /// file"). The entry itself is untouched.
+    #[serde(rename = "stash.file")]
+    StashFile {
+        task_id: String,
+        id: String,
+        paths: Vec<String>,
+    },
+    /// Drop a stash entry. The worktree is untouched.
+    #[serde(rename = "stash.drop")]
+    StashDrop { task_id: String, id: String },
     /// Pull the task's project repo up to its upstream (rebase + autostash).
     /// Any conflict rolls the working tree back to the exact prior state.
     #[serde(rename = "git.update")]
@@ -2253,6 +2317,74 @@ pub struct GitRoots {
     pub roots: Vec<GitRoot>,
 }
 
+/// One named bundle of shelved uncommitted changes. Result of `shelf.list`,
+/// one element of it.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ShelfEntry {
+    pub id: String,
+    pub name: String,
+    /// Unix seconds.
+    pub created_at: u64,
+    /// Branch the changes were shelved from, if any.
+    #[serde(default)]
+    pub branch: Option<String>,
+    /// Repo-relative paths in the bundle, sorted.
+    #[serde(default)]
+    pub files: Vec<String>,
+}
+
+/// Result of `shelf.list`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ShelfList {
+    pub entries: Vec<ShelfEntry>,
+}
+
+/// Result of `shelf.get`: the bundle plus its files as diffs, newest
+/// preview-ready for the diff view.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ShelfDiff {
+    pub entry: ShelfEntry,
+    #[serde(default)]
+    pub files: Vec<FileDiff>,
+}
+
+/// One `git stash` entry. Result of `stash.list`, one element of it.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct StashEntry {
+    /// `stash@{n}`.
+    pub id: String,
+    /// Message without git's "On <branch>:" prefix (that is `branch`).
+    pub message: String,
+    /// Branch the entry was stashed from, parsed from git's own prefix.
+    #[serde(default)]
+    pub branch: Option<String>,
+    /// Unix seconds.
+    pub created_at: u64,
+    /// Repo-relative paths in the entry, for the list view.
+    #[serde(default)]
+    pub files: Vec<String>,
+}
+
+/// Result of `stash.list`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct StashList {
+    pub entries: Vec<StashEntry>,
+}
+
+/// Result of `stash.get`: the entry plus its files as diffs.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct StashDiff {
+    pub entry: StashEntry,
+    #[serde(default)]
+    pub files: Vec<FileDiff>,
+}
+
 /// Result of `git.ignored`: `.gitignore`'d paths plus whether the scan ran.
 /// `available=false` means the scan itself failed (e.g. the repo became
 /// unreadable) — distinct from "no ignored files", which is an empty list
@@ -2312,6 +2444,9 @@ pub enum TextGenKind {
     PrDescription,
     /// A short (≤60 chars) imperative title derived from a task's first prompt.
     TaskTitle,
+    /// A short shelf title for the working-tree changes (the Shelve dialog's
+    /// magic button). Same diff as a commit message, one-line answer.
+    ShelfName,
     /// A polished, well-structured rewrite of a user-written task prompt.
     EnhancePrompt,
     /// A handoff document compacted from a task's stored transcript, for
@@ -2975,6 +3110,77 @@ mod tests {
         assert!(
             matches!(req.method, Method::GitIgnore { task_id, paths } if task_id == "t1" && paths == vec!["*.log"])
         );
+    }
+
+    #[test]
+    fn stash_push_parses_message_and_optional_paths() {
+        let json: serde_json::Value = serde_json::from_str(
+            r#"{"id":16,"method":"stash.push","params":{"task_id":"t1","message":"wip","paths":["a.ts"]}}"#,
+        )
+        .unwrap();
+        let req: Request = serde_json::from_value(json).unwrap();
+        assert!(
+            matches!(req.method, Method::StashPush { message, paths, .. } if message == "wip" && paths == Some(vec!["a.ts".to_string()]))
+        );
+
+        // Both optional: bare push stashes everything with git's default name.
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"id":17,"method":"stash.push","params":{"task_id":"t1"}}"#)
+                .unwrap();
+        let req: Request = serde_json::from_value(json).unwrap();
+        assert!(
+            matches!(req.method, Method::StashPush { message, paths, .. } if message.is_empty() && paths.is_none())
+        );
+    }
+
+    #[test]
+    fn shelf_methods_parse_and_default_sensibly() {
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"id":11,"method":"shelf.create","params":{"task_id":"t1"}}"#)
+                .unwrap();
+        let req: Request = serde_json::from_value(json).unwrap();
+        assert!(
+            matches!(req.method, Method::ShelfCreate { task_id, name, paths } if task_id == "t1" && name.is_empty() && paths.is_none())
+        );
+
+        // `drop` defaults to true: unshelving cleans up unless asked not to.
+        let json: serde_json::Value = serde_json::from_str(
+            r#"{"id":12,"method":"shelf.apply","params":{"task_id":"t1","id":"abc"}}"#,
+        )
+        .unwrap();
+        let req: Request = serde_json::from_value(json).unwrap();
+        assert!(matches!(req.method, Method::ShelfApply { drop, .. } if drop));
+
+        // Old entries without branch/files still read.
+        let entry: ShelfEntry =
+            serde_json::from_value(serde_json::json!({"id": "a", "name": "wip", "createdAt": 1}))
+                .unwrap();
+        assert!(entry.branch.is_none());
+        assert!(entry.files.is_empty());
+    }
+
+    #[test]
+    fn stash_methods_parse_and_default_sensibly() {
+        let json: serde_json::Value =
+            serde_json::from_str(r#"{"id":13,"method":"stash.list","params":{"task_id":"t1"}}"#)
+                .unwrap();
+        let req: Request = serde_json::from_value(json).unwrap();
+        assert!(matches!(req.method, Method::StashList { .. }));
+
+        // `pop` defaults to false: applying keeps the entry unless asked to pop.
+        let json: serde_json::Value = serde_json::from_str(
+            r#"{"id":14,"method":"stash.apply","params":{"task_id":"t1","id":"stash@{0}"}}"#,
+        )
+        .unwrap();
+        let req: Request = serde_json::from_value(json).unwrap();
+        assert!(matches!(req.method, Method::StashApply { pop: false, .. }));
+
+        let json: serde_json::Value = serde_json::from_str(
+            r#"{"id":15,"method":"stash.file","params":{"task_id":"t1","id":"stash@{0}","paths":["a.ts"]}}"#,
+        )
+        .unwrap();
+        let req: Request = serde_json::from_value(json).unwrap();
+        assert!(matches!(req.method, Method::StashFile { paths, .. } if paths == vec!["a.ts"]));
     }
 
     /// A failed scan must survive the wire as unavailable, not as an empty

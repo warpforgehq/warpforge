@@ -306,3 +306,39 @@ describe("ChangesRail ignored files", () => {
     expect(onSelect).toHaveBeenCalledWith(".env");
   });
 });
+
+describe("ChangesRail tabs", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("opens on Commit and switches to Shelf and Stash", async () => {
+    stubDaemon();
+
+    renderRail(<ChangesRail {...baseProps} files={[changedFile]} />);
+    expect(screen.getByRole("tab", { name: "Commit", selected: true })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Shelf" }));
+    expect(await screen.findByText(/No shelved changes yet/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Stash" }));
+    expect(await screen.findByText(/No stash entries/)).toBeInTheDocument();
+  });
+
+  it("shelves checked files silently from the toolbar", async () => {
+    const request = stubDaemon();
+    const onRefresh = vi.fn<() => void>();
+
+    renderRail(<ChangesRail {...baseProps} files={[changedFile]} onRefresh={onRefresh} />);
+    fireEvent.click(screen.getByRole("button", { name: "Shelve silently" }));
+
+    await waitFor(() =>
+      expect(request).toHaveBeenCalledWith("shelf.create", {
+        name: "",
+        paths: ["src/example.ts"],
+        task_id: "task-1",
+      }),
+    );
+    await waitFor(() => expect(onRefresh).toHaveBeenCalled());
+  });
+});
