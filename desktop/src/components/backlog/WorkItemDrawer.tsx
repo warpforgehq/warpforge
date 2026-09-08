@@ -394,6 +394,7 @@ function WorkItemDetails({
               <Markdown
                 density="comfortable"
                 renderImage={TrackerImage}
+                allowHtml
                 className="pr-8 text-foreground/90"
               >
                 {inlineHtmlImages(body)}

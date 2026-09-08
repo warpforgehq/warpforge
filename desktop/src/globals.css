@@ -1015,3 +1015,41 @@ body.wf-dragging,
 body.wf-dragging * {
   user-select: none !important;
 }
+
+/* Patch syntax tokens. The pull-request diff renders from patch text, not a
+   CodeMirror document, so it colours through these classes instead of the
+   editor's HighlightStyle — same `--syntax-*` variables, so both track the
+   active theme. See lib/pullDiffHighlight.ts. */
+.wf-tok-comment {
+  color: hsl(var(--syntax-comment));
+}
+.wf-tok-keyword {
+  color: hsl(var(--syntax-keyword));
+}
+.wf-tok-string {
+  color: hsl(var(--syntax-string));
+}
+.wf-tok-const {
+  color: hsl(var(--syntax-const));
+}
+.wf-tok-function {
+  color: hsl(var(--syntax-function));
+}
+.wf-tok-type {
+  color: hsl(var(--syntax-type));
+}
+.wf-tok-variable {
+  color: hsl(var(--syntax-variable));
+}
+.wf-tok-operator {
+  color: hsl(var(--syntax-operator));
+}
+.wf-tok-punctuation {
+  color: hsl(var(--syntax-punctuation));
+}
+.wf-tok-tag {
+  color: hsl(var(--syntax-tag));
+}
+.wf-tok-attribute {
+  color: hsl(var(--syntax-attribute));
+}

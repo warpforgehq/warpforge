@@ -20,6 +20,7 @@ import { SidebarTaskRow } from "@/components/SidebarTaskRow";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import UpdateControl from "@/components/UpdateControl";
+import { useInboxUnseenCount } from "@/hooks/useInboxUnseen";
 import { buildAttentionQueue } from "@/lib/attentionRail";
 import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
 import { cn } from "@/lib/utils";
@@ -60,6 +61,7 @@ import {
 const NAV: { id: View; label: string; icon: typeof LayoutGrid }[] = [
   { icon: LayoutGrid, id: "control", label: "Mission Control" },
   { icon: FolderTree, id: "projects", label: "Projects" },
+  { icon: Inbox, id: "inbox", label: "Inbox" },
   { icon: CalendarClock, id: "automations", label: "Automations" },
 ];
 
@@ -361,10 +363,9 @@ function Sidebar({
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(() => new Set());
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(() => new Set());
   const [expandedShelves, setExpandedShelves] = useState<Set<string>>(() => new Set());
-  const [deletingShelf, setDeletingShelf] = useState<Extract<
-    SidebarRow,
-    { kind: "shelf" }
-  > | null>(null);
+  const [deletingShelf, setDeletingShelf] = useState<Extract<SidebarRow, { kind: "shelf" }> | null>(
+    null,
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const handledTargetNonce = useRef<number | null>(null);
 
@@ -387,6 +388,9 @@ function Sidebar({
     const known = projectNames({ projects: state.snapshot.projects });
     return sortProjectsByActivity(known, tasks);
   }, [state.snapshot.projects, tasks]);
+  // The inbox's unread count — same query the inbox views render from, so
+  // the badge, the tab count and the rows never disagree.
+  const inboxUnseen = useInboxUnseenCount(names);
   const openProject = openTaskId ? (taskById.get(openTaskId)?.project ?? null) : null;
 
   const forceVisibleTaskIds = useMemo(
@@ -540,8 +544,15 @@ function Sidebar({
 
   const handleOpenProjects = useCallback((name: string) => onOpenProject(name), [onOpenProject]);
   const navCount = useCallback(
-    (id: View) => (id === "control" ? blockingCount : id === "projects" ? names.length : 0),
-    [blockingCount, names.length],
+    (id: View) =>
+      id === "control"
+        ? blockingCount
+        : id === "projects"
+          ? names.length
+          : id === "inbox"
+            ? inboxUnseen
+            : 0,
+    [blockingCount, inboxUnseen, names.length],
   );
 
   if (collapsed) {

@@ -11,7 +11,7 @@ import type { EditHunk } from "../protocol";
  * The server-data store is `daemon.ts` (useSyncExternalStore); this owns UI only.
  */
 
-export type View = "control" | "projects" | "automations";
+export type View = "control" | "projects" | "automations" | "inbox";
 /** Page shown in the Settings overlay's left rail. */
 export type SettingsPage =
   | "appearance"
@@ -28,8 +28,8 @@ export type RepositoryOperation = { taskId: string; kind: "pull" | "push" };
 export type TaskSurface = "files" | "diff" | "runtime" | "terminal" | "pipeline";
 export const DEFAULT_TASK_SURFACE: TaskSurface = "diff";
 
-/** Project-page surface. Git and Pull Requests join this union later. */
-export type ProjectSurface = "backlog" | "files" | "runtime" | "terminal";
+/** Project-page surface. */
+export type ProjectSurface = "backlog" | "pulls" | "files" | "runtime" | "terminal";
 export const DEFAULT_PROJECT_SURFACE: ProjectSurface = "backlog";
 
 /** Transient intent to open a task already showing a specific file/diff. */
@@ -65,6 +65,19 @@ export const BLUR_RADIUS_DEFAULT = 24;
 export const SIDEBAR_WIDTH_DEFAULT = 340;
 export const SIDEBAR_WIDTH_MIN = 260;
 export const SIDEBAR_WIDTH_MAX = 480;
+
+/**
+ * Below this the inbox cannot show its list rail, a file rail and a readable
+ * diff at once — the window's own minimum is 900px, so that case is reachable.
+ * Read once, when the store is created: the rails are user-toggled panels like
+ * every other one here, and a layout that re-collapses itself on every resize
+ * fights the person dragging the window.
+ */
+const NARROW_WINDOW_PX = 1200;
+
+function narrowWindow(): boolean {
+  return typeof window !== "undefined" && window.innerWidth < NARROW_WINDOW_PX;
+}
 
 export function clampSidebarWidth(v: unknown): number {
   if (typeof v !== "number" || !Number.isFinite(v)) return SIDEBAR_WIDTH_DEFAULT;
@@ -176,6 +189,10 @@ interface UiState extends SettingsState {
   runtimeSidebarCollapsed: boolean;
   /** Changes rail inside the Diff surface collapsed. */
   diffPanelCollapsed: boolean;
+  /** The inbox's pull-request list rail collapsed, leaving review full width. */
+  inboxListCollapsed: boolean;
+  /** File rail inside a pull request's Code tab collapsed. */
+  pullFilesPanelCollapsed: boolean;
   // Editor: language-server (LSP) features — persisted, user-toggled.
   lspEnabled: boolean;
 
@@ -209,6 +226,8 @@ interface UiState extends SettingsState {
   toggleFilesPanelCollapsed: () => void;
   toggleRuntimeSidebarCollapsed: () => void;
   toggleDiffPanelCollapsed: () => void;
+  toggleInboxListCollapsed: () => void;
+  togglePullFilesPanelCollapsed: () => void;
   toggleLsp: () => void;
 }
 
@@ -245,6 +264,8 @@ export const useUi = create<UiState>()(
       filesPanelCollapsed: false,
       runtimeSidebarCollapsed: false,
       diffPanelCollapsed: false,
+      inboxListCollapsed: narrowWindow(),
+      pullFilesPanelCollapsed: narrowWindow(),
       fontSize: DEFAULT_FONT_SIZE,
       monoFontSize: DEFAULT_MONO_FONT_SIZE,
       theme: DEFAULT_THEME,
@@ -353,6 +374,9 @@ export const useUi = create<UiState>()(
       toggleRuntimeSidebarCollapsed: () =>
         set((s) => ({ runtimeSidebarCollapsed: !s.runtimeSidebarCollapsed })),
       toggleDiffPanelCollapsed: () => set((s) => ({ diffPanelCollapsed: !s.diffPanelCollapsed })),
+      toggleInboxListCollapsed: () => set((s) => ({ inboxListCollapsed: !s.inboxListCollapsed })),
+      togglePullFilesPanelCollapsed: () =>
+        set((s) => ({ pullFilesPanelCollapsed: !s.pullFilesPanelCollapsed })),
 
       // ── Font size settings ──
       setFontSize: (fontSize) => set({ fontSize: clampFontSize(fontSize) }),

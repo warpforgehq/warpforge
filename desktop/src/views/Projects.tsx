@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { SurfaceTab } from "@/components/workspace";
+import { useInboxPulls } from "@/hooks/useInboxUnseen";
 import { disposeTerminalWorkspace } from "@/lib/terminalWorkspace";
 import { DEFAULT_PROJECT_SURFACE, type ProjectSurface, useUi } from "@/store/ui";
 
@@ -21,10 +22,11 @@ import { WorkItemDrawer } from "../components/backlog/WorkItemDrawer";
 import { TerminalWorkspaceView } from "../components/runtime/TerminalWorkspace";
 import { daemon } from "../daemon";
 import type { ServiceInfo, Snapshot } from "../protocol";
-import { ProjectFilesSurface } from "./projects/ProjectFilesSurface";
 import { PortRangeConflictCard, PortRangeSourceChip } from "./projects/PortRangeStatus";
+import { ProjectFilesSurface } from "./projects/ProjectFilesSurface";
 import { ProjectRuntimeSurface } from "./projects/ProjectRuntimeSurface";
 import { PROJECT_SURFACE_TABS, ProjectSurfaceBar } from "./projects/ProjectSurfaceBar";
+import { PullRequestSurface } from "./projects/PullRequestSurface";
 import { type ProjectLiveCounts, RemoveProjectDialog } from "./projects/RemoveProjectDialog";
 
 interface Props {
@@ -108,6 +110,18 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
       return tab;
     });
   }, [backlogCount.data?.total, pfs.length, projectTerminals.length, runtimeServices.length]);
+
+  // The Pull Requests tab's count rides the inbox poll cache — free here,
+  // and it only shows once there is something to count. An empty project
+  // name (no registered projects) polls nothing at all.
+  const pullsListing = useInboxPulls(projectName ? [projectName] : []);
+  const pullCount = pullsListing.data?.length;
+  const surfaceTabsWithPulls = useMemo<readonly SurfaceTab<ProjectSurface>[]>(() => {
+    return surfaceTabs.map((tab) => {
+      if (tab.id === "pulls") return { ...tab, count: pullCount };
+      return tab;
+    });
+  }, [pullCount, surfaceTabs]);
   const removeLiveCounts = useMemo<ProjectLiveCounts>(() => {
     if (!removeProject) return { services: 0, portforwards: 0, terminals: 0 };
     return {
@@ -250,7 +264,7 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
       <ProjectSurfaceBar
         activeSurface={surface}
         onSurfaceChange={(next) => setProjectSurface(project.name, next)}
-        tabs={surfaceTabs}
+        tabs={surfaceTabsWithPulls}
       />
 
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
@@ -264,6 +278,11 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
             services={runtimeServices}
             portforwards={pfs}
             onAppendToChat={(formattedLogs) => onNewTask(project.name, formattedLogs)}
+          />
+        ) : surface === "pulls" ? (
+          <PullRequestSurface
+            project={project.name}
+            onSendToAgent={(sendProject, prompt) => onNewTask(sendProject, prompt)}
           />
         ) : (
           <div className="h-full">

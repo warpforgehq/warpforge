@@ -27,6 +27,27 @@ const UnifiedDiff = lazy(async () => ({
 }));
 const EMPTY_DIFF_FILES: FileDiff[] = [];
 
+/**
+ * A file's rendered height, from its own line counts — the last hunk's reach
+ * into the new file, since the CodeMirror editor inside renders the whole
+ * document (its own viewport virtualizes, the spacer stays full-height).
+ *
+ * The fixed 384px estimate this replaces was fine for small diffs and poison
+ * for big ones: a 10k-line file is ~200kpx, so `measureElement` kept
+ * rewriting every position below it while scrolling, and the whole list
+ * lurched. A close estimate means measurement confirms instead of corrects.
+ */
+function estimateFileHeight(file: FileDiff | undefined): number {
+  const HEADER_PX = 36;
+  const LINE_PX = 20;
+  if (!file) return 384;
+  let lastLine = 0;
+  for (const hunk of file.hunks) {
+    lastLine = Math.max(lastLine, hunk.newStart + hunk.newLines);
+  }
+  return HEADER_PX + Math.max(lastLine, 8) * LINE_PX;
+}
+
 function EditorLoading() {
   return (
     <div className="flex h-full items-center px-4 text-sm text-muted-foreground">
@@ -103,13 +124,13 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
   // being scrolled to.
   const unifiedVirtualizer = useVirtualizer({
     count: files.length,
-    estimateSize: () => 384,
+    estimateSize: (index) => estimateFileHeight(files[index]),
     getScrollElement: () => unifiedScrollParent.current,
     overscan: 2,
   });
   const splitVirtualizer = useVirtualizer({
     count: files.length,
-    estimateSize: () => 384,
+    estimateSize: (index) => estimateFileHeight(files[index]),
     getScrollElement: () => splitScrollParent.current,
     overscan: 1,
   });

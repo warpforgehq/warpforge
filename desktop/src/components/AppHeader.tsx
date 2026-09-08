@@ -20,6 +20,7 @@ import { useUi, type View } from "@/store/ui";
 const VIEW_LABEL: Record<View, string> = {
   automations: "Automations",
   control: "Mission Control",
+  inbox: "Inbox",
   projects: "Projects",
 };
 
@@ -153,12 +154,15 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
         </>
       )}
 
-      {/* Only relevant outside a task: an open task already shows its own
-          harness's account chip on the left, and a *different* agent's
-          switcher here would just be account chrome for a tool this task
-          doesn't use. Global-view screens (Mission Control, Projects)
-          have no single agent in focus, so the full switcher belongs there. */}
-      {!openTask && (
+      {/* Only relevant outside a task, and only where an agent is actually in
+          play: an open task already shows its own harness's account chip on
+          the left, and a *different* agent's switcher here would just be
+          account chrome for a tool this task doesn't use. Mission Control and
+          Projects have no single agent in focus, so the full switcher belongs
+          there. The inbox spends nobody's quota — its one agent action, "Send
+          to agent", lands in a task that carries its own chip — so an account
+          picker there is chrome for a decision the surface never makes. */}
+      {!openTask && view !== "inbox" && (
         <div className="ml-auto">
           <AccountSwitcher agents={snapshot.agents ?? []} accounts={snapshot.accounts ?? []} />
         </div>

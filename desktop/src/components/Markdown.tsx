@@ -1,7 +1,11 @@
 import { createContext, memo, useContext, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
+import type { PluggableList } from "unified";
 
+import { MarkdownAlert, splitMarkdownAlert } from "@/components/MarkdownAlert";
 import { isExternalLink, openExternalLink } from "@/lib/externalLinks";
 import { cn } from "@/lib/utils";
 
@@ -161,12 +165,24 @@ const MarkdownImage: NonNullable<Components["img"]> = ({ alt, src, title }) => {
 const MARKDOWN_COMPONENTS: Components = {
   a: MarkdownAnchor,
   img: MarkdownImage,
-  blockquote: ({ children: content }) => (
-    <blockquote className="my-1 border-l-2 border-border pl-3 text-muted-foreground">
-      {content}
-    </blockquote>
-  ),
+  blockquote: ({ children: content }) => {
+    // GitHub's alerts are blockquotes with a marker in their first line.
+    const alert = splitMarkdownAlert(content);
+    if (alert) return <MarkdownAlert kind={alert.kind}>{alert.body}</MarkdownAlert>;
+    return (
+      <blockquote className="my-1 border-l-2 border-border pl-3 text-muted-foreground">
+        {content}
+      </blockquote>
+    );
+  },
   code: MarkdownCode,
+  // Only reachable with `allowHtml`; GitHub collapses release notes into these.
+  details: ({ children: content }) => (
+    <details className="my-1.5 rounded-md border border-border/70 px-2.5 py-1.5">{content}</details>
+  ),
+  summary: ({ children: content }) => (
+    <summary className="cursor-pointer text-sm font-medium text-foreground/90">{content}</summary>
+  ),
   h1: ({ children: content }) => <h1 className="mb-1 mt-2 text-base font-semibold">{content}</h1>,
   h2: ({ children: content }) => <h2 className="mb-1 mt-2 text-sm font-semibold">{content}</h2>,
   h3: ({ children: content }) => <h3 className="mb-1 mt-2 text-sm font-semibold">{content}</h3>,
@@ -208,6 +224,26 @@ const DENSITY_CLASS: Record<MarkdownDensity, string> = {
     "space-y-3 text-[0.9375rem] leading-7 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-base [&_li]:my-0.5 [&_ol]:my-0 [&_p]:my-0 [&_ul]:my-0",
 };
 
+/**
+ * What survives `allowHtml`. GitHub's own bodies lean on `<details>` for
+ * release notes and dependency bumps, and neither tag is in the default
+ * schema; everything dangerous (script, style, event handlers, unknown
+ * protocols) is dropped by the schema we extend.
+ */
+const HTML_SCHEMA = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames ?? []), "details", "summary"],
+  attributes: {
+    ...defaultSchema.attributes,
+    details: [...(defaultSchema.attributes?.details ?? []), "open"],
+    img: [...(defaultSchema.attributes?.img ?? []), "alt", "title"],
+  },
+};
+
+/** Raw HTML costs a second parse and a sanitiser pass, so it is opt-in.
+ *  Order matters: raw parses the tags, sanitise then throws most of them out. */
+const HTML_PLUGINS: PluggableList = [rehypeRaw, [rehypeSanitize, HTML_SCHEMA]];
+
 /** Agent/user messages rendered as GitHub-flavored markdown, tailwind-styled. */
 export function Markdown({
   children,
@@ -216,6 +252,7 @@ export function Markdown({
   resolveFilePath,
   onOpenFile,
   renderImage,
+  allowHtml = false,
 }: {
   children: string;
   className?: string;
@@ -224,6 +261,17 @@ export function Markdown({
   onOpenFile?: (path: string) => void;
   /** Replaces how images load — see `MarkdownImageProps`. */
   renderImage?: React.ComponentType<MarkdownImageProps>;
+  /**
+   * Render embedded HTML instead of printing it.
+   *
+   * Off by default, and deliberately so: agent output has no need of it, and
+   * this text arrives over the network. Tracker bodies are the exception —
+   * GitHub's release notes and Dependabot's descriptions are mostly
+   * `<details>`/`<blockquote>` markup, which used to show up as visible tag
+   * soup. Those turn it on, and everything then passes through
+   * `HTML_SCHEMA`.
+   */
+  allowHtml?: boolean;
 }) {
   const context = useMemo(
     () => ({ onOpenFile, renderImage, resolveFilePath }),
@@ -239,7 +287,11 @@ export function Markdown({
       )}
     >
       <MarkdownContext.Provider value={context}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={allowHtml ? HTML_PLUGINS : undefined}
+          components={MARKDOWN_COMPONENTS}
+        >
           {children}
         </ReactMarkdown>
       </MarkdownContext.Provider>

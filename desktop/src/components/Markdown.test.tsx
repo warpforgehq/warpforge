@@ -116,3 +116,57 @@ describe("CollapsibleMarkdown", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
+
+describe("Markdown embedded HTML", () => {
+  const RELEASE_NOTES = [
+    "Bumps react-native from 0.86.0 to 0.87.1.",
+    "<details><summary>Release notes</summary>",
+    "<p><em>Sourced from releases</em></p>",
+    "<blockquote><h2>0.87.1</h2><ul><li><strong>Hermes:</strong> bumped</li></ul></blockquote>",
+    "</details>",
+  ].join("\n");
+
+  it("prints the tags when HTML is not allowed", () => {
+    render(<Markdown>{RELEASE_NOTES}</Markdown>);
+
+    expect(screen.getByText(/<summary>Release notes<\/summary>/)).toBeInTheDocument();
+  });
+
+  it("renders a tracker body's collapsed release notes", () => {
+    render(<Markdown allowHtml>{RELEASE_NOTES}</Markdown>);
+
+    expect(screen.getByText("Release notes")).toBeInTheDocument();
+    expect(screen.getByText("0.87.1")).toBeInTheDocument();
+    expect(screen.getByText("Hermes:")).toBeInTheDocument();
+    expect(document.querySelector("details")).toBeInTheDocument();
+    expect(screen.queryByText(/<summary>/)).not.toBeInTheDocument();
+  });
+
+  it("drops scripts and event handlers from HTML it renders", () => {
+    render(
+      <Markdown allowHtml>
+        {'<p onclick="steal()">text</p><script>steal()</script><img src="x" onerror="steal()">'}
+      </Markdown>,
+    );
+
+    expect(document.querySelector("script")).toBeNull();
+    expect(screen.getByText("text")).not.toHaveAttribute("onclick");
+  });
+});
+
+describe("Markdown alerts", () => {
+  it("labels a GitHub alert instead of printing its marker", () => {
+    render(<Markdown>{"> [!IMPORTANT]\n> The consumer version is being sunset."}</Markdown>);
+
+    expect(screen.getByText("Important")).toBeInTheDocument();
+    expect(screen.getByText("The consumer version is being sunset.")).toBeInTheDocument();
+    expect(screen.queryByText(/\[!IMPORTANT]/)).not.toBeInTheDocument();
+  });
+
+  it("leaves an ordinary quote a quote", () => {
+    render(<Markdown>{"> just a quote"}</Markdown>);
+
+    expect(document.querySelector("blockquote")).toBeInTheDocument();
+    expect(screen.getByText("just a quote")).toBeInTheDocument();
+  });
+});

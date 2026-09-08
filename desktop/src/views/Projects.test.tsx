@@ -396,10 +396,7 @@ describe("Projects", () => {
 
 describe("Projects — port range source", () => {
   it("labels each of the four range sources", () => {
-    const sources: [
-      NonNullable<ProjectInfo["portRangeSource"]>,
-      string,
-    ][] = [
+    const sources: [NonNullable<ProjectInfo["portRangeSource"]>, string][] = [
       ["auto", "auto-assigned"],
       ["sticky", "auto-assigned (kept)"],
       ["declared", "from team config"],
@@ -408,7 +405,9 @@ describe("Projects — port range source", () => {
     const { rerender } = renderProjects();
     for (const [source, label] of sources) {
       rerender(
-        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <QueryClientProvider
+          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        >
           <Projects
             snapshot={{
               ...snapshot,
@@ -478,7 +477,9 @@ describe("Projects — port range conflict", () => {
     await user.click(screen.getByRole("button", { name: "Set range on this machine" }));
 
     await waitFor(() => {
-      expect(screen.getByText(/The daemon rejected this range: range overlaps project other-project/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/The daemon rejected this range: range overlaps project other-project/),
+      ).toBeInTheDocument();
     });
   });
 
