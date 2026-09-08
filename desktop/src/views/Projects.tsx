@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { SurfaceTab } from "@/components/workspace";
 import { useInboxPulls } from "@/hooks/useInboxUnseen";
+import { boardTasks } from "@/lib/taskOrigin";
 import { disposeTerminalWorkspace } from "@/lib/terminalWorkspace";
 import { DEFAULT_PROJECT_SURFACE, type ProjectSurface, useUi } from "@/store/ui";
 
@@ -146,7 +147,7 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
     [openItem?.taskId, snapshot.tasks],
   );
   const liveTaskIds = useMemo(
-    () => new Set(snapshot.tasks.map((task) => task.id)),
+    () => new Set(boardTasks(snapshot.tasks).map((task) => task.id)),
     [snapshot.tasks],
   );
 

@@ -1,6 +1,8 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Bot,
   Check,
+  ChevronDown,
   FileDiff,
   Loader2,
   MessageSquareWarning,
@@ -9,34 +11,46 @@ import {
 } from "lucide-react";
 import * as React from "react";
 
+import { PullAssistantLive } from "@/components/inbox/PullAssistant";
 import { PullDetailHeader } from "@/components/inbox/PullDetailHeader";
 import { PullDiffView } from "@/components/inbox/PullDiffView";
 import { PullOverview } from "@/components/inbox/PullOverview";
 import { PullReviewComposer, type ReviewVerdict } from "@/components/inbox/PullReviewComposer";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SurfaceTabs, type SurfaceTab } from "@/components/workspace/SurfaceTabs";
 import { daemon } from "@/daemon";
-import { inboxStartPrompt } from "@/lib/inboxStartDraft";
+import {
+  inboxTaskPrompt,
+  unresolvedReviewComments,
+  type InboxTaskIntent,
+} from "@/lib/inboxTaskPrompt";
 import type { CommitRange } from "@/lib/pullCommits";
 import { cn } from "@/lib/utils";
 import type { PullRequestSummary } from "@/protocol";
 
-type DetailTab = "overview" | "diff";
+type DetailTab = "overview" | "diff" | "assistant";
 
 const DETAIL_TABS: readonly SurfaceTab<DetailTab>[] = [
   { id: "overview", label: "Overview", icon: SquareChartGantt },
   { id: "diff", label: "Diff", icon: FileDiff },
+  // The agent sits beside the code rather than inside it: asking about a
+  // change and reading it are two different postures.
+  { id: "assistant", label: "Assistant", icon: Bot },
 ];
 
 /**
- * How big a change may be before its file list waits to be asked for.
- *
- * The overview's grouped file list rides the patch fetch — the daemon has no
- * files-only read yet — so a review of a few hundred lines gets its list for
- * free while a generated-lockfile monster does not pull a megabyte per row
- * while someone walks the inbox with `j`/`k`.
+ * How long a pull request has to stay selected before its file list is
+ * fetched. Walking the inbox with `j`/`k` must not pull a patch per row, and
+ * a button asking for the list was two clicks to see what the rail is for.
  */
-const AUTO_FILE_LIST_CHANGES = 3_000;
+const FILE_LIST_DELAY_MS = 400;
 
 /** Review states a reviewer line can carry; a dismissed review reads as "has
  *  spoken", not as a verdict, so it renders muted like a comment. */
@@ -65,15 +79,17 @@ export function PullRequestDetail({
 }) {
   const queryClient = useQueryClient();
   const [tab, setTab] = React.useState<DetailTab>("overview");
-  const [filesRequested, setFilesRequested] = React.useState(
-    // A source that does not report the size (the `gh` path leaves both at
-    // zero) reads as small: trying is the useful default.
-    () => (pr.additions ?? 0) + (pr.deletions ?? 0) <= AUTO_FILE_LIST_CHANGES,
-  );
+  const [filesRequested, setFilesRequested] = React.useState(false);
   /** A file picked on the overview, for the diff to scroll to on arrival. */
   const [focusPath, setFocusPath] = React.useState<string | null>(null);
   /** Which commits the diff covers; null is the whole pull request. */
   const [range, setRange] = React.useState<CommitRange | null>(null);
+
+  React.useEffect(() => {
+    setFilesRequested(false);
+    const timer = setTimeout(() => setFilesRequested(true), FILE_LIST_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [pr.project, pr.number]);
 
   const detailsQuery = useQuery({
     queryKey: ["pull", "details", pr.project, pr.number],
@@ -130,7 +146,15 @@ export function PullRequestDetail({
   });
 
   const details = detailsQuery.data ?? null;
-  const prompt = React.useMemo(() => inboxStartPrompt(pr, details), [pr, details]);
+  /**
+   * What the review has left unanswered — the count on the "Address review
+   * comments" action, and the reason it can be disabled: sending an agent to
+   * fix nothing is how the old single button earned its reputation.
+   */
+  const unresolved = React.useMemo(
+    () => unresolvedReviewComments(threadQuery.data ?? null),
+    [threadQuery.data],
+  );
 
   const refresh = React.useCallback(() => {
     for (const part of ["details", "thread", "diff", "commits"]) {
@@ -206,6 +230,22 @@ export function PullRequestDetail({
     void queryClient.invalidateQueries({ queryKey: ["inbox", "pulls"] });
   }, [invalidateThread, pr.number, pr.project, queryClient]);
 
+  const sendToAgent = React.useCallback(
+    (intent: InboxTaskIntent) => {
+      onSendToAgent?.(
+        pr,
+        inboxTaskPrompt({
+          details,
+          files: filesQuery.data?.files ?? null,
+          intent,
+          pr,
+          thread: threadQuery.data ?? null,
+        }),
+      );
+    },
+    [details, filesQuery.data, onSendToAgent, pr, threadQuery.data],
+  );
+
   const openFile = React.useCallback((path: string) => {
     setFocusPath(path);
     setFilesRequested(true);
@@ -266,23 +306,58 @@ export function PullRequestDetail({
             Request changes
           </Button>
           {onSendToAgent && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-6 gap-1.5 px-2 text-xs"
-              disabled={detailsQuery.isLoading}
-              title="Start a task from this pull request"
-              onClick={() => onSendToAgent(pr, prompt)}
-              data-testid="inbox-send-to-agent"
-            >
-              {detailsQuery.isLoading ? (
-                <Loader2 className="size-3 animate-spin" aria-hidden />
-              ) : (
-                <Sparkles className="size-3" />
-              )}
-              Send to agent
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                disabled={detailsQuery.isLoading}
+                title="Start a task from this pull request"
+                data-testid="inbox-send-to-agent"
+                className="flex h-6 shrink-0 items-center gap-1.5 rounded-md border border-border px-2 text-xs text-foreground hover:bg-secondary disabled:text-muted-foreground/40"
+              >
+                {detailsQuery.isLoading ? (
+                  <Loader2 className="size-3 animate-spin" aria-hidden />
+                ) : (
+                  <Sparkles className="size-3" aria-hidden />
+                )}
+                Send to agent
+                <ChevronDown className="size-3" aria-hidden />
+              </DropdownMenuTrigger>
+              {/* Two things worth a task of its own, named. The button used to
+                  hand over four lines of metadata and no instruction, which
+                  left the agent to guess — and guessing produced a summary of
+                  the diff, which is what the Assistant tab is for. */}
+              <DropdownMenuPortal>
+                <DropdownMenuContent align="end" className="w-72">
+                  <DropdownMenuItem
+                    className="flex-col items-start gap-0.5 px-2 py-1.5"
+                    disabled={unresolved.length === 0}
+                    onSelect={() => sendToAgent("comments")}
+                  >
+                    <span className="text-sm">
+                      Address review comments
+                      {unresolved.length > 0 && (
+                        <span className="tnum ml-1.5 text-muted-foreground">
+                          {unresolved.length}
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {unresolved.length > 0
+                        ? "Fix them on the branch, commit and push"
+                        : "Nothing unresolved on this pull request"}
+                    </span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="flex-col items-start gap-0.5 px-2 py-1.5"
+                    onSelect={() => sendToAgent("branch")}
+                  >
+                    <span className="text-sm">Work on this branch</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Pick the change up where it left off
+                    </span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenuPortal>
+            </DropdownMenu>
           )}
         </div>
       </div>
@@ -299,7 +374,9 @@ export function PullRequestDetail({
         />
       )}
 
-      {tab === "diff" ? (
+      {tab === "assistant" ? (
+        <PullAssistantLive pr={pr} details={details} />
+      ) : tab === "diff" ? (
         // The Diff tab owns its own scrolling: its file rail and sticky file
         // headers have to sit still while the diff moves under them. It also
         // owns its own loading state — the toolbar there is what changes the
@@ -330,7 +407,6 @@ export function PullRequestDetail({
           threadError={threadQuery.error}
           reviewers={reviewers}
           files={filesQuery.data?.files ?? null}
-          onLoadFiles={filesRequested ? undefined : () => setFilesRequested(true)}
           onOpenFile={openFile}
           onOpenDiff={() => setTab("diff")}
           onThreadChanged={invalidateThread}

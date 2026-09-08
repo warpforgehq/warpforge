@@ -23,6 +23,7 @@ import UpdateControl from "@/components/UpdateControl";
 import { useInboxUnseenCount } from "@/hooks/useInboxUnseen";
 import { buildAttentionQueue } from "@/lib/attentionRail";
 import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
+import { boardTasks } from "@/lib/taskOrigin";
 import { cn } from "@/lib/utils";
 
 import type { ConnectionState, DaemonState } from "../daemon";
@@ -369,7 +370,9 @@ function Sidebar({
   const scrollRef = useRef<HTMLDivElement>(null);
   const handledTargetNonce = useRef<number | null>(null);
 
-  const tasks = state.snapshot.tasks;
+  // Board list, not every task: a pull request's Assistant conversation runs
+  // as a real task, and the tree is not where it belongs (`lib/taskOrigin`).
+  const tasks = useMemo(() => boardTasks(state.snapshot.tasks), [state.snapshot.tasks]);
   const nowSec = Math.floor(Date.now() / 1000);
 
   // While the pointer rests on a project's bulk-settle button, the tree dims

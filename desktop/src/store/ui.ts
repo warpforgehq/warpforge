@@ -95,6 +95,14 @@ export interface SettingsState {
   bumpFontSize: (direction: 1 | -1) => void;
   bumpMonoFontSize: (direction: 1 | -1) => void;
   resetFontSizes: () => void;
+  /** Harness the PR Assistant talks to. null = first configured one. */
+  prAssistantAgentId: string | null;
+  setPrAssistantAgentId: (id: string | null) => void;
+  /** Model the PR Assistant asks for, per harness. Kept per harness because
+   *  the lists have nothing in common — five Anthropic models on one, an
+   *  OpenRouter catalogue on the next. */
+  prAssistantModelByAgent: Record<string, string>;
+  setPrAssistantModel: (agentId: string, model: string) => void;
   /** Agent that drafts commit messages and PR descriptions. null = none picked. */
   textGenAgentId: string | null;
   setTextGenAgentId: (id: string | null) => void;
@@ -269,6 +277,8 @@ export const useUi = create<UiState>()(
       fontSize: DEFAULT_FONT_SIZE,
       monoFontSize: DEFAULT_MONO_FONT_SIZE,
       theme: DEFAULT_THEME,
+      prAssistantAgentId: null,
+      prAssistantModelByAgent: {},
       textGenAgentId: null,
       textGenModel: null,
       autoNameTasks: true,
@@ -391,6 +401,11 @@ export const useUi = create<UiState>()(
         set({ fontSize: DEFAULT_FONT_SIZE, monoFontSize: DEFAULT_MONO_FONT_SIZE }),
       setTheme: (theme) => set({ theme }),
       // Models are per-agent, so a stored pick is meaningless once the agent changes.
+      setPrAssistantAgentId: (prAssistantAgentId) => set({ prAssistantAgentId }),
+      setPrAssistantModel: (agentId, model) =>
+        set((state) => ({
+          prAssistantModelByAgent: { ...state.prAssistantModelByAgent, [agentId]: model },
+        })),
       setTextGenAgentId: (textGenAgentId) => set({ textGenAgentId, textGenModel: null }),
       setTextGenModel: (textGenModel) => set({ textGenModel }),
       setAutoNameTasks: (autoNameTasks) => set({ autoNameTasks }),

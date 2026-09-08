@@ -282,6 +282,10 @@ export interface TaskInfo {
   /** True while a permission prompt for this task is unanswered. Computed
    *  daemon-side so the "needs you" badge works without holding transcripts. */
   pendingPermission?: boolean;
+  /** What created this task, when it was not the board. `pr-review` is the
+   *  shadow task behind a pull request's Assistant tab: the surface owns it,
+   *  so board-shaped lists filter it out (`lib/taskOrigin`). */
+  origin?: string | null;
 }
 
 export interface ConfigChoice {

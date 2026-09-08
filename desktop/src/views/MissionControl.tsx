@@ -1,6 +1,7 @@
 import "react-grid-layout/css/styles.css";
-import "react-resizable/css/styles.css";
 import { Plus } from "lucide-react";
+
+import "react-resizable/css/styles.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactGridLayout, { useContainerWidth } from "react-grid-layout";
 import type { LayoutItem } from "react-grid-layout";
@@ -14,6 +15,7 @@ import {
   setTaskGroupPinned,
   type TaskTree,
 } from "@/lib/taskGroups";
+import { boardTasks } from "@/lib/taskOrigin";
 
 import type { DaemonState } from "../daemon";
 import { buildAttentionQueue } from "../lib/attentionRail";
@@ -86,30 +88,28 @@ export default function MissionControl({ state, onOpenTask, onNewTask }: Props) 
   // `isSettledTask`, not `status !== "done"`: a task the user marked handled is
   // finished too. Counting only the daemon's `done` made this number disagree
   // with the sidebar, which hides both — same tasks, two different totals.
-  const live = useMemo(
-    () => state.snapshot.tasks.filter((task) => !isSettledTask(task)),
-    [state.snapshot.tasks],
-  );
+  // Surface-owned tasks (a pull request's Assistant conversation) are not
+  // board work and never appear here — filtered once, so every list below
+  // agrees (`lib/taskOrigin`).
+  const boardTaskList = useMemo(() => boardTasks(state.snapshot.tasks), [state.snapshot.tasks]);
+  const live = useMemo(() => boardTaskList.filter((task) => !isSettledTask(task)), [boardTaskList]);
   const liveStripItems = useMemo(() => {
     if (activeTab !== "live") return [];
     return buildLiveStripItems(live, state.sessionUpdates, EMPTY_PINNED_SET);
   }, [activeTab, live, state.sessionUpdates]);
   const attentionQueue = useMemo(
-    () => buildAttentionQueue(state.snapshot.tasks, state.sessionUpdates),
-    [state.sessionUpdates, state.snapshot.tasks],
+    () => buildAttentionQueue(boardTaskList, state.sessionUpdates),
+    [boardTaskList, state.sessionUpdates],
   );
   const failures = useMemo(
-    () => buildFailureList(state.snapshot.tasks, state.sessionUpdates),
-    [state.snapshot.tasks, state.sessionUpdates],
+    () => buildFailureList(boardTaskList, state.sessionUpdates),
+    [boardTaskList, state.sessionUpdates],
   );
   const decisionItems = useMemo(
     () => attentionQueue.filter((item) => item.task.status !== "interrupted"),
     [attentionQueue],
   );
-  const groupIndex = useMemo(
-    () => buildTaskGroupIndex(state.snapshot.tasks),
-    [state.snapshot.tasks],
-  );
+  const groupIndex = useMemo(() => buildTaskGroupIndex(boardTaskList), [boardTaskList]);
   const pinnedGroups = useMemo(
     () => resolvePinnedTaskGroups(groupIndex, pinned),
     [groupIndex, pinned],
