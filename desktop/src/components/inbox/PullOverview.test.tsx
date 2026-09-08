@@ -162,14 +162,26 @@ describe("PullOverview", () => {
     expect(screen.getByText("Outdated")).toBeInTheDocument();
   });
 
-  it("waits to be asked for the file list of a big change", async () => {
-    const user = userEvent.setup();
-    const onLoadFiles = vi.fn<() => void>();
-    renderOverview(emptyThread, { files: null, onLoadFiles });
+  it("lists every file rather than hiding the tail behind a second click", () => {
+    const many = Array.from({ length: 30 }, (_, index) => ({
+      path: `src/file-${index}.ts`,
+      additions: 1,
+      deletions: 0,
+    }));
+    renderOverview(emptyThread, { files: many });
 
-    // The count is known from the listing long before the file list is.
+    // One click opened the group; a second one to reveal "45 more files" was
+    // the bug. The list scrolls instead.
+    expect(screen.getByText("file-29.ts")).toBeInTheDocument();
+    expect(screen.queryByText(/more files/)).not.toBeInTheDocument();
+  });
+
+  it("shows the count before the list, then the list, with nothing to click", () => {
+    // No "Show file list" gate: the count comes from the listing, the list
+    // follows on its own, and the rail never asked for a second click.
+    renderOverview(emptyThread, { files: null });
     expect(screen.getByText("3 files changed")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Show file list" }));
-    expect(onLoadFiles).toHaveBeenCalled();
+    expect(screen.getByText("Loading files…")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Show file list/ })).not.toBeInTheDocument();
   });
 });
