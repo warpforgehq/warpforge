@@ -60,6 +60,7 @@
     "codemirror-lang-elixir": "^4.0.1",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.23.0",
+    "mermaid": "^11.17.2",
     "radix-ui": "^1.6.7",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
