@@ -27,20 +27,20 @@ export function PullMetaRail({
   reviewers,
   files,
   onOpenFile,
-  onLoadFiles,
 }: {
   pr: PullRequestSummary;
   details: PullRequestDetails | null;
   reviewers: readonly PullReviewer[];
   files: readonly PullRequestFile[] | null;
   onOpenFile?: (path: string) => void;
-  onLoadFiles?: () => void;
 }) {
   const state = (details?.state || pr.state).toLowerCase();
   const draft = details?.draft ?? pr.draft;
 
   return (
-    <aside className="flex w-full min-w-0 flex-col gap-5">
+    /* The meta sections keep their place; only the file list scrolls, so a
+       52-file change cannot push Status and Reviewers out of sight. */
+    <aside className="flex w-full min-w-0 flex-col gap-5 xl:min-h-0">
       <Section title="Status">
         <StateLine state={state} draft={draft} />
       </Section>
@@ -121,7 +121,6 @@ export function PullMetaRail({
         files={files}
         changedFiles={details?.changedFiles ?? pr.changedFiles ?? 0}
         onOpenFile={onOpenFile}
-        onLoadFiles={onLoadFiles}
       />
     </aside>
   );

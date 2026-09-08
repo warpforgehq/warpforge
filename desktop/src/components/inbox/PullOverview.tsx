@@ -32,7 +32,6 @@ export function PullOverview({
   threadError,
   reviewers,
   files,
-  onLoadFiles,
   onOpenFile,
   onOpenDiff,
   onThreadChanged,
@@ -46,7 +45,6 @@ export function PullOverview({
   threadError?: Error | null;
   reviewers: readonly PullReviewer[];
   files: readonly PullRequestFile[] | null;
-  onLoadFiles?: () => void;
   /** Takes a file from the rail to its diff. */
   onOpenFile?: (path: string) => void;
   onOpenDiff?: () => void;
@@ -55,12 +53,17 @@ export function PullOverview({
   const body = (details?.body ?? "").trim();
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
-      {/* Two columns from 1280px up: the pane already gives ~320px to the
-          inbox list, so a viewport narrower than that has no room for a rail
-          beside a readable measure — it stacks under the activity instead. */}
-      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-x-8 gap-y-6 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
-        <div className="flex min-w-0 flex-col gap-6">
+    /*
+     * Two panes that scroll separately from 1280px up: reading a long
+     * description must not push the rail's status and file list off screen,
+     * and scrolling 52 files must not move the conversation. Below that width
+     * there is no room for a rail beside a readable measure, so it stacks
+     * under the activity and the whole thing is one scroller again — which is
+     * why the overflow rules are all `xl:`.
+     */
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto xl:flex-row xl:overflow-hidden">
+      <div className="min-w-0 flex-1 px-4 py-4 xl:overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6">
           <section className="flex min-w-0 flex-col gap-2">
             <h3 className="text-xs font-medium text-muted-foreground">Description</h3>
             {detailsLoading && !details ? (
@@ -100,14 +103,15 @@ export function PullOverview({
             />
           )}
         </div>
+      </div>
 
+      <div className="shrink-0 px-4 pb-4 xl:flex xl:w-72 xl:min-h-0 xl:flex-col xl:border-l xl:border-border/70 xl:px-4 xl:py-4">
         <PullMetaRail
           pr={pr}
           details={details}
           reviewers={reviewers}
           files={files}
           onOpenFile={onOpenFile}
-          onLoadFiles={onLoadFiles}
         />
       </div>
     </div>

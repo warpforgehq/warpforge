@@ -96,5 +96,7 @@ export function groupPullFiles(files: readonly PullRequestFile[]): PullFileGroup
     group.additions += file.additions;
     group.deletions += file.deletions;
   }
-  return [groups.implementation, groups.documentation].filter((group) => group.files.length > 0);
+  // Documentation first: it is the short group, and under a 46-file
+  // implementation list it never got on screen at all.
+  return [groups.documentation, groups.implementation].filter((group) => group.files.length > 0);
 }

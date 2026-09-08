@@ -1,13 +1,9 @@
 import { ChevronDown, ChevronRight, FileCode2, FileText } from "lucide-react";
 import * as React from "react";
 
-import { Button } from "@/components/ui/button";
 import { groupPullFiles, type PullFileGroup, type PullGroupedFile } from "@/lib/pullFileGroups";
 import { cn } from "@/lib/utils";
 import type { PullRequestFile } from "@/protocol";
-
-/** How many files a group shows before it hands the rest to an expander. */
-const VISIBLE_FILES = 7;
 
 /**
  * What this pull request touches, grouped by whether it is code or prose.
@@ -21,39 +17,31 @@ export function PullFilesChanged({
   files,
   changedFiles,
   onOpenFile,
-  onLoadFiles,
 }: {
   /** The file list, once something has fetched it. */
   files: readonly PullRequestFile[] | null;
   /** The count from the listing — known long before the file list is. */
   changedFiles: number;
   onOpenFile?: (path: string) => void;
-  /** Present when the list has not been fetched and can be, on request. */
-  onLoadFiles?: () => void;
 }) {
   const groups = React.useMemo(() => (files ? groupPullFiles(files) : []), [files]);
   const total = files?.length || changedFiles;
 
   return (
-    <section className="flex min-w-0 flex-col gap-2">
-      <h4 className="tnum text-xs text-muted-foreground">
+    <section className="flex min-w-0 flex-col gap-2 xl:min-h-0 xl:flex-1">
+      <h4 className="tnum shrink-0 text-xs text-muted-foreground">
         {total} {total === 1 ? "file" : "files"} changed
       </h4>
       {files ? (
-        groups.map((group) => <FileGroup key={group.id} group={group} onOpenFile={onOpenFile} />)
-      ) : onLoadFiles ? (
-        // A big pull request does not load its file list on the overview: the
-        // list rides the patch fetch, and walking the inbox with `j`/`k` must
-        // not pull a megabyte per row.
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 self-start px-2 text-xs"
-          onClick={onLoadFiles}
-        >
-          Show file list
-        </Button>
+        /* One scroller for every group, not one each: two open groups sharing
+           the height meant opening the second squashed the first. Each group's
+           heading sticks to the top of this box instead, so it stays readable
+           while its own rows move under it. */
+        <div className="flex min-w-0 flex-col gap-1 xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
+          {groups.map((group) => (
+            <FileGroup key={group.id} group={group} onOpenFile={onOpenFile} />
+          ))}
+        </div>
       ) : (
         <p className="text-xs text-muted-foreground/60">Loading files…</p>
       )}
@@ -71,17 +59,14 @@ function FileGroup({
   // Implementation opens, documentation folds: the code is what the review is
   // for, and a 3-file docs group under it is context, not work.
   const [open, setOpen] = React.useState(group.id === "implementation");
-  const [showAll, setShowAll] = React.useState(false);
-  const visible = showAll ? group.files : group.files.slice(0, VISIBLE_FILES);
-  const hidden = group.files.length - visible.length;
 
   return (
-    <div className="min-w-0">
+    <div className="flex min-w-0 flex-col">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="flex h-7 w-full min-w-0 items-center gap-1.5 rounded px-1 text-left hover:bg-secondary/40"
+        className="sticky top-0 z-10 flex h-7 w-full min-w-0 shrink-0 items-center gap-1.5 bg-background px-1 text-left hover:bg-secondary/40"
       >
         <span className="min-w-0 truncate text-xs font-medium text-foreground/85">
           {group.label}
@@ -99,18 +84,9 @@ function FileGroup({
       </button>
       {open && (
         <div className="ml-1 flex min-w-0 flex-col border-l border-border/60 pl-1.5">
-          {visible.map((file) => (
+          {group.files.map((file) => (
             <FileRow key={file.path} file={file} onOpenFile={onOpenFile} />
           ))}
-          {hidden > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowAll(true)}
-              className="flex h-6 items-center gap-1.5 px-1.5 text-left text-xs text-muted-foreground hover:text-foreground"
-            >
-              {hidden} more {hidden === 1 ? "file" : "files"}
-            </button>
-          )}
         </div>
       )}
     </div>

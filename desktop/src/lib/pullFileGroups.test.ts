@@ -36,11 +36,12 @@ describe("groupPullFiles", () => {
       { path: "docs/b.md", additions: 30, deletions: 0 },
       { path: "src/nested/c.ts", additions: 5, deletions: 1 },
     ]);
-    expect(groups.map((group) => group.id)).toEqual(["implementation", "documentation"]);
-    expect(groups[0].files.map((file) => file.name)).toEqual(["a.ts", "c.ts"]);
-    expect(groups[0].additions).toBe(15);
-    expect(groups[0].deletions).toBe(3);
-    expect(groups[1].additions).toBe(30);
+    // Documentation leads: the long implementation list used to bury it.
+    expect(groups.map((group) => group.id)).toEqual(["documentation", "implementation"]);
+    expect(groups[1].files.map((file) => file.name)).toEqual(["a.ts", "c.ts"]);
+    expect(groups[1].additions).toBe(15);
+    expect(groups[1].deletions).toBe(3);
+    expect(groups[0].additions).toBe(30);
   });
 
   it("splits a path into the name it leads with and the directory behind it", () => {
