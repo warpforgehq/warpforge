@@ -311,6 +311,20 @@
   * {
     border-color: hsl(var(--border) / 0.8);
   }
+
+  /* A `<button>` is `cursor: default` in every browser, and Tailwind's
+     preflight leaves that alone — so every control in the app read as inert
+     text. Layered in `base` so a `cursor-*` utility still wins, and scoped
+     off `:disabled` / `aria-disabled` so a dead control does not invite the
+     click it will swallow. The `Button` component says the same thing in its
+     own class list; this covers the plain `<button>`s and the elements that
+     only claim the role. */
+  button:not(:disabled):not([aria-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="checkbox"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
 }
 
 /*
