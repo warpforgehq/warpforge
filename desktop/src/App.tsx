@@ -1,10 +1,11 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import {
-  lazy,
   Suspense,
+  lazy,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -29,6 +30,7 @@ import { SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX } from "@/store/ui";
 import { useDaemonEvents } from "./hooks/useDaemonEvents";
 import { useFindInFilesShortcut } from "./hooks/useFindInFilesShortcut";
 import { useFontScaling } from "./hooks/useFontScaling";
+import { usePrAssistantLifecycle } from "./hooks/usePrAssistantLifecycle";
 import { usePullShortcut } from "./hooks/usePullShortcut";
 import { usePushShortcut } from "./hooks/usePushShortcut";
 import { useQuickOpenShortcut } from "./hooks/useQuickOpenShortcut";
@@ -61,6 +63,18 @@ function LiveMissionControl({
 function LiveSidebar(props: Omit<React.ComponentProps<typeof Sidebar>, "state">) {
   const state = useSyncExternalStore(daemon.subscribe, daemon.getState);
   return <Sidebar state={state} {...props} />;
+}
+
+/**
+ * Retires a PR Assistant conversation when its pull request is done with.
+ *
+ * A component rather than a hook call in `App`: it reads the inbox listing
+ * through React Query, and `App` renders above the provider. Every project,
+ * because a listing scoped to one says nothing about the others.
+ */
+function PrAssistantLifecycleHost({ projects }: { projects: string[] }) {
+  usePrAssistantLifecycle(projects);
+  return null;
 }
 
 /** Hosts the search palettes: owns the file-list query, the search RPCs and the
@@ -321,6 +335,10 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [startNewTask]);
 
+  const projectNames = useMemo(
+    () => snapshot.projects.map((project) => project.name),
+    [snapshot.projects],
+  );
   usePullShortcut(snapshot.tasks);
   usePushShortcut(snapshot.tasks, setPushOpen);
 
@@ -429,7 +447,7 @@ export default function App() {
                       <LiveMissionControl onOpenTask={setOpenTaskId} onNewTask={startNewTask} />
                     ) : view === "inbox" ? (
                       <InboxView
-                        projects={snapshot.projects.map((project) => project.name)}
+                        projects={projectNames}
                         onSendToAgent={(project, prompt) => startNewTask(project, prompt)}
                       />
                     ) : view === "automations" ? (
@@ -452,6 +470,7 @@ export default function App() {
               openTaskId={openTask ? openTask.id : null}
               hasOpenTask={!!openTask && !newTaskOpen}
             />
+            <PrAssistantLifecycleHost projects={projectNames} />
             {addProjectOpen && (
               <AddProjectDialog
                 open

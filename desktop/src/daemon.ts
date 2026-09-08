@@ -626,6 +626,7 @@ export class DaemonClient {
           id,
           project: String(p.project),
           prompt: promptText,
+          origin: p.origin ? String(p.origin) : null,
           status: "running" as const,
           tags: (p.tags as string[]) ?? [],
           title: promptText.trim().split("\n")[0]?.trim().slice(0, 80) ?? "",
@@ -1290,6 +1291,36 @@ export class DaemonClient {
       project,
     })) as Partial<ProjectSources>;
     return { project, local: true, linear: false, github: false, ...result };
+  }
+
+  /**
+   * Create a task. `origin` marks a task a surface owns rather than the board
+   * — `pr-review` for the PR Assistant's conversation, which is filtered out
+   * of every board list (`lib/taskOrigin`).
+   */
+  async taskCreate(params: {
+    project: string;
+    prompt: string;
+    agent: string;
+    tags?: string[];
+    origin?: string;
+    worktree?: boolean;
+    includeRuntimeContext?: boolean;
+    defaultModel?: string;
+  }): Promise<string> {
+    const result = (await this.request("task.create", {
+      agent: params.agent,
+      default_model: params.defaultModel,
+      include_runtime_context: params.includeRuntimeContext ?? true,
+      origin: params.origin,
+      project: params.project,
+      prompt: params.prompt,
+      tags: params.tags ?? [],
+      worktree: params.worktree ?? false,
+    })) as { taskId?: string } | null;
+    const taskId = result?.taskId;
+    if (!taskId) throw new Error("the daemon created no task");
+    return taskId;
   }
 
   /** One project's pull requests, newest update first. GitHub only. */

@@ -9,6 +9,7 @@ import { attentionToastSummary } from "@/lib/attentionToast";
 import { permissionToastApproveOption, permissionToastContext } from "@/lib/permissionToast";
 import { awaitsReview } from "@/lib/taskGroups";
 import { taskLabel } from "@/lib/taskLabel";
+import { isSurfaceOwnedTask } from "@/lib/taskOrigin";
 import type { DaemonEvent, TaskInfo, TaskStatus } from "@/protocol";
 import { useUi } from "@/store/ui";
 
@@ -21,6 +22,9 @@ const ATTENTION_STATUS = new Set<TaskStatus>(["waiting", "blocked", "interrupted
  * `needs_review` toast noise.
  */
 function attentionStatusOf(task: TaskInfo): TaskStatus | null {
+  // A surface owns its own task's state (the PR Assistant tab shows it in
+  // place); a toast would point at a task no board list can open.
+  if (isSurfaceOwnedTask(task)) return null;
   if (task.status === "blocked" || task.status === "interrupted") return task.status;
   return awaitsReview(task) ? "waiting" : null;
 }
