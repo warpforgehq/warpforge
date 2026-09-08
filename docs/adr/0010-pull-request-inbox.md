@@ -70,27 +70,51 @@ other. That is the fingerprint rule working, not an accident.
 **The changed files group by kind on the overview, by folder on the diff.**
 `lib/pullFileGroups` splits paths into Implementation and Documentation
 (prose extensions, `docs/`, `dataset/`, `.jsonl`) and sums each group.
-Implementation opens, documentation folds: triage first, navigation second.
+Documentation leads and folds; implementation follows and opens. Order first:
+under a 46-file implementation list the docs group was below the fold and
+effectively invisible, and it is the group whose *heading alone* — count and
+totals — is often the whole answer. Fold state second: the code is what the
+review is for.
 The Diff tab keeps its folder tree (`PullFilesRail`) because that is where
 you navigate. Path heuristics, not GitHub metadata — the wire carries a path
 and two counts, and asking the daemon to classify would put a UI opinion in
 the protocol. Unrecognized paths fall to Implementation: a file misfiled as
 prose is a file the reviewer skips.
 
-**The overview's file list rides the patch fetch, but only for a change that
-can afford it.** There is no files-only read on the wire, so the group list
-comes out of `pulls.diff`. Fetching a capped 2 MB patch for every row someone
-walks past with `j`/`k` is exactly what invariant 2 exists to prevent, so the
-fetch is automatic under `AUTO_FILE_LIST_CHANGES` (3000 changed lines, from
-the listing's own counts) and a button above it. A files-only daemon read
-retires the heuristic.
+**The overview's file list arrives on its own, on a delay.** There is no
+files-only read on the wire, so the group list comes out of `pulls.diff` — and
+fetching a capped 2 MB patch for every row someone walks past with `j`/`k` is
+what invariant 2 exists to prevent. The first answer was a size threshold plus
+a "Show file list" button, which turned the rail into two clicks: one to open
+a group, one to see past the seventh file. Now the fetch simply waits
+`FILE_LIST_DELAY_MS` (400 ms) after a pull request is selected — long enough
+that walking the list costs nothing, short enough that nobody notices when
+they stop. A files-only daemon read retires the delay too.
 
-**The header carries three rows and no verbs.** Status and identity, the
-title, then author + branch route + diff size. The verdict actions moved to
-the tab bar as quiet ghost buttons: approving is something you do once, at
-the end, and it had been sitting in the reading path shouting through the
-whole review. The rail owns everything countable — reviewers, labels,
-assignees — which is what let the header stop wrapping.
+**The header carries two rows and no verbs.** Status, identity and author on
+one line; the title on the next. The verdict actions moved to the tab bar as
+quiet ghost buttons: approving is something you do once, at the end, and it
+had been sitting in the reading path shouting through the whole review. The
+branch route and the diff size left too — the rail states both, and a header
+that repeats the rail is a header that reads twice. The rail owns everything
+countable: reviewers, labels, assignees, branch, totals.
+
+**Overview scrolls in three places, not one.** One scroller meant reading a
+long description pushed the rail's status and file list off screen, and
+scrolling a 52-file list dragged the conversation with it. So from 1280px up
+the description+activity column and the rail scroll independently, and inside
+the rail only the *file rows* move: the "52 files changed" line, the totals
+and each group's heading stay put, because those are what you navigate by.
+Below that width there is no room for a rail beside a readable measure, so it
+stacks under the activity and the whole pane is one scroller again — which is
+why every overflow rule there is `xl:`.
+
+The file list also stopped truncating and stopped asking. It used to show
+seven files per group behind an "N more files" button, on top of a "Show file
+list" gate for large changes — three clicks to read a rail. It is one
+scroller now, with each group's heading sticky inside it. One scroller and not
+one per group: two open groups splitting the height meant opening the second
+squashed the first.
 
 **Seen state is localStorage, not the daemon.** Which rows the user has
 looked at is per-device, worthless to sync, and must survive daemon restarts
@@ -124,6 +148,64 @@ one preference, not two. Syntax colouring parses each side of a file once with
 the file's CodeMirror grammar and hands tokens back per patch line
 (`lib/pullDiffHighlight`); it is decoration, so a missing grammar, a timeout or
 a file past the budget renders plain rather than not at all.
+
+**The diff pays per change, not per render.** A 10k-line pull request made
+three things crawl, and each had its own cause.
+
+*Menus.* `ui/dropdown-menu`'s `Content` is not portalled — the codebase
+portals at the call site (`MessageActions`, `SidebarTaskRow`). The commit
+picker, the send-to-agent menu and the Assistant's harness/model pickers did
+not, so they mounted *inside* the patch's own scroll container: Radix's
+positioning observers then measured a 10k-row subtree on open and on every
+pointer move. They portal now.
+
+*Row handlers.* Each gutter bound `onPointerEnter`, and each comment button
+`onPointerDown`/`onPointerUp`/`onKeyDown` — ~50k closures rebuilt on every
+render of a big file. The hunk container owns those four listeners now and
+reads `data-line-id` off the event target, so a row is markup and nothing
+else.
+
+*Render scope.* Nothing was memoized and every `PullDiffFile` prop was an
+inline closure or a fresh object, so ticking one file off re-rendered all of
+them. `PullDiffFile`, `PullDiffLines`, `Gutter` and `LineText` are memoized;
+the per-line `lineExtras` closure moved *into* the file (it builds its own
+composers from a per-file thread map and a `draft` that is `undefined` for
+every file the drag is not on). `PullDiffView.memo.test` pins both halves:
+ticking a file off re-renders no other file's rows, and a unified/split flip
+rebuilds exactly once per file. That flip is also a `useTransition` — the work
+is unavoidable, blocking the click on it is not.
+
+*Row count.* The three fixes above made the diff pay per change; they did not
+make it cheaper to have 10k rows on the page at all, and on a real 60-file /
+10k-line pull request it still sagged. Measured: `parseUnifiedPatch` costs 4 ms
+(nothing), highlighting all 60 files costs 352 ms of synchronous main-thread
+work, and one rendered row costs **11 DOM elements plain, 25–29 coloured** —
+because colouring emits a `<span>` per token. That is a quarter of a million
+nodes for one pull request. `content-visibility: auto` does not help: it skips
+*painting* an off-screen subtree, not *creating* it.
+
+So hunks mount only while they are near the viewport (`PullDiffHunk`), and
+stand in as a spacer of their own height while they are not. Three details are
+load-bearing. The height is **measured on the way out**, not estimated — a
+spacer of the estimated height moves every row below it and takes the scroll
+position with it. A hunk whose file carries a comment draft or a review thread
+is `pinned` and never unmounts, because a composer's and a reply box's typed
+text live in that DOM. And with no `IntersectionObserver` at all (jsdom, an old
+webview) every hunk renders outright, so the diff is never blank because a
+spacer never resolved.
+
+Highlighting follows the same rule: a file colours only once it is near the
+viewport, and `highlightPatchBlock` serialises its callers through one queue
+with a yield between them, so two big files can no longer land 200 ms of
+CodeMirror parsing on the frame that was trying to answer a hover. Adjacent
+tokens sharing a class collapse into one span, which is worth ~7% of the rows'
+elements — kept because it is free, not because it mattered.
+
+Rejected: **row virtualization** (`react-window` and friends). A diff row's
+height is not fixed — long lines wrap under `break-all` — the file headers are
+`sticky`, and a windowed list breaks Ctrl+F over the whole patch. Hunk-level
+mounting gives up Ctrl+F for off-screen hunks too, which is the one real cost
+of this decision, and the same cost GitHub pays.
 
 **Viewed marks are the reviewer's bookkeeping, not the PR's state — but they
 expire with the file.** Ticking a file off is per-device localStorage
@@ -169,6 +251,113 @@ is stored. Both land in the same wire types (`warpforge_protocol::pulls`), so
 callers never learn which one ran. The thread is one GraphQL query for
 comments + reviews + review threads (ADR heritage: the backlog's invariant 3,
 one round trip per listing).
+
+**An agent on the pull request is a third tab, backed by a real task.**
+Reading a diff and asking about it are different postures, so the Assistant
+sits beside Overview and Diff rather than inside either. Behind it is an
+ordinary daemon task — same session, same transcript, same store — which is
+what makes the conversation survive a restart without this pane persisting
+anything of its own. What makes it *not* board work is one field: `origin =
+"pr-review"` on `task.create` and on `TaskInfo`, which every board-shaped list
+filters on (`lib/taskOrigin`: the sidebar tree, Mission Control's tiles and
+attention queue, the backlog's live-task set, and the attention toasts).
+
+Two buttons, one thread. "Explain" and "Review" differ only in the task they
+open with (`lib/prAssistantPrompt`); pressing the second one sends a prompt
+into the existing session rather than starting a second task, because
+answering "what is wrong with this" without the walk-through that preceded it
+throws away the context the user just paid for. Reopen-not-spawn is the rule
+the pane resolves its task by: `origin` plus a `pr:{repo}#{number}` tag, never
+a second row for the same pull request. "Continue in task" is the one door out
+of the pane — the task is openable, just not listed.
+
+The session runs without a worktree and without runtime context. A review
+reads; a checkout per pull request would leave a worktree behind a surface
+nobody can see to clean up, and the running-services preamble describes a dev
+runtime that has nothing to do with the diff.
+
+**"Send to agent" names the job; the Assistant answers questions.** The
+button used to hand the New Task dialog four lines — number, title, URL,
+branch route, under the words "Work on this GitHub pull request" — and nothing
+about what to do with them. So the agent guessed, and its guess was usually a
+summary of the diff: the very thing the Assistant tab now does in place,
+without spawning board work. The overlap was the bug.
+
+It is now two named actions (`lib/inboxTaskPrompt`), both for work that wants
+a task of its own — a checkout, commits, a push, a row on the board:
+*Address review comments* (disabled, with a reason, when nothing is
+unresolved) carries the remarks themselves, with author and `path:line`,
+because an agent in a checkout cannot see a review thread; *Work on this
+branch* carries the description and the file list. Both open with
+`git fetch origin <head> && git switch <head>`: a task that reasons about a
+pull request from `main` is the most common way this goes wrong.
+
+**The opening prompt names the files; it does not paste them.** The first
+version packed up to 48 KB of patch into the Assistant's opening message and
+told the agent to read the files for anything missing. Watching it run showed
+the cost: the agent read the whole change twice — once as prompt text, once
+with its own tools — and the prompt half was pure waste. So the diff is
+inlined only under `INLINE_PATCH_MAX_BYTES` (8 KB), where a tool round trip
+costs more than the text; above it the prompt carries the file list with
+per-file counts and the two commands that produce the diff, and says to read
+each thing once.
+
+Those commands fetch and diff `origin` refs rather than switching branches:
+the Assistant session runs in the developer's own working tree, so a
+`git switch` there would move the tree under the person using it. The same
+sentence sits in the daemon-side instruction, because that is what applies to
+the follow-up turns.
+
+**The shadow task's lifecycle is not the user's problem.** Nobody sees these
+tasks, so nobody archives them, and the board's own sweeps deliberately skip
+them (`origin IS NULL` in `find_ignored_waiting_tasks`,
+`find_expired_closed_tasks`, `find_settled_tasks` — a shelf "delete finished"
+must not take a PR conversation with it). Three rules replace the user:
+
+- **Merged or closed → archived.** The inbox listing is the only thing
+  watching GitHub, so this rides its poll (`usePrAssistantLifecycle`). A pull
+  request that shows up closed is archived immediately; one that has dropped
+  out of the listing is *asked about* (`pulls.details`, a few per poll, each
+  once per session) rather than assumed dead — the default listing filter is
+  `open`, so absence is the common case, not evidence.
+- **14 days untouched → deleted**, through the ordinary `DeleteTask` path so
+  the transcript goes with it.
+- **50 conversations, newest first** — a reviewer opening twenty pull requests
+  a day must not accumulate sessions without bound.
+
+The last two are one store query (`find_stale_origin_tasks`) run off the actor
+loop when a new PR Assistant task is created, and on the existing history
+sweep.
+
+**Style is daemon-side, shape is per-request.** The standing instruction
+(`actor/pr_assistant::PR_ASSISTANT_SYSTEM`, adapted from Dex Horthy's
+`/show-me` skill) started out listing every compact form the agent could
+reach for. That leaked: pressing **Review** produced a four-section essay with
+a diagram and pseudocode in it, because the system prompt kept asking for
+forms the request had not. So the split is now strict — the system prompt
+carries tone, grounding, read-once and "answer in the shape the request asks
+for, and nothing else"; the request itself (`lib/prAssistantPrompt`) owns the
+sections. Explain asks for three, caps its pseudocode at 12 simplified lines
+and its diagram at 8 nodes; Review asks for findings, worst first, explicitly
+without a diagram or a summary.
+
+```mermaid fences render for real (`components/MermaidDiagram`, lazy-loaded,
+theme-following). A diagram that will not parse falls back to its source *with
+a line saying so* — the first version fell back silently, which is
+indistinguishable from an app that cannot draw diagrams at all, and that is
+exactly how it was first misread.
+
+**The harness and the model are picks, not defaults.** The pane first used
+the first configured agent with no control, so every conversation silently ran
+on whichever harness happened to be first — and on whatever model that harness
+defaulted to, which is unanswerable when one has five Anthropic models and the
+next has an OpenRouter catalogue. Both are now pickers in the header, with the
+harness's own logo (`components/AgentLogo`), remembered across sessions:
+`prAssistantAgentId`, and `prAssistantModelByAgent` keyed per harness because
+the lists have nothing in common. The model rides task creation as
+`default_model`. Both collapse to labels once a task exists — the harness
+behind a live session cannot change under it, and the model is switchable from
+the transcript's own config bar from then on.
 
 ## Invariants
 
@@ -231,6 +420,32 @@ one round trip per listing).
     rejected before the URL is built. A range is also both hashes or
     neither: one alone is a bad request rather than a silent fall back to
     the whole pull request, which would show more than was asked for.
+15. **A surface-owned task is never listed as board work.** `origin` is
+    checked through `lib/taskOrigin`, not by comparing the string in place: a
+    new board-shaped list is the failure mode here, and one helper is what
+    makes "did you filter it?" answerable. The same field keeps those tasks
+    out of the daemon's settle, retention and bulk-delete sweeps — they have
+    their own TTL and cap instead.
+16. **The two agent doors do different jobs.** The Assistant tab reads and
+    explains, in place, on a hidden task. "Send to agent" hands out work with
+    an instruction in it, as an ordinary board task. Neither should grow into
+    the other: a "send to agent" that only summarises is the button this ADR
+    already replaced once.
+17. **The Assistant reopens; it never spawns twice.** One conversation per
+    pull request, resolved by `origin` + the `pr:{repo}#{number}` tag. The tag
+    alone is not the marker: a user is free to tag their own task `pr:…` and
+    the pane must not adopt it.
+18. **A prompt says where the code is; it does not carry all of it.** Above
+    `INLINE_PATCH_MAX_BYTES` the agent gets the file list and the commands,
+    not the patch — measured, after watching it read the same change twice.
+19. **An off-screen hunk holds the height it measured, not the height it was
+    estimated at.** `PullDiffHunk` reads the real height before it unmounts;
+    substituting the estimate moves every row below the spacer and drags the
+    scroll position with it. A hunk on a file with a draft or a thread is
+    pinned and never unmounts — a composer's typed text lives in that DOM —
+    and with no `IntersectionObserver` every hunk renders outright.
+    And nothing the Assistant runs may switch branches: that tree belongs to
+    the developer.
 
 ## Deferred (v2)
 
@@ -254,5 +469,5 @@ to guess:
 Also deferred: Linear parity (the same pane takes a second provider later),
 pending "draft" reviews (a verdict posts immediately), issue-only inbox items
 (the backlog owns those), pushing a PR's comments into an existing task, and
-the agent-authored review pass that the backlog tracks separately — Activity
-and the Diff's thread cards are where its output will land.
+posting the Assistant's suggested comments straight onto the diff (it writes
+them into the conversation; the reviewer still places them).
