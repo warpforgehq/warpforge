@@ -1,0 +1,106 @@
+---
+title: Reviewing pull requests
+description: A GitHub review surface inside Warpforge — one inbox across every project, line comments and verdicts that post for real, and an agent you can ask about the change.
+sidebar:
+  order: 6
+  label: Pull requests
+---
+
+Reviewing a pull request is the other half of agent work. An agent opens one; someone still has to read it. The **Inbox** is that surface: every project's open pull requests in one list, the full diff beside it, and comments, replies and verdicts that go to GitHub rather than into a local note.
+
+It is a review tool, not a mirror of github.com. Anything Warpforge cannot answer honestly, it says so about — see [What isn't here yet](#what-isnt-here-yet).
+
+## Where it lives
+
+- **Sidebar → Inbox** reads every registered project. Its badge counts unread pull requests.
+- **A project page → Pull Requests** is the same pane scoped to that project.
+
+Both need a GitHub connection — a personal access token in **Settings → Trackers → GitHub**, the same one the backlog uses ([how to create it](/guides/tasks-and-backlog/#connect-a-tracker)). A `gh` CLI session still works as a fallback if no token is set.
+
+## The list
+
+The list polls every 30 seconds and sorts by last activity, newest first.
+
+- **Unread is "changed since you looked."** A new comment, a new review, a force-push — all of them move the pull request's timestamp, and the row lights up. Opening a row clears it; **Mark all as read** clears the rest. The very first listing after you connect is recorded silently, so a fresh install doesn't flag every pull request that ever existed.
+- **Filter** matches the title, repo, `#number`, author, either branch name, labels and assignees. **Open** or **All** switches state. **Reset** appears only when something is actually narrowing the list.
+- **`j` / `k`** (or the arrow keys) walk the list without leaving the review — the next pull request loads into the pane you are already reading. **Hide the list** gives the review the whole window; the unread count stays visible on the collapsed edge.
+
+Each row reads across one line: repo and number, `+`/`−` and file count, when it last changed, then the title and its labels.
+
+## Overview
+
+The header is two rows and nothing more: state, review decision, `repo#number`, author, and buttons to refresh or open the pull request on GitHub. Everything else about the change lives in the rail, once.
+
+**The left column is the change as a document** — the description, then every review and comment as a card underneath it, in the order they happened. Reply to a review thread inline; it posts to GitHub straight away. Bot reviews render properly: GitHub's `> [!WARNING]` callouts become callouts, collapsible sections stay collapsible, and a Mermaid diagram in a review body renders as a diagram.
+
+**The rail beside it answers "where does this stand"** — status, each reviewer with their latest verdict, branch, labels, assignees, and the changed files.
+
+Files are grouped **Documentation** then **Implementation** by path: `*.md`, anything under `docs/`, and JSONL datasets are documentation, everything else is implementation. Documentation comes first deliberately — it is the short group, and under a 46-file implementation list it never got on screen at all. Click any file to jump straight to its diff.
+
+The description, the rail and the file list scroll independently, so reading one never moves the other.
+
+## The diff
+
+**Files** toggles the changed-file rail: a folder tree with a filter, which flattens to plain matches while you type, because someone typing a name wants the matches and not the folders they live in. **`[`** and **`]`** step through files.
+
+**Unified or side-by-side**, switched from the right of the toolbar. Both read from the same patch — side-by-side costs no extra fetch.
+
+### Read it one commit at a time
+
+Open **Commits** and tick the commit you want, or tick two to read the run between them. The diff, the file list and the viewed marks all follow the selection; **All commits** puts the whole change back. Commits you have already opened come back instantly.
+
+Selection is a contiguous run on purpose — "commits 1 and 3 but not 2" is not a diff GitHub can produce.
+
+### Tick files off as you read
+
+The count in the toolbar is your progress through the review. A viewed mark is per-device and local — it is your bookkeeping, not the pull request's state — and it **expires when the file changes**: a mark is scoped to the version of the file it was made against, so a force-push does not leave a changed file reported as already read.
+
+### Comment on a line
+
+Hover a line number and press the **+**. Drag down the gutter, or shift-click a second line, to cover a range. **Suggestion** seeds a fenced `suggestion` block with the lines as they currently stand, which is what GitHub replaces when someone accepts it.
+
+Existing review threads sit on the lines they were written about. A thread GitHub has outdated — its line no longer exists — appears in Overview's activity instead of being guessed onto a row.
+
+**Approve** and **Request changes** sit at the right of the tab bar, out of the reading path. Both are disabled on a draft pull request, because GitHub refuses a verdict there.
+
+<Aside type="note" title="Very large pull requests">
+  A 15,000-line change across 130 files opens, scrolls and switches layout without stalling: only the part of the diff you are looking at is built. One consequence — your browser's find-in-page searches the files currently on screen, so use the file list to get to the right file first. Patches above 2 MB are cut off, and the toolbar says so rather than quietly showing you less than the whole change.
+</Aside>
+
+## Ask an agent about it
+
+The **Assistant** tab puts an agent on the pull request without turning it into work.
+
+- **Explain** walks the change: what it does, how the new path flows, a diagram when the shape is easier to see than to read.
+- **Review** goes looking for what is wrong with it: risks, missing tests, and comments worth posting — worst first, no summary of the change.
+
+Both continue the *same* conversation, so you can ask follow-ups in plain language. Pick which harness and which model answers from the tab's own header; the choice is remembered per harness, so Claude and opencode can each keep their own model.
+
+The agent reads the change by fetching and diffing `origin` refs. It never switches or checks out a branch in your working tree — you are reading a pull request, not moving your own checkout onto it. Large patches are not pasted into the prompt either: past a few kilobytes the agent gets the file list and the commands to read them, so it reads each file once instead of twice.
+
+<Aside type="tip" title="These conversations stay inside the pull request">
+  The Assistant's thread never appears on your board, backlog or Mission Control — it belongs to the pane. It survives closing the app: reopen the pull request and the conversation is where you left it. It archives itself once the pull request is merged or closed, and after two weeks of silence. **Continue in task** moves it into a full task view when you want the whole window.
+</Aside>
+
+## Hand the work to an agent
+
+**Send to agent** asks what you want done, rather than handing an agent a link and hoping:
+
+| Choice | What the agent gets |
+| --- | --- |
+| **Address review comments** | Every unresolved remark with its file and line, and the instruction to fix them on the branch, then commit and push. The count is on the menu item; it's disabled when nothing is unresolved. |
+| **Work on this branch** | The description and the files the change touches — pick it up where it left off. |
+
+Either way it starts by checking the pull request's own branch out, and it becomes an ordinary task on your board — unlike the Assistant, this one is real work with an owner.
+
+## What isn't here yet
+
+- **Status checks.** The rail says "Status checks aren't read yet" instead of showing you a green tick it has not verified.
+- **Merge state.** Merged and closed both read as *Closed*; no merge timestamp travels yet.
+- **Pull requests with more than 100 commits** list their most recent 100 in the commit picker.
+
+## See also
+
+- [Tasks and backlog](/guides/tasks-and-backlog/) — connecting GitHub, and where issues come from
+- [Git in Warpforge](/guides/git-in-warpforge/) — the branch tree, and opening a pull request in the first place
+- [Working in a task](/guides/working-in-a-task/) — the review surface inside a task
