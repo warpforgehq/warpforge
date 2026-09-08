@@ -25,3 +25,4 @@ stale and then misleads.
 | [0007](0007-scheduled-automations.md) | Scheduled automations: the mirror, the run, and the tick |
 | [0009](0009-service-secrets.md) | Service secrets are SOPS files warpforge reads, not a warpforge format |
 | [0008](0008-prompt-file-attachments.md) | Prompt attachments carry text, not blobs |
+| [0010](0010-pull-request-inbox.md) | The PR inbox is a second surface, not a backlog column |
