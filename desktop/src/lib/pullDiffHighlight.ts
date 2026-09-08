@@ -61,7 +61,30 @@ const HIGHLIGHTER = tagHighlighter([
 /** Tokens per `PatchLine.id`. A missing id means "render that line plain". */
 export type PatchHighlight = Map<string, SyntaxToken[]>;
 
-export async function highlightPatchBlock(block: PatchFileBlock): Promise<PatchHighlight> {
+/**
+ * One file at a time, and never on the frame that asked for it. Parsing is
+ * synchronous CodeMirror work; several files starting together blocked the main
+ * thread long enough that the diff stopped answering hover.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+
+export function highlightPatchBlock(block: PatchFileBlock): Promise<PatchHighlight> {
+  const run = queue.then(() => idle()).then(() => highlightNow(block));
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+function idle(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestIdleCallback === "function")
+      requestIdleCallback(() => resolve(), {
+        timeout: 150,
+      });
+    else setTimeout(resolve, 0);
+  });
+}
+
+async function highlightNow(block: PatchFileBlock): Promise<PatchHighlight> {
   const tokens: PatchHighlight = new Map();
   if (block.binary) return tokens;
 
@@ -101,7 +124,14 @@ function parseLines(lines: readonly PatchLine[], language: Extension[]): SyntaxT
     HIGHLIGHTER,
     (piece, className) => {
       if (!piece) return;
-      out[out.length - 1]?.push(className ? { text: piece, className } : { text: piece });
+      const line = out[out.length - 1];
+      if (!line) return;
+      // One span per run of a class, not per token: adjacent punctuation,
+      // operators and plain text usually carry the same class, and a span each
+      // is what put 27 DOM elements on a single coloured row.
+      const last = line[line.length - 1];
+      if (last && last.className === className) last.text += piece;
+      else line.push(className ? { text: piece, className } : { text: piece });
     },
     () => {
       out.push([]);

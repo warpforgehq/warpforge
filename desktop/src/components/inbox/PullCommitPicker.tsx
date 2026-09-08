@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -65,34 +66,39 @@ export function PullCommitPicker({
           {all ? commits.length : `${selected.size}/${commits.length}`}
         </span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-80">
-        <DropdownMenuItem
-          className="gap-2 px-2 py-1.5 text-sm"
-          onSelect={() => onRangeChange(null)}
-        >
-          <span className="flex-1">All commits</span>
-          {all && <Check aria-hidden className="text-primary" />}
-          <span className="tnum text-xs text-muted-foreground">
-            {commitRangeLabel(commits, null)}
-          </span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="py-1 text-xs font-normal text-muted-foreground">
-          Specific commits
-        </DropdownMenuLabel>
-        {/* A long branch is a long list; the picker scrolls rather than
+      {/* Portalled out of the diff: rendered inline, this menu sat inside the
+          patch's own scroll container, and Radix's positioning observers then
+          measured a 10k-row subtree on open and on every pointer move. */}
+      <DropdownMenuPortal>
+        <DropdownMenuContent align="start" className="w-80">
+          <DropdownMenuItem
+            className="gap-2 px-2 py-1.5 text-sm"
+            onSelect={() => onRangeChange(null)}
+          >
+            <span className="flex-1">All commits</span>
+            {all && <Check aria-hidden className="text-primary" />}
+            <span className="tnum text-xs text-muted-foreground">
+              {commitRangeLabel(commits, null)}
+            </span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="py-1 text-xs font-normal text-muted-foreground">
+            Specific commits
+          </DropdownMenuLabel>
+          {/* A long branch is a long list; the picker scrolls rather than
             growing past the window. */}
-        <div className="max-h-72 overflow-y-auto">
-          {rows.map(({ commit, index }) => (
-            <CommitRow
-              key={commit.oid}
-              commit={commit}
-              checked={all || selected.has(index)}
-              onSelect={() => onRangeChange(toggleCommitInRange(commits, range, index))}
-            />
-          ))}
-        </div>
-      </DropdownMenuContent>
+          <div className="max-h-72 overflow-y-auto">
+            {rows.map(({ commit, index }) => (
+              <CommitRow
+                key={commit.oid}
+                commit={commit}
+                checked={all || selected.has(index)}
+                onSelect={() => onRangeChange(toggleCommitInRange(commits, range, index))}
+              />
+            ))}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenuPortal>
     </DropdownMenu>
   );
 }
