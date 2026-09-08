@@ -42,9 +42,11 @@ mod command;
 mod config_observer;
 mod event;
 mod lifecycle;
+mod origin_sweep;
 mod output;
 mod policy;
 mod ports;
+mod pr_assistant;
 mod project;
 mod prompt;
 mod run;
@@ -55,6 +57,8 @@ mod workflow;
 mod workflow_control;
 mod workflow_review;
 mod workflow_stage;
+
+pub(crate) use origin_sweep::PR_REVIEW_ORIGIN;
 
 pub(crate) mod commands;
 mod handle;
@@ -308,7 +312,10 @@ impl Daemon {
                 }
                 let _ = reply.send(result);
             }
-            Command::PruneHistory => self.history_sweep(),
+            Command::PruneHistory => {
+                self.history_sweep();
+                self.sweep_pr_review_tasks();
+            }
             other => self.handle_project_command(other).await,
         }
     }

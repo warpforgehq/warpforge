@@ -597,6 +597,7 @@ async fn dispatch(
             config_overrides,
             workflow,
             backlog_item_id,
+            origin,
             start,
         } => {
             if let Some(workflow) = workflow {
@@ -626,39 +627,30 @@ async fn dispatch(
                     })?;
                 return Ok(json!({ "taskId": id }));
             }
-            let id = if !start {
-                handle
-                    .queue_task(
-                        &project,
-                        &prompt,
-                        &agent,
-                        tags,
-                        include_runtime_context,
-                        worktree,
-                        parent_task_id,
-                        attachments,
-                        default_model,
-                        config_overrides,
-                        backlog_item_id,
-                    )
-                    .await
-            } else {
-                handle
-                    .create_task(
-                        &project,
-                        &prompt,
-                        &agent,
-                        tags,
-                        include_runtime_context,
-                        worktree,
-                        parent_task_id,
-                        attachments,
-                        default_model,
-                        config_overrides,
-                        backlog_item_id,
-                    )
-                    .await
-            };
+            // Sent as one command rather than through `handle.create_task` /
+            // `queue_task`: those are the board's own entry points and carry
+            // no origin, and `start` is the only thing that differed between
+            // the two branches this replaced.
+            let (tx, rx) = oneshot::channel();
+            handle
+                .send(Command::CreateTask {
+                    project,
+                    prompt,
+                    agent,
+                    tags,
+                    include_runtime_context,
+                    worktree,
+                    parent_task_id,
+                    attachments,
+                    default_model,
+                    config_overrides,
+                    backlog_item_id,
+                    origin,
+                    start,
+                    reply: tx,
+                })
+                .await;
+            let id = rx.await.unwrap_or_default();
             Ok(json!({ "taskId": id }))
         }
         OrchestratorReadInbox { parent_task_id } => {

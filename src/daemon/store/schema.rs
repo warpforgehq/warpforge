@@ -174,6 +174,10 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
     // Migration: link a task back to the backlog item it was started from.
     let _ = conn.execute("ALTER TABLE tasks ADD COLUMN backlog_item_id TEXT", []);
     let _ = conn.execute("ALTER TABLE tasks ADD COLUMN blocked_kind TEXT", []);
+    // Migration: what created the task, when it was not the board — the PR
+    // Assistant's shadow tasks carry `pr-review` and are swept on their own
+    // schedule rather than living on the board.
+    let _ = conn.execute("ALTER TABLE tasks ADD COLUMN origin TEXT", []);
     // Migration: last explicit model intent the user expressed for a task
     // (creation default or an accepted mid-session switch), so resume
     // reconciles the live session to it after a daemon restart.

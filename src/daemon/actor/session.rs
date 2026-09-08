@@ -163,6 +163,18 @@ impl Daemon {
         } else {
             String::new()
         };
+        // The Assistant tab's own session: the instruction rides every turn,
+        // because the follow-up questions are where prose creeps back in.
+        let pr_assistant_prefix = if crate::daemon::actor::pr_assistant::is_pr_assistant(
+            self.tasks.get(task_id).and_then(|t| t.origin.as_deref()),
+        ) {
+            format!(
+                "{}\n\n",
+                crate::daemon::actor::pr_assistant::PR_ASSISTANT_SYSTEM
+            )
+        } else {
+            String::new()
+        };
         let base_prompt = if is_orchestrator {
             let agents = self.available_agent_ids();
             let roster = if agents.is_empty() {
@@ -184,7 +196,7 @@ impl Daemon {
             };
             format!("{memory_prefix}{ORCHESTRATOR_SYSTEM}{roster}{workflow_roster}\n\n{RUNTIME_MCP_SYSTEM}\n\n{prompt}")
         } else {
-            format!("{memory_prefix}{RUNTIME_MCP_SYSTEM}\n\n{prompt}")
+            format!("{memory_prefix}{pr_assistant_prefix}{RUNTIME_MCP_SYSTEM}\n\n{prompt}")
         };
         let full_prompt = match include_runtime_context
             .then(|| self.runtime_context(project))

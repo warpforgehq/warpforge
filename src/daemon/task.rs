@@ -90,6 +90,11 @@ pub struct Task {
     pub account_id: Option<String>,
     /// Id of the backlog item this task was started from, if any.
     pub backlog_item_id: Option<String>,
+    /// What created this task, when it is not the board. `pr-review` marks the
+    /// shadow task behind a pull request's Assistant tab — the surface owns
+    /// it, so clients keep it out of their board lists and the daemon sweeps
+    /// it on its own schedule (see `origin_sweep`).
+    pub origin: Option<String>,
     /// Last explicit model intent the user expressed for this task.
     pub model: Option<String>,
 }
@@ -123,6 +128,7 @@ impl Task {
             snoozed_at: None,
             account_id: None,
             backlog_item_id: None,
+            origin: None,
             model: None,
         }
     }

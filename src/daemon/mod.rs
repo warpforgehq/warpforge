@@ -134,6 +134,7 @@ mod tests {
                 default_model: None,
                 config_overrides: std::collections::HashMap::new(),
                 backlog_item_id: None,
+                origin: None,
                 start: true,
                 reply: task_tx,
             })

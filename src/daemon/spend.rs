@@ -189,6 +189,7 @@ mod tests {
             snoozed_until: None,
             snoozed_at: None,
             backlog_item_id: None,
+            origin: None,
             model: None,
             pending_permission: false,
         }

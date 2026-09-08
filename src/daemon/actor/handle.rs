@@ -70,6 +70,9 @@ impl DaemonHandle {
             default_model,
             config_overrides,
             backlog_item_id,
+            // The board's own creation paths; a surface-owned origin only
+            // arrives over the wire (see `server::dispatch`).
+            origin: None,
             start: true,
             reply: tx,
         })
@@ -105,6 +108,7 @@ impl DaemonHandle {
             default_model,
             config_overrides,
             backlog_item_id,
+            origin: None,
             start: false,
             reply: tx,
         })

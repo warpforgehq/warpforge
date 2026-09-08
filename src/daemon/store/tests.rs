@@ -701,6 +701,68 @@ fn auto_settle_sweep_still_skips_already_handled_tasks() {
     assert_eq!(ids, vec![never_settled.id]);
 }
 
+/// The PR Assistant's shadow tasks are retired by their own two rules, and by
+/// nothing else: the board's sweeps must not see them at all.
+#[test]
+fn surface_owned_tasks_are_swept_by_ttl_and_cap_only() {
+    let store = Store::open_at(std::path::Path::new(":memory:")).unwrap();
+    let cutoff = 1_700_000_000i64;
+
+    let mut fresh = Task::new("demo", "pr 1", "claude", vec![]);
+    fresh.origin = Some("pr-review".into());
+    fresh.updated_at = cutoff as u64 + 100;
+    store.upsert_task(&fresh).unwrap();
+
+    let mut stale = Task::new("demo", "pr 2", "claude", vec![]);
+    stale.origin = Some("pr-review".into());
+    stale.updated_at = cutoff as u64 - 1;
+    store.upsert_task(&stale).unwrap();
+
+    // Past the TTL: gone. The recent one stays under a cap of two.
+    let ids = store
+        .find_stale_origin_tasks("pr-review", cutoff, 2)
+        .unwrap();
+    assert_eq!(ids, vec![stale.id.clone()]);
+
+    // A cap of one retires the older row even though it is inside the TTL.
+    let ids = store.find_stale_origin_tasks("pr-review", 0, 1).unwrap();
+    assert_eq!(ids, vec![stale.id.clone()]);
+
+    // And a board task of the same age is not a candidate at all.
+    let mut board = Task::new("demo", "ordinary", "claude", vec![]);
+    board.updated_at = cutoff as u64 - 1;
+    store.upsert_task(&board).unwrap();
+    let ids = store
+        .find_stale_origin_tasks("pr-review", cutoff, 50)
+        .unwrap();
+    assert!(!ids.contains(&board.id));
+}
+
+/// The board's own sweeps skip surface-owned tasks: a shelf "delete finished"
+/// or a retention pass must never take a PR conversation with it.
+#[test]
+fn board_sweeps_ignore_surface_owned_tasks() {
+    let store = Store::open_at(std::path::Path::new(":memory:")).unwrap();
+    let cutoff = 1_700_000_000i64;
+
+    let mut shadow = Task::new("demo", "pr assistant", "claude", vec![]);
+    shadow.origin = Some("pr-review".into());
+    shadow.set_status(TaskStatus::Done);
+    shadow.settled_at = Some(cutoff as u64 - 1);
+    shadow.updated_at = cutoff as u64 - 1;
+    store.upsert_task(&shadow).unwrap();
+
+    assert!(store.find_expired_closed_tasks(cutoff).unwrap().is_empty());
+    assert!(store.find_settled_tasks(None).unwrap().is_empty());
+
+    let mut waiting = Task::new("demo", "pr assistant idle", "claude", vec![]);
+    waiting.origin = Some("pr-review".into());
+    waiting.set_status(TaskStatus::Waiting);
+    waiting.updated_at = cutoff as u64 - 1;
+    store.upsert_task(&waiting).unwrap();
+    assert!(store.find_ignored_waiting_tasks(cutoff).unwrap().is_empty());
+}
+
 /// Retention counts from when the user closed the task. Rows written before
 /// `settled_at` existed have none, and must fall back to `updated_at` rather
 /// than comparing NULL and never expiring.
