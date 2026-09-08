@@ -41,28 +41,10 @@ import {
   type SidebarRow,
 } from "./Sidebar.logic";
 
-/**
- * The application sidebar: brand, New task, view nav, then the workspace tree
- * of projects → root tasks → subtasks, and Settings in the footer.
- *
- * The tree is the only structure — there is no "Needs you" block and no
- * "Workspace" heading above it. Both were noise: the first collected every
- * finished task awaiting review (dozens of rows, so the word stopped meaning
- * anything) and the second labelled the one thing on screen. What a row needs
- * from the user is said inline instead, by the rare glyph `Sidebar.logic.ts`
- * allows it.
- *
- * Row content follows one rhythm (`gap-2`, 13px titles, `tnum` for every
- * number) and every secondary affordance stays hidden until hover or focus.
- *
- * Rows are flattened into one virtualized list by `Sidebar.logic.ts`; nesting is
- * a per-row `depth` rather than nested DOM containers.
- */
-
-const NAV: { id: View; label: string; icon: typeof LayoutGrid }[] = [
-  { icon: LayoutGrid, id: "control", label: "Mission Control" },
+const NAV: { id: View; label: string; icon: typeof LayoutGrid; attention?: boolean }[] = [
+  { attention: true, icon: LayoutGrid, id: "control", label: "Mission Control" },
   { icon: FolderTree, id: "projects", label: "Projects" },
-  { icon: Inbox, id: "inbox", label: "Inbox" },
+  { attention: true, icon: Inbox, id: "inbox", label: "Inbox" },
   { icon: CalendarClock, id: "automations", label: "Automations" },
 ];
 
@@ -584,7 +566,7 @@ function Sidebar({
               label={item.label}
               active={view === item.id && !openTaskId}
               count={navCount(item.id)}
-              hot={item.id === "control"}
+              hot={item.attention}
               onClick={() => onSelectView(item.id)}
             />
           ))}
@@ -666,9 +648,7 @@ function Sidebar({
                   <span
                     className={cn(
                       "tnum shrink-0 text-[11px]",
-                      item.id === "control"
-                        ? "font-semibold text-warn"
-                        : "text-muted-foreground/50",
+                      item.attention ? "font-semibold text-warn" : "text-muted-foreground/50",
                     )}
                   >
                     {count}
