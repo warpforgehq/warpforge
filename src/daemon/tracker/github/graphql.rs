@@ -3,9 +3,9 @@
 
 #![allow(deprecated)]
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 
-use super::cli::{gh, github_owner_repo};
+use super::cli::gh;
 use super::{github_token, GITHUB_GRAPHQL};
 use crate::daemon::tracker::NETWORK_TIMEOUT;
 
@@ -104,7 +104,7 @@ pub(super) fn project_issues_query(state: &str) -> String {
 /// submitted reviews, and the inline review threads with their replies. Asking
 /// for the three separately costs three requests and can stitch together states
 /// that never coexisted, so the whole thread is one query.
-const PR_THREAD_QUERY: &str = r#"
+pub(super) const GITHUB_PR_THREAD_QUERY: &str = r#"
 query($owner: String!, $repo: String!, $number: Int!) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $number) {
@@ -127,7 +127,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
           path
           comments(first: 8) {
             totalCount
-            nodes { id author { login } body createdAt url path line originalLine isMinimized }
+            nodes { id author { login } body createdAt url path line originalLine startLine originalStartLine diffHunk isMinimized }
           }
         }
       }
@@ -135,24 +135,6 @@ query($owner: String!, $repo: String!, $number: Int!) {
   }
 }
 "#;
-
-/// The `pullRequest` node of [`PR_THREAD_QUERY`] for one PR.
-// The PR inbox is the caller; it lands on top of this.
-#[allow(dead_code)]
-pub(crate) async fn github_pr_thread(repo_dir: &str, number: u64) -> Result<serde_json::Value> {
-    let (owner, repo) = github_owner_repo(repo_dir).await?;
-    let payload = github_query(
-        repo_dir,
-        PR_THREAD_QUERY,
-        serde_json::json!({"owner": owner, "repo": repo, "number": number}),
-    )
-    .await?;
-    payload
-        .pointer("/data/repository/pullRequest")
-        .filter(|node| !node.is_null())
-        .cloned()
-        .ok_or_else(|| anyhow!("GitHub has no pull request #{number} here"))
-}
 
 #[cfg(test)]
 mod tests {
@@ -175,15 +157,15 @@ mod tests {
     #[test]
     fn the_pr_thread_is_one_query_for_comments_reviews_and_review_threads() {
         assert_eq!(
-            PR_THREAD_QUERY.matches("query").count(),
+            GITHUB_PR_THREAD_QUERY.matches("query").count(),
             1,
             "a second query means a second round trip"
         );
         for field in ["comments(", "reviews(", "reviewThreads("] {
-            assert!(PR_THREAD_QUERY.contains(field), "missing {field}");
+            assert!(GITHUB_PR_THREAD_QUERY.contains(field), "missing {field}");
         }
         assert!(
-            PR_THREAD_QUERY.contains("reviewDecision"),
+            GITHUB_PR_THREAD_QUERY.contains("reviewDecision"),
             "the inbox reads the review decision from the same trip"
         );
     }

@@ -1882,6 +1882,120 @@ async fn dispatch(
                 message: e.to_string(),
             })
         }
+        // The PR inbox reads run on the request task like every other tracker
+        // call (ADR-0002 invariant 1): the actor loop must never wait on `gh`.
+        TrackerPullsList {
+            project,
+            state,
+            assigned_to_me,
+            search,
+            limit,
+        } => {
+            let repo_dir = project_path(handle, &project).await?;
+            let mut items =
+                tracker::github_pr_list(&repo_dir, &state, assigned_to_me, &search, limit)
+                    .await
+                    .map_err(|e| rpc_err(format!("{e:#}")))?;
+            for item in &mut items {
+                item.project = project.clone();
+            }
+            Ok(json!({ "items": items }))
+        }
+        TrackerPullDetails { project, number } => {
+            let repo_dir = project_path(handle, &project).await?;
+            let details = tracker::github_pr_details(&repo_dir, number)
+                .await
+                .map_err(|e| rpc_err(format!("{e:#}")))?;
+            serde_json::to_value(details).map_err(|e| rpc_err(e.to_string()))
+        }
+        TrackerPullDiff {
+            project,
+            number,
+            from_oid,
+            to_oid,
+        } => {
+            let repo_dir = project_path(handle, &project).await?;
+            // A range is two hashes or none: one alone names no comparison,
+            // and silently diffing the whole pull request instead would show
+            // the reviewer more than they asked to see.
+            if from_oid.is_empty() != to_oid.is_empty() {
+                return Err(rpc_err(
+                    "a commit range needs both fromOid and toOid".to_string(),
+                ));
+            }
+            let diff = if from_oid.is_empty() {
+                tracker::github_pr_diff(&repo_dir, number).await
+            } else {
+                tracker::github_pr_range_diff(&repo_dir, &from_oid, &to_oid).await
+            }
+            .map_err(|e| rpc_err(format!("{e:#}")))?;
+            serde_json::to_value(diff).map_err(|e| rpc_err(e.to_string()))
+        }
+        TrackerPullCommits { project, number } => {
+            let repo_dir = project_path(handle, &project).await?;
+            let items = tracker::github_pr_commits(&repo_dir, number)
+                .await
+                .map_err(|e| rpc_err(format!("{e:#}")))?;
+            Ok(json!({ "items": items }))
+        }
+        TrackerPullThread { project, number } => {
+            let repo_dir = project_path(handle, &project).await?;
+            let thread = tracker::github_pr_conversation(&repo_dir, number)
+                .await
+                .map_err(|e| rpc_err(format!("{e:#}")))?;
+            serde_json::to_value(thread).map_err(|e| rpc_err(e.to_string()))
+        }
+        TrackerPullComment {
+            project,
+            number,
+            body,
+            in_reply_to,
+        } => {
+            let repo_dir = project_path(handle, &project).await?;
+            let url = tracker::github_pr_comment(&repo_dir, number, &body, &in_reply_to)
+                .await
+                .map_err(|e| rpc_err(format!("{e:#}")))?;
+            Ok(json!({ "url": url }))
+        }
+        TrackerPullReviewComment {
+            project,
+            number,
+            path,
+            line,
+            side,
+            body,
+            start_line,
+            start_side,
+        } => {
+            let repo_dir = project_path(handle, &project).await?;
+            let url = tracker::github_pr_review_comment(
+                &repo_dir,
+                number,
+                &path,
+                line,
+                &side,
+                &body,
+                start_line,
+                start_side.as_deref(),
+            )
+            .await
+            .map_err(|e| rpc_err(format!("{e:#}")))?;
+            Ok(json!({ "url": url }))
+        }
+        // The verdict write runs here on the request task like the other PR
+        // network calls (ADR-0002 invariant 1).
+        TrackerPullReview {
+            project,
+            number,
+            event,
+            body,
+        } => {
+            let repo_dir = project_path(handle, &project).await?;
+            let url = tracker::github_pr_review(&repo_dir, number, &event, &body)
+                .await
+                .map_err(|e| rpc_err(format!("{e:#}")))?;
+            Ok(json!({ "url": url }))
+        }
         WorkItemSyncExternal { ids } => {
             // Three phases, and the middle one deliberately runs here rather
             // than in the actor: the actor loop is single-threaded and awaits
@@ -2346,6 +2460,11 @@ fn method_runs_concurrently(method: &wire::Method) -> bool {
             | AutomationList { .. }
             | AutomationShow { .. }
             | AutomationRuns { .. }
+            | TrackerPullsList { .. }
+            | TrackerPullDetails { .. }
+            | TrackerPullDiff { .. }
+            | TrackerPullCommits { .. }
+            | TrackerPullThread { .. }
     )
 }
 
@@ -2387,6 +2506,11 @@ fn method_is_mutation(method: &wire::Method) -> bool {
             | AutomationList { .. }
             | AutomationShow { .. }
             | AutomationRuns { .. }
+            | TrackerPullsList { .. }
+            | TrackerPullDetails { .. }
+            | TrackerPullDiff { .. }
+            | TrackerPullCommits { .. }
+            | TrackerPullThread { .. }
     )
 }
 
