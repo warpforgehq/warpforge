@@ -85,7 +85,7 @@ const SELECTED_GUTTER = "bg-primary/20 text-primary";
  * parsed patch — the split view is a pairing of the lines we already have
  * (`lib/pullDiff`), not a second fetch of both file revisions.
  */
-export function PullDiffLines({
+export const PullDiffLines = React.memo(function PullDiffLines({
   hunk,
   mode,
   tokens,
@@ -93,6 +93,68 @@ export function PullDiffLines({
   lineExtras,
   range,
 }: PullDiffLinesProps) {
+  /**
+   * Gutter gestures are delegated to one container rather than bound per row.
+   * A 10k-line file meant ~50k closures and listener props rebuilt on every
+   * render — switching unified/split re-created all of them, which is what
+   * made the switch take seconds.
+   */
+  const lines = React.useMemo(() => {
+    const index = new Map<string, PatchLine>();
+    for (const line of hunk.lines) index.set(line.id, line);
+    return index;
+  }, [hunk]);
+
+  const fromEvent = React.useCallback(
+    (target: EventTarget | null): PatchLine | null => {
+      const cell = target instanceof Element ? target.closest("[data-line-id]") : null;
+      const id = cell?.getAttribute("data-line-id");
+      return id ? (lines.get(id) ?? null) : null;
+    },
+    [lines],
+  );
+
+  const gestures = React.useMemo(
+    () =>
+      onComment
+        ? {
+            onKeyDown: (event: React.KeyboardEvent) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              const line = fromEvent(event.target);
+              if (!line) return;
+              event.preventDefault();
+              // No pointer to release, so this both starts and commits.
+              onComment(line, event.shiftKey ? "extend" : "start");
+              if (!event.shiftKey) onComment(line, "commit");
+            },
+            onPointerDown: (event: React.PointerEvent) => {
+              if (!(event.target instanceof Element) || !event.target.closest("button")) return;
+              const line = fromEvent(event.target);
+              if (!line) return;
+              // Pointer-down, not click: the press starts a drag that may grow
+              // the span, and a click afterwards would collapse it to one line.
+              event.preventDefault();
+              onComment(line, event.shiftKey ? "extend" : "start");
+            },
+            onPointerOver: (event: React.PointerEvent) => {
+              const line = fromEvent(event.target);
+              if (line) onComment(line, "hover");
+            },
+            onPointerUp: (event: React.PointerEvent) => {
+              if (!(event.target instanceof Element) || !event.target.closest("button")) return;
+              const line = fromEvent(event.target);
+              if (line) onComment(line, "commit");
+            },
+          }
+        : {},
+    [fromEvent, onComment],
+  );
+
+  const rows = React.useMemo(
+    () => (mode === "split" ? pairHunkLines(hunk.lines) : []),
+    [hunk, mode],
+  );
+
   const header = (
     <div className="sticky left-0 border-y border-border/40 bg-secondary/20 px-2.5 text-muted-foreground/70">
       {hunk.header}
@@ -101,9 +163,9 @@ export function PullDiffLines({
 
   if (mode === "split") {
     return (
-      <>
+      <div {...gestures}>
         {header}
-        {pairHunkLines(hunk.lines).map((row) => {
+        {rows.map((row) => {
           const meta = row.left?.kind === "meta" ? row.left : null;
           if (meta) {
             return (
@@ -123,7 +185,7 @@ export function PullDiffLines({
                   line={row.left}
                   number={row.left?.oldNumber}
                   tokens={row.left ? tokens?.get(row.left.id) : undefined}
-                  onComment={onComment}
+                  commentable={!!onComment}
                   range={range}
                 />
                 <SplitHalf
@@ -131,7 +193,7 @@ export function PullDiffLines({
                   line={row.right}
                   number={row.right?.newNumber}
                   tokens={row.right ? tokens?.get(row.right.id) : undefined}
-                  onComment={onComment}
+                  commentable={!!onComment}
                   range={range}
                   bordered
                 />
@@ -140,12 +202,12 @@ export function PullDiffLines({
             </React.Fragment>
           );
         })}
-      </>
+      </div>
     );
   }
 
   return (
-    <>
+    <div {...gestures}>
       {header}
       {hunk.lines.map((line) => (
         <React.Fragment key={line.id}>
@@ -154,14 +216,14 @@ export function PullDiffLines({
               side="LEFT"
               line={line}
               number={line.oldNumber}
-              onComment={onComment}
+              commentable={!!onComment}
               selected={columnInRange("LEFT", line.oldNumber, range)}
             />
             <Gutter
               side="RIGHT"
               line={line}
               number={line.newNumber}
-              onComment={onComment}
+              commentable={!!onComment}
               selected={columnInRange("RIGHT", line.newNumber, range)}
             />
             <span className="w-3 shrink-0 select-none text-muted-foreground/40">
@@ -174,9 +236,9 @@ export function PullDiffLines({
           {lineExtras?.(line)}
         </React.Fragment>
       ))}
-    </>
+    </div>
   );
-}
+});
 
 /** One side of a split row: number gutter, then the text. */
 function SplitHalf({
@@ -184,7 +246,7 @@ function SplitHalf({
   line,
   number,
   tokens,
-  onComment,
+  commentable,
   bordered,
   range,
 }: {
@@ -192,7 +254,7 @@ function SplitHalf({
   line: PatchLine | null;
   number?: number;
   tokens?: SyntaxToken[];
-  onComment?: (line: PatchLine, intent: CommentIntent) => void;
+  commentable?: boolean;
   bordered?: boolean;
   range?: LineRange;
 }) {
@@ -210,7 +272,7 @@ function SplitHalf({
             side={side}
             line={line}
             number={number}
-            onComment={onComment}
+            commentable={commentable}
             selected={columnInRange(side, number, range)}
           />
           <span className="min-w-0 whitespace-pre-wrap break-all pr-2.5">
@@ -228,19 +290,22 @@ function SplitHalf({
  * A line-number cell. Where commenting is offered the number swaps for a
  * "comment" button on row hover — the affordance every review tool puts
  * there, and it costs no layout because it replaces the number in place.
+ *
+ * It carries no handlers: `data-line-id` is what the hunk's delegated
+ * listeners read, so a 10k-line file binds four listeners instead of 50k.
  */
-function Gutter({
+const Gutter = React.memo(function Gutter({
   side,
   line,
   number,
-  onComment,
+  commentable: offered,
   selected,
 }: {
   /** Which image this column numbers — not which side the line belongs to. */
   side: "LEFT" | "RIGHT";
   line: PatchLine;
   number?: number;
-  onComment?: (line: PatchLine, intent: CommentIntent) => void;
+  commentable?: boolean;
   selected?: boolean;
 }) {
   // Exactly one gutter of a row owns the comment affordance: the column whose
@@ -248,13 +313,13 @@ function Gutter({
   // put the button in both columns of a context line, where the pre- and
   // post-image numbers are usually the same.
   const commentable =
-    !!onComment && line.kind !== "meta" && number !== undefined && side === lineSide(line);
+    !!offered && line.kind !== "meta" && number !== undefined && side === lineSide(line);
   return (
     <span
       // The whole number column, not just the 16px button, answers the drag:
       // pulling straight down a gutter must not depend on staying inside a
       // button that is only there while its own row is hovered.
-      onPointerEnter={commentable ? () => onComment?.(line, "hover") : undefined}
+      data-line-id={commentable ? line.id : undefined}
       className={cn(
         "tnum relative w-10 shrink-0 select-none pr-1.5 text-right",
         GUTTER_CLASS[line.kind],
@@ -275,25 +340,6 @@ function Gutter({
               : `Comment on line ${number}`
           }
           title="Comment on this line — drag or shift-click to cover a range"
-          // Pointer-down, not click: the press starts a drag that may grow the
-          // span, and a click firing afterwards would collapse it back to one
-          // line. `preventDefault` keeps the drag from selecting the diff text.
-          onPointerDown={(event) => {
-            event.preventDefault();
-            onComment?.(line, event.shiftKey ? "extend" : "start");
-          }}
-          // The composer waits for the release: while the button is held the
-          // gesture is still choosing lines, and a box popping up under the
-          // cursor mid-drag is what "held it and it opened anyway" looked like.
-          onPointerUp={() => onComment?.(line, "commit")}
-          // Buttons are reachable by keyboard, and that path has no pointer.
-          onKeyDown={(event) => {
-            if (event.key !== "Enter" && event.key !== " ") return;
-            event.preventDefault();
-            // No pointer to release, so this both starts and commits.
-            onComment?.(line, event.shiftKey ? "extend" : "start");
-            if (!event.shiftKey) onComment?.(line, "commit");
-          }}
           className="absolute right-1.5 top-0 hidden h-5 w-4 items-center justify-center rounded-[3px] bg-primary text-primary-foreground group-hover/line:flex hover:bg-primary/85"
         >
           <Plus className="size-3" strokeWidth={2.5} />
@@ -304,9 +350,15 @@ function Gutter({
       </span>
     </span>
   );
-}
+});
 
-function LineText({ line, tokens }: { line: PatchLine; tokens?: SyntaxToken[] }) {
+const LineText = React.memo(function LineText({
+  line,
+  tokens,
+}: {
+  line: PatchLine;
+  tokens?: SyntaxToken[];
+}) {
   if (!tokens || tokens.length === 0) {
     return <>{line.text || (line.kind === "context" ? " " : "")}</>;
   }
@@ -328,4 +380,4 @@ function LineText({ line, tokens }: { line: PatchLine; tokens?: SyntaxToken[] })
       })}
     </>
   );
-}
+});

@@ -3,12 +3,7 @@ import * as React from "react";
 
 import { usePullLineDraft } from "@/hooks/usePullLineDraft";
 import type { CommitRange } from "@/lib/pullCommits";
-import {
-  linesInRange,
-  parseUnifiedPatch,
-  type PatchFileBlock,
-  type PatchLine,
-} from "@/lib/pullDiff";
+import { parseUnifiedPatch } from "@/lib/pullDiff";
 import {
   fingerprintPatchFile,
   pullViewedKey,
@@ -28,10 +23,8 @@ import type {
 import { useUi } from "@/store/ui";
 
 import { PullDiffFile } from "./PullDiffFile";
-import { lineNumberFor, lineSide } from "./PullDiffLines";
 import { PullDiffToolbar } from "./PullDiffToolbar";
 import { PullFilesRail } from "./PullFilesRail";
-import { PullLineComments } from "./PullLineComments";
 
 /**
  * A pull request's changes, as a review surface: the changed-file rail, the
@@ -76,6 +69,14 @@ export function PullDiffView({
 }) {
   const mode = useUi((s) => s.diffView);
   const setMode = useUi((s) => s.setDiffView);
+  // Re-pairing every row of a 10k-line diff is real work. Off the urgent
+  // path it stops swallowing the click that asked for it; the body dims the
+  // same way it does while a narrowed patch loads.
+  const [swapping, startSwap] = React.useTransition();
+  const changeMode = React.useCallback(
+    (next: "unified" | "split") => startSwap(() => setMode(next)),
+    [setMode],
+  );
   const railCollapsed = useUi((s) => s.pullFilesPanelCollapsed);
   const toggleRail = useUi((s) => s.togglePullFilesPanelCollapsed);
 
@@ -92,6 +93,9 @@ export function PullDiffView({
   const viewed = React.useSyncExternalStore(subscribePullViewed, () =>
     viewedPathsSnapshot(prKey, fingerprints),
   );
+  // Read by the fold toggle, which must not change identity when a mark does.
+  const viewedRef = React.useRef(viewed);
+  viewedRef.current = viewed;
 
   /**
    * Folded state the reviewer chose by hand, overriding the default. The
@@ -114,6 +118,14 @@ export function PullDiffView({
   const isExpanded = React.useCallback(
     (path: string) => foldOverride.get(path) ?? !viewed.has(path),
     [foldOverride, viewed],
+  );
+  const toggleExpanded = React.useCallback(
+    (path: string) =>
+      setFoldOverride((current) => {
+        const wasOpen = current.get(path) ?? !viewedRef.current.has(path);
+        return new Map(current).set(path, !wasOpen);
+      }),
+    [],
   );
 
   /**
@@ -195,57 +207,33 @@ export function PullDiffView({
   }, [activePath, blocks, jumpTo]);
 
   /**
-   * Inline review threads by `path\0line`. GitHub's wire shape gives a path
-   * and a line but not which side it was written on, so these anchor to the
-   * post-image line — the ordinary case. A thread on a deleted line stays
-   * readable in the Conversation tab.
+   * Inline review threads, per file and then per post-image line. GitHub's
+   * wire shape carries a path and a line but not the side, so these anchor to
+   * the post-image line; a thread on a deleted line stays readable in
+   * Overview's Activity. Indexed per file so a row can look itself up without
+   * a composite key built per line per render.
    */
-  const threadsByLine = React.useMemo(() => {
-    const index = new Map<string, PullComment[]>();
-    const comments = (thread?.comments ?? []).filter(
-      (comment) => comment.kind === "review_comment" && comment.path && comment.line,
-    );
-    for (const comment of comments) {
-      const key = lineKey(comment.path ?? "", comment.line ?? 0);
-      index.set(key, [...(index.get(key) ?? []), comment]);
+  const threadsByPath = React.useMemo(() => {
+    const index = new Map<string, Map<number, PullComment[]>>();
+    for (const comment of thread?.comments ?? []) {
+      if (comment.kind !== "review_comment" || !comment.path || !comment.line) continue;
+      const perFile = index.get(comment.path) ?? new Map<number, PullComment[]>();
+      perFile.set(comment.line, [...(perFile.get(comment.line) ?? []), comment]);
+      index.set(comment.path, perFile);
     }
     return index;
   }, [thread]);
 
-  const lineExtrasFor = (block: PatchFileBlock) => (line: PatchLine) => {
-    const path = block.path;
-    const number = lineNumberFor(line);
-    if (number === undefined) return null;
-    const side = lineSide(line);
-    const comments = side === "RIGHT" ? (threadsByLine.get(lineKey(path, number)) ?? []) : [];
-    // The composer hangs off the range's last line — where the eye already is
-    // after a shift-click.
-    const composing =
-      draft?.path === path && !draft.pending && draft.side === side && draft.end === number;
-    if (comments.length === 0 && !composing) return null;
-    const range = composing && draft ? draft : null;
-    return (
-      <PullLineComments
-        project={pr.project}
-        number={pr.number}
-        path={path}
-        line={number}
-        startLine={range && range.start !== range.end ? range.start : undefined}
-        side={side}
-        comments={comments}
-        composing={composing}
-        suggestionSeed={range ? linesInRange(block, side, range.start, range.end) : []}
-        onCompose={() =>
-          setDraft({ anchor: number, end: number, path, pending: false, side, start: number })
-        }
-        onCancel={() => setDraft(null)}
-        onPosted={() => {
-          setDraft(null);
-          onThreadChanged();
-        }}
-      />
-    );
-  };
+  const compose = React.useCallback(
+    (path: string, line: number, side: "LEFT" | "RIGHT") =>
+      setDraft({ anchor: line, end: line, path, pending: false, side, start: line }),
+    [setDraft],
+  );
+  const cancelDraft = React.useCallback(() => setDraft(null), [setDraft]);
+  const onPosted = React.useCallback(() => {
+    setDraft(null);
+    onThreadChanged();
+  }, [onThreadChanged, setDraft]);
 
   return (
     <div className="flex h-full min-h-0 min-w-0">
@@ -257,7 +245,7 @@ export function PullDiffView({
           railOpen={!railCollapsed}
           onToggleRail={toggleRail}
           mode={mode}
-          onModeChange={setMode}
+          onModeChange={changeMode}
           commits={commits}
           commitsLoading={commitsLoading}
           range={range}
@@ -269,7 +257,7 @@ export function PullDiffView({
             each file's header floating below the top while it was pinned. */}
         <div
           className="min-h-0 flex-1 overflow-y-auto"
-          aria-busy={loading || undefined}
+          aria-busy={loading || swapping || undefined}
           data-testid="pull-diff-body"
         >
           {error ? (
@@ -289,9 +277,12 @@ export function PullDiffView({
                 // The previous patch stays legible while the next one arrives:
                 // a spinner in its place is what made picking a commit feel
                 // like leaving the page.
-                loading && "opacity-50",
+                (loading || swapping) && "opacity-50",
               )}
             >
+              {/* Every prop here is stable or `undefined` for the files a
+                  change does not touch: ticking one file off, folding one, or
+                  dragging a comment span re-renders that file alone. */}
               {blocks.map((block) => (
                 <PullDiffFile
                   key={block.path || block.hunks[0]?.id}
@@ -299,20 +290,17 @@ export function PullDiffView({
                   mode={mode}
                   expanded={isExpanded(block.path)}
                   viewed={viewed.has(block.path)}
+                  project={pr.project}
+                  number={pr.number}
+                  threads={threadsByPath.get(block.path)}
+                  draft={draft?.path === block.path ? draft : undefined}
                   registerAnchor={registerAnchor}
-                  onToggleExpanded={() =>
-                    setFoldOverride((current) =>
-                      new Map(current).set(block.path, !isExpanded(block.path)),
-                    )
-                  }
-                  onToggleViewed={() => toggleViewed(block.path)}
-                  onComment={(line, intent) => onComment(block.path, line, intent)}
-                  lineExtras={lineExtrasFor(block)}
-                  range={
-                    draft?.path === block.path
-                      ? { end: draft.end, side: draft.side, start: draft.start }
-                      : undefined
-                  }
+                  onToggleExpanded={toggleExpanded}
+                  onToggleViewed={toggleViewed}
+                  onComment={onComment}
+                  onCompose={compose}
+                  onCancelDraft={cancelDraft}
+                  onPosted={onPosted}
                 />
               ))}
             </div>
@@ -344,9 +332,4 @@ function Spinner({ label }: { label: string }) {
       <span>{label}</span>
     </div>
   );
-}
-
-/** A path and a line as one map key; the separator cannot occur in a path. */
-function lineKey(path: string, line: number): string {
-  return `${path}\u0000${line}`;
 }
