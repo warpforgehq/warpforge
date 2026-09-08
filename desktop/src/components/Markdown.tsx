@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import type { PluggableList } from "unified";
 
 import { MarkdownAlert, splitMarkdownAlert } from "@/components/MarkdownAlert";
+import { MermaidDiagram } from "@/components/MermaidDiagram";
 import { isExternalLink, openExternalLink } from "@/lib/externalLinks";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +71,12 @@ const MarkdownCode: NonNullable<Components["code"]> = ({
   const { resolveFilePath, onOpenFile } = useContext(MarkdownContext);
   const inline = !codeClassName;
   const text = String(content ?? "");
+  // A mermaid fence is a picture, not code: agents reach for one when the
+  // shape of a change is the point (see `prAssistantPrompt`). Lazily loaded,
+  // and it falls back to this same block when the diagram will not parse.
+  if (!inline && /(^|\s)language-mermaid(\s|$)/.test(codeClassName ?? "")) {
+    return <MermaidDiagram code={text.trimEnd()} />;
+  }
   const filePath = inline ? resolveFilePath?.(text) : null;
   if (filePath && onOpenFile) {
     return (

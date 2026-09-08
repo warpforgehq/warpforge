@@ -66,13 +66,7 @@ export function splitMarkdownAlert(
 
 /** One alert as a labelled callout: the marker becomes a heading with a glyph,
  *  because the raw `[!IMPORTANT]` line reads as markup that failed to render. */
-export function MarkdownAlert({
-  kind,
-  children,
-}: {
-  kind: AlertKind;
-  children: React.ReactNode;
-}) {
+export function MarkdownAlert({ kind, children }: { kind: AlertKind; children: React.ReactNode }) {
   const { icon: Icon, label, tone } = ALERT_KINDS[kind];
   return (
     <div className={cn("my-2 rounded-md border-l-2 py-1.5 pl-3", tone.frame)}>
