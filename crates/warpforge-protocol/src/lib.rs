@@ -22,6 +22,9 @@ use std::collections::HashMap;
 pub mod automations;
 pub use automations::*;
 
+pub mod pulls;
+pub use pulls::*;
+
 /// Version of the daemon WebSocket contract. Bump this only for a breaking
 /// wire change; application versions may advance without changing it.
 pub const PROTOCOL_VERSION: u32 = 1;
@@ -44,6 +47,18 @@ fn default_terminal_cols() -> u16 {
 
 fn default_terminal_rows() -> u16 {
     24
+}
+
+fn default_pull_state() -> String {
+    "open".into()
+}
+
+fn default_pull_limit() -> u32 {
+    50
+}
+
+fn default_review_side() -> String {
+    "RIGHT".into()
 }
 
 // ─── Envelope ────────────────────────────────────────────────────────────────
@@ -976,6 +991,95 @@ pub enum Method {
         project: String,
         team_id: Option<String>,
         team_name: Option<String>,
+    },
+    /// List a project's open pull requests (GitHub only). Sorting/filtering
+    /// happen at the daemon boundary; returns `[PullRequestSummary]`.
+    #[serde(rename = "tracker.pulls.list")]
+    TrackerPullsList {
+        project: String,
+        /// `open` or `all`.
+        #[serde(default = "default_pull_state")]
+        state: String,
+        /// Restrict to PRs assigned to the authenticated user.
+        #[serde(default)]
+        assigned_to_me: bool,
+        /// Substring filter over title/number, applied daemon-side.
+        #[serde(default)]
+        search: String,
+        #[serde(default = "default_pull_limit")]
+        limit: u32,
+    },
+    /// One pull request's body-level fields. Returns `PullRequestDetails`.
+    #[serde(rename = "tracker.pulls.details")]
+    TrackerPullDetails { project: String, number: u64 },
+    /// One pull request's changes: file stats plus the raw unified patch.
+    /// Returns `PullRequestDiff`.
+    ///
+    /// `from_oid`/`to_oid` narrow it to a slice of the pull request's commits:
+    /// the comparison from `from_oid` (exclusive — it is the range base, i.e.
+    /// the first selected commit's parent) to `to_oid` (inclusive). Both or
+    /// neither; either alone is a bad request.
+    #[serde(rename = "tracker.pulls.diff")]
+    TrackerPullDiff {
+        project: String,
+        number: u64,
+        #[serde(default)]
+        from_oid: String,
+        #[serde(default)]
+        to_oid: String,
+    },
+    /// One pull request's commits, oldest first (the most recent 100 when
+    /// there are more). Returns `{ items: [PullCommit] }`.
+    #[serde(rename = "tracker.pulls.commits")]
+    TrackerPullCommits { project: String, number: u64 },
+    /// One pull request's conversation: comments, reviews, review threads.
+    /// Returns `PullThread`.
+    #[serde(rename = "tracker.pulls.thread")]
+    TrackerPullThread { project: String, number: u64 },
+    /// Post a conversation comment, or reply on a review thread when
+    /// `in_reply_to` carries the thread's node id. Returns `{ url }`.
+    #[serde(rename = "tracker.pulls.comment")]
+    TrackerPullComment {
+        project: String,
+        number: u64,
+        body: String,
+        #[serde(default)]
+        in_reply_to: String,
+    },
+    /// Start a new inline review thread on one line of a pull request's diff.
+    /// `side` is `RIGHT` for a line of the post-image (added or unchanged) and
+    /// `LEFT` for a line that the diff deleted. Returns `{ url }`.
+    #[serde(rename = "tracker.pulls.reviewComment")]
+    TrackerPullReviewComment {
+        project: String,
+        number: u64,
+        path: String,
+        line: u64,
+        #[serde(default = "default_review_side")]
+        side: String,
+        body: String,
+        /// First line of a multi-line comment: the thread spans
+        /// `start_line..=line`, so it must be `<= line`. A single-line comment
+        /// leaves this `None`.
+        #[serde(default)]
+        start_line: Option<u64>,
+        /// Which image `start_line` belongs to, same `LEFT`/`RIGHT` vocabulary
+        /// as `side`. Defaults to `side` when omitted, and like `start_line` is
+        /// `None` for a single-line comment.
+        #[serde(default)]
+        start_side: Option<String>,
+    },
+    /// Submit a review verdict on a pull request: `APPROVE`,
+    /// `REQUEST_CHANGES` or `COMMENT`. `REQUEST_CHANGES` needs a non-empty
+    /// `body`; the others may leave it empty. Returns `{ url }` — the
+    /// review's page URL.
+    #[serde(rename = "tracker.pulls.review")]
+    TrackerPullReview {
+        project: String,
+        number: u64,
+        event: String,
+        #[serde(default)]
+        body: String,
     },
     /// Which sources this project can actually read and write. `local` is
     /// always true; Linear needs both a connected key and a mapped team;
