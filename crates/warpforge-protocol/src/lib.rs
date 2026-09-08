@@ -266,6 +266,12 @@ pub enum Method {
         /// Id of the backlog item this task is started from, if any.
         #[serde(default)]
         backlog_item_id: Option<String>,
+        /// What created this task, when it is not the board. `pr-review` marks
+        /// the shadow task behind a pull request's Assistant tab: it belongs
+        /// to that pane, and every board-shaped surface filters it out
+        /// (docs/adr/0010). `None` = an ordinary task the user started.
+        #[serde(default)]
+        origin: Option<String>,
         /// When false, create without starting session. Defaults to true.
         #[serde(default = "default_true")]
         start: bool,
@@ -2065,6 +2071,12 @@ pub struct TaskInfo {
     /// keep the board's backlog item and its agent task linked.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub backlog_item_id: Option<String>,
+    /// What created this task, when it is not the board — `pr-review` for the
+    /// shadow task behind a pull request's Assistant tab. Clients filter their
+    /// board/sidebar/backlog lists on it, so a surface-owned task never shows
+    /// up as ordinary work.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub origin: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
     /// True while a permission prompt for this task is unanswered. Computed

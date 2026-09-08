@@ -20,6 +20,7 @@ impl Daemon {
                 default_model,
                 config_overrides,
                 backlog_item_id,
+                origin,
                 start,
                 reply,
             } => {
@@ -32,6 +33,7 @@ impl Daemon {
                 let mut task = Task::new(&project, &prompt, &agent, tags);
                 task.parent_task_id = parent_task_id;
                 task.backlog_item_id = backlog_item_id;
+                task.origin = origin.clone();
                 // Durable model intent: only an explicit pick counts. The
                 // last_model fallback below is a default, not something the
                 // user asked this task to run on, so it must not land here.
@@ -68,6 +70,12 @@ impl Daemon {
                 self.persist(&task);
                 self.emit(Event::TaskCreated(task));
                 let _ = reply.send(id.clone());
+
+                // A surface-owned task is never retired by hand, so its own
+                // creation is when the pile behind that surface gets trimmed.
+                if origin.as_deref() == Some(crate::daemon::actor::PR_REVIEW_ORIGIN) {
+                    self.sweep_pr_review_tasks();
+                }
 
                 if start {
                     let start = PendingSessionStart {

@@ -17,8 +17,8 @@ impl Store {
                 (id, session_id, project, prompt, agent, status, tags, title,
                  created_at, updated_at, files_changed, blocked_reason, config_options, worktree,
                  parent_task_id, settled_override, settled_at, snoozed_until, snoozed_at,
-                 account_id, backlog_item_id, blocked_kind, model)
-            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23)
+                 account_id, backlog_item_id, blocked_kind, model, origin)
+            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24)
             ON CONFLICT(id) DO UPDATE SET
                 session_id=excluded.session_id,
                 status=excluded.status,
@@ -62,6 +62,7 @@ impl Store {
                 task.backlog_item_id,
                 blocked_kind_str(task.blocked_kind),
                 task.model,
+                task.origin,
             ],
         )?;
         Ok(())
@@ -76,7 +77,7 @@ impl Store {
             "SELECT id, session_id, project, prompt, agent, status, tags, \
              created_at, updated_at, files_changed, blocked_reason, config_options, worktree, \
              parent_task_id, title, settled_override, settled_at, snoozed_until, snoozed_at, \
-             account_id, backlog_item_id, blocked_kind, model \
+             account_id, backlog_item_id, blocked_kind, model, origin \
              FROM tasks",
         )?;
         let rows = stmt.query_map([], |row| {
@@ -112,6 +113,7 @@ impl Store {
                 snoozed_at: row.get::<_, Option<u64>>(18)?,
                 account_id: row.get(19)?,
                 backlog_item_id: row.get(20)?,
+                origin: row.get(23)?,
                 model: row.get(22)?,
             })
         })?;
@@ -152,6 +154,7 @@ impl Store {
         let mut stmt = self.conn.prepare(&format!(
             "SELECT id FROM tasks
               WHERE status = 'waiting'
+                AND origin IS NULL
                 AND files_changed = 0
                 AND NOT {SETTLED_TASK}
                 AND (snoozed_until IS NULL OR snoozed_until <= strftime('%s','now'))
@@ -171,7 +174,7 @@ impl Store {
     pub fn find_expired_closed_tasks(&self, cutoff: i64) -> Result<Vec<(String, i64)>> {
         let mut stmt = self.conn.prepare(&format!(
             "SELECT id, files_changed FROM tasks
-              WHERE {SETTLED_TASK} AND {SETTLED_SINCE} < ?1"
+              WHERE origin IS NULL AND {SETTLED_TASK} AND {SETTLED_SINCE} < ?1"
         ))?;
         let rows = stmt
             .query_map(rusqlite::params![cutoff], |row| {
@@ -180,6 +183,33 @@ impl Store {
             .filter_map(|r| r.ok())
             .collect();
         Ok(rows)
+    }
+
+    /// Surface-owned tasks past `cutoff`, plus the oldest beyond `keep`.
+    /// Nothing else retires them: the board's sweeps skip them.
+    pub fn find_stale_origin_tasks(
+        &self,
+        origin: &str,
+        cutoff: i64,
+        keep: usize,
+    ) -> Result<Vec<String>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, updated_at FROM tasks
+              WHERE origin = ?1
+              ORDER BY updated_at DESC",
+        )?;
+        let rows: Vec<(String, i64)> = stmt
+            .query_map(rusqlite::params![origin], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(rows
+            .into_iter()
+            .enumerate()
+            .filter(|(index, (_, updated_at))| *index >= keep || *updated_at < cutoff)
+            .map(|(_, (id, _))| id)
+            .collect())
     }
 
     /// Every settled task (`status = 'done'` or manually marked handled via
@@ -191,7 +221,8 @@ impl Store {
     pub fn find_settled_tasks(&self, project: Option<&str>) -> Result<Vec<(String, i64, bool)>> {
         let mut stmt = self.conn.prepare(&format!(
             "SELECT id, files_changed, (worktree IS NOT NULL AND worktree <> '') FROM tasks
-              WHERE {SETTLED_TASK}
+              WHERE origin IS NULL
+                AND {SETTLED_TASK}
                 AND (?1 IS NULL OR project = ?1)"
         ))?;
         let rows = stmt

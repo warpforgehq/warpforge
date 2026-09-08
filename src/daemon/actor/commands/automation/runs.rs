@@ -282,6 +282,7 @@ impl Daemon {
                         default_model: a.model.clone(),
                         config_overrides: a.config_overrides.clone(),
                         backlog_item_id: None,
+                        origin: None,
                         start: true,
                         reply: tx,
                     })

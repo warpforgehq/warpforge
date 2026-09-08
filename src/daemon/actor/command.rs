@@ -159,6 +159,8 @@ pub enum Command {
         config_overrides: std::collections::HashMap<String, String>,
         /// Id of the backlog item this task was started from, if any.
         backlog_item_id: Option<String>,
+        /// What created this task, when it is not the board (`pr-review`).
+        origin: Option<String>,
         /// When false, create the task but do not start its agent session.
         start: bool,
         reply: oneshot::Sender<String>,
