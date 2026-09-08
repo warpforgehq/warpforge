@@ -39,6 +39,7 @@ import { queryClient, useProjectFileListQuery } from "./query";
 const AddProjectDialog = lazy(() => import("./views/AddProjectDialog"));
 const AgentSetupDialog = lazy(() => import("./views/AgentSetupDialog"));
 const Automations = lazy(() => import("./views/Automations"));
+const InboxView = lazy(() => import("./views/InboxView"));
 const MissionControl = lazy(() => import("./views/MissionControl"));
 const NewTaskDialog = lazy(() => import("./views/NewTaskDialog"));
 const Projects = lazy(() => import("./views/Projects"));
@@ -354,166 +355,175 @@ export default function App() {
               hidden native title bar no longer provides. */}
           {IS_MAC && <div data-tauri-drag-region="deep" className="h-7 shrink-0" />}
           <div className="relative flex min-h-0 flex-1">
-          {showPersistent && (
-            <>
-              <aside
-                style={{
-                  width: persistentWidth,
-                  minWidth: persistentWidth,
-                  maxWidth: persistentWidth,
-                }}
-                className="flex shrink-0 flex-col overflow-hidden"
-                data-testid="persistent-sidebar"
-              >
-                <LiveSidebar {...sidebarProps} />
-              </aside>
-              {!sidebarCollapsed && (
-                <SidebarResizeHandle width={sidebarWidth} onWidthChange={setSidebarWidth} />
-              )}
-            </>
-          )}
+            {showPersistent && (
+              <>
+                <aside
+                  style={{
+                    width: persistentWidth,
+                    minWidth: persistentWidth,
+                    maxWidth: persistentWidth,
+                  }}
+                  className="flex shrink-0 flex-col overflow-hidden"
+                  data-testid="persistent-sidebar"
+                >
+                  <LiveSidebar {...sidebarProps} />
+                </aside>
+                {!sidebarCollapsed && (
+                  <SidebarResizeHandle width={sidebarWidth} onWidthChange={setSidebarWidth} />
+                )}
+              </>
+            )}
 
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            {!newTaskOpen && (
-              <AppHeader
-                view={view}
-                openTask={openTask}
-                onAddProject={() => setAddProjectOpen(true)}
-                onCloseTask={() => setOpenTaskId(null)}
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              {!newTaskOpen && (
+                <AppHeader
+                  view={view}
+                  openTask={openTask}
+                  onAddProject={() => setAddProjectOpen(true)}
+                  onCloseTask={() => setOpenTaskId(null)}
+                />
+              )}
+              <main
+                className={
+                  newTaskOpen
+                    ? "min-h-0 flex-1 overflow-hidden"
+                    : "min-h-0 flex-1 overflow-hidden p-2"
+                }
+              >
+                <ErrorBoundary>
+                  <Suspense
+                    fallback={
+                      <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground/70">
+                        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                        <span>Loading…</span>
+                      </div>
+                    }
+                  >
+                    {connection !== "connected" ? (
+                      <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground/70">
+                        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                        <span>
+                          {connectionError && !connectionError.includes("daemon.json")
+                            ? connectionError
+                            : "Connecting to daemon…"}
+                        </span>
+                      </div>
+                    ) : newTaskOpen ? (
+                      <NewTaskDialog
+                        open
+                        onOpenChange={setNewTaskOpen}
+                        snapshot={snapshot}
+                        defaultProject={newTaskProject}
+                        initialPrompt={newTaskPrompt}
+                        backlogItemId={newTaskBacklogItemId}
+                      />
+                    ) : openTask ? (
+                      <TaskDetail
+                        key={openTask.id}
+                        task={openTask}
+                        snapshot={snapshot}
+                        onOpenTask={setOpenTaskId}
+                        onOpenPush={() => setPushOpen(true)}
+                      />
+                    ) : view === "control" ? (
+                      <LiveMissionControl onOpenTask={setOpenTaskId} onNewTask={startNewTask} />
+                    ) : view === "inbox" ? (
+                      <InboxView
+                        projects={snapshot.projects.map((project) => project.name)}
+                        onSendToAgent={(project, prompt) => startNewTask(project, prompt)}
+                      />
+                    ) : view === "automations" ? (
+                      <Automations snapshot={snapshot} onOpenTask={setOpenTaskId} />
+                    ) : (
+                      <Projects
+                        snapshot={snapshot}
+                        onOpenTask={setOpenTaskId}
+                        onNewTask={startNewTask}
+                        onAddProject={() => setAddProjectOpen(true)}
+                      />
+                    )}
+                  </Suspense>
+                </ErrorBoundary>
+              </main>
+            </div>
+
+            {pushOpen && <PushDialog open onOpenChange={setPushOpen} task={openTask} />}
+            <QuickOpenHost
+              openTaskId={openTask ? openTask.id : null}
+              hasOpenTask={!!openTask && !newTaskOpen}
+            />
+            {addProjectOpen && (
+              <AddProjectDialog
+                open
+                onOpenChange={setAddProjectOpen}
+                onAdded={handleProjectAdded}
               />
             )}
-            <main
-              className={
-                newTaskOpen
-                  ? "min-h-0 flex-1 overflow-hidden"
-                  : "min-h-0 flex-1 overflow-hidden p-2"
-              }
-            >
-              <ErrorBoundary>
-                <Suspense
-                  fallback={
-                    <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground/70">
-                      <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                      <span>Loading…</span>
-                    </div>
-                  }
-                >
-                  {connection !== "connected" ? (
-                    <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground/70">
-                      <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                      <span>
-                        {connectionError && !connectionError.includes("daemon.json")
-                          ? connectionError
-                          : "Connecting to daemon…"}
-                      </span>
-                    </div>
-                  ) : newTaskOpen ? (
-                    <NewTaskDialog
-                      open
-                      onOpenChange={setNewTaskOpen}
-                      snapshot={snapshot}
-                      defaultProject={newTaskProject}
-                      initialPrompt={newTaskPrompt}
-                      backlogItemId={newTaskBacklogItemId}
-                    />
-                  ) : openTask ? (
-                    <TaskDetail
-                      key={openTask.id}
-                      task={openTask}
-                      snapshot={snapshot}
-                      onOpenTask={setOpenTaskId}
-                      onOpenPush={() => setPushOpen(true)}
-                    />
-                  ) : view === "control" ? (
-                    <LiveMissionControl onOpenTask={setOpenTaskId} onNewTask={startNewTask} />
-                  ) : view === "automations" ? (
-                    <Automations snapshot={snapshot} onOpenTask={setOpenTaskId} />
-                  ) : (
-                    <Projects
-                      snapshot={snapshot}
-                      onOpenTask={setOpenTaskId}
-                      onNewTask={startNewTask}
-                      onAddProject={() => setAddProjectOpen(true)}
-                    />
-                  )}
-                </Suspense>
-              </ErrorBoundary>
-            </main>
-          </div>
-
-          {pushOpen && <PushDialog open onOpenChange={setPushOpen} task={openTask} />}
-          <QuickOpenHost
-            openTaskId={openTask ? openTask.id : null}
-            hasOpenTask={!!openTask && !newTaskOpen}
-          />
-          {addProjectOpen && (
-            <AddProjectDialog open onOpenChange={setAddProjectOpen} onAdded={handleProjectAdded} />
-          )}
-          <SettingsView open={settingsOpen} onOpenChange={setSettingsOpen} />
-          {pendingQuit && (
-            <ConfirmDialog
-              open
-              title="Stop running services and quit?"
-              description={
-                <>
-                  Still running: {pendingQuit.services.join(", ")}
-                  {pendingQuit.more > 0 ? `, and ${pendingQuit.more} more` : ""}. Quitting stops
-                  them.
-                </>
-              }
-              confirmLabel="Stop & quit"
-              busyLabel="Stopping…"
-              onCancel={pendingQuit.cancel}
-              onConfirm={pendingQuit.confirm}
-            />
-          )}
-          {pendingAgentSetup && (
-            <AgentSetupDialog
-              detected={pendingAgentSetup}
-              onClose={() => {
-                daemon.dismissAgentSetup();
-              }}
-            />
-          )}
-          {wizardProject && (
-            <BootstrapWizard
-              project={wizardProject}
-              agents={snapshot.agents ?? []}
-              open={!!wizardProject}
-              onOpenChange={(v) => {
-                if (!v) setWizardProject(null);
-              }}
-              onStarted={(taskId) => {
-                const projectName = wizardProject;
-                setWizardProject(null);
-                const toastId = `bootstrap:${taskId}`;
-                toast.custom(
-                  (sonnerId) => (
-                    <AttentionToast
-                      title="Config generation started"
-                      identity={projectName ?? "project"}
-                      summary="Agent is writing .warpforge.yaml in background"
-                      onDismiss={() => toast.dismiss(sonnerId)}
-                      onOpen={() => {
-                        useUi.getState().openTask(taskId);
-                        toast.dismiss(sonnerId);
-                      }}
-                    />
-                  ),
-                  {
-                    action: null,
-                    cancel: null,
-                    description: null,
-                    duration: 10_000,
-                    icon: null,
-                    id: toastId,
-                    richColors: false,
-                    unstyled: true,
-                  },
-                );
-              }}
-            />
-          )}
+            <SettingsView open={settingsOpen} onOpenChange={setSettingsOpen} />
+            {pendingQuit && (
+              <ConfirmDialog
+                open
+                title="Stop running services and quit?"
+                description={
+                  <>
+                    Still running: {pendingQuit.services.join(", ")}
+                    {pendingQuit.more > 0 ? `, and ${pendingQuit.more} more` : ""}. Quitting stops
+                    them.
+                  </>
+                }
+                confirmLabel="Stop & quit"
+                busyLabel="Stopping…"
+                onCancel={pendingQuit.cancel}
+                onConfirm={pendingQuit.confirm}
+              />
+            )}
+            {pendingAgentSetup && (
+              <AgentSetupDialog
+                detected={pendingAgentSetup}
+                onClose={() => {
+                  daemon.dismissAgentSetup();
+                }}
+              />
+            )}
+            {wizardProject && (
+              <BootstrapWizard
+                project={wizardProject}
+                agents={snapshot.agents ?? []}
+                open={!!wizardProject}
+                onOpenChange={(v) => {
+                  if (!v) setWizardProject(null);
+                }}
+                onStarted={(taskId) => {
+                  const projectName = wizardProject;
+                  setWizardProject(null);
+                  const toastId = `bootstrap:${taskId}`;
+                  toast.custom(
+                    (sonnerId) => (
+                      <AttentionToast
+                        title="Config generation started"
+                        identity={projectName ?? "project"}
+                        summary="Agent is writing .warpforge.yaml in background"
+                        onDismiss={() => toast.dismiss(sonnerId)}
+                        onOpen={() => {
+                          useUi.getState().openTask(taskId);
+                          toast.dismiss(sonnerId);
+                        }}
+                      />
+                    ),
+                    {
+                      action: null,
+                      cancel: null,
+                      description: null,
+                      duration: 10_000,
+                      icon: null,
+                      id: toastId,
+                      richColors: false,
+                      unstyled: true,
+                    },
+                  );
+                }}
+              />
+            )}
           </div>
         </div>
       </TooltipProvider>

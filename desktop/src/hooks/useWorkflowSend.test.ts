@@ -1,3 +1,4 @@
+import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PromptSubmission, TaskInfo, WorkflowRunInfo } from "../protocol";
@@ -15,12 +16,11 @@ vi.mock("../daemon", () => ({
   },
 }));
 
-// The hook only reads props and returns callbacks, so calling it outside a
-// renderer is enough to pin the routing table.
-vi.mock("react", async () => {
-  const actual = await vi.importActual<typeof import("react")>("react");
-  return { ...actual, useCallback: (fn: unknown) => fn };
-});
+// Rendered, not called bare: React Compiler output needs a live dispatcher
+// (useMemoCache), so the hook has to run inside a real renderer.
+function send(box: TaskInfo) {
+  return renderHook(() => useWorkflowSend(box), {}).result.current;
+}
 
 function task(run: Partial<WorkflowRunInfo> | null): TaskInfo {
   return {
@@ -54,22 +54,22 @@ describe("useWorkflowSend", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("declines to handle a plain task so the caller prompts its session", async () => {
-    const send = useWorkflowSend(task(null));
-    expect(send.isWorkflow).toBe(false);
-    expect(send.disabled).toBe(false);
-    expect(await send.send(submission("hello"))).toBe(false);
+    const box = send(task(null));
+    expect(box.isWorkflow).toBe(false);
+    expect(box.disabled).toBe(false);
+    expect(await box.send(submission("hello"))).toBe(false);
   });
 
   it("routes each barrier to its own RPC", async () => {
-    expect(
-      await useWorkflowSend(task({ waiting: { kind: "question" } })).send(submission("Postgres")),
-    ).toBe(true);
+    expect(await send(task({ waiting: { kind: "question" } })).send(submission("Postgres"))).toBe(
+      true,
+    );
     expect(workflowReply).toHaveBeenCalledWith("t_1", "Postgres");
 
-    await useWorkflowSend(task({ waiting: { kind: "paused" } })).send(submission("carry on"));
+    await send(task({ waiting: { kind: "paused" } })).send(submission("carry on"));
     expect(workflowResume).toHaveBeenCalledWith("t_1", "carry on");
 
-    await useWorkflowSend(task({ waiting: { kind: "limit" } })).send(submission("focus here"));
+    await send(task({ waiting: { kind: "limit" } })).send(submission("focus here"));
     expect(workflowDecide).toHaveBeenCalledWith("t_1", "extend", {
       note: "focus here",
       rounds: 1,
@@ -81,7 +81,7 @@ describe("useWorkflowSend", () => {
     // would surface a raw "no live or resumable agent session" error.
     const handled = await Promise.all(
       (["review", "done", "failed"] as const).map((stage) =>
-        useWorkflowSend(task({ stage, waiting: null })).send(submission("hi")),
+        send(task({ stage, waiting: null })).send(submission("hi")),
       ),
     );
     expect(handled).toEqual([true, true, true]);
@@ -91,10 +91,8 @@ describe("useWorkflowSend", () => {
   });
 
   it("explains why the box is disabled, differently for running vs finished", () => {
-    expect(useWorkflowSend(task({ stage: "review" })).placeholder).toMatch(/open a stage above/);
-    expect(useWorkflowSend(task({ stage: "done" })).placeholder).toMatch(/has finished/);
-    expect(useWorkflowSend(task({ waiting: { kind: "question" } })).placeholder).toMatch(
-      /Answer the stage/,
-    );
+    expect(send(task({ stage: "review" })).placeholder).toMatch(/open a stage above/);
+    expect(send(task({ stage: "done" })).placeholder).toMatch(/has finished/);
+    expect(send(task({ waiting: { kind: "question" } })).placeholder).toMatch(/Answer the stage/);
   });
 });

@@ -76,6 +76,7 @@ vi.mock("@tanstack/react-virtual", () => ({
   },
 }));
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -152,14 +153,18 @@ function renderSidebar(
   overrides: Partial<React.ComponentProps<typeof Sidebar>> = {},
 ) {
   return render(
-    <Sidebar
-      state={state}
-      view="control"
-      openTaskId={null}
-      collapsed={false}
-      {...handlers}
-      {...overrides}
-    />,
+    // The sidebar reads the inbox badge through React Query; a fresh client
+    // per render keeps one test's cache out of the next.
+    <QueryClientProvider client={new QueryClient()}>
+      <Sidebar
+        state={state}
+        view="control"
+        openTaskId={null}
+        collapsed={false}
+        {...handlers}
+        {...overrides}
+      />
+    </QueryClientProvider>,
   );
 }
 
@@ -230,13 +235,15 @@ describe("Sidebar shell", () => {
     );
 
     rerender(
-      <Sidebar
-        state={makeState([task("t1")])}
-        view="projects"
-        openTaskId="t1"
-        collapsed={false}
-        {...handlers}
-      />,
+      <QueryClientProvider client={new QueryClient()}>
+        <Sidebar
+          state={makeState([task("t1")])}
+          view="projects"
+          openTaskId="t1"
+          collapsed={false}
+          {...handlers}
+        />
+      </QueryClientProvider>,
     );
     expect(screen.getByRole("button", { name: /^Projects/ })).not.toHaveAttribute("aria-current");
   });

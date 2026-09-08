@@ -1,15 +1,14 @@
-import { FolderTree, ListTodo, Server, TerminalSquare } from "lucide-react";
+import { FolderTree, GitPullRequest, ListTodo, Server, TerminalSquare } from "lucide-react";
 
 import { SurfaceTabs, type SurfaceTab } from "@/components/workspace";
 import type { ProjectSurface } from "@/store/ui";
 
 /**
  * The project page's surfaces, in the same bar the task workspace uses.
- * Git and Pull Requests are planned neighbours; adding one is adding a row
- * here plus a panel, not another page.
  */
 export const PROJECT_SURFACE_TABS: readonly SurfaceTab<ProjectSurface>[] = [
   { id: "backlog", label: "Backlog", icon: ListTodo },
+  { id: "pulls", label: "Pull Requests", icon: GitPullRequest },
   { id: "files", label: "Files", icon: FolderTree },
   { id: "runtime", label: "Runtime", icon: Server },
   { id: "terminal", label: "Terminal", icon: TerminalSquare },
