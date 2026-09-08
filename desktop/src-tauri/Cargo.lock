@@ -4796,7 +4796,7 @@ dependencies = [
 
 [[package]]
 name = "warpforge-desktop"
-version = "0.19.0"
+version = "0.19.1"
 dependencies = [
  "dirs 5.0.1",
  "env_logger",
@@ -4818,7 +4818,7 @@ dependencies = [
 
 [[package]]
 name = "warpforge-protocol"
-version = "0.19.0"
+version = "0.19.1"
 dependencies = [
  "serde",
  "serde_json",
