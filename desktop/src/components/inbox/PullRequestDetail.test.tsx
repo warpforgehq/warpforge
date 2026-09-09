@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PullRequestDetails, PullRequestSummary, PullThread } from "@/protocol";
+import { useUi } from "@/store/ui";
 
 const { pullDetails, pullThread, pullDiff, pullReview } = vi.hoisted(() => ({
   pullDetails: vi.fn<(project: string, number: number) => Promise<PullRequestDetails>>(),
@@ -20,7 +22,25 @@ const { pullDetails, pullThread, pullDiff, pullReview } = vi.hoisted(() => ({
     >(),
 }));
 
-vi.mock("@/daemon", () => ({ daemon: { pullDetails, pullDiff, pullThread, pullReview } }));
+/**
+ * The task list the send-to-agent menu reads to find the Assistant's thread.
+ * One object, mutated in place: `useSyncExternalStore` re-renders forever if
+ * `getState` hands back a fresh snapshot on every call.
+ */
+const { daemonState } = vi.hoisted(() => ({
+  daemonState: { snapshot: { agents: [] as unknown[], tasks: [] as unknown[] } },
+}));
+
+vi.mock("@/daemon", () => ({
+  daemon: {
+    getState: () => daemonState,
+    pullDetails,
+    pullDiff,
+    pullReview,
+    pullThread,
+    subscribe: () => () => {},
+  },
+}));
 
 import { PullRequestDetail } from "./PullRequestDetail";
 
@@ -64,17 +84,20 @@ const thread: PullThread = {
   headRefName: "widget",
 };
 
-function renderDetail(summary: PullRequestSummary) {
+function renderDetail(
+  summary: PullRequestSummary,
+  props: Partial<React.ComponentProps<typeof PullRequestDetail>> = {},
+) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
     <QueryClientProvider client={client}>
-      <PullRequestDetail pr={summary} />
+      <PullRequestDetail pr={summary} {...props} />
     </QueryClientProvider>,
   );
   const rerender = (next: PullRequestSummary) =>
     view.rerender(
       <QueryClientProvider client={client}>
-        <PullRequestDetail pr={next} />
+        <PullRequestDetail pr={next} {...props} />
       </QueryClientProvider>,
     );
   return { rerender };
@@ -172,5 +195,48 @@ describe("PullRequestDetail review verdicts", () => {
       expect(screen.getByRole("button", { name })).toBeDisabled();
     }
     expect(pullReview).not.toHaveBeenCalled();
+  });
+});
+
+describe("PullRequestDetail send to agent", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    daemonState.snapshot.tasks = [];
+    pullDetails.mockResolvedValue(details);
+    pullThread.mockResolvedValue(thread);
+  });
+
+  /**
+   * Every choice under this menu ends as a task on the board, and every one
+   * says so: five look-alike agent buttons with no stated consequence is what
+   * this replaced.
+   */
+  it("says what each choice does, and offers the Assistant's thread among them", async () => {
+    const user = userEvent.setup();
+    renderDetail(pr(), { onSendToAgent: vi.fn<() => void>() });
+    await waitFor(() => expect(pullThread).toHaveBeenCalledTimes(1));
+
+    await user.click(screen.getByTitle("Start a task from this pull request"));
+
+    expect(screen.getByText(/^Starts a task that picks the change up/)).toBeTruthy();
+    expect(screen.getByText("Continue in a task")).toBeTruthy();
+    // No conversation yet, so the item explains itself instead of going quiet.
+    expect(screen.getByText("Ask the Assistant something first")).toBeTruthy();
+  });
+
+  it("opens the Assistant's thread as a task once there is one", async () => {
+    const user = userEvent.setup();
+    daemonState.snapshot.tasks = [
+      { id: "t1", createdAt: 1, origin: "pr-review", tags: ["pr-review", "pr:acme/widgets#7"] },
+    ];
+    const openTask = vi.fn<(id: string | null) => void>();
+    useUi.setState({ openTask });
+    renderDetail(pr(), { onSendToAgent: vi.fn<() => void>() });
+    await waitFor(() => expect(pullThread).toHaveBeenCalledTimes(1));
+
+    await user.click(screen.getByTitle("Start a task from this pull request"));
+    await user.click(screen.getByText("Continue in a task"));
+
+    expect(openTask).toHaveBeenCalledWith("t1");
   });
 });

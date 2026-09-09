@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bot, ExternalLink, Loader2, MessageSquareCode, Sparkles } from "lucide-react";
+import { Bot, Loader2, MessageSquareCode, Sparkles } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import * as React from "react";
 
@@ -7,7 +7,6 @@ import { AgentLogo } from "@/components/AgentLogo";
 import { ChatTranscript } from "@/components/ChatTranscript";
 import type { ComposerHandle } from "@/components/Composer";
 import { IntentButton, PickerMenu } from "@/components/inbox/PullAssistantControls";
-import { Button } from "@/components/ui/button";
 import { daemon } from "@/daemon";
 import { useTaskSessionUpdates } from "@/hooks/useTaskSessionUpdates";
 import { configRole } from "@/lib/configRole";
@@ -59,7 +58,6 @@ export function PullAssistant({
   agents: readonly AgentConfig[];
 }) {
   const task = React.useMemo(() => findPrAssistantTask(tasks, pr), [pr, tasks]);
-  const openTask = useUi((s) => s.openTask);
   const [starting, setStarting] = React.useState<PrAssistantIntent | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -188,9 +186,13 @@ export function PullAssistant({
           </>
         )}
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {/* Both answer in this tab. Everything that turns the pull request
+              into a task of its own lives under "Send to agent" instead, so
+              the two are never a row of look-alike buttons. */}
           <IntentButton
             icon={Sparkles}
             label="Explain"
+            title="Walks you through the change, here in this tab"
             busy={starting === "explain"}
             disabled={!!starting || (!task && !agent)}
             onClick={() => void ask("explain")}
@@ -198,23 +200,11 @@ export function PullAssistant({
           <IntentButton
             icon={MessageSquareCode}
             label="Review"
+            title="Looks for what is wrong with the change, here in this tab"
             busy={starting === "review"}
             disabled={!!starting || (!task && !agent)}
             onClick={() => void ask("review")}
           />
-          {task && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-6 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
-              title="Open this conversation as a task"
-              onClick={() => openTask(task.id)}
-            >
-              <ExternalLink className="size-3" />
-              Continue in task
-            </Button>
-          )}
         </div>
       </div>
 

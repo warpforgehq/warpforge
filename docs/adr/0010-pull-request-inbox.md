@@ -268,8 +268,24 @@ into the existing session rather than starting a second task, because
 answering "what is wrong with this" without the walk-through that preceded it
 throws away the context the user just paid for. Reopen-not-spawn is the rule
 the pane resolves its task by: `origin` plus a `pr:{repo}#{number}` tag, never
-a second row for the same pull request. "Continue in task" is the one door out
-of the pane — the task is openable, just not listed.
+a second row for the same pull request. The thread is openable as a task, just
+not listed.
+
+**A choice is grouped by what it does to you, not by what it runs.** The pane's
+own buttons and the "Send to agent" menu both start agents, which is why the
+first shape put five of them within an inch of each other — Approve, Request
+changes, Send to agent, Explain, Review, Continue in task — and left the
+reviewer to guess which one would take them off the pull request. Explain and
+Review answer *here*, so they stay in the pane and say so in their tooltips.
+Everything that becomes a task on the board lives under "Send to agent",
+including opening the Assistant's own thread, and every item there states the
+consequence in its second line ("Starts a task…", "Moves the Assistant's
+conversation into its own task"). The trigger also stopped sharing `Sparkles`
+with Explain: one icon on two doors reads as one door.
+
+That item reads the task list itself (`AssistantThreadItem`) rather than the
+pane hoisting the daemon snapshot into `PullRequestDetail`: menu content mounts
+only when open, so a session update no longer re-renders the diff behind it.
 
 The session runs without a worktree and without runtime context. A review
 reads; a checkout per pull request would leave a worktree behind a surface

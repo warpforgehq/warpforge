@@ -1,5 +1,6 @@
 import { Check, ChevronDown, Loader2, type LucideIcon } from "lucide-react";
 import type * as React from "react";
+import { useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +10,11 @@ import {
   DropdownMenuPortal,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { daemon } from "@/daemon";
+import { findPrAssistantTask } from "@/lib/taskOrigin";
 import { cn } from "@/lib/utils";
+import type { PullRequestSummary } from "@/protocol";
+import { useUi } from "@/store/ui";
 
 export function PickerMenu({
   label,
@@ -61,15 +66,42 @@ export function PickerMenu({
   );
 }
 
+/**
+ * The Assistant's thread, offered where the other "this becomes a task"
+ * choices are. It reads the task list itself so opening the menu is what costs
+ * a daemon subscription, not rendering the pull request.
+ */
+export function AssistantThreadItem({ pr }: { pr: PullRequestSummary }) {
+  const state = useSyncExternalStore(daemon.subscribe, daemon.getState);
+  const task = findPrAssistantTask(state.snapshot.tasks, pr);
+  const openTask = useUi((s) => s.openTask);
+  return (
+    <DropdownMenuItem
+      className="flex-col items-start gap-0.5 px-2 py-1.5"
+      disabled={!task}
+      onSelect={() => task && openTask(task.id)}
+    >
+      <span className="text-sm">Continue in a task</span>
+      <span className="text-[11px] text-muted-foreground">
+        {task
+          ? "Moves the Assistant's conversation into its own task, away from this pull request"
+          : "Ask the Assistant something first"}
+      </span>
+    </DropdownMenuItem>
+  );
+}
+
 export function IntentButton({
   icon: Icon,
   label,
+  title,
   busy,
   disabled,
   onClick,
 }: {
   icon: LucideIcon;
   label: string;
+  title?: string;
   busy: boolean;
   disabled: boolean;
   onClick: () => void;
@@ -79,6 +111,7 @@ export function IntentButton({
       type="button"
       variant="outline"
       size="sm"
+      title={title}
       className="h-6 shrink-0 gap-1.5 px-2 text-xs"
       disabled={disabled}
       onClick={onClick}

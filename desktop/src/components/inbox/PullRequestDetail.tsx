@@ -6,12 +6,13 @@ import {
   FileDiff,
   Loader2,
   MessageSquareWarning,
-  Sparkles,
+  Send,
   SquareChartGantt,
 } from "lucide-react";
 import * as React from "react";
 
 import { PullAssistantLive } from "@/components/inbox/PullAssistant";
+import { AssistantThreadItem } from "@/components/inbox/PullAssistantControls";
 import { PullDetailHeader } from "@/components/inbox/PullDetailHeader";
 import { PullDiffView } from "@/components/inbox/PullDiffView";
 import { PullOverview } from "@/components/inbox/PullOverview";
@@ -21,7 +22,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuPortal,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SurfaceTabs, type SurfaceTab } from "@/components/workspace/SurfaceTabs";
@@ -316,17 +319,19 @@ export function PullRequestDetail({
                 {detailsQuery.isLoading ? (
                   <Loader2 className="size-3 animate-spin" aria-hidden />
                 ) : (
-                  <Sparkles className="size-3" aria-hidden />
+                  <Send className="size-3" aria-hidden />
                 )}
                 Send to agent
                 <ChevronDown className="size-3" aria-hidden />
               </DropdownMenuTrigger>
-              {/* Two things worth a task of its own, named. The button used to
-                  hand over four lines of metadata and no instruction, which
-                  left the agent to guess — and guessing produced a summary of
-                  the diff, which is what the Assistant tab is for. */}
+              {/* Everything here ends up as a task on the board, and every
+                  line says so: the complaint this answers was not five agent
+                  buttons but not knowing which one leaves the pull request. */}
               <DropdownMenuPortal>
-                <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuContent align="end" className="w-80">
+                  <DropdownMenuLabel className="py-1 text-xs font-normal text-muted-foreground">
+                    Hand the work over
+                  </DropdownMenuLabel>
                   <DropdownMenuItem
                     className="flex-col items-start gap-0.5 px-2 py-1.5"
                     disabled={unresolved.length === 0}
@@ -342,7 +347,7 @@ export function PullRequestDetail({
                     </span>
                     <span className="text-[11px] text-muted-foreground">
                       {unresolved.length > 0
-                        ? "Fix them on the branch, commit and push"
+                        ? "Starts a task on this branch to fix them, commit and push"
                         : "Nothing unresolved on this pull request"}
                     </span>
                   </DropdownMenuItem>
@@ -352,9 +357,14 @@ export function PullRequestDetail({
                   >
                     <span className="text-sm">Work on this branch</span>
                     <span className="text-[11px] text-muted-foreground">
-                      Pick the change up where it left off
+                      Starts a task that picks the change up where it left off
                     </span>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="py-1 text-xs font-normal text-muted-foreground">
+                    Assistant
+                  </DropdownMenuLabel>
+                  <AssistantThreadItem pr={pr} />
                 </DropdownMenuContent>
               </DropdownMenuPortal>
             </DropdownMenu>

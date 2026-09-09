@@ -79,19 +79,20 @@ Both continue the *same* conversation, so you can ask follow-ups in plain langua
 The agent reads the change by fetching and diffing `origin` refs. It never switches or checks out a branch in your working tree — you are reading a pull request, not moving your own checkout onto it. Large patches are not pasted into the prompt either: past a few kilobytes the agent gets the file list and the commands to read them, so it reads each file once instead of twice.
 
 <Aside type="tip" title="These conversations stay inside the pull request">
-  The Assistant's thread never appears on your board, backlog or Mission Control — it belongs to the pane. It survives closing the app: reopen the pull request and the conversation is where you left it. It archives itself once the pull request is merged or closed, and after two weeks of silence. **Continue in task** moves it into a full task view when you want the whole window.
+  The Assistant's thread never appears on your board, backlog or Mission Control — it belongs to the pane. It survives closing the app: reopen the pull request and the conversation is where you left it. It archives itself once the pull request is merged or closed, and after two weeks of silence. When you want the whole window for it, **Send to agent → Continue in a task** moves the conversation into a task of its own.
 </Aside>
 
 ## Hand the work to an agent
 
-**Send to agent** asks what you want done, rather than handing an agent a link and hoping:
+**Send to agent** asks what you want done, rather than handing an agent a link and hoping. Everything under it becomes a task on your board, and every choice says so on its second line:
 
-| Choice | What the agent gets |
+| Choice | What it does |
 | --- | --- |
-| **Address review comments** | Every unresolved remark with its file and line, and the instruction to fix them on the branch, then commit and push. The count is on the menu item; it's disabled when nothing is unresolved. |
-| **Work on this branch** | The description and the files the change touches — pick it up where it left off. |
+| **Address review comments** | Starts a task on the branch with every unresolved remark, its file and its line, to fix them, commit and push. The count sits on the item, and it's disabled when nothing is unresolved. |
+| **Work on this branch** | Starts a task with the description and the files the change touches, to pick it up where it left off. |
+| **Continue in a task** | Moves the Assistant's conversation into a task of its own. Disabled until you have asked it something. |
 
-Either way it starts by checking the pull request's own branch out, and it becomes an ordinary task on your board — unlike the Assistant, this one is real work with an owner.
+The first two check the pull request's branch out before they start. That is the line between the two doors: Explain and Review answer inside the pull request, everything in this menu leaves it.
 
 ## What isn't here yet
 
