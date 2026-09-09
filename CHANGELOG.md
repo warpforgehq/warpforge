@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.19.2
+
+### Patch Changes
+
+- [`41c503c`](https://github.com/warpforgehq/warpforge/commit/41c503c7fc7c97b1e49a257c73d69f28c0428429) Thanks [@ephor](https://github.com/ephor)! - The code editor and the terminal work again in the installed app. Opening a file or a diff drew line numbers beside empty space — text turned up in the wrong font with its indentation gone, or only the tail of the file showed at all — and the terminal took neither a cursor nor a keystroke. Everything the editor, the diff viewer and the terminal style themselves with was being thrown away as the window loaded, so syntax colours, the monospace font and the whole line layout never arrived. This only ever affected released builds, which is why it could sit unnoticed while the app was run from source. The app also stops falling back to a slower channel for talking to its background service.
+
+- [`6eb294f`](https://github.com/warpforgehq/warpforge/commit/6eb294f8a184549d69891738d26416e691b3a020) Thanks [@ephor](https://github.com/ephor)! - The agent actions on a pull request now say what they will do to you. **Explain** and **Review** answer inside the pull request and stay where they are. Everything that turns the change into a task on your board moved under **Send to agent**, which now also holds **Continue in a task** for handing the Assistant's own conversation a full window. Each choice spells out its consequence: "Starts a task on this branch to fix them, commit and push", "Moves the Assistant's conversation into its own task". Before this, six look-alike agent buttons sat side by side and nothing told you which one would take you off the pull request.
+
 ## 0.19.1
 
 ### Patch Changes
