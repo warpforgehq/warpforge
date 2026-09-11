@@ -114,7 +114,7 @@ These are the likely reasons the result looks wrong. Verify each against #21/#22
 
 - Real Editor (tabs + editable file + Files tree, #22).
 - Interactive terminal (daemon already streams vt100 grid; desktop drops
-  `terminal.screen`/`terminal.exited` in `daemon.ts`).
+  `terminal.screen`/`terminal.exited` in `daemon/events.ts`).
 - Top-bar restyle + vertical tool-window strip.
 
 ## Build / run / verify

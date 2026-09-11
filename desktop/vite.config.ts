@@ -34,7 +34,7 @@ export default defineConfig({
             { name: "vendor-query", test: /node_modules\/@tanstack/ },
             { name: "vendor-radix", test: /node_modules\/@radix-ui/ },
             { name: "vendor-codemirror", test: /node_modules\/@codemirror/ },
-            { name: "daemon", test: /src\/daemon\.ts/ },
+            { name: "daemon", test: /src\/daemon\// },
           ],
         },
       },

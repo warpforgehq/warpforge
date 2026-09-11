@@ -84,6 +84,6 @@ Applies to `src/daemon/prompt/` and `desktop/src/lib/fileAttachments.ts`.
    Image previews created before the failing file are revoked on that path.
 5. **Adding a `PromptAttachment` variant is a daemon change, not just a wire
    change.** `prepare_prompt` matches exhaustively, so the compiler will catch
-   the daemon side — but the demo-mode mapper in `desktop/src/daemon.ts` and
+   the daemon side — but the demo-mode mapper in `desktop/src/daemon/demo.ts` and
    the transcript label in `StreamLine.tsx` are TypeScript unions with a
    fallback arm, and will silently mislabel a new variant.

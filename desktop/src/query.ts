@@ -6,7 +6,7 @@ import type { ProjectFile } from "./protocol";
 /**
  * TanStack Query is used ONLY for on-demand daemon *reads* — diff, file
  * contents/list, branches, service logs, sessions. The daemon's live state
- * (the snapshot + incremental events projected in daemon.ts) stays in the push
+ * (the snapshot + incremental events projected in daemon/events.ts) stays in the push
  * store: that is already a server-driven cache and does not belong here.
  *
  * Bridge between the two worlds: read keys bake in the task's server-side

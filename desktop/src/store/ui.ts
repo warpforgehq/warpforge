@@ -8,7 +8,7 @@ import type { EditHunk } from "../protocol";
 
 /**
  * Client-side UI state (view, panel toggles, prefs) — persisted to localStorage.
- * The server-data store is `daemon.ts` (useSyncExternalStore); this owns UI only.
+ * The server-data store is `daemon/` (useSyncExternalStore); this owns UI only.
  */
 
 export type View = "control" | "projects" | "automations" | "inbox";

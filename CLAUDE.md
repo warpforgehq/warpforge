@@ -63,7 +63,7 @@ tui/
 ```
 main.tsx              — React entry point
 App.tsx               — Main app shell, navigation
-daemon.ts             — WebSocket client to Rust daemon (ONLY place that talks to daemon)
+daemon/               — WebSocket client to Rust daemon (ONLY place that talks to daemon)
 protocol.ts           — TypeScript types for daemon protocol (mirrors Rust)
 query.ts              — React Query setup
 store/
