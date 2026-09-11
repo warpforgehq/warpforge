@@ -3,8 +3,9 @@
 //! package-manager classification mirror `agents.rs` — a server is a global
 //! binary (npm/brew) the editor starts via the daemon's stdio proxy (`lsp.rs`).
 //!
-//! `lsp.detect` is read-only (see `method_is_mutation` in server.rs), so this
-//! module only probes; installs run through `agents::run_manage_command`.
+//! `lsp.detect` is read-only (see `method_is_mutation` in
+//! `server/method_policy.rs`), so this module only probes; installs run
+//! through `agents::run_manage_command`.
 
 use warpforge_protocol as wire;
 
