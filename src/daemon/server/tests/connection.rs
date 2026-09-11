@@ -6,6 +6,10 @@ use crate::registry::ProjectEntry;
 use std::time::Duration;
 use tokio::time::timeout;
 
+/// A request the daemon cannot parse must still be answered. Dropping it
+/// leaves the caller waiting forever, which is indistinguishable from a
+/// hung daemon — it showed up as a spinner that never stopped when a client
+/// sent params in the wrong case.
 #[tokio::test]
 async fn unparseable_request_is_answered_instead_of_dropped() {
     let store = Store::open_at(std::path::Path::new(":memory:")).ok();
@@ -45,6 +49,14 @@ async fn unparseable_request_is_answered_instead_of_dropped() {
     }
 }
 
+/// A read must not hold up whatever is queued behind it. One connection
+/// used to serve one request at a time, so a slow read delayed everything
+/// after it — a tool approval was not even read off the socket until the
+/// read ahead of it finished. The cheap request sent second must come back
+/// first.
+// Multi-threaded on purpose: the daemon runs on a multi-thread runtime, and
+// on the single-threaded test default a synchronous filesystem walk inside
+// a spawned task blocks the very socket read this is measuring.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_slow_read_does_not_delay_the_request_behind_it() {
     // A project big enough that listing it takes real time, and sized here
@@ -114,6 +126,10 @@ async fn a_slow_read_does_not_delay_the_request_behind_it() {
     );
 }
 
+/// Generating a title spawns an agent process and can run for minutes. It
+/// used to be dispatched on the read loop, so the daemon read nothing else
+/// from that client meanwhile — which is what made starting a task appear
+/// to stall the conversation it was starting.
 #[test]
 fn the_slowest_requests_do_not_block_the_connection() {
     use wire::Method::*;
@@ -138,6 +154,8 @@ fn the_slowest_requests_do_not_block_the_connection() {
     }
 }
 
+/// Ordered work must stay on the serial path. LSP is a streaming protocol
+/// and git writes only mean what they mean in sequence.
 #[test]
 fn ordered_requests_stay_serial() {
     use wire::Method::*;

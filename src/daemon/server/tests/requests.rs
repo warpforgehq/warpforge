@@ -6,6 +6,9 @@ use crate::registry::ProjectEntry;
 use std::time::Duration;
 use tokio::time::timeout;
 
+/// An unparseable port range on `project.add` is rejected at the parse
+/// gate — before the project is registered, so there is no half-created
+/// entry and the caller can retry with a fixed range.
 #[tokio::test]
 async fn an_unparseable_range_rejects_the_add_before_registration() {
     let store = Store::open_at(std::path::Path::new(":memory:")).ok();
