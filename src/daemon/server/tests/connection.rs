@@ -490,3 +490,152 @@ async fn lifecycle_methods_dispatch_over_websocket() {
         }
     }
 }
+
+/// A client that stops draining its socket must not park the connection's read
+/// loop. This is the head-of-line block that froze the UI: broadcast events
+/// filled the outgoing queue and the loop that reads requests was parked on
+/// `send` while it drained them, so a concurrent request — the push dialog's
+/// `git.pushInfo` — was never even read. Here one client is stalled and flooded
+/// with events while a second client watches for the effect of a request sent
+/// on the stalled connection.
+// Multi-threaded on purpose: the witness and the stalled writer must make
+// progress while the stalled read loop is parked.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_stalled_reader_does_not_park_the_request_loop() {
+    let projects = vec![ProjectEntry {
+        name: "demo".into(),
+        path: ".".into(),
+        added_at: "0".into(),
+        port_range: None,
+        port_range_override: None,
+    }];
+    let store = Store::open_at(std::path::Path::new(":memory:")).ok();
+    let handle = Daemon::spawn(projects, store);
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(run(listener, handle.clone(), String::new()));
+
+    // The stalled client subscribes, reads the ack and snapshot, then stops
+    // reading its socket.
+    let (mut stalled, _) = tokio_tungstenite::connect_async(&format!("ws://{addr}"))
+        .await
+        .unwrap();
+    stalled
+        .send(Message::Text(
+            json!({ "id": 1, "method": "state.subscribe", "params": { "topics": [] } }).to_string(),
+        ))
+        .await
+        .unwrap();
+    for _ in 0..2 {
+        let msg = timeout(Duration::from_secs(2), stalled.next())
+            .await
+            .expect("subscribe ack and snapshot")
+            .expect("some")
+            .expect("ok");
+        if let Message::Text(t) = msg {
+            let v: serde_json::Value = serde_json::from_str(t.as_str()).unwrap();
+            if v.get("event").and_then(|e| e.as_str()) == Some("state.snapshot") {
+                break;
+            }
+        }
+    }
+
+    // A witness subscribes and drains in the background, watching for the
+    // stalled client's request to surface as an event.
+    let (mut witness, _) = tokio_tungstenite::connect_async(&format!("ws://{addr}"))
+        .await
+        .unwrap();
+    witness
+        .send(Message::Text(
+            json!({ "id": 2, "method": "state.subscribe", "params": { "topics": [] } }).to_string(),
+        ))
+        .await
+        .unwrap();
+    for _ in 0..2 {
+        let msg = timeout(Duration::from_secs(2), witness.next())
+            .await
+            .expect("subscribe ack and snapshot")
+            .expect("some")
+            .expect("ok");
+        if let Message::Text(t) = msg {
+            let v: serde_json::Value = serde_json::from_str(t.as_str()).unwrap();
+            if v.get("event").and_then(|e| e.as_str()) == Some("state.snapshot") {
+                break;
+            }
+        }
+    }
+    let (seen_tx, seen_rx) = tokio::sync::oneshot::channel::<()>();
+    tokio::spawn(async move {
+        while let Some(Ok(msg)) = witness.next().await {
+            if let Message::Text(t) = msg {
+                let Ok(v) = serde_json::from_str::<serde_json::Value>(t.as_str()) else {
+                    continue;
+                };
+                if v.get("event").and_then(|e| e.as_str()) == Some("task.created")
+                    && v["data"]["prompt"].as_str() == Some("probe")
+                {
+                    let _ = seen_tx.send(());
+                    return;
+                }
+            }
+        }
+    });
+
+    // A third client floods events. The first is far larger than any socket
+    // buffer, so the stalled client's writer parks mid-frame and the outgoing
+    // queue behind it fills; the stalled read loop must not park with it.
+    let (mut flood, _) = tokio_tungstenite::connect_async(&format!("ws://{addr}"))
+        .await
+        .unwrap();
+    let big = "x".repeat(2 * 1024 * 1024);
+    for i in 0..6u64 {
+        let prompt = if i == 0 {
+            big.clone()
+        } else {
+            format!("flood-{i}")
+        };
+        flood
+            .send(Message::Text(
+                json!({
+                    "id": 100 + i,
+                    "method": "task.create",
+                    "params": {
+                        "project": "demo",
+                        "prompt": prompt,
+                        "agent": "claude",
+                        "start": false
+                    }
+                })
+                .to_string(),
+            ))
+            .await
+            .unwrap();
+        let _ = timeout(Duration::from_secs(5), flood.next()).await;
+    }
+    // Let the stalled writer park and its queue fill before the probe.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // The probe is sent on the stalled connection, which never reads. If the
+    // read loop is parked, it is never read, so the witness never sees it.
+    stalled
+        .send(Message::Text(
+            json!({
+                "id": 3,
+                "method": "task.create",
+                "params": {
+                    "project": "demo",
+                    "prompt": "probe",
+                    "agent": "claude",
+                    "start": false
+                }
+            })
+            .to_string(),
+        ))
+        .await
+        .unwrap();
+
+    timeout(Duration::from_secs(5), seen_rx)
+        .await
+        .expect("the stalled client's request was never dispatched — the read loop is parked")
+        .expect("probe event");
+}

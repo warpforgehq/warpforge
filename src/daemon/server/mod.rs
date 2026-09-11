@@ -41,7 +41,9 @@ mod util;
 use dispatch::dispatch;
 
 /// Outgoing frames buffered per connection before the read loop slows down.
-const OUTGOING_QUEUE: usize = 256;
+/// Shrunk under test so a regression test can fill it without sending
+/// hundreds of events.
+const OUTGOING_QUEUE: usize = if cfg!(test) { 4 } else { 256 };
 
 /// Requests one connection may have in flight at once. Concurrent requests
 /// answer off the read loop, so without a cap a client could fan out unbounded
@@ -229,9 +231,8 @@ async fn handle_conn(
 ) -> Result<()> {
     let ws = tokio_tungstenite::accept_async(stream).await?;
     let (mut sink, mut rx) = ws.split();
-    let mut events = handle.subscribe();
     let mut authed = token.is_empty();
-    let mut subscribed = false;
+    let subscribed = Arc::new(AtomicBool::new(false));
 
     // One writer owns the socket so read requests answered off the read loop
     // have somewhere to reply to. Bounded: a client that stops draining slows
@@ -244,6 +245,56 @@ async fn handle_conn(
             }
         }
     });
+
+    // Broadcast events are consumed on their own task that owns a clone of
+    // `out_tx`. A client that stops reading its socket can fill the queue and
+    // park this task in `send`, but it can no longer park the read loop below
+    // — which is what used to freeze request handling (a push dialog's
+    // `git.pushInfo` was never even read while events drained). The task exits
+    // when the connection closes (`abort` below) or `send` fails.
+    let events_task = {
+        let mut events = handle.subscribe();
+        let handle = handle.clone();
+        let out = out_tx.clone();
+        let subscribed = Arc::clone(&subscribed);
+        tokio::spawn(async move {
+            loop {
+                let event = events.recv().await;
+                match event {
+                    Ok(ev) => {
+                        if !subscribed.load(Ordering::Acquire) {
+                            continue;
+                        }
+                        let Some(w) = wireconv::to_wire(&ev) else {
+                            continue;
+                        };
+                        let message = wire::ServerMessage::Event(w);
+                        let Ok(text) = serde_json::to_string(&message) else {
+                            continue;
+                        };
+                        if out.send(Message::Text(text)).await.is_err() {
+                            return;
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Lagged(_)) => {
+                        // The receiver fell behind and events were dropped.
+                        // Re-send a full snapshot so the client resynchronizes
+                        // instead of staying stale forever. One snapshot per
+                        // lag notice is enough; it cannot loop on its own.
+                        let snapshot = handle.snapshot().await;
+                        let message = wire::ServerMessage::Event(wire::Event::Snapshot(snapshot));
+                        let Ok(text) = serde_json::to_string(&message) else {
+                            continue;
+                        };
+                        if out.send(Message::Text(text)).await.is_err() {
+                            return;
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Closed) => return,
+                }
+            }
+        })
+    };
     // Caps the work one client can have in flight at once.
     let request_slots = Arc::new(Semaphore::new(MAX_CONCURRENT_REQUESTS));
 
@@ -314,7 +365,7 @@ async fn handle_conn(
                     let snapshot = handle.snapshot().await;
                     send!(wire::ServerMessage::Response { id, result: json!(null) });
                     send!(wire::ServerMessage::Event(wire::Event::Snapshot(snapshot)));
-                    subscribed = true;
+                    subscribed.store(true, Ordering::Release);
                     continue;
                 }
 
@@ -391,19 +442,8 @@ async fn handle_conn(
                     break;
                 }
             }
-            event = events.recv() => {
-                match event {
-                    Ok(ev) if subscribed => {
-                        if let Some(w) = wireconv::to_wire(&ev) {
-                            send!(wire::ServerMessage::Event(w));
-                        }
-                    }
-                    Ok(_) => {}
-                    Err(broadcast::error::RecvError::Lagged(_)) => {} // client can re-snapshot
-                    Err(broadcast::error::RecvError::Closed) => break,
-                }
-            }
         }
     }
+    events_task.abort();
     Ok(())
 }
