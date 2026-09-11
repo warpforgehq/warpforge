@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.19.3
+
+### Patch Changes
+
+- [`f61adab`](https://github.com/warpforgehq/warpforge/commit/f61adab9211a96ea1f4e7f8a54d5190f9f69aed1) Thanks [@ephor](https://github.com/ephor)! - Warpforge now keeps itself and your agents fresh without you asking. While the app is open it quietly checks for a new desktop release every few hours instead of only at launch, and it checks the AI agent programs you have installed twice a day. When an agent has an update waiting, a banner appears above Settings in the sidebar telling you how many agent updates are available; click it to jump straight to the Agents settings and install them.
+
+- [`7f4e1a7`](https://github.com/warpforgehq/warpforge/commit/7f4e1a7cb81f3391d492178b979649a93b90446f) Thanks [@ephor](https://github.com/ephor)! - Side panels are now yours to size. Every rail — the workspace file tree, the changes list, a task's services and port-forwards, the run pipeline, the inbox list and a pull request's changed files — can be dragged to the width you want and remembers it, and collapsing one folds it away with a real animation instead of snapping out of the layout. The separators take the keyboard too: arrow keys nudge, Shift jumps, Home and End go to the bounds, Enter folds, and a double-click restores the default. The split inside a task works the same way: drag the seam between the conversation and the workspace and either side folds away to the edge once there is no room left for it, with a label over the pane that is about to go, so you can go full-screen on one of them without reaching for a menu. Squeezing the workspace also tucks the file tree, changes list or services rail out of the way on its own and brings it back when there is room again, so a narrow workspace shows the file you are reading instead of just its rail — the header button still opens the rail at any width if you want it there anyway. The conversation can also swap to the right of the workspace with the new flip control — it slides across — for anyone who reads the code on the left.
+
+- [`4d37448`](https://github.com/warpforgehq/warpforge/commit/4d37448c60cc23598db897447956c98fcf0e2c57) Thanks [@ephor](https://github.com/ephor)! - Agents that maintain their own updates no longer show a permanent, unusable update prompt. Warpforge only compares an agent against the npm registry when it can actually install that update; an agent installed through its own updater could previously be flagged forever even though there was nothing to update from the Agents page.
+
+- [`ced0cba`](https://github.com/warpforgehq/warpforge/commit/ced0cbac25ca8edd8d9228c2bb1b7350834bfc27) Thanks [@ephor](https://github.com/ephor)! - The app no longer freezes while a busy task streams output. Previously, when one view fell behind on updates it could stop Warpforge from handling anything else, so actions like opening the push dialog appeared to hang until that view caught up. Replies are now written ahead of pending updates, and a view that misses some resynchronizes itself with a fresh snapshot instead of staying stale.
+
 ## 0.19.2
 
 ### Patch Changes
