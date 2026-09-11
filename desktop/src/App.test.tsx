@@ -89,6 +89,17 @@ function setWide(wide: boolean) {
   mockedUseMediaQuery.mockReturnValue(wide);
 }
 
+/**
+ * The content views are lazily imported. Under the full suite every worker
+ * competes for transforms, so the import can outrun the default one-second
+ * `findBy` timeout and leave the tree uncommitted — an assertion right after
+ * `render` then flakes. Render, settle, then touch the DOM.
+ */
+async function renderApp() {
+  render(<App />);
+  await screen.findByTestId("mission-control", undefined, { timeout: 5_000 });
+}
+
 beforeEach(() => {
   localStorage.clear();
   useUi.setState({
@@ -109,8 +120,7 @@ describe("App sidebar layout", () => {
   it("renders exactly one persistent sidebar on wide viewports", async () => {
     setWide(true);
 
-    render(<App />);
-    await screen.findByTestId("mission-control");
+    await renderApp();
 
     expect(screen.getByTestId("persistent-sidebar")).toBeInTheDocument();
     expect(screen.getByTestId("sidebar-resize-handle")).toBeInTheDocument();
@@ -118,21 +128,21 @@ describe("App sidebar layout", () => {
     expect(screen.queryByRole("button", { name: "Close sessions rail" })).not.toBeInTheDocument();
   });
 
-  it("renders no sidebar on narrow viewports", () => {
+  it("renders no sidebar on narrow viewports", async () => {
     setWide(false);
 
-    render(<App />);
+    await renderApp();
 
     expect(screen.queryByTestId("persistent-sidebar")).not.toBeInTheDocument();
     expect(screen.queryByTestId("sidebar-resize-handle")).not.toBeInTheDocument();
     expect(screen.queryByTestId("app-sidebar")).not.toBeInTheDocument();
   });
 
-  it("collapsed sidebar shrinks to the icon rail and drops the resize handle", () => {
+  it("collapsed sidebar shrinks to the icon rail and drops the resize handle", async () => {
     setWide(true);
     useUi.setState({ sidebarCollapsed: true, sidebarWidth: 400 });
 
-    render(<App />);
+    await renderApp();
 
     // The rail keeps its place in the split and narrows: moving it out of the
     // panel group would remount every view beside it.
@@ -143,8 +153,7 @@ describe("App sidebar layout", () => {
   });
 
   it("⌘N opens the new task dialog", async () => {
-    render(<App />);
-    await screen.findByTestId("mission-control");
+    await renderApp();
 
     expect(screen.queryByTestId("new-task-dialog")).not.toBeInTheDocument();
     fireEvent.keyDown(window, { key: "n", metaKey: true });
@@ -157,8 +166,7 @@ describe("Sidebar resize separator", () => {
     setWide(true);
     useUi.setState({ sidebarWidth: 340 });
 
-    render(<App />);
-    await screen.findByTestId("mission-control");
+    await renderApp();
 
     const handle = screen.getByTestId("sidebar-resize-handle");
     expect(handle).toHaveAttribute("role", "separator");
@@ -178,10 +186,11 @@ describe("Sidebar resize separator", () => {
 });
 
 describe("Responsive behavior", () => {
-  it("hides the sidebar when viewport narrows", () => {
+  it("hides the sidebar when viewport narrows", async () => {
     setWide(true);
 
     const { rerender } = render(<App />);
+    await screen.findByTestId("mission-control", undefined, { timeout: 5_000 });
     expect(screen.getByTestId("persistent-sidebar")).toBeInTheDocument();
 
     setWide(false);
@@ -190,10 +199,11 @@ describe("Responsive behavior", () => {
     expect(screen.queryByTestId("persistent-sidebar")).not.toBeInTheDocument();
   });
 
-  it("shows the sidebar when viewport widens", () => {
+  it("shows the sidebar when viewport widens", async () => {
     setWide(false);
 
     const { rerender } = render(<App />);
+    await screen.findByTestId("mission-control", undefined, { timeout: 5_000 });
     expect(screen.queryByTestId("persistent-sidebar")).not.toBeInTheDocument();
 
     setWide(true);
@@ -202,10 +212,11 @@ describe("Responsive behavior", () => {
     expect(screen.getByTestId("persistent-sidebar")).toBeInTheDocument();
   });
 
-  it("renders no off-canvas overlay on any viewport", () => {
+  it("renders no off-canvas overlay on any viewport", async () => {
     setWide(true);
 
     const { rerender } = render(<App />);
+    await screen.findByTestId("mission-control", undefined, { timeout: 5_000 });
     expect(screen.queryByRole("button", { name: "Close sessions rail" })).not.toBeInTheDocument();
 
     setWide(false);
@@ -216,8 +227,8 @@ describe("Responsive behavior", () => {
 });
 
 describe("AppHeader sidebar control", () => {
-  it("has no header sidebar toggle (collapse lives in the sidebar)", () => {
-    render(<App />);
+  it("has no header sidebar toggle (collapse lives in the sidebar)", async () => {
+    await renderApp();
 
     expect(
       screen.queryByRole("button", { name: "Toggle attention sidebar" }),
