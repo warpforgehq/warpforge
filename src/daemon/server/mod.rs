@@ -223,6 +223,16 @@ async fn run_controlled(
     }
 }
 
+/// Aborts the wrapped task when dropped, so every exit path out of
+/// `handle_conn` tears the events task down instead of leaking it.
+struct AbortOnDrop(tokio::task::JoinHandle<()>);
+
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
 async fn handle_conn(
     stream: TcpStream,
     handle: DaemonHandle,
@@ -234,30 +244,50 @@ async fn handle_conn(
     let mut authed = token.is_empty();
     let subscribed = Arc::new(AtomicBool::new(false));
 
-    // One writer owns the socket so read requests answered off the read loop
-    // have somewhere to reply to. Bounded: a client that stops draining slows
-    // its own connection rather than growing the queue without limit.
-    let (out_tx, mut out_rx) = mpsc::channel::<Message>(OUTGOING_QUEUE);
+    // Replies and events share one writer but travel on separate bounded
+    // queues, and the writer drains replies first. A client that stops reading
+    // fills the event queue; without the split a reply queued behind up to
+    // `OUTGOING_QUEUE` events waited for all of them (editor file loads hung
+    // while a task streamed output). Serial replies now backpressure only on
+    // the reply queue.
+    let (resp_tx, mut resp_rx) = mpsc::channel::<Message>(OUTGOING_QUEUE);
+    let (event_tx, mut event_rx) = mpsc::channel::<Message>(OUTGOING_QUEUE);
     tokio::spawn(async move {
-        while let Some(msg) = out_rx.recv().await {
-            if sink.send(msg).await.is_err() {
-                break;
+        loop {
+            tokio::select! {
+                biased;
+                Some(msg) = resp_rx.recv() => {
+                    if sink.send(msg).await.is_err() {
+                        break;
+                    }
+                }
+                Some(msg) = event_rx.recv() => {
+                    if sink.send(msg).await.is_err() {
+                        break;
+                    }
+                }
+                else => break,
             }
         }
     });
 
     // Broadcast events are consumed on their own task that owns a clone of
-    // `out_tx`. A client that stops reading its socket can fill the queue and
-    // park this task in `send`, but it can no longer park the read loop below
-    // — which is what used to freeze request handling (a push dialog's
-    // `git.pushInfo` was never even read while events drained). The task exits
-    // when the connection closes (`abort` below) or `send` fails.
-    let events_task = {
+    // the event sender. A client that stops reading its socket can fill the
+    // event queue and park this task in `send`, but it can no longer park the
+    // read loop below — which is what used to freeze request handling (a push
+    // dialog's `git.pushInfo` was never even read while events drained). The
+    // task exits when the connection closes (the guard aborts it) or `send`
+    // fails.
+    // Held for its drop guard: aborting the events task on every exit path.
+    let _events_task = AbortOnDrop({
         let mut events = handle.subscribe();
         let handle = handle.clone();
-        let out = out_tx.clone();
+        let out = event_tx.clone();
         let subscribed = Arc::clone(&subscribed);
         tokio::spawn(async move {
+            // At most one resync snapshot queued at a time, so a sustained
+            // flood cannot queue a snapshot per lag notice.
+            let mut resync_queued = false;
             loop {
                 let event = events.recv().await;
                 match event {
@@ -272,20 +302,24 @@ async fn handle_conn(
                         let Ok(text) = serde_json::to_string(&message) else {
                             continue;
                         };
+                        resync_queued = false;
                         if out.send(Message::Text(text)).await.is_err() {
                             return;
                         }
                     }
                     Err(broadcast::error::RecvError::Lagged(_)) => {
-                        // The receiver fell behind and events were dropped.
-                        // Re-send a full snapshot so the client resynchronizes
-                        // instead of staying stale forever. One snapshot per
-                        // lag notice is enough; it cannot loop on its own.
+                        // Never leak state to a client that has not subscribed
+                        // (the task runs before auth), and do not pile up
+                        // resyncs: drop notices while one is queued.
+                        if !subscribed.load(Ordering::Acquire) || resync_queued {
+                            continue;
+                        }
                         let snapshot = handle.snapshot().await;
                         let message = wire::ServerMessage::Event(wire::Event::Snapshot(snapshot));
                         let Ok(text) = serde_json::to_string(&message) else {
                             continue;
                         };
+                        resync_queued = true;
                         if out.send(Message::Text(text)).await.is_err() {
                             return;
                         }
@@ -294,14 +328,22 @@ async fn handle_conn(
                 }
             }
         })
-    };
+    });
     // Caps the work one client can have in flight at once.
     let request_slots = Arc::new(Semaphore::new(MAX_CONCURRENT_REQUESTS));
 
     macro_rules! send {
         ($msg:expr) => {{
             let text = serde_json::to_string(&$msg)?;
-            if out_tx.send(Message::Text(text)).await.is_err() {
+            if resp_tx.send(Message::Text(text)).await.is_err() {
+                break;
+            }
+        }};
+    }
+    macro_rules! send_event {
+        ($msg:expr) => {{
+            let text = serde_json::to_string(&$msg)?;
+            if event_tx.send(Message::Text(text)).await.is_err() {
                 break;
             }
         }};
@@ -316,7 +358,7 @@ async fn handle_conn(
                 };
                 let text = match msg {
                     Message::Text(t) => t.as_str().to_string(),
-                    Message::Ping(p) => { let _ = out_tx.send(Message::Pong(p)).await; continue; }
+                    Message::Ping(p) => { let _ = resp_tx.send(Message::Pong(p)).await; continue; }
                     Message::Close(_) => break,
                     _ => continue,
                 };
@@ -330,7 +372,7 @@ async fn handle_conn(
                     if ok {
                         authed = true;
                     } else {
-                        let _ = out_tx.send(Message::Close(None)).await;
+                        let _ = resp_tx.send(Message::Close(None)).await;
                         break;
                     }
                     continue;
@@ -364,7 +406,7 @@ async fn handle_conn(
                 if matches!(req.method, wire::Method::StateSubscribe { .. }) {
                     let snapshot = handle.snapshot().await;
                     send!(wire::ServerMessage::Response { id, result: json!(null) });
-                    send!(wire::ServerMessage::Event(wire::Event::Snapshot(snapshot)));
+                    send_event!(wire::ServerMessage::Event(wire::Event::Snapshot(snapshot)));
                     subscribed.store(true, Ordering::Release);
                     continue;
                 }
@@ -377,7 +419,7 @@ async fn handle_conn(
                     let gated = method_is_mutation(&req.method);
                     let handle = handle.clone();
                     let lifecycle = Arc::clone(&lifecycle);
-                    let out = out_tx.clone();
+                    let out = resp_tx.clone();
                     let slots = Arc::clone(&request_slots);
                     tokio::spawn(async move {
                         let _permit = slots.acquire_owned().await;
@@ -430,7 +472,7 @@ async fn handle_conn(
                     Err(error) => wire::ServerMessage::Error { id, error },
                 };
                 let text = serde_json::to_string(&message)?;
-                let sent = out_tx.send(Message::Text(text)).await.is_ok();
+                let sent = resp_tx.send(Message::Text(text)).await.is_ok();
 
                 if handoff_ready {
                     // Queue the acknowledgement on the socket before stopping
@@ -444,6 +486,5 @@ async fn handle_conn(
             }
         }
     }
-    events_task.abort();
     Ok(())
 }

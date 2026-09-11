@@ -587,7 +587,7 @@ async fn a_stalled_reader_does_not_park_the_request_loop() {
     let (mut flood, _) = tokio_tungstenite::connect_async(&format!("ws://{addr}"))
         .await
         .unwrap();
-    let big = "x".repeat(2 * 1024 * 1024);
+    let big = "x".repeat(8 * 1024 * 1024);
     for i in 0..6u64 {
         let prompt = if i == 0 {
             big.clone()
@@ -638,4 +638,50 @@ async fn a_stalled_reader_does_not_park_the_request_loop() {
         .await
         .expect("the stalled client's request was never dispatched — the read loop is parked")
         .expect("probe event");
+
+    // A concurrent request must still get its own RESPONSE, not just be
+    // dispatched. Its reply shares the socket with the event flood but must be
+    // written ahead of the queued events.
+    stalled
+        .send(Message::Text(
+            json!({ "id": 4, "method": "accounts.list", "params": {} }).to_string(),
+        ))
+        .await
+        .unwrap();
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    // Resume reading the stalled connection. The oversized event is still
+    // mid-frame, so once it completes the next frames are the replies; the
+    // flood events queued behind them must come after.
+    let mut response_at = None;
+    let mut first_flood_at = None;
+    for i in 0..10 {
+        let msg = match timeout(Duration::from_secs(5), stalled.next()).await {
+            Ok(Some(Ok(msg))) => msg,
+            _ => break,
+        };
+        let Message::Text(t) = msg else { continue };
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(t.as_str()) else {
+            continue;
+        };
+        if v.get("id").and_then(|id| id.as_u64()) == Some(4) {
+            response_at = Some(i);
+        }
+        let is_flood = v.get("event").and_then(|e| e.as_str()) == Some("task.created")
+            && v["data"]["prompt"]
+                .as_str()
+                .is_some_and(|p| p.starts_with("flood-"));
+        if is_flood && first_flood_at.is_none() {
+            first_flood_at = Some(i);
+        }
+        if response_at.is_some() && first_flood_at.is_some() {
+            break;
+        }
+    }
+    let response_at =
+        response_at.expect("the stalled connection never got its concurrent response");
+    assert!(
+        first_flood_at.is_none_or(|flood| response_at < flood),
+        "the concurrent response (frame {response_at}) was written after queued events (frame {first_flood_at:?})"
+    );
 }
