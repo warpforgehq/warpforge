@@ -20,7 +20,7 @@ import {
   sortProjectsByActivity,
   type SidebarRow,
   type SidebarTaskState,
-} from "./Sidebar.logic";
+} from "./logic";
 
 const NOW = 1_700_000_000;
 

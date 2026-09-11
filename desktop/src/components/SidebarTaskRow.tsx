@@ -53,7 +53,7 @@ import {
   snoozeWakeLabel,
   type SidebarStateIcon,
   type SidebarTaskState,
-} from "./Sidebar.logic";
+} from "./Sidebar/logic";
 
 /**
  * One task row. Anatomy, left to right:
