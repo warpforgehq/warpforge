@@ -6,7 +6,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -20,12 +19,12 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { FindInFiles, FIND_LIMIT } from "@/components/FindInFiles";
 import { QuickOpen } from "@/components/QuickOpen";
 import Sidebar from "@/components/Sidebar";
+import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { daemon } from "@/daemon";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { HAS_NATIVE_GLASS, IS_MAC } from "@/lib/platform";
-import { useUi } from "@/store/ui";
-import { SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX } from "@/store/ui";
+import { SIDEBAR_WIDTH_DEFAULT, SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN, useUi } from "@/store/ui";
 
 import { useDaemonEvents } from "./hooks/useDaemonEvents";
 import { useFindInFilesShortcut } from "./hooks/useFindInFilesShortcut";
@@ -149,90 +148,8 @@ const getConnection = () => daemon.getState().connection;
 const getConnectionError = () => daemon.getState().connectionError;
 const getPendingAgentSetup = () => daemon.getState().pendingAgentSetup;
 
-const SIDEBAR_RESIZE_STEP = 10;
 /** Icon-rail width when the sidebar is collapsed. */
 const SIDEBAR_COLLAPSED_WIDTH = 64;
-
-function SidebarResizeHandle({
-  width,
-  onWidthChange,
-}: {
-  width: number;
-  onWidthChange: (w: number) => void;
-}) {
-  const startXRef = useRef(0);
-  const startWidthRef = useRef(0);
-
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      startXRef.current = e.clientX;
-      startWidthRef.current = width;
-
-      const handleMouseMove = (ev: MouseEvent) => {
-        const delta = ev.clientX - startXRef.current;
-        onWidthChange(startWidthRef.current + delta);
-      };
-      const handleMouseUp = () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-      };
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    },
-    [width, onWidthChange],
-  );
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      let next: number;
-      switch (e.key) {
-        case "ArrowLeft":
-          e.preventDefault();
-          next = width - SIDEBAR_RESIZE_STEP;
-          break;
-        case "ArrowRight":
-          e.preventDefault();
-          next = width + SIDEBAR_RESIZE_STEP;
-          break;
-        case "Home":
-          e.preventDefault();
-          next = SIDEBAR_WIDTH_MIN;
-          break;
-        case "End":
-          e.preventDefault();
-          next = SIDEBAR_WIDTH_MAX;
-          break;
-        default:
-          return;
-      }
-      onWidthChange(next);
-    },
-    [width, onWidthChange],
-  );
-
-  return (
-    <div
-      role="separator"
-      aria-orientation="vertical"
-      aria-valuemin={SIDEBAR_WIDTH_MIN}
-      aria-valuemax={SIDEBAR_WIDTH_MAX}
-      aria-valuenow={width}
-      aria-label="Resize sidebar"
-      tabIndex={0}
-      onMouseDown={handleMouseDown}
-      onKeyDown={handleKeyDown}
-      data-testid="sidebar-resize-handle"
-      className="z-10 group flex w-1 -ml-0.5 shrink-0 cursor-col-resize items-center justify-center hover:bg-primary/15 focus-visible:bg-primary/15 focus-visible:outline-none"
-    >
-      <div className="h-full w-px bg-border/70 transition-colors group-hover:bg-primary/60 group-focus-visible:bg-primary/60" />
-    </div>
-  );
-}
 
 export default function App() {
   const snapshot = useSyncExternalStore(daemon.subscribe, getSnapshot);
@@ -357,7 +274,78 @@ export default function App() {
     openTaskId,
     view,
   };
-  const persistentWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : sidebarWidth;
+  const contentColumn = (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {!newTaskOpen && (
+        <AppHeader
+          view={view}
+          openTask={openTask}
+          onAddProject={() => setAddProjectOpen(true)}
+          onCloseTask={() => setOpenTaskId(null)}
+        />
+      )}
+      <main
+        className={
+          newTaskOpen ? "min-h-0 flex-1 overflow-hidden" : "min-h-0 flex-1 overflow-hidden p-2"
+        }
+      >
+        <ErrorBoundary>
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground/70">
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                <span>Loading…</span>
+              </div>
+            }
+          >
+            {connection !== "connected" ? (
+              <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground/70">
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                <span>
+                  {connectionError && !connectionError.includes("daemon.json")
+                    ? connectionError
+                    : "Connecting to daemon…"}
+                </span>
+              </div>
+            ) : newTaskOpen ? (
+              <NewTaskDialog
+                open
+                onOpenChange={setNewTaskOpen}
+                snapshot={snapshot}
+                defaultProject={newTaskProject}
+                initialPrompt={newTaskPrompt}
+                backlogItemId={newTaskBacklogItemId}
+              />
+            ) : openTask ? (
+              <TaskDetail
+                key={openTask.id}
+                task={openTask}
+                snapshot={snapshot}
+                onOpenTask={setOpenTaskId}
+                onOpenPush={() => setPushOpen(true)}
+              />
+            ) : view === "control" ? (
+              <LiveMissionControl onOpenTask={setOpenTaskId} onNewTask={startNewTask} />
+            ) : view === "inbox" ? (
+              <InboxView
+                projects={projectNames}
+                onSendToAgent={(project, prompt) => startNewTask(project, prompt)}
+              />
+            ) : view === "automations" ? (
+              <Automations snapshot={snapshot} onOpenTask={setOpenTaskId} />
+            ) : (
+              <Projects
+                snapshot={snapshot}
+                onOpenTask={setOpenTaskId}
+                onNewTask={startNewTask}
+                onAddProject={() => setAddProjectOpen(true)}
+              />
+            )}
+          </Suspense>
+        </ErrorBoundary>
+      </main>
+    </div>
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -373,97 +361,44 @@ export default function App() {
               hidden native title bar no longer provides. */}
           {IS_MAC && <div data-tauri-drag-region="deep" className="h-7 shrink-0" />}
           <div className="relative flex min-h-0 flex-1">
-            {showPersistent && (
-              <>
-                <aside
-                  style={{
-                    width: persistentWidth,
-                    minWidth: persistentWidth,
-                    maxWidth: persistentWidth,
-                  }}
-                  className="flex shrink-0 flex-col overflow-hidden"
-                  data-testid="persistent-sidebar"
+            {/* One shape whatever the sidebar is doing: moving the content
+                column between branches remounts every view under it, editors
+                and chat included. Collapsing narrows the panel instead. */}
+            <PanelGroup orientation="horizontal" className="h-full min-h-0">
+              {showPersistent && (
+                <Panel
+                  key="sidebar"
+                  size={sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : sidebarWidth}
+                  minSize={SIDEBAR_WIDTH_MIN}
+                  maxSize={SIDEBAR_WIDTH_MAX}
+                  defaultSize={SIDEBAR_WIDTH_DEFAULT}
+                  onSizeChange={setSidebarWidth}
+                  className="min-w-0"
                 >
-                  <LiveSidebar {...sidebarProps} />
-                </aside>
-                {!sidebarCollapsed && (
-                  <SidebarResizeHandle width={sidebarWidth} onWidthChange={setSidebarWidth} />
-                )}
-              </>
-            )}
-
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-              {!newTaskOpen && (
-                <AppHeader
-                  view={view}
-                  openTask={openTask}
-                  onAddProject={() => setAddProjectOpen(true)}
-                  onCloseTask={() => setOpenTaskId(null)}
+                  <aside
+                    className="flex h-full min-h-0 flex-col overflow-hidden"
+                    data-testid="persistent-sidebar"
+                  >
+                    <LiveSidebar {...sidebarProps} />
+                  </aside>
+                </Panel>
+              )}
+              {showPersistent && (
+                // Kept mounted while collapsed so the panel does not grow its
+                // own edge grip and make the icon rail draggable.
+                <PanelSeparator
+                  key="sidebar-separator"
+                  aria-label="Resize sidebar"
+                  aria-hidden={sidebarCollapsed || undefined}
+                  tabIndex={sidebarCollapsed ? -1 : 0}
+                  data-testid={sidebarCollapsed ? undefined : "sidebar-resize-handle"}
+                  className={sidebarCollapsed ? "pointer-events-none opacity-0" : undefined}
                 />
               )}
-              <main
-                className={
-                  newTaskOpen
-                    ? "min-h-0 flex-1 overflow-hidden"
-                    : "min-h-0 flex-1 overflow-hidden p-2"
-                }
-              >
-                <ErrorBoundary>
-                  <Suspense
-                    fallback={
-                      <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground/70">
-                        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                        <span>Loading…</span>
-                      </div>
-                    }
-                  >
-                    {connection !== "connected" ? (
-                      <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground/70">
-                        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                        <span>
-                          {connectionError && !connectionError.includes("daemon.json")
-                            ? connectionError
-                            : "Connecting to daemon…"}
-                        </span>
-                      </div>
-                    ) : newTaskOpen ? (
-                      <NewTaskDialog
-                        open
-                        onOpenChange={setNewTaskOpen}
-                        snapshot={snapshot}
-                        defaultProject={newTaskProject}
-                        initialPrompt={newTaskPrompt}
-                        backlogItemId={newTaskBacklogItemId}
-                      />
-                    ) : openTask ? (
-                      <TaskDetail
-                        key={openTask.id}
-                        task={openTask}
-                        snapshot={snapshot}
-                        onOpenTask={setOpenTaskId}
-                        onOpenPush={() => setPushOpen(true)}
-                      />
-                    ) : view === "control" ? (
-                      <LiveMissionControl onOpenTask={setOpenTaskId} onNewTask={startNewTask} />
-                    ) : view === "inbox" ? (
-                      <InboxView
-                        projects={projectNames}
-                        onSendToAgent={(project, prompt) => startNewTask(project, prompt)}
-                      />
-                    ) : view === "automations" ? (
-                      <Automations snapshot={snapshot} onOpenTask={setOpenTaskId} />
-                    ) : (
-                      <Projects
-                        snapshot={snapshot}
-                        onOpenTask={setOpenTaskId}
-                        onNewTask={startNewTask}
-                        onAddProject={() => setAddProjectOpen(true)}
-                      />
-                    )}
-                  </Suspense>
-                </ErrorBoundary>
-              </main>
-            </div>
+              <Panel key="content" pin className="min-w-0">
+                {contentColumn}
+              </Panel>
+            </PanelGroup>
 
             {pushOpen && <PushDialog open onOpenChange={setPushOpen} task={openTask} />}
             <QuickOpenHost

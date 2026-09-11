@@ -215,6 +215,7 @@ interface UiState extends SettingsState {
   setRepositoryOperation: (operation: RepositoryOperation | null) => void;
   toggleChat: () => void;
   toggleDiff: () => void;
+  setShowChat: (open: boolean) => void;
   setShowDiff: (open: boolean) => void;
   setDiffView: (v: DiffView) => void;
   setRightPanel: (panel: RightPanel) => void;
@@ -236,6 +237,11 @@ interface UiState extends SettingsState {
   toggleDiffPanelCollapsed: () => void;
   toggleInboxListCollapsed: () => void;
   togglePullFilesPanelCollapsed: () => void;
+  setFilesPanelCollapsed: (collapsed: boolean) => void;
+  setRuntimeSidebarCollapsed: (collapsed: boolean) => void;
+  setDiffPanelCollapsed: (collapsed: boolean) => void;
+  setInboxListCollapsed: (collapsed: boolean) => void;
+  setPullFilesPanelCollapsed: (collapsed: boolean) => void;
   toggleLsp: () => void;
 }
 
@@ -318,6 +324,7 @@ export const useUi = create<UiState>()(
       // Sub-panel of Center, so it toggles freely.
       toggleChat: () => set((s) => (!s.showChat || s.showDiff ? { showChat: !s.showChat } : s)),
       toggleDiff: () => set((s) => (!s.showDiff || s.showChat ? { showDiff: !s.showDiff } : s)),
+      setShowChat: (showChat) => set((s) => (!showChat && !s.showDiff ? s : { showChat })),
       setShowDiff: (showDiff) => set((s) => (!showDiff && !s.showChat ? s : { showDiff })),
       setDiffView: (diffView) => set({ diffView }),
       setRightPanel: (rightPanel) => set({ rightPanel }),
@@ -387,6 +394,11 @@ export const useUi = create<UiState>()(
       toggleInboxListCollapsed: () => set((s) => ({ inboxListCollapsed: !s.inboxListCollapsed })),
       togglePullFilesPanelCollapsed: () =>
         set((s) => ({ pullFilesPanelCollapsed: !s.pullFilesPanelCollapsed })),
+      setFilesPanelCollapsed: (filesPanelCollapsed) => set({ filesPanelCollapsed }),
+      setRuntimeSidebarCollapsed: (runtimeSidebarCollapsed) => set({ runtimeSidebarCollapsed }),
+      setDiffPanelCollapsed: (diffPanelCollapsed) => set({ diffPanelCollapsed }),
+      setInboxListCollapsed: (inboxListCollapsed) => set({ inboxListCollapsed }),
+      setPullFilesPanelCollapsed: (pullFilesPanelCollapsed) => set({ pullFilesPanelCollapsed }),
 
       // ── Font size settings ──
       setFontSize: (fontSize) => set({ fontSize: clampFontSize(fontSize) }),

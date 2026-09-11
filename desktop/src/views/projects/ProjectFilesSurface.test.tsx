@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { daemon } from "@/daemon";
@@ -86,7 +86,7 @@ describe("ProjectFilesSurface", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Collapse file panel" }));
 
-    expect(screen.queryByTitle("README.md")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTitle("README.md")).not.toBeInTheDocument());
   });
 
   it("falls back to the previously opened file when a tab is closed", async () => {

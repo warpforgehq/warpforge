@@ -4,6 +4,8 @@ import { TrackerImage } from "@/components/backlog/TrackerImage";
 import { PullActivity } from "@/components/inbox/PullActivity";
 import { PullMetaRail, type PullReviewer } from "@/components/inbox/PullMetaRail";
 import { Markdown } from "@/components/Markdown";
+import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { inlineHtmlImages } from "@/lib/trackerMarkdown";
 import type {
   PullRequestDetails,
@@ -11,6 +13,7 @@ import type {
   PullRequestSummary,
   PullThread,
 } from "@/protocol";
+import { PANEL_BOUNDS, usePanelSize } from "@/store/panelLayout";
 
 /**
  * The pull request as a document: what it says on the left, what it is on the
@@ -51,70 +54,91 @@ export function PullOverview({
   onThreadChanged: () => void;
 }) {
   const body = (details?.body ?? "").trim();
+  const isWide = useMediaQuery("(min-width: 1280px)");
+  const [railSize, setRailSize] = usePanelSize("pullMeta");
+  const railBounds = PANEL_BOUNDS.pullMeta;
+
+  /*
+   * Two panes that scroll separately from 1280px up: reading a long
+   * description must not push the rail's status and file list off screen,
+   * and scrolling 52 files must not move the conversation. Below that width
+   * there is no room for a rail beside a readable measure, so it stacks
+   * under the activity and the whole thing is one scroller again.
+   */
+  const document = (
+    <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6">
+      <section className="flex min-w-0 flex-col gap-2">
+        <h3 className="text-xs font-medium text-muted-foreground">Description</h3>
+        {detailsLoading && !details ? (
+          <Spinner label="Loading description…" />
+        ) : detailsError ? (
+          <p className="text-sm text-destructive">
+            Could not load the pull request: {detailsError.message}
+          </p>
+        ) : body ? (
+          <div className="max-w-[80ch]">
+            <Markdown
+              density="comfortable"
+              renderImage={TrackerImage}
+              allowHtml
+              className="text-foreground/90"
+            >
+              {inlineHtmlImages(body)}
+            </Markdown>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground/60">No description.</p>
+        )}
+      </section>
+
+      {threadError ? (
+        <p className="text-sm text-destructive">
+          Could not load the conversation: {threadError.message}
+        </p>
+      ) : threadLoading && !thread ? (
+        <Spinner label="Loading activity…" />
+      ) : (
+        <PullActivity pr={pr} thread={thread} onPosted={onThreadChanged} onOpenDiff={onOpenDiff} />
+      )}
+    </div>
+  );
+
+  const metaRail = (
+    <PullMetaRail
+      pr={pr}
+      details={details}
+      reviewers={reviewers}
+      files={files}
+      onOpenFile={onOpenFile}
+    />
+  );
+
+  if (!isWide) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="min-w-0 flex-1 px-4 py-4">{document}</div>
+        <div className="shrink-0 px-4 pb-4">{metaRail}</div>
+      </div>
+    );
+  }
 
   return (
-    /*
-     * Two panes that scroll separately from 1280px up: reading a long
-     * description must not push the rail's status and file list off screen,
-     * and scrolling 52 files must not move the conversation. Below that width
-     * there is no room for a rail beside a readable measure, so it stacks
-     * under the activity and the whole thing is one scroller again — which is
-     * why the overflow rules are all `xl:`.
-     */
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto xl:flex-row xl:overflow-hidden">
-      <div className="min-w-0 flex-1 px-4 py-4 xl:overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6">
-          <section className="flex min-w-0 flex-col gap-2">
-            <h3 className="text-xs font-medium text-muted-foreground">Description</h3>
-            {detailsLoading && !details ? (
-              <Spinner label="Loading description…" />
-            ) : detailsError ? (
-              <p className="text-sm text-destructive">
-                Could not load the pull request: {detailsError.message}
-              </p>
-            ) : body ? (
-              <div className="max-w-[80ch]">
-                <Markdown
-                  density="comfortable"
-                  renderImage={TrackerImage}
-                  allowHtml
-                  className="text-foreground/90"
-                >
-                  {inlineHtmlImages(body)}
-                </Markdown>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground/60">No description.</p>
-            )}
-          </section>
-
-          {threadError ? (
-            <p className="text-sm text-destructive">
-              Could not load the conversation: {threadError.message}
-            </p>
-          ) : threadLoading && !thread ? (
-            <Spinner label="Loading activity…" />
-          ) : (
-            <PullActivity
-              pr={pr}
-              thread={thread}
-              onPosted={onThreadChanged}
-              onOpenDiff={onOpenDiff}
-            />
-          )}
-        </div>
-      </div>
-
-      <div className="shrink-0 px-4 pb-4 xl:flex xl:w-72 xl:min-h-0 xl:flex-col xl:border-l xl:border-border/70 xl:px-4 xl:py-4">
-        <PullMetaRail
-          pr={pr}
-          details={details}
-          reviewers={reviewers}
-          files={files}
-          onOpenFile={onOpenFile}
-        />
-      </div>
-    </div>
+    <PanelGroup orientation="horizontal" className="min-h-0 flex-1">
+      <Panel pin className="min-w-0">
+        <div className="h-full min-w-0 overflow-y-auto px-4 py-4">{document}</div>
+      </Panel>
+      <PanelSeparator aria-label="Resize pull request details panel" />
+      <Panel
+        size={railSize}
+        minSize={railBounds.min}
+        maxSize={railBounds.max}
+        defaultSize={railBounds.default}
+        onSizeChange={setRailSize}
+        className="min-w-0"
+      >
+        <div className="flex h-full min-h-0 flex-col overflow-y-auto px-4 py-4">{metaRail}</div>
+      </Panel>
+    </PanelGroup>
   );
 }
 

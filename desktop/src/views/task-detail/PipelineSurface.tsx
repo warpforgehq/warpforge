@@ -6,6 +6,7 @@ import { ChatTranscript } from "@/components/ChatTranscript";
 import type { ComposerHandle } from "@/components/Composer";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTaskSessionUpdates } from "@/hooks/useTaskSessionUpdates";
 import { sessionActivity } from "@/lib/sessionActivity";
@@ -13,6 +14,7 @@ import type { TaskTree } from "@/lib/taskGroups";
 import { taskLabel } from "@/lib/taskLabel";
 import { cn } from "@/lib/utils";
 import { workflowStageLabel } from "@/lib/workflow";
+import { PANEL_BOUNDS, usePanelSize } from "@/store/panelLayout";
 
 import type { AgentConfig, OrchNodeInfo, TaskInfo } from "../../protocol";
 
@@ -175,6 +177,8 @@ export function PipelineSurface({
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const graph = task.orchestrationGraph;
   const run = task.workflowRun;
+  const [stagesSize, setStagesSize] = usePanelSize("pipeline");
+  const stagesBounds = PANEL_BOUNDS.pipeline;
 
   const byTaskId = useMemo(() => {
     const map = new Map<string, TaskInfo>();
@@ -207,30 +211,40 @@ export function PipelineSurface({
   }
 
   return (
-    <div className="flex h-full min-h-0">
-      <div className="flex w-64 shrink-0 flex-col border-r border-border/70">
-        <div className="flex shrink-0 items-center gap-2 border-b border-border/70 px-3 py-2">
-          <ListTodo className="size-4 text-muted-foreground" />
-          <span className="text-sm font-semibold">Stages</span>
-          <span className="tnum ml-auto text-xs text-muted-foreground">
-            {completed}/{steps.length}
-          </span>
-        </div>
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="flex flex-col gap-1 p-2">
-            {steps.map((step) => (
-              <StepRow
-                key={step.key}
-                step={step}
-                selected={step.key === selectedKey}
-                onSelect={() => setSelectedKey(step.key)}
-              />
-            ))}
+    <PanelGroup orientation="horizontal" className="h-full min-h-0">
+      <Panel
+        size={stagesSize}
+        minSize={stagesBounds.min}
+        maxSize={stagesBounds.max}
+        defaultSize={stagesBounds.default}
+        onSizeChange={setStagesSize}
+        className="min-w-0"
+      >
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="flex shrink-0 items-center gap-2 border-b border-border/70 px-3 py-2">
+            <ListTodo className="size-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">Stages</span>
+            <span className="tnum ml-auto text-xs text-muted-foreground">
+              {completed}/{steps.length}
+            </span>
           </div>
-        </ScrollArea>
-      </div>
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="flex flex-col gap-1 p-2">
+              {steps.map((step) => (
+                <StepRow
+                  key={step.key}
+                  step={step}
+                  selected={step.key === selectedKey}
+                  onSelect={() => setSelectedKey(step.key)}
+                />
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+      </Panel>
+      <PanelSeparator aria-label="Resize stages panel" />
 
-      <div className="min-w-0 flex-1">
+      <Panel pin className="min-w-0">
         {selected?.task ? (
           <StepTranscript task={selected.task} agents={agents} onOpenTask={onOpenTask} />
         ) : selected ? (
@@ -269,7 +283,7 @@ export function PipelineSurface({
             </p>
           </div>
         )}
-      </div>
-    </div>
+      </Panel>
+    </PanelGroup>
   );
 }

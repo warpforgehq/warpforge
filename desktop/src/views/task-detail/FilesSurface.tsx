@@ -1,7 +1,9 @@
 import { FileText, PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import { lazy, Suspense } from "react";
 
+import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { cn } from "@/lib/utils";
+import { PANEL_BOUNDS, useAutoHiddenRail, usePanelSize } from "@/store/panelLayout";
 import { useUi } from "@/store/ui";
 
 import type { FileDoc, FileRange, ProjectFile, SymbolMatch } from "../../protocol";
@@ -74,10 +76,14 @@ export function FilesSurface({
   onAskFile?: (path: string, range: FileRange) => void;
 }) {
   const collapsed = useUi((s) => s.filesPanelCollapsed);
+  const setCollapsed = useUi((s) => s.setFilesPanelCollapsed);
   const toggleCollapsed = useUi((s) => s.toggleFilesPanelCollapsed);
+  const [size, setSize] = usePanelSize("files");
+  const bounds = PANEL_BOUNDS.files;
+  const surfaceRef = useAutoHiddenRail(size, setCollapsed);
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col">
+    <div ref={surfaceRef} className="flex h-full min-h-0 min-w-0 flex-col">
       <div className="flex h-9 min-w-0 items-center gap-2 border-b bg-background/25 px-2">
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           {openTabs.length === 0 ? (
@@ -137,48 +143,59 @@ export function FilesSurface({
           )}
         </button>
       </div>
-      <div className="flex min-h-0 min-w-0 flex-1">
-        <div className="min-h-0 min-w-0 flex-1">
-          {!activeFilePath ? (
-            <p className="p-3 text-sm text-muted-foreground">Select a file to open it.</p>
-          ) : fileDoc ? (
-            <Suspense fallback={<EditorLoading />}>
-              <CodeEditor
-                key={`${fileDoc.path}:${editable}`}
-                doc={fileDoc}
-                editable={editable}
-                taskId={taskId}
-                project={project}
-                onSave={onSave}
-                onGotoDefinition={onGotoDefinition}
-                onOpenSymbol={onOpenSymbol}
-                gotoLocation={gotoLocation?.path === fileDoc.path ? gotoLocation : undefined}
-                onGotoLocationHandled={onGotoLocationHandled}
-                onAskFile={onAskFile}
-              />
-            </Suspense>
-          ) : fileDocError ? (
-            <p className="p-3 text-sm text-muted-foreground">
-              Could not read {activeFilePath}: {fileDocError}
-            </p>
-          ) : (
-            <p className="p-3 text-sm text-muted-foreground">Loading file…</p>
-          )}
-        </div>
-        {!collapsed && (
-          <div className="w-72 shrink-0 border-l border-border/70">
-            <ProjectFilesPanel
-              files={projectFiles}
-              error={fileListError}
-              selected={activeFilePath}
-              onSelect={onSelectTreeFile}
-              rootPath={rootPath}
-              onRefresh={onRefresh}
-              taskId={taskId}
-            />
+      <PanelGroup orientation="horizontal" className="min-h-0 min-w-0 flex-1">
+        <Panel pin className="min-h-0 min-w-0">
+          <div className="h-full min-h-0 min-w-0">
+            {!activeFilePath ? (
+              <p className="p-3 text-sm text-muted-foreground">Select a file to open it.</p>
+            ) : fileDoc ? (
+              <Suspense fallback={<EditorLoading />}>
+                <CodeEditor
+                  key={`${fileDoc.path}:${editable}`}
+                  doc={fileDoc}
+                  editable={editable}
+                  taskId={taskId}
+                  project={project}
+                  onSave={onSave}
+                  onGotoDefinition={onGotoDefinition}
+                  onOpenSymbol={onOpenSymbol}
+                  gotoLocation={gotoLocation?.path === fileDoc.path ? gotoLocation : undefined}
+                  onGotoLocationHandled={onGotoLocationHandled}
+                  onAskFile={onAskFile}
+                />
+              </Suspense>
+            ) : fileDocError ? (
+              <p className="p-3 text-sm text-muted-foreground">
+                Could not read {activeFilePath}: {fileDocError}
+              </p>
+            ) : (
+              <p className="p-3 text-sm text-muted-foreground">Loading file…</p>
+            )}
           </div>
-        )}
-      </div>
+        </Panel>
+        <PanelSeparator aria-label="Resize file panel" />
+        <Panel
+          size={size}
+          minSize={bounds.min}
+          maxSize={bounds.max}
+          defaultSize={bounds.default}
+          collapsed={collapsed}
+          keepMounted={false}
+          onCollapsedChange={setCollapsed}
+          onSizeChange={setSize}
+          className="min-w-0"
+        >
+          <ProjectFilesPanel
+            files={projectFiles}
+            error={fileListError}
+            selected={activeFilePath}
+            onSelect={onSelectTreeFile}
+            rootPath={rootPath}
+            onRefresh={onRefresh}
+            taskId={taskId}
+          />
+        </Panel>
+      </PanelGroup>
     </div>
   );
 }

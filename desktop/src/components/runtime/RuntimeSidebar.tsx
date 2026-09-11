@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 
 import { daemon } from "../../daemon";
 import type { PortForwardInfo, ServiceInfo } from "../../protocol";
-import { SIDEBAR_WIDTH } from "./constants";
 import { StatusDot } from "./StatusDot";
 
 function safeRequest(method: string, params: unknown, onError: (msg: string) => void) {
@@ -283,10 +282,7 @@ export function RuntimeSidebar({
   onError: (msg: string) => void;
 }) {
   return (
-    <div
-      className="shrink-0 self-stretch overflow-y-auto border-l"
-      style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
-    >
+    <div className="h-full self-stretch overflow-y-auto">
       {services.length > 0 && (
         <div className="flex flex-col">
           <SectionHeader

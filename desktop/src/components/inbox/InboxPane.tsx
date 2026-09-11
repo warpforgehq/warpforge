@@ -4,6 +4,7 @@ import * as React from "react";
 import { InboxDetailPane } from "@/components/inbox/InboxDetailPane";
 import { InboxToolbar, PullRequestList } from "@/components/inbox/PullRequestList";
 import { Button } from "@/components/ui/button";
+import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { useInboxPulls } from "@/hooks/useInboxUnseen";
 import {
   applyInboxFilters,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/inboxSeen";
 import { isTypingTarget } from "@/lib/typingTarget";
 import type { PullRequestSummary } from "@/protocol";
+import { PANEL_BOUNDS, usePanelSize } from "@/store/panelLayout";
 import { useUi } from "@/store/ui";
 
 /**
@@ -52,6 +54,8 @@ export function InboxPane({
   const [selectedKey, setSelectedKey] = React.useState<string | null>(null);
   const collapsed = useUi((s) => s.inboxListCollapsed);
   const toggleCollapsed = useUi((s) => s.toggleInboxListCollapsed);
+  const [listSize, setListSize] = usePanelSize("inboxList");
+  const listBounds = PANEL_BOUNDS.inboxList;
 
   const listing = useInboxPulls(projects, filters);
   const items = React.useMemo(
@@ -121,9 +125,16 @@ export function InboxPane({
     );
   }
 
-  return (
-    <div className="flex h-full min-h-0 min-w-0">
-      {collapsed ? (
+  const detail = (
+    <InboxDetailPane pr={selected} onSendToAgent={onSendToAgent ? handleSendToAgent : undefined} />
+  );
+
+  // Collapsed keeps a thin, always-visible icon rail rather than folding the
+  // list to zero: the unread count and the expand affordance have to stay in
+  // reach. Only the expanded layout is a motion-panels split.
+  if (collapsed) {
+    return (
+      <div className="flex h-full min-h-0 min-w-0">
         <div className="flex w-9 shrink-0 flex-col items-center border-r border-border/70 pt-1">
           <Button
             type="button"
@@ -145,8 +156,22 @@ export function InboxPane({
             </span>
           )}
         </div>
-      ) : (
-        <div className="flex w-80 shrink-0 flex-col border-r border-border/70">
+        <div className="min-h-0 min-w-0 flex-1">{detail}</div>
+      </div>
+    );
+  }
+
+  return (
+    <PanelGroup orientation="horizontal" className="h-full min-h-0 min-w-0">
+      <Panel
+        size={listSize}
+        minSize={listBounds.min}
+        maxSize={listBounds.max}
+        defaultSize={listBounds.default}
+        onSizeChange={setListSize}
+        className="min-w-0"
+      >
+        <div className="flex h-full flex-col">
           <InboxToolbar
             search={filters.search}
             onSearch={(search) => setFilters((current) => ({ ...current, search }))}
@@ -204,13 +229,11 @@ export function InboxPane({
             />
           </div>
         </div>
-      )}
-      <div className="min-h-0 min-w-0 flex-1">
-        <InboxDetailPane
-          pr={selected}
-          onSendToAgent={onSendToAgent ? handleSendToAgent : undefined}
-        />
-      </div>
-    </div>
+      </Panel>
+      <PanelSeparator aria-label="Resize pull request list" />
+      <Panel pin className="min-w-0">
+        {detail}
+      </Panel>
+    </PanelGroup>
   );
 }

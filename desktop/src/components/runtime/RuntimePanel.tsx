@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
+import { PANEL_BOUNDS, useAutoHiddenRail, usePanelSize } from "@/store/panelLayout";
 import { useUi } from "@/store/ui";
 
 import type { PortForwardInfo, ServiceInfo } from "../../protocol";
@@ -27,7 +29,11 @@ export function RuntimePanel({
   const hasItems = services.length > 0 || portforwards.length > 0;
   const [actionError, setActionError] = useState<string | null>(null);
   const sidebarCollapsed = useUi((s) => s.runtimeSidebarCollapsed);
+  const setSidebarCollapsed = useUi((s) => s.setRuntimeSidebarCollapsed);
   const toggleSidebarCollapsed = useUi((s) => s.toggleRuntimeSidebarCollapsed);
+  const [sidebarSize, setSidebarSize] = usePanelSize("runtime");
+  const sidebarBounds = PANEL_BOUNDS.runtime;
+  const surfaceRef = useAutoHiddenRail(sidebarSize, setSidebarCollapsed);
 
   const statusSignature = useMemo(() => {
     const svcPart = services.map((s) => `${s.name}:${s.status}`).join(",");
@@ -70,7 +76,7 @@ export function RuntimePanel({
   }, []);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div ref={surfaceRef} className="flex h-full min-h-0 flex-col">
       <RuntimeHeader
         actionError={actionError}
         sidebarCollapsed={sidebarCollapsed}
@@ -89,27 +95,40 @@ export function RuntimePanel({
             No services or port-forwards configured for this project.
           </div>
         ) : (
-          <div className="flex h-full min-h-0">
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-              {selectedService ? (
-                <ServiceDetailPane
-                  project={project}
-                  service={selectedService}
-                  onAppendToChat={onAppendToChat}
-                />
-              ) : selectedPf ? (
-                <PortForwardDetailPane
-                  project={project}
-                  pf={selectedPf}
-                  onAppendToChat={onAppendToChat}
-                />
-              ) : (
-                <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
-                  Select a service to view logs
-                </div>
-              )}
-            </div>
-            {!sidebarCollapsed && (
+          <PanelGroup orientation="horizontal" className="h-full min-h-0">
+            <Panel pin className="min-h-0 min-w-0">
+              <div className="flex h-full min-h-0 min-w-0 flex-col">
+                {selectedService ? (
+                  <ServiceDetailPane
+                    project={project}
+                    service={selectedService}
+                    onAppendToChat={onAppendToChat}
+                  />
+                ) : selectedPf ? (
+                  <PortForwardDetailPane
+                    project={project}
+                    pf={selectedPf}
+                    onAppendToChat={onAppendToChat}
+                  />
+                ) : (
+                  <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
+                    Select a service to view logs
+                  </div>
+                )}
+              </div>
+            </Panel>
+            <PanelSeparator aria-label="Resize service panel" />
+            <Panel
+              size={sidebarSize}
+              minSize={sidebarBounds.min}
+              maxSize={sidebarBounds.max}
+              defaultSize={sidebarBounds.default}
+              collapsed={sidebarCollapsed}
+              keepMounted={false}
+              onCollapsedChange={setSidebarCollapsed}
+              onSizeChange={setSidebarSize}
+              className="min-w-0"
+            >
               <RuntimeSidebar
                 project={project}
                 services={services}
@@ -118,8 +137,8 @@ export function RuntimePanel({
                 onSelect={handleSelect}
                 onError={setActionError}
               />
-            )}
-          </div>
+            </Panel>
+          </PanelGroup>
         )}
       </div>
     </div>

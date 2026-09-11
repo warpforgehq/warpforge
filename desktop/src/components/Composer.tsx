@@ -173,8 +173,22 @@ export const Composer = forwardRef<
     useLayoutEffect(() => {
       const el = textRef.current;
       if (!el) return;
-      el.style.height = "auto";
-      el.style.height = `${Math.min(el.scrollHeight, compact ? 180 : 220)}px`;
+      const fit = () => {
+        el.style.height = "auto";
+        el.style.height = `${Math.min(el.scrollHeight, compact ? 180 : 220)}px`;
+      };
+      fit();
+      // The resizable pane around the composer takes its width in its own
+      // layout effect, which runs after this one — the first measurement here
+      // happens at zero width and wraps every word onto its own line.
+      let measured = el.clientWidth;
+      const watch = new ResizeObserver(() => {
+        if (el.clientWidth === measured) return;
+        measured = el.clientWidth;
+        fit();
+      });
+      watch.observe(el);
+      return () => watch.disconnect();
     }, [compact, value]);
 
     const mention = findMentionAtCaret(value, caret);

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { FocusButton, SurfaceTabs, type SurfaceTab } from "@/components/workspace";
 
 import type { TaskSurface } from "../../store/ui";
@@ -9,6 +11,8 @@ export interface TaskSurfaceTabsProps {
   focused: boolean;
   focusLabel: string;
   onToggleFocus: () => void;
+  /** Extra controls rendered alongside maximize/restore. */
+  extraActions?: ReactNode;
 }
 
 /**
@@ -23,12 +27,14 @@ export function TaskSurfaceTabs({
   focused,
   focusLabel,
   onToggleFocus,
+  extraActions,
 }: TaskSurfaceTabsProps) {
   return (
     <div className="flex h-9 min-w-0 items-center gap-1 border-b border-rule pr-1">
       <div className="min-w-0 flex-1">
         <SurfaceTabs value={activeSurface} onValueChange={onSurfaceChange} tabs={tabs} />
       </div>
+      {extraActions}
       <FocusButton focused={focused} label={focusLabel} onClick={onToggleFocus} />
     </div>
   );

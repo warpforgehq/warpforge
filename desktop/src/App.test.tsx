@@ -128,24 +128,17 @@ describe("App sidebar layout", () => {
     expect(screen.queryByTestId("app-sidebar")).not.toBeInTheDocument();
   });
 
-  it("persistent sidebar uses store width", async () => {
-    setWide(true);
-    useUi.setState({ sidebarWidth: 400 });
-
-    render(<App />);
-    await screen.findByTestId("mission-control");
-
-    const sidebar = screen.getByTestId("persistent-sidebar");
-    expect(sidebar.style.width).toBe("400px");
-  });
-
   it("collapsed sidebar shrinks to the icon rail and drops the resize handle", () => {
     setWide(true);
     useUi.setState({ sidebarCollapsed: true, sidebarWidth: 400 });
 
     render(<App />);
 
-    expect(screen.getByTestId("persistent-sidebar").style.width).toBe("64px");
+    // The rail keeps its place in the split and narrows: moving it out of the
+    // panel group would remount every view beside it.
+    expect(screen.getByTestId("persistent-sidebar").parentElement).toHaveStyle({
+      width: "64px",
+    });
     expect(screen.queryByTestId("sidebar-resize-handle")).not.toBeInTheDocument();
   });
 
@@ -159,94 +152,28 @@ describe("App sidebar layout", () => {
   });
 });
 
-describe("SidebarResizeHandle keyboard", () => {
-  it("ArrowRight increases width by step", () => {
+describe("Sidebar resize separator", () => {
+  it("is a focusable separator carrying the sidebar's bounds", async () => {
     setWide(true);
     useUi.setState({ sidebarWidth: 340 });
 
     render(<App />);
-
-    const handle = screen.getByTestId("sidebar-resize-handle");
-    fireEvent.keyDown(handle, { key: "ArrowRight" });
-
-    expect(useUi.getState().sidebarWidth).toBe(350);
-  });
-
-  it("ArrowLeft decreases width by step", () => {
-    setWide(true);
-    useUi.setState({ sidebarWidth: 340 });
-
-    render(<App />);
-
-    const handle = screen.getByTestId("sidebar-resize-handle");
-    fireEvent.keyDown(handle, { key: "ArrowLeft" });
-
-    expect(useUi.getState().sidebarWidth).toBe(330);
-  });
-
-  it("Home sets width to min", () => {
-    setWide(true);
-    useUi.setState({ sidebarWidth: 340 });
-
-    render(<App />);
-
-    const handle = screen.getByTestId("sidebar-resize-handle");
-    fireEvent.keyDown(handle, { key: "Home" });
-
-    expect(useUi.getState().sidebarWidth).toBe(SIDEBAR_WIDTH_MIN);
-  });
-
-  it("End sets width to max", () => {
-    setWide(true);
-    useUi.setState({ sidebarWidth: 340 });
-
-    render(<App />);
-
-    const handle = screen.getByTestId("sidebar-resize-handle");
-    fireEvent.keyDown(handle, { key: "End" });
-
-    expect(useUi.getState().sidebarWidth).toBe(SIDEBAR_WIDTH_MAX);
-  });
-
-  it("width is clamped after keyboard resize", () => {
-    setWide(true);
-    useUi.setState({ sidebarWidth: SIDEBAR_WIDTH_MIN });
-
-    render(<App />);
-
-    const handle = screen.getByTestId("sidebar-resize-handle");
-    fireEvent.keyDown(handle, { key: "ArrowLeft" });
-
-    expect(useUi.getState().sidebarWidth).toBe(SIDEBAR_WIDTH_MIN);
-  });
-});
-
-describe("SidebarResizeHandle ARIA", () => {
-  it("has correct separator role and orientation", () => {
-    setWide(true);
-    useUi.setState({ sidebarWidth: 340 });
-
-    render(<App />);
+    await screen.findByTestId("mission-control");
 
     const handle = screen.getByTestId("sidebar-resize-handle");
     expect(handle).toHaveAttribute("role", "separator");
     expect(handle).toHaveAttribute("aria-orientation", "vertical");
-    expect(handle).toHaveAttribute("aria-valuemin", String(SIDEBAR_WIDTH_MIN));
-    expect(handle).toHaveAttribute("aria-valuemax", String(SIDEBAR_WIDTH_MAX));
-    expect(handle).toHaveAttribute("aria-valuenow", "340");
+    expect(handle).toHaveAttribute("aria-label", "Resize sidebar");
     expect(handle).toHaveAttribute("tabindex", "0");
   });
 
-  it("updates aria-valuenow when width changes", () => {
-    setWide(true);
-    useUi.setState({ sidebarWidth: 340 });
+  it("clamps the store width to the sidebar bounds", () => {
+    useUi.setState({ sidebarWidth: SIDEBAR_WIDTH_MIN });
+    useUi.getState().setSidebarWidth(SIDEBAR_WIDTH_MIN - 100);
+    expect(useUi.getState().sidebarWidth).toBe(SIDEBAR_WIDTH_MIN);
 
-    render(<App />);
-
-    const handle = screen.getByTestId("sidebar-resize-handle");
-    fireEvent.keyDown(handle, { key: "ArrowRight" });
-
-    expect(handle).toHaveAttribute("aria-valuenow", "350");
+    useUi.getState().setSidebarWidth(SIDEBAR_WIDTH_MAX + 100);
+    expect(useUi.getState().sidebarWidth).toBe(SIDEBAR_WIDTH_MAX);
   });
 });
 
