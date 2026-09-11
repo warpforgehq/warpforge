@@ -56,7 +56,7 @@ keeps Expand + Unpin, pin cap 4. Removed the old one-line `activityLine`.
 
 **Backend (Rust) — this part is fine and reusable:**
 - `git.commit` RPC end-to-end: `Method::GitCommit {task_id, message, files: Option<Vec<String>>, amend}`
-  in `crates/warpforge-protocol/src/lib.rs`; `diff::commit()` in `src/daemon/diff.rs`
+  in `crates/warpforge-protocol/src/method.rs`; `diff::commit()` in `src/daemon/diff.rs`
   (`git add -- <files|.>` then `git commit -m [--amend]`, returns stderr on failure);
   `Command::GitCommit` + `DaemonHandle::git_commit()` (await-and-return, mirrors
   `file_contents`) in `src/daemon/actor.rs`; dispatch in `src/daemon/server.rs`. On success

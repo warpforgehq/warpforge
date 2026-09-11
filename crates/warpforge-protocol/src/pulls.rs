@@ -1,6 +1,6 @@
 //! Wire types for the GitHub pull-request inbox.
 //!
-//! `Method` variants live in `lib.rs` (that enum must stay exhaustive in one
+//! `Method` variants live in `method.rs` (that enum must stay exhaustive in one
 //! file); everything the PR reads and writes carry lives here. All types
 //! mirror one-for-one what the desktop's `protocol.ts` declares.
 

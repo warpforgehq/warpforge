@@ -6,8 +6,9 @@
 //! are the same objects a hand-created task has — an [`AutomationRun`] is just
 //! the bookkeeping row that links the two.
 //!
-//! `Method`/`Event` variants live in `lib.rs` (those enums must stay exhaustive
-//! in one file); everything they carry lives here.
+//! `Method` variants live in `method.rs` and `Event` variants in `event.rs`
+//! (those enums must stay exhaustive in one file); everything they carry lives
+//! here.
 
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;

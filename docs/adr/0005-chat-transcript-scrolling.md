@@ -4,7 +4,7 @@
 
 Applies to `desktop/src/components/SessionChat.tsx`, `desktop/src/lib/chatScroll.ts`
 and the `session_history` field of the daemon snapshot
-(`crates/warpforge-protocol/src/lib.rs`, `src/daemon/actor.rs`).
+(`crates/warpforge-protocol/src/event.rs`, `src/daemon/actor.rs`).
 
 ## Context
 
