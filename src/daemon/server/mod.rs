@@ -340,14 +340,6 @@ async fn handle_conn(
             }
         }};
     }
-    macro_rules! send_event {
-        ($msg:expr) => {{
-            let text = serde_json::to_string(&$msg)?;
-            if event_tx.send(Message::Text(text)).await.is_err() {
-                break;
-            }
-        }};
-    }
 
     loop {
         tokio::select! {
@@ -406,7 +398,7 @@ async fn handle_conn(
                 if matches!(req.method, wire::Method::StateSubscribe { .. }) {
                     let snapshot = handle.snapshot().await;
                     send!(wire::ServerMessage::Response { id, result: json!(null) });
-                    send_event!(wire::ServerMessage::Event(wire::Event::Snapshot(snapshot)));
+                    send!(wire::ServerMessage::Event(wire::Event::Snapshot(snapshot)));
                     subscribed.store(true, Ordering::Release);
                     continue;
                 }
