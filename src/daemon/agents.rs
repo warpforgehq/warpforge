@@ -197,6 +197,14 @@ fn update_command(agent: &KnownAgent, resolved_path: Option<&str>) -> Option<Str
     }
 }
 
+/// Whether a registry version is a fair baseline for the installed binary. It
+/// is only fair when the binary is upgradable through that channel: a
+/// self-managed install can number its releases on an unrelated scheme and
+/// would otherwise sit at "behind" forever with no way to update.
+fn registry_is_baseline(update: Option<&str>) -> bool {
+    update.is_some()
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum PackageManager {
     Npm,
@@ -462,7 +470,8 @@ async fn detect_one(agent: &'static KnownAgent, check_latest: bool) -> wire::Det
     }
 
     let version = installed_version(agent, path.as_deref()).await;
-    let latest = if check_latest {
+    let update = update_command(agent, path.as_deref());
+    let latest = if check_latest && registry_is_baseline(update.as_deref()) {
         match agent.npm_package {
             Some(pkg) => latest_npm_version(pkg).await,
             None => None,
@@ -470,7 +479,6 @@ async fn detect_one(agent: &'static KnownAgent, check_latest: bool) -> wire::Det
     } else {
         None
     };
-    let update = update_command(agent, path.as_deref());
 
     let status = match (&version, &latest) {
         (Some(v), Some(l)) => {
@@ -595,6 +603,27 @@ mod tests {
         // npm-global install under a brew-managed Node has no /cellar segment.
         let npm = "/opt/homebrew/lib/node_modules/@agentclientprotocol/claude-agent-acp/cli.js";
         assert_eq!(package_manager_for_path(npm), PackageManager::Npm);
+    }
+
+    #[test]
+    fn self_managed_install_is_not_compared_to_the_registry() {
+        // junie on PATH is its own auto-updating launcher under ~/.local/bin and
+        // numbers releases on a scheme unrelated to @jetbrains/junie-cli.
+        let junie = known_agent("junie").unwrap();
+        let update = update_command(junie, Some("/Users/u/.local/bin/junie"));
+        assert_eq!(update, None);
+        assert!(!registry_is_baseline(update.as_deref()));
+    }
+
+    #[test]
+    fn npm_managed_install_is_compared_to_the_registry() {
+        let qwen = known_agent("qwen").unwrap();
+        let update = update_command(
+            qwen,
+            Some("/opt/homebrew/lib/node_modules/@qwen-code/qwen-code/bin/qwen.js"),
+        );
+        assert!(update.is_some());
+        assert!(registry_is_baseline(update.as_deref()));
     }
 
     #[test]
