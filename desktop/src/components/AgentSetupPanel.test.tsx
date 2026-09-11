@@ -1,5 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render as renderBare, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { PropsWithChildren, ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DetectedAgent } from "@/protocol";
@@ -37,6 +39,13 @@ const agent = (id: string, overrides: Partial<DetectedAgent> = {}): DetectedAgen
   status: "missing",
   ...overrides,
 });
+
+// The panel invalidates the shared agent-detection query after install/save.
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const wrapper = ({ children }: PropsWithChildren) => (
+  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+);
+const render = (ui: ReactElement) => renderBare(ui, { wrapper });
 
 describe("AgentSetupPanel", () => {
   beforeEach(() => {

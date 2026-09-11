@@ -1,6 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowUpRight,
+  Bot,
   CalendarClock,
   CheckCheck,
   ChevronRight,
@@ -15,11 +16,13 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 
+import { AgentUpdateBanner } from "@/components/AgentUpdateBanner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { SidebarTaskRow } from "@/components/SidebarTaskRow";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import UpdateControl from "@/components/UpdateControl";
+import { useAgentUpdatesCount } from "@/hooks/useAgentUpdates";
 import { useInboxUnseenCount } from "@/hooks/useInboxUnseen";
 import { buildAttentionQueue } from "@/lib/attentionRail";
 import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
@@ -376,6 +379,9 @@ function Sidebar({
   // The inbox's unread count — same query the inbox views render from, so
   // the badge, the tab count and the rows never disagree.
   const inboxUnseen = useInboxUnseenCount(names);
+  // Only the collapsed rail needs this count; expanded renders AgentUpdateBanner,
+  // which reads the same cached query.
+  const agentUpdates = useAgentUpdatesCount();
   const openProject = openTaskId ? (taskById.get(openTaskId)?.project ?? null) : null;
 
   const forceVisibleTaskIds = useMemo(
@@ -571,6 +577,16 @@ function Sidebar({
             />
           ))}
           <span className="flex-1" />
+          {agentUpdates > 0 && (
+            <RailButton
+              icon={Bot}
+              label={`${agentUpdates} agent update${agentUpdates === 1 ? "" : "s"} available`}
+              onClick={() => {
+                useUi.getState().setSettingsPage("agents");
+                onOpenSettings();
+              }}
+            />
+          )}
           <UpdateControl daemonConnected={connection === "connected"} />
           <RailButton icon={Settings} label="Settings" onClick={onOpenSettings} />
         </aside>
@@ -724,6 +740,7 @@ function Sidebar({
 
         <footer className="flex shrink-0 flex-col gap-1.5 border-t border-border px-2 py-2">
           <UpdateBanner />
+          <AgentUpdateBanner onOpenSettings={onOpenSettings} />
           <div className="flex items-center gap-1">
             <button
               type="button"

@@ -25,11 +25,12 @@ export default function UpdateControl({ daemonConnected }: UpdateControlProps) {
     void updater.initialize();
   }, []);
 
+  // The updater owns the schedule; the only thing the control decides is when
+  // it may start, which is once the daemon it has to hand off to is there.
   useEffect(() => {
-    if (!daemonConnected || state.status !== "idle") return;
-    const timeout = window.setTimeout(() => void updater.check(), 3_000);
-    return () => window.clearTimeout(timeout);
-  }, [daemonConnected, state.status]);
+    if (!daemonConnected) return;
+    updater.startAutoCheck();
+  }, [daemonConnected]);
 
   if (state.status === "unsupported") return null;
 

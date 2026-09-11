@@ -1,7 +1,9 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Download, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
+import { agentUpdatesQueryKey } from "@/hooks/useAgentUpdates";
 import { configRole } from "@/lib/configRole";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +44,7 @@ function fromConfig(agent: AgentConfig): DetectedAgent {
 export default function AgentSetupPanel({ detected, onSaved }: Props) {
   const state = useSyncExternalStore(daemon.subscribe, daemon.getState);
   const configured = state.snapshot.agents;
+  const queryClient = useQueryClient();
 
   const [agents, setAgents] = useState<DetectedAgent[]>(
     () => detected ?? (configured ?? []).map(fromConfig),
@@ -133,6 +136,8 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
       }
       const refreshed = await daemon.detectAgents();
       setAgents(refreshed);
+      // The app-wide badge reads the shared query, not this local list.
+      void queryClient.invalidateQueries({ queryKey: agentUpdatesQueryKey });
       if (result.ok) {
         const nowInstalled = refreshed.find((a) => a.id === id)?.installed;
         if (nowInstalled) setEnabled((prev) => new Set(prev).add(id));
@@ -200,6 +205,7 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
     setSaveError(null);
     try {
       await daemon.saveAgents(configs);
+      void queryClient.invalidateQueries({ queryKey: agentUpdatesQueryKey });
       setSaved(true);
       onSaved?.();
     } catch (e) {

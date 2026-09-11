@@ -22,6 +22,7 @@ import Sidebar from "@/components/Sidebar";
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { daemon } from "@/daemon";
+import { useAgentUpdates } from "@/hooks/useAgentUpdates";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { HAS_NATIVE_GLASS, IS_MAC } from "@/lib/platform";
 import { SIDEBAR_WIDTH_DEFAULT, SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN, useUi } from "@/store/ui";
@@ -73,6 +74,16 @@ function LiveSidebar(props: Omit<React.ComponentProps<typeof Sidebar>, "state">)
  */
 function PrAssistantLifecycleHost({ projects }: { projects: string[] }) {
   usePrAssistantLifecycle(projects);
+  return null;
+}
+
+/**
+ * Owns the agent-package version poll for the whole app, so an out-of-date
+ * agent CLI reaches the sidebar dot without anyone opening Settings. A
+ * component for the same reason as `PrAssistantLifecycleHost`.
+ */
+function AgentUpdatesHost() {
+  useAgentUpdates();
   return null;
 }
 
@@ -406,6 +417,7 @@ export default function App() {
               hasOpenTask={!!openTask && !newTaskOpen}
             />
             <PrAssistantLifecycleHost projects={projectNames} />
+            <AgentUpdatesHost />
             {addProjectOpen && (
               <AddProjectDialog
                 open

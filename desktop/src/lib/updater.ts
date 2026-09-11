@@ -24,10 +24,38 @@ export interface UpdaterState {
 
 type Listener = () => void;
 
+/** Four checks a day while the app stays open, so a release is never more than
+ *  a few hours away from being offered. */
+export const AUTO_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+const LAST_CHECK_KEY = "warpforge.update.lastCheck";
+
+/** Statuses an automatic check may interrupt. Anything else means a check,
+ *  download or install is already in flight and the user is watching it. */
+const AUTO_CHECKABLE: UpdateStatus[] = ["idle", "upToDate", "error"];
+
+function readLastCheck(): number {
+  try {
+    const raw = Number(window.localStorage.getItem(LAST_CHECK_KEY));
+    return Number.isFinite(raw) ? raw : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeLastCheck(at: number) {
+  try {
+    window.localStorage.setItem(LAST_CHECK_KEY, String(at));
+  } catch {
+    // A webview with storage disabled just re-checks a launch earlier.
+  }
+}
+
 export class DesktopUpdater {
   private listeners = new Set<Listener>();
   private update: Update | null = null;
   private initialized = false;
+  private autoCheckStarted = false;
   private state: UpdaterState = {
     currentVersion: "dev",
     status: "idle",
@@ -75,7 +103,31 @@ export class DesktopUpdater {
     } catch (error) {
       this.setState({ error: checkErrorMessage(error), status: "error" });
     }
+    // A failed check still counts: retrying a dead feed every mount is noise.
+    writeLastCheck(Date.now());
     return this.state;
+  }
+
+  /**
+   * Keeps checking for the lifetime of the window, picking up where the last
+   * run left off so a long-lived session and a relaunch cost the same number
+   * of checks. Idempotent — both sidebar mounts call it.
+   */
+  startAutoCheck() {
+    if (this.autoCheckStarted || this.state.status === "unsupported") return;
+    this.autoCheckStarted = true;
+    const start = () => {
+      void this.autoCheck();
+      window.setInterval(() => void this.autoCheck(), AUTO_CHECK_INTERVAL_MS);
+    };
+    const due = readLastCheck() + AUTO_CHECK_INTERVAL_MS - Date.now();
+    if (due <= 0) start();
+    else window.setTimeout(start, due);
+  }
+
+  private async autoCheck() {
+    if (!AUTO_CHECKABLE.includes(this.state.status)) return;
+    await this.check();
   }
 
   async download() {
