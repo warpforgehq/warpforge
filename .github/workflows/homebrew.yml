@@ -69,7 +69,7 @@ jobs:
             end
             on_linux do
               sha256 "${SHA_APPIMAGE}"
-              url "https://github.com/warpforgehq/warpforge/releases/download/v#{version}/Warpforge_${version}_amd64.AppImage"
+              url "https://github.com/warpforgehq/warpforge/releases/download/v#{version}/Warpforge_#{version}_amd64.AppImage"
             end
 
             name "Warpforge"
