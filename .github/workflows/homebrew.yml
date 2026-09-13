@@ -1,6 +1,6 @@
 name: Homebrew tap
 
-# Syncs ephor/homebrew-tap cask for desktop app.
+# Syncs warpforgehq/homebrew-tap cask for desktop app.
 # macOS: DMG, Linux: AppImage via linuxbrew. rpm/deb stay as direct
 # downloads from Releases (dnf/dpkg) — both channels valid.
 on:
@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   cask:
-    name: Sync ephor/homebrew-tap cask (macOS + Linux AppImage)
+    name: Sync warpforgehq/homebrew-tap cask (macOS + Linux AppImage)
     runs-on: blacksmith-4vcpu-ubuntu-2204
     timeout-minutes: 10
     env:
@@ -57,7 +57,7 @@ jobs:
           SHA_APPIMAGE: ${{ steps.sha.outputs.appimage_sha }}
           TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
         run: |
-          git clone -q "https://x-access-token:${TOKEN}@github.com/ephor/homebrew-tap" tap
+          git clone -q "https://x-access-token:${TOKEN}@github.com/warpforgehq/homebrew-tap" tap
           cd tap
           cat > Casks/warpforge.rb <<RUBY
           cask "warpforge" do
