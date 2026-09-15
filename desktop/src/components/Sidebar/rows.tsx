@@ -171,22 +171,20 @@ export function ProjectRow({
           onMouseLeave={() => onSettleHover?.(false)}
           onFocus={() => onSettleHover?.(true)}
           onBlur={() => onSettleHover?.(false)}
-          className="pointer-events-none absolute right-1 top-1/2 grid size-[22px] -translate-y-1/2 place-items-center rounded text-muted-foreground/70 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring group-hover/proj:pointer-events-auto group-hover/proj:opacity-100"
+          className="pointer-events-none absolute right-7 top-1/2 grid size-[22px] -translate-y-1/2 place-items-center rounded text-muted-foreground/70 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring group-hover/proj:pointer-events-auto group-hover/proj:opacity-100"
         >
           <CheckCheck className="size-3.5" />
         </button>
       )}
       {/* The row click opens the project, but nothing said so: the count and the
-          attention dot faded out on hover and left a blank lane. The arrow takes
-          their place exactly then, so the row's affordance is visible at the
-          moment the pointer is on it. The settle button owns the lane when it is
-          there — it is the rarer, more specific action. */}
-      {!settle && (
-        <ArrowUpRight
-          aria-hidden
-          className="pointer-events-none absolute right-1.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/70 opacity-0 transition-opacity group-hover/proj:opacity-100 group-focus-within/proj:opacity-100"
-        />
-      )}
+          attention dot faded out on hover and left a blank lane. The arrow sits
+          at the row's end from then on, so the affordance is visible exactly when
+          the pointer is on it; the bulk-settle button, when present, stands to
+          its left rather than owning the lane. */}
+      <ArrowUpRight
+        aria-hidden
+        className="pointer-events-none absolute right-1.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/70 opacity-0 transition-opacity group-hover/proj:opacity-100 group-focus-within/proj:opacity-100"
+      />
     </div>
   );
 }
