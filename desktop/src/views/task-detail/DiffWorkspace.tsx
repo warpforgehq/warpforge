@@ -77,7 +77,9 @@ function EmptyChangesState({ onOpenFiles }: { onOpenFiles: () => void }) {
 }
 
 export interface DiffWorkspaceHandle {
-  scrollToFile: (path: string, editHunks?: EditHunk[]) => void;
+  /** Scrolls to a file's diff. Returns false while the diff does not carry
+   *  the path yet — the caller retries rather than dropping the request. */
+  scrollToFile: (path: string, editHunks?: EditHunk[]) => boolean;
 }
 
 interface Props {
@@ -190,7 +192,7 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
     () => ({
       scrollToFile(path, editHunks = []) {
         const index = files.findIndex((file) => file.path === path);
-        if (index < 0) return;
+        if (index < 0) return false;
         const matchingHunks =
           editHunks.length > 0 ? matchingHunkIndexes(files[index].hunks, editHunks) : [];
         if (highlightTimerRef.current !== null) {
@@ -213,7 +215,7 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
         // In unified mode the editor scrolls to the hunk itself via the
         // highlighted-hunks decoration; here we only ensure the file is on
         // screen (the file-level anchor still exists in the virtualized list).
-        if (diffView === "unified") return;
+        if (diffView === "unified") return true;
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             const anchorEl = document.getElementById(fileAnchor(path));
@@ -230,6 +232,7 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
             }
           });
         });
+        return true;
       },
     }),
     [diffView, files, splitVirtualizer, unifiedVirtualizer],

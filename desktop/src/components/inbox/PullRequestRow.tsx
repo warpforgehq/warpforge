@@ -21,9 +21,11 @@ export interface PullRequestRowActions {
  * band with a divider under it — the list lives in the sidebar now, and a row
  * that keeps its own gutters reads as a foreign rail beside the task tree.
  *
- * Both lanes are fixed width: the age column lines up down the list, and the
- * unread lane is reserved on every row so a read title starts where an unread
- * one does. An action dropped into either lane cannot reflow the row.
+ * The repo name is the only lane that grows and truncates; the numeric lanes
+ * stay `shrink-0`, so the listing keeps the owner's original composition while
+ * the smaller type buys the repo back the room the fixed columns used to take.
+ * The unread lane is reserved on every row so a read title starts where an
+ * unread one does.
  */
 export const PullRequestRow = React.memo(function PullRequestRow({
   pr,
@@ -62,31 +64,32 @@ export const PullRequestRow = React.memo(function PullRequestRow({
         active ? "bg-accent" : "hover:bg-accent/60",
       )}
     >
-      <span className="flex min-w-0 items-center gap-1.5 text-[11px] leading-none text-muted-foreground">
+      <span className="flex min-w-0 items-center gap-1.5 text-[10px] leading-[14px] text-muted-foreground/70">
         {/* Draft is a state of the pull request, so it reads off the glyph
             rather than costing a word on the meta line. */}
         {draft ? (
           <GitPullRequestDraft
             aria-label="Draft"
-            className="size-3.5 shrink-0 text-muted-foreground/60"
+            className="size-3 shrink-0 text-muted-foreground/60"
           />
         ) : pr.state === "open" ? (
-          <GitPullRequest aria-hidden className="size-3.5 shrink-0 text-ok" />
+          <GitPullRequest aria-hidden className="size-3 shrink-0 text-ok" />
         ) : (
-          <GitPullRequestClosed
-            aria-hidden
-            className="size-3.5 shrink-0 text-muted-foreground/60"
-          />
+          <GitPullRequestClosed aria-hidden className="size-3 shrink-0 text-muted-foreground/60" />
         )}
+        {/* The repo name truncates first, since it repeats down the list. */}
         <span className="min-w-0 truncate" title={`${pr.repo}#${pr.number}`}>
           {pr.repo}
         </span>
-        <span className="tnum shrink-0 text-muted-foreground/60">#{pr.number}</span>
+        <span className="tnum shrink-0 whitespace-nowrap text-muted-foreground/60">
+          #{pr.number}
+        </span>
         {/* Size before age: how big a review is decides whether you start it
-            now. The repo name truncates first, since it repeats down the list. */}
+            now. `whitespace-nowrap` keeps `+N −N` on one line — a wrapped pair
+            made that row taller than every neighbour. */}
         {additions + deletions > 0 && (
           <span
-            className="tnum shrink-0"
+            className="tnum shrink-0 whitespace-nowrap"
             title={`+${additions} −${deletions} across ${pr.changedFiles ?? 0} files`}
           >
             <span className="text-ok">+{additions}</span>{" "}
@@ -112,10 +115,12 @@ export const PullRequestRow = React.memo(function PullRequestRow({
         <span aria-hidden className="flex size-1.5 shrink-0 items-center justify-center">
           {unseen && <span data-unread className="size-1.5 rounded-full bg-primary" />}
         </span>
+        {/* The title is the brightest text in the row; the meta line is the
+            only thing allowed to be quieter. */}
         <span
           className={cn(
-            "min-w-0 flex-1 truncate text-[13px] leading-none",
-            active ? "font-medium text-foreground" : "text-foreground/85",
+            "min-w-0 flex-1 truncate text-[12px] leading-4 text-foreground",
+            active && "font-medium",
           )}
         >
           {pr.title}

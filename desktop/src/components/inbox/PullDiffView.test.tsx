@@ -81,8 +81,8 @@ const diff: PullRequestDiff = {
 /** The fingerprint the view itself would compute for `src/a.ts` in `diff`. */
 const fingerprintA = fingerprintPatchFile(parseUnifiedPatch(diff.patch)[0]);
 
-function renderView(overrides: Partial<React.ComponentProps<typeof PullDiffView>> = {}) {
-  return render(
+function viewElement(overrides: Partial<React.ComponentProps<typeof PullDiffView>> = {}) {
+  return (
     <PullDiffView
       pr={pr}
       diff={diff}
@@ -92,8 +92,54 @@ function renderView(overrides: Partial<React.ComponentProps<typeof PullDiffView>
       onRangeChange={() => {}}
       onThreadChanged={() => {}}
       {...overrides}
-    />,
+    />
   );
+}
+
+function renderView(overrides: Partial<React.ComponentProps<typeof PullDiffView>> = {}) {
+  return render(viewElement(overrides));
+}
+
+/** The kind of change set the bracket keys are meant to walk. */
+const threeFileDiff: PullRequestDiff = {
+  additions: 3,
+  deletions: 3,
+  files: [
+    { path: "src/a.ts", additions: 1, deletions: 1 },
+    { path: "src/b.ts", additions: 1, deletions: 1 },
+    { path: "src/c.ts", additions: 1, deletions: 1 },
+  ],
+  patch: [
+    "diff --git a/src/a.ts b/src/a.ts",
+    "--- a/src/a.ts",
+    "+++ b/src/a.ts",
+    "@@ -1,2 +1,2 @@",
+    " kept",
+    "-old a",
+    "+new a",
+    "diff --git a/src/b.ts b/src/b.ts",
+    "--- a/src/b.ts",
+    "+++ b/src/b.ts",
+    "@@ -1,2 +1,2 @@",
+    " kept",
+    "-old b",
+    "+new b",
+    "diff --git a/src/c.ts b/src/c.ts",
+    "--- a/src/c.ts",
+    "+++ b/src/c.ts",
+    "@@ -1,2 +1,2 @@",
+    " kept",
+    "-old c",
+    "+new c",
+  ].join("\n"),
+  truncated: false,
+};
+
+/** Mounts with no patch, then lets one arrive — so no file is active yet. */
+function renderNoActiveFile() {
+  const view = renderView({ diff: null, loading: true });
+  view.rerender(viewElement({ diff: threeFileDiff }));
+  return view;
 }
 
 describe("PullDiffView", () => {
@@ -382,6 +428,33 @@ describe("PullDiffView", () => {
     renderView({ diff: twoFiles });
 
     fireEvent.keyDown(window, { key: "}" });
+
+    expect(screen.getByTitle("src/c.ts")).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTitle("src/a.ts")).not.toHaveAttribute("aria-current");
+  });
+
+  it("steps from the edge the direction points at when no file is active yet", () => {
+    // A patch arriving with no file selected: `]` opens the first file, `[`
+    // the last. Treating the missing index as "0 − 1" made `[` open the
+    // first file too.
+    const first = renderNoActiveFile();
+    fireEvent.keyDown(window, { key: "]" });
+    expect(screen.getByTitle("src/a.ts")).toHaveAttribute("aria-current", "true");
+    first.unmount();
+
+    renderNoActiveFile();
+    fireEvent.keyDown(window, { key: "[" });
+    expect(screen.getByTitle("src/c.ts")).toHaveAttribute("aria-current", "true");
+  });
+
+  it("steps to the last unviewed file with `{` when no file is active yet", () => {
+    // `}` and `{` used to disagree at the top of the list: `}` jumped to the
+    // first unviewed file while `{` silently did nothing.
+    const blocks = parseUnifiedPatch(threeFileDiff.patch);
+    setPullFileViewed(pullViewedKey(pr), "src/a.ts", fingerprintPatchFile(blocks[0]), true);
+    renderNoActiveFile();
+
+    fireEvent.keyDown(window, { key: "{" });
 
     expect(screen.getByTitle("src/c.ts")).toHaveAttribute("aria-current", "true");
     expect(screen.getByTitle("src/a.ts")).not.toHaveAttribute("aria-current");

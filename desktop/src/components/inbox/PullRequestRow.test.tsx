@@ -120,6 +120,97 @@ describe("PullRequestRow", () => {
     expect(lane().className).toBe(width);
   });
 
+  it("keeps the compact two-line composition with smaller type and room to breathe", () => {
+    const { container } = render(
+      <PullRequestRow pr={pr()} unseen={false} active={false} actions={{ onOpen: () => {} }} />,
+    );
+    const row = container.querySelector("button")!;
+    expect(row.className).toContain("py-1.5");
+    expect(row.className).toContain("gap-1");
+    // Meta over title: the original two-line composition.
+    expect(row.children).toHaveLength(2);
+
+    // Never `leading-none` on a multi-line row: it clips descenders and lets
+    // two lines merge into one grey block. The type is smaller, not collapsed.
+    expect(row.className).not.toContain("leading-none");
+    expect(row.querySelector(".leading-none")).toBeNull();
+
+    const meta = row.firstElementChild!;
+    const title = row.lastElementChild!;
+    expect(meta.className).toContain("text-[10px]");
+    expect(meta.className).toContain("leading-[14px]");
+    const titleText = title.querySelector("span:last-child")!;
+    expect(titleText.className).toContain("text-[12px]");
+    expect(titleText.className).toContain("leading-4");
+    expect(titleText.className).toContain("text-foreground");
+  });
+
+  it("keeps the repo truncating while the numeric lanes stay fixed", () => {
+    const { container } = render(
+      <PullRequestRow
+        pr={pr({ additions: 28525, deletions: 46, number: 482, repo: "edenlabllc/kodjin-analytics" })}
+        unseen={false}
+        active={false}
+        actions={{ onOpen: () => {} }}
+      />,
+    );
+
+    const repo = screen.getByTitle("edenlabllc/kodjin-analytics#482");
+    expect(repo.className).toContain("min-w-0");
+    expect(repo.className).toContain("truncate");
+
+    const meta = container.querySelector("button")!.firstElementChild!;
+    const number = meta.children[2] as HTMLElement;
+    expect(number.textContent).toBe("#482");
+    expect(number.className).toContain("shrink-0");
+    expect(number.className).toContain("tnum");
+
+    const age = meta.lastElementChild!.lastElementChild!;
+    expect(age.className).toContain("w-8");
+    expect(age.className).toContain("text-right");
+  });
+
+  it("keeps wide diffstats on one line instead of wrapping", () => {
+    const cases = [
+      { additions: 28525, deletions: 46, text: "+28525 −46" },
+      { additions: 5477, deletions: 1266, text: "+5477 −1266" },
+      { additions: 1, deletions: 1, text: "+1 −1" },
+    ];
+    for (const item of cases) {
+      const { container, unmount } = render(
+        <PullRequestRow
+          pr={pr({ additions: item.additions, deletions: item.deletions })}
+          unseen={false}
+          active={false}
+          actions={{ onOpen: () => {} }}
+        />,
+      );
+      const meta = container.querySelector("button")!.firstElementChild!;
+      const stat = meta.children[3] as HTMLElement;
+
+      expect(stat.textContent).toBe(item.text);
+      // The pair cannot wrap to a second line, which made the row taller than
+      // its neighbours.
+      expect(stat.className).toContain("whitespace-nowrap");
+      expect(stat.className).toContain("shrink-0");
+      expect(stat.querySelector("br")).toBeNull();
+      unmount();
+    }
+  });
+
+  it("renders no diffstat at all when a size is unknown", () => {
+    const { container } = render(
+      <PullRequestRow
+        pr={pr({ additions: 0, deletions: 0 })}
+        unseen={false}
+        active={false}
+        actions={{ onOpen: () => {} }}
+      />,
+    );
+    expect(screen.queryByText("+0")).not.toBeInTheDocument();
+    expect(container.querySelector("button")!.children).toHaveLength(2);
+  });
+
   it("wears the sidebar's row language rather than a full-bleed band", () => {
     const { container, rerender } = render(
       <PullRequestRow pr={pr()} unseen={false} active={false} actions={{ onOpen: () => {} }} />,

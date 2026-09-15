@@ -100,13 +100,16 @@ export function InboxToolbar({
 }) {
   return (
     <div className="flex h-9 shrink-0 items-center gap-1.5 px-2 pt-1">
+      {/* `text-xs!` because the shared `Input` ships `md:text-sm`, which
+          outranks a plain `text-xs` and left the placeholder visibly larger
+          than every row around it in the sidebar. */}
       <Input
         value={search}
         onChange={(event) => onSearch(event.target.value)}
         placeholder="Filter pull requests"
         aria-label="Filter pull requests"
         spellCheck={false}
-        className="h-7 min-w-0 flex-1 border-transparent bg-transparent px-2 text-xs shadow-none focus-visible:border-border"
+        className="h-7 min-w-0 flex-1 border-transparent bg-transparent px-2 text-xs! shadow-none focus-visible:border-border"
       />
       <div
         role="tablist"

@@ -221,15 +221,26 @@ export function PullDiffView({
             : 0;
       if (step === 0) return;
       event.preventDefault();
+      // No file active yet (`-1`): step from the edge the direction points at,
+      // so `]` opens the first file, `[` the last, `}` the first unviewed from
+      // the top and `{` the first unviewed from the bottom. Treating `-1` as
+      // "before the start" made `{` a silent no-op while `}` jumped.
       const current = blocks.findIndex((block) => block.path === activePath);
       if (unviewedOnly) {
         const candidates =
-          step === 1 ? blocks.slice(current + 1) : blocks.slice(0, Math.max(0, current)).reverse();
+          current < 0
+            ? step === 1
+              ? blocks
+              : [...blocks].reverse()
+            : step === 1
+              ? blocks.slice(current + 1)
+              : blocks.slice(0, current).reverse();
         const next = candidates.find((block) => !viewed.has(block.path));
         if (next) jumpTo(next.path);
         return;
       }
-      const next = blocks[Math.min(blocks.length - 1, Math.max(0, current + step))];
+      const index = current < 0 ? (step === 1 ? 0 : blocks.length - 1) : current + step;
+      const next = blocks[Math.min(blocks.length - 1, Math.max(0, index))];
       if (next) jumpTo(next.path);
     };
     window.addEventListener("keydown", onKeyDown);

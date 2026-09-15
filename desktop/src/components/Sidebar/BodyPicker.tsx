@@ -13,6 +13,11 @@ export const segmentTabId = (segment: SidebarSegment) => `sidebar-segment-${segm
  * Picks what the sidebar body shows. It owns the body and nothing else —
  * Mission Control and Automations stay nav rows underneath, so a new
  * destination costs a row rather than a tab.
+ *
+ * A segmented control, not content tabs: this switches the sidebar's *mode*,
+ * while the underline tabs inside a task switch the panel below them. It must
+ * also stay visually smaller than the primary "New task" button beside it, so
+ * the active pill is a raised neutral, never a `primary` fill.
  */
 export function BodyPicker({
   segment,
@@ -41,7 +46,7 @@ export function BodyPicker({
     <div
       role="tablist"
       aria-label="Sidebar contents"
-      className="flex items-center gap-0.5 rounded-md bg-secondary/50 p-0.5"
+      className="flex items-stretch rounded-lg bg-muted/70 p-0.5 dark:bg-muted/40"
     >
       {SEGMENTS.map((item, index) => {
         const active = item.id === segment;
@@ -66,21 +71,16 @@ export function BodyPicker({
               move(index, direction);
             }}
             className={cn(
-              "flex h-7 min-w-0 flex-1 items-center justify-center gap-1.5 rounded px-2 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              "flex h-[26px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
               active
-                ? "bg-card font-medium text-foreground shadow-sm"
+                ? "bg-background font-medium text-foreground shadow-sm dark:bg-secondary"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <item.icon
-              className={cn(
-                "size-3.5 shrink-0",
-                active ? "text-primary" : "text-muted-foreground/60",
-              )}
-            />
+            <item.icon aria-hidden className="size-3.5 shrink-0" />
             <span className="min-w-0 truncate">{item.label}</span>
             {count > 0 && (
-              <span className="tnum shrink-0 text-[11px] font-semibold text-warn">{count}</span>
+              <span className="tnum shrink-0 text-[11px] font-medium text-warn">{count}</span>
             )}
           </button>
         );

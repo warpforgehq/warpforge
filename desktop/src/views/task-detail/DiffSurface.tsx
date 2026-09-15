@@ -1,5 +1,5 @@
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
-import type { RefObject } from "react";
+import { useEffect, useState, useTransition, type RefObject } from "react";
 
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,18 @@ import { ChangesRail } from "../../components/ChangesRail";
 import type { EditHunk, FileDiff, HunkResolution, TaskDiff } from "../../protocol";
 import type { DiffView } from "../../store/ui";
 import { DiffWorkspace, type DiffWorkspaceHandle } from "./DiffWorkspace";
+
+/** The shell's placeholder while the diff workspace is still unmounted. Static
+ *  on purpose: a pulse over a full-height pane is noise, not information. */
+function DiffSkeleton() {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3 p-3" aria-busy data-testid="diff-skeleton">
+      {[0, 1, 2].map((row) => (
+        <div key={row} className="h-28 rounded-md border border-rule bg-secondary/20" />
+      ))}
+    </div>
+  );
+}
 
 /**
  * Diff surface: `DiffWorkspace` plus `ChangesRail` side by side. Diff is no
@@ -64,6 +76,17 @@ export function DiffSurface({
   const [size, setSize] = usePanelSize("diff");
   const bounds = PANEL_BOUNDS.diff;
   const surfaceRef = useAutoHiddenRail(size, setCollapsed);
+  // The workspace mounts one frame behind the shell. A restored task arrives
+  // with its diff already cached, and mounting the diff's editors in the same
+  // commit as the TaskDetail shell is what made the Inbox → Tasks switch freeze
+  // before anything painted. The transition keeps the skeleton on screen and
+  // lets React yield between the mount's render passes.
+  const [workspaceReady, setWorkspaceReady] = useState(false);
+  const [, startTransition] = useTransition();
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => startTransition(() => setWorkspaceReady(true)));
+    return () => cancelAnimationFrame(frame);
+  }, []);
   return (
     <div ref={surfaceRef} className="flex h-full min-h-0 flex-col">
       <div className="flex h-9 items-center gap-2 border-b border-rule bg-background/25 px-2">
@@ -105,18 +128,22 @@ export function DiffSurface({
       </div>
       <PanelGroup orientation="horizontal" className="min-h-0 min-w-0 flex-1">
         <Panel pin className="min-h-0 min-w-0">
-          <DiffWorkspace
-            ref={diffWorkspaceRef}
-            diff={diff}
-            diffError={diffError}
-            diffView={diffView}
-            editable={editable}
-            localRes={localRes}
-            onOpenFiles={onOpenFiles}
-            onResolve={onResolve}
-            onSendToChat={onSendToChat}
-            taskId={taskId}
-          />
+          {workspaceReady ? (
+            <DiffWorkspace
+              ref={diffWorkspaceRef}
+              diff={diff}
+              diffError={diffError}
+              diffView={diffView}
+              editable={editable}
+              localRes={localRes}
+              onOpenFiles={onOpenFiles}
+              onResolve={onResolve}
+              onSendToChat={onSendToChat}
+              taskId={taskId}
+            />
+          ) : (
+            <DiffSkeleton />
+          )}
         </Panel>
         <PanelSeparator aria-label="Resize changes panel" />
         <Panel

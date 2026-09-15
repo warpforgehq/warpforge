@@ -49,10 +49,47 @@ describe("BodyPicker", () => {
 
   it("carries the unread count the Inbox nav row used to, and nothing at zero", () => {
     const { unmount } = render(<BodyPicker segment="tasks" inboxCount={7} onSelect={() => {}} />);
-    expect(within(screen.getByRole("tab", { name: /^Inbox/ })).getByText("7")).toBeInTheDocument();
+    const badge = within(screen.getByRole("tab", { name: /^Inbox/ })).getByText("7");
+    expect(badge).toBeInTheDocument();
+    // Attention count: 11px, tabular, `warn`.
+    expect(badge.className).toContain("text-[11px]");
+    expect(badge.className).toContain("tnum");
+    expect(badge.className).toContain("text-warn");
     unmount();
 
     renderPicker("tasks", 0);
     expect(screen.getByRole("tab", { name: /^Inbox/ }).textContent).toBe("Inbox");
+  });
+
+  it("reads as a compact segmented control, not content tabs or one big button", () => {
+    renderPicker("tasks");
+
+    const list = screen.getByRole("tablist");
+    // A short track tightly around the two halves, inset 2px.
+    expect(list.className).toContain("rounded-lg");
+    expect(list.className).toContain("p-0.5");
+    expect(list.className).toContain("bg-muted/70");
+    expect(list.className).toContain("dark:bg-muted/40");
+    expect(list.className).not.toContain("border");
+
+    const tasks = screen.getByRole("tab", { name: /^Tasks/ });
+    const inbox = screen.getByRole("tab", { name: /^Inbox/ });
+    // Active: a raised neutral pill — never a `primary` fill, never an
+    // underline, so it cannot read as the button below it or as a tab strip.
+    // It must be lighter than the track in dark, or it reads as a hole.
+    expect(tasks.className).toContain("bg-background");
+    expect(tasks.className).toContain("dark:bg-secondary");
+    expect(tasks.className).toContain("rounded-md");
+    expect(tasks.className).toContain("shadow-sm");
+    expect(tasks.className).toContain("text-foreground");
+    expect(tasks.className).not.toContain("border");
+    expect(tasks.className).not.toContain("bg-primary");
+    // Inactive: transparent, and hover brightens the text only.
+    expect(inbox.className).toContain("text-muted-foreground");
+    expect(inbox.className).toContain("hover:text-foreground");
+    expect(inbox.className).not.toContain("bg-");
+    // 26px pill + 2px inset each side ≈ a 30px control, under the 32px
+    // "New task" button.
+    expect(tasks.className).toContain("h-[26px]");
   });
 });

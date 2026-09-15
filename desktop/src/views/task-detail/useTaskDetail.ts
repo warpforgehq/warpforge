@@ -162,14 +162,23 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     ) {
       return;
     }
-    const frame = requestAnimationFrame(() => {
+    // The diff workspace mounts a frame after the shell (see `DiffSurface`),
+    // so its handle can be absent, or still working off an empty diff, the
+    // first time this runs. Retry until it reports the scroll; bounded so a
+    // path the diff never carries cannot spin forever.
+    let frame = 0;
+    let attempts = 0;
+    const scroll = () => {
       const workspace = diffWorkspaceRef.current;
-      if (!workspace) {
+      if (workspace?.scrollToFile(diffNavigation.path, diffNavigation.hunks)) {
+        handledDiffNavigationRef.current = diffNavigation;
         return;
       }
-      workspace.scrollToFile(diffNavigation.path, diffNavigation.hunks);
-      handledDiffNavigationRef.current = diffNavigation;
-    });
+      if (attempts >= 120) return;
+      attempts += 1;
+      frame = requestAnimationFrame(scroll);
+    };
+    frame = requestAnimationFrame(scroll);
     return () => cancelAnimationFrame(frame);
   }, [activeSurface, diff, diffNavigation, diffView]);
   const closeFileTab = useCallback(
