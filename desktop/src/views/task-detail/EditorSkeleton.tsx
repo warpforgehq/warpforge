@@ -14,18 +14,19 @@ import { ROW_HEIGHT_PX } from "../../components/inbox/PullDiffHunk";
  */
 
 const INDENT_STEPS = [0, 0, 2, 4, 4, 2, 0, 2, 4, 0] as const;
-const MAX_LINES = 24;
 const FALLBACK_LINES = 12;
+/** Bar height: a text line, not a block. The 20px row leaves it air. */
+const BAR_PX = 6;
 
 export function EditorSkeleton({
   height,
-  maxLines = MAX_LINES,
+  maxLines = Number.POSITIVE_INFINITY,
   className,
   "aria-label": ariaLabel = "Loading editor",
 }: {
   /** Exact slot height, when a virtualizer estimate already reserved one. */
   height?: number;
-  /** Cap for preview call sites; defaults to a full editor. */
+  /** Cap for preview call sites; a full editor fills whatever it is given. */
   maxLines?: number;
   className?: string;
   "aria-label"?: string;
@@ -72,13 +73,13 @@ export function EditorSkeleton({
               style={{ height: ROW_HEIGHT_PX }}
             >
               <span className="flex w-10 shrink-0 justify-end">
-                <SkeletonBar h={8} className="w-4" />
+                <SkeletonBar h={BAR_PX} className="w-3" />
               </span>
               <span
                 className="flex h-full min-w-0 flex-1 items-center"
                 style={{ paddingLeft: indent * 8 }}
               >
-                <SkeletonBar h={8} w={skeletonWidth(line, indent)} />
+                <SkeletonBar h={BAR_PX} w={skeletonWidth(line, indent)} />
               </span>
             </div>
           );
