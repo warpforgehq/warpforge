@@ -36,7 +36,7 @@ const updates: SessionUpdate[] = [
 ];
 
 function activityRow(source: SessionUpdate[], overrides = new Map<string, boolean>()): ActivityRow {
-  const row = deriveTranscriptRows(source, overrides, null, null).find(
+  const row = deriveTranscriptRows(source, overrides, null, null, true).find(
     (candidate) => candidate.kind === "activity",
   );
   if (!row || row.kind !== "activity") throw new Error("expected an activity row");

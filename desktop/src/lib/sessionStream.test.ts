@@ -52,7 +52,7 @@ describe("session stream coalescing", () => {
       { kind: "agent_text", text: "Done" },
     ];
 
-    const rows = deriveTranscriptRows(updates, new Map(), null, null);
+    const rows = deriveTranscriptRows(updates, new Map(), null, null, true);
 
     expect(rows.map((row) => row.kind)).toEqual(["update", "activity", "update"]);
     const group = rows[1];
@@ -62,11 +62,44 @@ describe("session stream coalescing", () => {
     expect(group.open).toBe(false);
     expect(group.summary.text).toBe("Read a.ts");
 
-    const expanded = deriveTranscriptRows(updates, new Map([[group.groupId, true]]), null, null);
+    const expanded = deriveTranscriptRows(updates, new Map([[group.groupId, true]]), null, null, true);
     const reopened = expanded[1];
     if (reopened.kind !== "activity") throw new Error("expected an activity group");
     expect(reopened.open).toBe(true);
     expect(reopened.id).toBe(group.id);
+  });
+
+  it("stops a group pulsing once the session is no longer working", () => {
+    // A call left in progress by a killed session rests in the transcript as
+    // history. Reading it as activity made every group pulse forever after a
+    // daemon restart.
+    const updates: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        status: "in_progress",
+        title: "Run tests",
+        tool_call_id: "p",
+        tool_kind: "execute",
+      },
+      {
+        kind: "tool_call",
+        status: "completed",
+        title: "Run lint",
+        tool_call_id: "q",
+        tool_kind: "execute",
+      },
+    ];
+
+    const settled = deriveTranscriptRows(updates, new Map(), null, null, false)[0];
+    if (settled.kind !== "activity") throw new Error("expected an activity group");
+    expect(settled.live).toBe(false);
+    expect(settled.open).toBe(false);
+    expect(settled.summary.text.startsWith("Ran")).toBe(true);
+
+    const running = deriveTranscriptRows(updates, new Map(), null, null, true)[0];
+    if (running.kind !== "activity") throw new Error("expected an activity group");
+    expect(running.live).toBe(true);
+    expect(running.open).toBe(true);
   });
 
   it("opens a failed group by default but lets the reader fold it away", () => {
@@ -87,7 +120,7 @@ describe("session stream coalescing", () => {
       },
     ];
 
-    const rows = deriveTranscriptRows(updates, new Map(), null, null);
+    const rows = deriveTranscriptRows(updates, new Map(), null, null, true);
     const group = rows[0];
     if (group.kind !== "activity") throw new Error("expected an activity group");
     expect(group.hasFailure).toBe(true);
@@ -95,7 +128,7 @@ describe("session stream coalescing", () => {
 
     // A non-zero exit is not a blocker: unlike an unanswered prompt, the reader
     // may fold it away and the choice sticks.
-    const folded = deriveTranscriptRows(updates, new Map([[group.groupId, false]]), null, null);
+    const folded = deriveTranscriptRows(updates, new Map([[group.groupId, false]]), null, null, true);
     const foldedGroup = folded[0];
     if (foldedGroup.kind !== "activity") throw new Error("expected an activity group");
     expect(foldedGroup.open).toBe(false);
@@ -120,13 +153,13 @@ describe("session stream coalescing", () => {
       },
     ];
 
-    const rows = deriveTranscriptRows(updates, new Map(), null, null);
+    const rows = deriveTranscriptRows(updates, new Map(), null, null, true);
     const group = rows[0];
     if (group.kind !== "activity") throw new Error("expected an activity group");
     expect(group.hasPendingApproval).toBe(true);
     expect(group.open).toBe(true);
 
-    const folded = deriveTranscriptRows(updates, new Map([[group.groupId, false]]), null, null);
+    const folded = deriveTranscriptRows(updates, new Map([[group.groupId, false]]), null, null, true);
     const foldedGroup = folded[0];
     if (foldedGroup.kind !== "activity") throw new Error("expected an activity group");
     expect(foldedGroup.open).toBe(true);
@@ -143,8 +176,8 @@ describe("session stream coalescing", () => {
         tool_kind: "read",
       },
     ];
-    const first = deriveTranscriptRows(updates, new Map(), 0, null);
-    const repeated = deriveTranscriptRows(updates, new Map(), 0, null);
+    const first = deriveTranscriptRows(updates, new Map(), 0, null, true);
+    const repeated = deriveTranscriptRows(updates, new Map(), 0, null, true);
 
     expect(first.map((row) => row.kind)).toEqual(["activity"]);
     const group = first[0];
@@ -171,7 +204,7 @@ describe("session stream coalescing", () => {
         tool_kind: "execute",
       },
     ];
-    const liveRows = deriveTranscriptRows(live, new Map(), null, null);
+    const liveRows = deriveTranscriptRows(live, new Map(), null, null, true);
     const liveRow = liveRows[0];
     if (liveRow.kind !== "activity") throw new Error("expected an activity group");
     expect(liveRow.expandable).toBe(true);
@@ -187,7 +220,7 @@ describe("session stream coalescing", () => {
         tool_kind: "execute",
       },
     ];
-    const settledRows = deriveTranscriptRows(settled, new Map(), null, null);
+    const settledRows = deriveTranscriptRows(settled, new Map(), null, null, true);
     const settledRow = settledRows[0];
     if (settledRow.kind !== "activity") throw new Error("expected an activity group");
     expect(settledRow.open).toBe(false);
@@ -216,10 +249,10 @@ describe("session stream coalescing", () => {
         tool_kind: "execute",
       },
     ];
-    const liveRows = deriveTranscriptRows(live, new Map(), null, null);
+    const liveRows = deriveTranscriptRows(live, new Map(), null, null, true);
     const liveRow = liveRows[0];
     if (liveRow.kind !== "activity") throw new Error("expected an activity group");
-    const foldedRows = deriveTranscriptRows(live, new Map([[liveRow.groupId, false]]), null, null);
+    const foldedRows = deriveTranscriptRows(live, new Map([[liveRow.groupId, false]]), null, null, true);
 
     expect(
       automaticFoldAnchor(
@@ -244,7 +277,7 @@ describe("session stream coalescing", () => {
       request,
     ];
 
-    const rows = deriveTranscriptRows(coalesceUpdates(updates), new Map(), null, null);
+    const rows = deriveTranscriptRows(coalesceUpdates(updates), new Map(), null, null, true);
     const ids = rows.map((row) => row.id);
 
     expect(new Set(ids).size).toBe(ids.length);

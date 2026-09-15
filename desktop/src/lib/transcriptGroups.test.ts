@@ -57,7 +57,7 @@ const thought = (text: string): SessionUpdate => ({ kind: "agent_thought", text 
 const prose = (text: string): SessionUpdate => ({ kind: "agent_text", text });
 
 function activityRows(updates: SessionUpdate[], overrides = new Map<string, boolean>()) {
-  return deriveTranscriptRows(coalesceUpdates(updates), overrides, null, null).filter(
+  return deriveTranscriptRows(coalesceUpdates(updates), overrides, null, null, true).filter(
     (row) => row.kind === "activity",
   );
 }
@@ -69,6 +69,7 @@ describe("transcript work grouping", () => {
       new Map(),
       null,
       null,
+      true,
     );
 
     expect(rows.map((row) => row.kind)).toEqual(["update", "activity", "update"]);
@@ -178,6 +179,7 @@ describe("transcript work grouping", () => {
       new Map(),
       null,
       null,
+      true,
     );
     expect(rows.map((row) => row.kind)).toEqual(["activity", "update", "activity"]);
     expect(rows[1].kind === "update" && rows[1].entry.update.kind).toBe("plan");
@@ -211,7 +213,7 @@ describe("transcript work grouping", () => {
       prose("done"),
       { kind: "workflow_event", event: "stage_started", title: "Review", agents: [], tone: "info" },
     ];
-    const rows = deriveTranscriptRows(coalesceUpdates(updates), new Map(), null, null);
+    const rows = deriveTranscriptRows(coalesceUpdates(updates), new Map(), null, null, true);
     expect(rows.map((row) => row.kind)).toEqual(["update", "activity", "update", "update"]);
   });
 
@@ -228,6 +230,7 @@ describe("transcript work grouping", () => {
       new Map([[first.groupId, true]]),
       null,
       null,
+      true,
     ).find((row) => row.kind === "activity")!;
     if (opened.kind !== "activity") throw new Error("expected a group");
 

@@ -115,6 +115,10 @@ export function deriveTranscriptRows(
   workGroupOverrides: ReadonlyMap<string, boolean>,
   thinkingIndex: number | null,
   streamingTextIndex: number | null,
+  /** Whether the session behind this transcript is actually working. A call
+   *  left `pending` by a killed session is history, not activity — without
+   *  this the group pulses forever after a daemon restart. */
+  sessionLive: boolean,
 ): TranscriptListRow[] {
   const rows: TranscriptListRow[] = [];
   let group: TranscriptEntry[] = [];
@@ -138,7 +142,7 @@ export function deriveTranscriptRows(
       category: categoryForUpdate(entry.update),
       entry,
     }));
-    const live = group.some((entry) => activityEntryIsLive(entry, thinkingIndex));
+    const live = sessionLive && group.some((entry) => activityEntryIsLive(entry, thinkingIndex));
     const hasFailure = group.some(
       (entry) => entry.update.kind === "tool_call" && entry.update.status === "failed",
     );

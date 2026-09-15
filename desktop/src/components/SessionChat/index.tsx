@@ -165,9 +165,19 @@ export function SessionChat({
     },
     [suspendForDisclosure],
   );
+  // A call left pending by a killed session is history: only a session that is
+  // actually working keeps its groups pulsing.
+  const sessionLive = task.status === "running" || task.status === "queued";
   const transcriptRows = useMemo(
-    () => deriveTranscriptRows(merged, workGroupOverrides, thinkingIndex, streamingTextIndex),
-    [merged, streamingTextIndex, thinkingIndex, workGroupOverrides],
+    () =>
+      deriveTranscriptRows(
+        merged,
+        workGroupOverrides,
+        thinkingIndex,
+        streamingTextIndex,
+        sessionLive,
+      ),
+    [merged, sessionLive, streamingTextIndex, thinkingIndex, workGroupOverrides],
   );
   // A live group folds itself once its turn settles. That is a disclosure the
   // user never triggered, so it misses the anchor a manual toggle sets and the
