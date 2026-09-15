@@ -73,11 +73,14 @@ export function BodyPicker({
             className={cn(
               "flex h-[26px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
               active
-                ? "bg-background font-medium text-foreground shadow-sm dark:bg-accent"
+                ? "bg-primary/15 font-medium text-foreground shadow-sm dark:bg-primary/20"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <item.icon aria-hidden className="size-3.5 shrink-0" />
+            <item.icon
+              aria-hidden
+              className={cn("size-3.5 shrink-0", active && "text-primary")}
+            />
             <span className="min-w-0 truncate">{item.label}</span>
             {count > 0 && (
               <span className="tnum shrink-0 text-[11px] font-medium text-warn">{count}</span>

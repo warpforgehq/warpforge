@@ -74,18 +74,19 @@ describe("BodyPicker", () => {
 
     const tasks = screen.getByRole("tab", { name: /^Tasks/ });
     const inbox = screen.getByRole("tab", { name: /^Inbox/ });
-    // Active: a raised neutral pill — never a `primary` fill, never an
-    // underline, so it cannot read as the button below it or as a tab strip.
-    // It must be measurably lighter than the track in dark (the theme's own
-    // numbers: muted 11%, secondary 15%, accent 20%), or the two halves read
-    // as one flat row — `secondary` sat three points off the track and did.
-    expect(tasks.className).toContain("bg-background");
-    expect(tasks.className).toContain("dark:bg-accent");
+    // Active: a raised pill tinted with the accent — a fraction of `primary`,
+    // never the full fill (it must not read as the button below it) and never
+    // an underline (it must not read as a tab strip). The tint is what makes
+    // the active half visible at all: a neutral one sat three points off the
+    // track and the two halves read as a single flat row.
+    expect(tasks.className).toContain("bg-primary/15");
+    expect(tasks.className).toContain("dark:bg-primary/20");
+    // A tint, not a fill: the bare `bg-primary` class would read as a button.
+    expect(tasks.className).not.toMatch(/(?:^|\s)bg-primary(?:\s|$)/);
     expect(tasks.className).toContain("rounded-md");
     expect(tasks.className).toContain("shadow-sm");
     expect(tasks.className).toContain("text-foreground");
     expect(tasks.className).not.toContain("border");
-    expect(tasks.className).not.toContain("bg-primary");
     // Inactive: transparent, and hover brightens the text only.
     expect(inbox.className).toContain("text-muted-foreground");
     expect(inbox.className).toContain("hover:text-foreground");
