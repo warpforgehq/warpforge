@@ -1,7 +1,25 @@
-import { ExternalLink, RefreshCw } from "lucide-react";
+import {
+  ChevronDown,
+  ExternalLink,
+  GitBranch,
+  Hash,
+  Link2,
+  RefreshCw,
+  TextQuote,
+} from "lucide-react";
 
+import { AuthorBadge } from "@/components/inbox/AuthorBadge";
 import { ReviewDecisionGlyph } from "@/components/inbox/ReviewDecisionChip";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { copyText } from "@/lib/clipboard";
 import { openExternalLink } from "@/lib/externalLinks";
 import { cn } from "@/lib/utils";
 import type { PullRequestDetails, PullRequestSummary } from "@/protocol";
@@ -23,27 +41,25 @@ export function PullDetailHeader({
   onRefresh: () => void;
 }) {
   const author = details?.author?.login || pr.author?.login;
-  const state = (details?.state || pr.state).toLowerCase();
-  const draft = details?.draft ?? pr.draft;
+  const title = details?.title || pr.title;
+  const branch = details?.headRefName || pr.headRefName;
 
   return (
     <header className="flex shrink-0 flex-col gap-0.5 border-b border-border/70 px-3 py-2">
       <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-        <span className="shrink-0 capitalize text-foreground/70">{draft ? "Draft" : state}</span>
+        {/* The reference is the menu, the way Linear does it: everything you
+            would want to do with this pull request hangs off its own name.
+            The state word that sat beside it is gone — the list glyph and the
+            Overview rail both say it, and a header repeats neither. */}
+        <RefMenu pr={pr} title={title} branch={branch} />
         <ReviewDecisionGlyph decision={pr.reviewDecision} />
-        <span className="min-w-0 flex-1 truncate" title={`${pr.repo}#${pr.number}`}>
-          {pr.repo && (
-            <span className="tnum">
-              {pr.repo}#{pr.number}
-            </span>
-          )}
-          {author && (
-            <>
-              <Dot />
-              <span>{author}</span>
-            </>
-          )}
-        </span>
+        {author && (
+          <span className="flex min-w-0 items-center gap-1.5" title={`Author: ${author}`}>
+            <AuthorBadge login={author} size={4} />
+            <span className="min-w-0 truncate text-foreground/80">{author}</span>
+          </span>
+        )}
+        <span className="flex-1" />
         <Button
           type="button"
           variant="ghost"
@@ -56,33 +72,63 @@ export function PullDetailHeader({
         >
           <RefreshCw className={cn("size-3", refreshing && "animate-spin")} />
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-6 shrink-0 text-muted-foreground hover:text-foreground"
-          aria-label="Open on GitHub"
-          title="Open on GitHub"
-          onClick={() => void openExternalLink(pr.url)}
-        >
-          <ExternalLink className="size-3" />
-        </Button>
       </div>
 
       {/* Two lines at most: a long title that wrapped freely pushed the diff
           off the first screen, and one truncated to a single line lost the
           part that says what the change actually does. */}
-      <h2 className="line-clamp-2 text-sm font-semibold leading-snug tracking-tight text-foreground">
-        {details?.title || pr.title}
+      <h2 className="line-clamp-2 text-base font-semibold leading-snug tracking-tight text-foreground">
+        {title}
       </h2>
     </header>
   );
 }
 
-function Dot() {
+/** The `repo#number` badge as a menu of everything useful to do with it. */
+function RefMenu({ pr, title, branch }: { pr: PullRequestSummary; title: string; branch: string }) {
+  const ref = `${pr.repo}#${pr.number}`;
   return (
-    <span aria-hidden className="px-1.5 text-border">
-      ·
-    </span>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          title="Pull request actions"
+          className="tnum -mx-1 flex shrink-0 items-center gap-0.5 rounded px-1 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground data-[state=open]:bg-secondary/60 data-[state=open]:text-foreground"
+        >
+          {ref}
+          <ChevronDown aria-hidden className="size-3 opacity-70" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuPortal>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onSelect={() => void openExternalLink(pr.url)}>
+            <ExternalLink aria-hidden />
+            Open in GitHub
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => void copyText(pr.url, "GitHub URL")}>
+            <Link2 aria-hidden />
+            Copy GitHub URL
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            disabled={!branch}
+            onSelect={() => void copyText(branch, "branch name")}
+          >
+            <GitBranch aria-hidden />
+            Copy branch name
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => void copyText(`#${pr.number}`, "pull request number")}>
+            <Hash aria-hidden />
+            Copy pull request number
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => void copyText(`[${title}](${pr.url})`, "title as link")}
+          >
+            <TextQuote aria-hidden />
+            Copy title as link
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenuPortal>
+    </DropdownMenu>
   );
 }

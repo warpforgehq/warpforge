@@ -4,6 +4,7 @@ import * as React from "react";
 import { AuthorBadge } from "@/components/inbox/AuthorBadge";
 import { PullFilesChanged } from "@/components/inbox/PullFilesChanged";
 import { REVIEW_DECISION_META } from "@/components/inbox/ReviewDecisionChip";
+import { CopyButton } from "@/components/ui/copy-button";
 import { cn } from "@/lib/utils";
 import type { PullRequestDetails, PullRequestFile, PullRequestSummary } from "@/protocol";
 
@@ -69,16 +70,20 @@ export function PullMetaRail({
             title={details?.headRefName || pr.headRefName}
           >
             <GitBranch aria-hidden className="size-3 shrink-0 text-primary" />
-            <span className="min-w-0 break-all text-foreground/90">
+            <span className="min-w-0 flex-1 break-all text-foreground/90">
               {details?.headRefName || pr.headRefName}
             </span>
+            <CopyButton value={details?.headRefName || pr.headRefName} label="branch name" />
           </span>
           <span
             className="flex min-w-0 items-center gap-1.5 text-muted-foreground"
             title={`into ${details?.baseRefName || pr.baseRefName}`}
           >
             <GitBranch aria-hidden className="size-3 shrink-0 text-muted-foreground/70" />
-            <span className="min-w-0 break-all">into {details?.baseRefName || pr.baseRefName}</span>
+            <span className="min-w-0 flex-1 break-all">
+              into {details?.baseRefName || pr.baseRefName}
+            </span>
+            <CopyButton value={details?.baseRefName || pr.baseRefName} label="base branch" />
           </span>
         </div>
       </Section>
