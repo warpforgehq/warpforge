@@ -45,6 +45,7 @@ export function ProjectFilesPanel({
   selected,
   onSelect,
   taskId,
+  project,
   rootPath,
   onRefresh,
   treeState,
@@ -55,6 +56,7 @@ export function ProjectFilesPanel({
   selected: string | null;
   onSelect: (path: string) => void;
   taskId?: string;
+  project?: string;
   rootPath?: string;
   onRefresh?: () => void;
   /** When provided, expansion and scroll are persisted through the caller's
@@ -313,18 +315,18 @@ export function ProjectFilesPanel({
     e.preventDefault();
     e.stopPropagation();
     targetRef.current = { path, fKey };
-    // `file.create/rename/delete` are addressed by task, so a tree opened
-    // without one (the project page's read-only Files surface) must not offer
-    // them — they would go out with an empty task id and fail.
-    const edits: ContextMenuItemOrSeparator[] = taskId
-      ? [
-          { type: "separator" },
-          { type: "item", id: "new-file", label: "New File…" },
-          { type: "item", id: "new-folder", label: "New Folder…" },
-          { type: "item", id: "rename", label: "Rename…" },
-          { type: "item", id: "delete", label: "Delete…" },
-        ]
-      : [];
+    // `file.create/rename/delete` need a subject to address; a tree opened
+    // with neither a task nor a project cannot offer them.
+    const edits: ContextMenuItemOrSeparator[] =
+      taskId || project
+        ? [
+            { type: "separator" },
+            { type: "item", id: "new-file", label: "New File…" },
+            { type: "item", id: "new-folder", label: "New Folder…" },
+            { type: "item", id: "rename", label: "Rename…" },
+            { type: "item", id: "delete", label: "Delete…" },
+          ]
+        : [];
     const items: ContextMenuItemOrSeparator[] = path
       ? [
           { type: "item", id: "open", label: "Open" },
@@ -465,6 +467,7 @@ export function ProjectFilesPanel({
       <FileSystemActionDialog
         action={fileAction}
         taskId={taskId ?? ""}
+        project={project}
         onComplete={() => onRefresh?.()}
         onClose={() => setFileAction(null)}
       />

@@ -88,6 +88,7 @@ pub(super) async fn file_create(
     task_id: String,
     path: String,
     directory: bool,
+    project: Option<String>,
 ) -> Result<serde_json::Value, wire::RpcError> {
     let (tx, rx) = tokio::sync::oneshot::channel();
     handle
@@ -95,6 +96,7 @@ pub(super) async fn file_create(
             task_id,
             path,
             directory,
+            project,
             reply: tx,
         })
         .await;
@@ -115,6 +117,7 @@ pub(super) async fn file_rename(
     task_id: String,
     path: String,
     new_path: String,
+    project: Option<String>,
 ) -> Result<serde_json::Value, wire::RpcError> {
     let (tx, rx) = tokio::sync::oneshot::channel();
     handle
@@ -122,6 +125,7 @@ pub(super) async fn file_rename(
             task_id,
             path,
             new_path,
+            project,
             reply: tx,
         })
         .await;
@@ -141,12 +145,14 @@ pub(super) async fn file_delete(
     handle: &DaemonHandle,
     task_id: String,
     path: String,
+    project: Option<String>,
 ) -> Result<serde_json::Value, wire::RpcError> {
     let (tx, rx) = tokio::sync::oneshot::channel();
     handle
         .send(Command::DeleteFile {
             task_id,
             path,
+            project,
             reply: tx,
         })
         .await;

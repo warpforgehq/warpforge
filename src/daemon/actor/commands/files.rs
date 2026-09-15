@@ -2,7 +2,34 @@ use warpforge_protocol as wire;
 
 use crate::daemon::actor::{Command, Daemon, GitEffect};
 
+/// Checkout a file-editing op runs in: the task's tree when a task is named,
+/// the project's checkout otherwise. Naming neither subject is an error — a
+/// write must never fall back to a tree the caller did not ask for.
+fn pick_file_op_root(
+    task_id: &str,
+    task_repo: Option<String>,
+    project: Option<&str>,
+    project_repo: Option<String>,
+) -> Result<String, String> {
+    if !task_id.is_empty() {
+        return task_repo.ok_or_else(|| format!("no repo for task {task_id}"));
+    }
+    match project {
+        Some(name) => project_repo.ok_or_else(|| format!("no checkout for project {name}")),
+        None => Err("file operation needs a task_id or a project".to_string()),
+    }
+}
+
 impl Daemon {
+    fn file_op_root(&self, task_id: &str, project: Option<&str>) -> Result<String, String> {
+        pick_file_op_root(
+            task_id,
+            self.task_repo_path(task_id),
+            project,
+            project.and_then(|name| self.project_path(name)),
+        )
+    }
+
     pub(crate) async fn handle_files_command(&mut self, cmd: Command) {
         match cmd {
             Command::GetDiff {
@@ -171,21 +198,17 @@ impl Daemon {
                 task_id,
                 path,
                 directory,
+                project,
                 reply,
             } => {
                 // Filesystem work: resolve the path here, touch the disk on the
                 // blocking pool (ADR 0002 invariant 1).
-                let repo = self
-                    .tasks
-                    .get(&task_id)
-                    .and_then(|_| self.task_repo_path(&task_id));
+                let root = self.file_op_root(&task_id, project.as_deref());
                 tokio::task::spawn_blocking(move || {
-                    let result = repo
-                        .ok_or_else(|| format!("no repo for task {task_id}"))
-                        .and_then(|repo| {
-                            crate::daemon::diff::create_file(&repo, &path, directory)
-                                .map_err(|e| e.to_string())
-                        });
+                    let result = root.and_then(|repo| {
+                        crate::daemon::diff::create_file(&repo, &path, directory)
+                            .map_err(|e| e.to_string())
+                    });
                     let _ = reply.send(result);
                 });
             }
@@ -193,38 +216,29 @@ impl Daemon {
                 task_id,
                 path,
                 new_path,
+                project,
                 reply,
             } => {
-                let repo = self
-                    .tasks
-                    .get(&task_id)
-                    .and_then(|_| self.task_repo_path(&task_id));
+                let root = self.file_op_root(&task_id, project.as_deref());
                 tokio::task::spawn_blocking(move || {
-                    let result = repo
-                        .ok_or_else(|| format!("no repo for task {task_id}"))
-                        .and_then(|repo| {
-                            crate::daemon::diff::rename_file(&repo, &path, &new_path)
-                                .map_err(|e| e.to_string())
-                        });
+                    let result = root.and_then(|repo| {
+                        crate::daemon::diff::rename_file(&repo, &path, &new_path)
+                            .map_err(|e| e.to_string())
+                    });
                     let _ = reply.send(result);
                 });
             }
             Command::DeleteFile {
                 task_id,
                 path,
+                project,
                 reply,
             } => {
-                let repo = self
-                    .tasks
-                    .get(&task_id)
-                    .and_then(|_| self.task_repo_path(&task_id));
+                let root = self.file_op_root(&task_id, project.as_deref());
                 tokio::task::spawn_blocking(move || {
-                    let result = repo
-                        .ok_or_else(|| format!("no repo for task {task_id}"))
-                        .and_then(|repo| {
-                            crate::daemon::diff::delete_file(&repo, &path)
-                                .map_err(|e| e.to_string())
-                        });
+                    let result = root.and_then(|repo| {
+                        crate::daemon::diff::delete_file(&repo, &path).map_err(|e| e.to_string())
+                    });
                     let _ = reply.send(result);
                 });
             }
@@ -257,5 +271,48 @@ impl Daemon {
 
             other => self.handle_workflow_command(other).await,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pick_file_op_root;
+
+    #[test]
+    fn a_named_task_uses_its_own_tree() {
+        let root = pick_file_op_root(
+            "t1",
+            Some("/tmp/worktree".into()),
+            Some("demo"),
+            Some("/tmp/project".into()),
+        );
+        assert_eq!(root.unwrap(), "/tmp/worktree");
+    }
+
+    #[test]
+    fn a_task_with_no_tree_does_not_fall_back_to_the_project() {
+        let root = pick_file_op_root("t1", None, Some("demo"), Some("/tmp/project".into()));
+        assert_eq!(root.unwrap_err(), "no repo for task t1");
+    }
+
+    #[test]
+    fn a_named_project_uses_its_checkout() {
+        let root = pick_file_op_root("", None, Some("demo"), Some("/tmp/project".into()));
+        assert_eq!(root.unwrap(), "/tmp/project");
+    }
+
+    #[test]
+    fn an_unknown_project_is_refused() {
+        let root = pick_file_op_root("", None, Some("ghost"), None);
+        assert_eq!(root.unwrap_err(), "no checkout for project ghost");
+    }
+
+    #[test]
+    fn a_missing_subject_is_refused() {
+        let root = pick_file_op_root("", None, None, None);
+        assert_eq!(
+            root.unwrap_err(),
+            "file operation needs a task_id or a project"
+        );
     }
 }

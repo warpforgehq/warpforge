@@ -123,9 +123,32 @@ fn validate_relative_path(path: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn create_file(repo: &str, path: &str, directory: bool) -> Result<()> {
+/// Resolve `path` under `repo`, following symlinks in its existing parent
+/// directories and refusing anything that lands outside the root. The last
+/// component is never followed: these ops act on a link, not on its target.
+fn resolve_in_root(repo: &str, path: &str) -> Result<std::path::PathBuf> {
     validate_relative_path(path)?;
-    let full = std::path::Path::new(repo).join(path);
+    let root = std::fs::canonicalize(repo)?;
+    let parts: Vec<&str> = path
+        .split('/')
+        .filter(|part| !part.is_empty() && *part != ".")
+        .collect();
+    let Some((leaf, parents)) = parts.split_last() else {
+        bail!("refusing unsafe relative path: {path}");
+    };
+    let mut dir = root.clone();
+    for part in parents {
+        let candidate = dir.join(part);
+        dir = std::fs::canonicalize(&candidate).unwrap_or(candidate);
+        if !dir.starts_with(&root) {
+            bail!("refusing path outside the root: {path}");
+        }
+    }
+    Ok(dir.join(leaf))
+}
+
+pub fn create_file(repo: &str, path: &str, directory: bool) -> Result<()> {
+    let full = resolve_in_root(repo, path)?;
     if directory {
         std::fs::create_dir_all(full)?;
     } else {
@@ -141,10 +164,8 @@ pub fn create_file(repo: &str, path: &str, directory: bool) -> Result<()> {
 }
 
 pub fn rename_file(repo: &str, path: &str, new_path: &str) -> Result<()> {
-    validate_relative_path(path)?;
-    validate_relative_path(new_path)?;
-    let from = std::path::Path::new(repo).join(path);
-    let to = std::path::Path::new(repo).join(new_path);
+    let from = resolve_in_root(repo, path)?;
+    let to = resolve_in_root(repo, new_path)?;
     if let Some(parent) = to.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -153,8 +174,7 @@ pub fn rename_file(repo: &str, path: &str, new_path: &str) -> Result<()> {
 }
 
 pub fn delete_file(repo: &str, path: &str) -> Result<()> {
-    validate_relative_path(path)?;
-    let full = std::path::Path::new(repo).join(path);
+    let full = resolve_in_root(repo, path)?;
     let metadata = std::fs::symlink_metadata(&full)?;
     if metadata.is_dir() {
         std::fs::remove_dir_all(full)?;
@@ -162,4 +182,124 @@ pub fn delete_file(repo: &str, path: &str) -> Result<()> {
         std::fs::remove_file(full)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{create_file, delete_file, rename_file};
+
+    struct Fixture {
+        repo: tempfile::TempDir,
+        outside: tempfile::TempDir,
+    }
+
+    impl Fixture {
+        fn new() -> Self {
+            Self {
+                repo: tempfile::tempdir().unwrap(),
+                outside: tempfile::tempdir().unwrap(),
+            }
+        }
+
+        fn root(&self) -> String {
+            self.repo.path().to_string_lossy().to_string()
+        }
+
+        /// A symlink inside the repo pointing at the sibling temp dir.
+        fn escape_link(&self, name: &str) -> String {
+            std::os::unix::fs::symlink(self.outside.path(), self.repo.path().join(name)).unwrap();
+            name.to_string()
+        }
+    }
+
+    #[test]
+    fn creates_a_file_and_a_directory_inside_the_root() {
+        let fx = Fixture::new();
+        create_file(&fx.root(), "src/main.rs", false).unwrap();
+        create_file(&fx.root(), "docs/adr", true).unwrap();
+        assert!(fx.repo.path().join("src/main.rs").is_file());
+        assert!(fx.repo.path().join("docs/adr").is_dir());
+    }
+
+    #[test]
+    fn creating_the_same_file_twice_fails() {
+        let fx = Fixture::new();
+        create_file(&fx.root(), "a.txt", false).unwrap();
+        assert!(create_file(&fx.root(), "a.txt", false).is_err());
+    }
+
+    #[test]
+    fn renames_inside_the_root_and_overwrites_an_existing_target() {
+        let fx = Fixture::new();
+        std::fs::write(fx.repo.path().join("from.txt"), "new").unwrap();
+        std::fs::write(fx.repo.path().join("onto.txt"), "old").unwrap();
+        rename_file(&fx.root(), "from.txt", "nested/moved.txt").unwrap();
+        assert!(fx.repo.path().join("nested/moved.txt").is_file());
+
+        rename_file(&fx.root(), "nested/moved.txt", "onto.txt").unwrap();
+        let onto = std::fs::read_to_string(fx.repo.path().join("onto.txt")).unwrap();
+        assert_eq!(onto, "new");
+    }
+
+    #[test]
+    fn deletes_a_file_and_a_directory_tree() {
+        let fx = Fixture::new();
+        create_file(&fx.root(), "tree/a.txt", false).unwrap();
+        delete_file(&fx.root(), "tree/a.txt").unwrap();
+        assert!(!fx.repo.path().join("tree/a.txt").exists());
+
+        delete_file(&fx.root(), "tree").unwrap();
+        assert!(!fx.repo.path().join("tree").exists());
+    }
+
+    #[test]
+    fn a_relative_escape_is_refused() {
+        let fx = Fixture::new();
+        let outside = fx.outside.path().join("stolen.txt");
+        std::fs::write(&outside, "keep").unwrap();
+        let relative = format!(
+            "../{}/stolen.txt",
+            fx.outside.path().file_name().unwrap().to_string_lossy()
+        );
+
+        assert!(create_file(&fx.root(), &relative, false).is_err());
+        assert!(rename_file(&fx.root(), &relative, "taken.txt").is_err());
+        assert!(delete_file(&fx.root(), &relative).is_err());
+        assert!(outside.is_file());
+    }
+
+    #[test]
+    fn an_absolute_path_is_refused() {
+        let fx = Fixture::new();
+        let absolute = fx.outside.path().join("stolen.txt");
+        std::fs::write(&absolute, "keep").unwrap();
+        let absolute = absolute.to_string_lossy().to_string();
+
+        assert!(create_file(&fx.root(), &absolute, false).is_err());
+        assert!(rename_file(&fx.root(), "a.txt", &absolute).is_err());
+        assert!(delete_file(&fx.root(), &absolute).is_err());
+    }
+
+    #[test]
+    fn a_symlinked_parent_that_leaves_the_root_is_refused() {
+        let fx = Fixture::new();
+        let link = fx.escape_link("escape");
+        let outside = fx.outside.path().join("stolen.txt");
+        std::fs::write(&outside, "keep").unwrap();
+        let through_link = format!("{link}/stolen.txt");
+
+        assert!(create_file(&fx.root(), &format!("{link}/new.txt"), false).is_err());
+        assert!(rename_file(&fx.root(), &through_link, "taken.txt").is_err());
+        assert!(delete_file(&fx.root(), &through_link).is_err());
+        assert!(outside.is_file());
+        assert!(!fx.outside.path().join("new.txt").exists());
+    }
+
+    #[test]
+    fn an_empty_path_is_refused() {
+        let fx = Fixture::new();
+        assert!(create_file(&fx.root(), "", false).is_err());
+        assert!(rename_file(&fx.root(), "", "a.txt").is_err());
+        assert!(delete_file(&fx.root(), "").is_err());
+    }
 }

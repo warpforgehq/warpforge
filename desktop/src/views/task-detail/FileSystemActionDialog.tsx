@@ -20,11 +20,14 @@ export type FileSystemAction =
 export function FileSystemActionDialog({
   action,
   taskId,
+  project,
   onComplete,
   onClose,
 }: {
   action: FileSystemAction | null;
   taskId: string;
+  /** Subject when no task owns the tree — the project page's Files surface. */
+  project?: string;
   onComplete: () => void;
   onClose: () => void;
 }) {
@@ -58,11 +61,12 @@ export function FileSystemActionDialog({
         : action.kind === "rename"
           ? "file.rename"
           : "file.create";
+      const subject = taskId ? { task_id: taskId } : { project };
       const params = isDelete
-        ? { task_id: taskId, path: basePath }
+        ? { ...subject, path: basePath }
         : action.kind === "rename"
-          ? { task_id: taskId, path: basePath, new_path: nextPath }
-          : { task_id: taskId, path: nextPath, directory: action.kind === "create-folder" };
+          ? { ...subject, path: basePath, new_path: nextPath }
+          : { ...subject, path: nextPath, directory: action.kind === "create-folder" };
       await daemon.request(method, params);
       toast.success(`${title} complete`);
       onComplete();

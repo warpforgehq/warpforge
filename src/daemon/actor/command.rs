@@ -332,17 +332,20 @@ pub enum Command {
         task_id: String,
         path: String,
         directory: bool,
+        project: Option<String>,
         reply: oneshot::Sender<Result<(), String>>,
     },
     RenameFile {
         task_id: String,
         path: String,
         new_path: String,
+        project: Option<String>,
         reply: oneshot::Sender<Result<(), String>>,
     },
     DeleteFile {
         task_id: String,
         path: String,
+        project: Option<String>,
         reply: oneshot::Sender<Result<(), String>>,
     },
     /// Plain-text search across the task's project working tree.

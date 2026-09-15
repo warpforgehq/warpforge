@@ -495,21 +495,35 @@ pub enum Method {
         #[serde(default)]
         project: Option<String>,
     },
+    /// Create a file (or directory) in the task's working tree, or in the
+    /// project's own checkout when no task owns the tree.
     #[serde(rename = "file.create")]
     FileCreate {
+        #[serde(default)]
         task_id: String,
         path: String,
         #[serde(default)]
         directory: bool,
+        #[serde(default)]
+        project: Option<String>,
     },
     #[serde(rename = "file.rename")]
     FileRename {
+        #[serde(default)]
         task_id: String,
         path: String,
         new_path: String,
+        #[serde(default)]
+        project: Option<String>,
     },
     #[serde(rename = "file.delete")]
-    FileDelete { task_id: String, path: String },
+    FileDelete {
+        #[serde(default)]
+        task_id: String,
+        path: String,
+        #[serde(default)]
+        project: Option<String>,
+    },
     /// Plain-text search across the task's project working tree (grep). Powers
     /// "go to definition" (a symbol under the cursor resolved to its definition
     /// lines) and quick symbol lookup, without needing a full LSP server.

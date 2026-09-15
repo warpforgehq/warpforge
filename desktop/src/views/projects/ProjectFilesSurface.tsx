@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { daemon } from "@/daemon";
@@ -32,6 +32,7 @@ export interface ProjectFilesSurfaceProps {
  * session (`project:<name>`), so switching project no longer destroys them.
  */
 export function ProjectFilesSurface({ project, rootPath }: ProjectFilesSurfaceProps) {
+  const queryClient = useQueryClient();
   const { session } = useProjectSession(project, rootPath);
   const open = session.files;
   const filesQuery = useProjectFilesQuery(project, false);
@@ -173,7 +174,9 @@ export function ProjectFilesSurface({ project, rootPath }: ProjectFilesSurfacePr
       project={project}
       onSave={handleSave}
       rootPath={rootPath}
-      onRefresh={() => void filesQuery.refetch()}
+      onRefresh={() =>
+        void queryClient.invalidateQueries({ queryKey: ["projectFileList", project] })
+      }
       onGotoDefinition={searchSymbol}
       onOpenSymbol={openSymbol}
       gotoLocation={gotoLocation}
