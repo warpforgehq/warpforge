@@ -37,6 +37,7 @@ import {
   LANE_TWISTY_PX,
   SIDEBAR_INDENT_PX,
   SIDEBAR_MAX_INDENT_LEVELS,
+  SIDEBAR_ROW_INSET_PX,
   SIDEBAR_STATE_META,
   snoozeWakeLabel,
   type SidebarTaskState,
@@ -289,9 +290,9 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
             data-task-state={state}
             onClick={() => onOpen(task.id)}
             aria-label={`Open task: ${label}`}
-            style={{ paddingLeft: gutterWidth + LANE_TWISTY_PX }}
+            style={{ paddingLeft: SIDEBAR_ROW_INSET_PX + gutterWidth + LANE_TWISTY_PX }}
             className={cn(
-              "flex h-8 w-full items-center gap-2 rounded-md pr-2 text-left transition-colors",
+              "flex h-8 w-full items-center gap-2 rounded-md pr-1.5 text-left transition-colors",
               "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
               active ? "font-medium text-foreground" : "hover:bg-accent/60",
             )}
@@ -341,11 +342,11 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
                 className={cn("size-3.5 shrink-0", receded && "opacity-40 grayscale")}
               />
               {state === "snoozed" ? (
-                <span className="tnum w-8 text-right text-[11px] text-info/80">
+                <span className="tnum w-7 text-right text-[11px] text-info/80">
                   {snoozeWakeLabel(task.snoozedUntil!, nowSec)}
                 </span>
               ) : (
-                <span className="tnum w-8 text-right text-[11px] text-muted-foreground/50">
+                <span className="tnum w-7 text-right text-[11px] text-muted-foreground/50">
                   {meta.live ? <LiveElapsed since={task.updatedAt} /> : elapsed(task.updatedAt)}
                 </span>
               )}
@@ -368,7 +369,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
           data-expand={task.id}
           aria-label={`${expanded ? "Collapse" : "Expand"} ${childCount} subtask${childCount === 1 ? "" : "s"} of ${label}`}
           onClick={() => onToggle(task.id)}
-          style={{ left: gutterWidth }}
+          style={{ left: SIDEBAR_ROW_INSET_PX + gutterWidth }}
           className="absolute top-1/2 grid size-4 -translate-y-1/2 place-items-center rounded text-muted-foreground/50 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <ChevronRight

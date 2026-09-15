@@ -565,23 +565,26 @@ describe("nested rail data", () => {
     const two = rows.find((row) => row.task.id === "two")!;
     // x = level × INDENT + half the twisty lane, so the vertical sits under
     // the ancestor's chevron; the run ends where the child's content starts.
+    // x = base inset (12) + level × INDENT + half the twisty lane (8), so a
+    // depth-1 connector at x=20 lands under the depth-0 chevron centre.
     expect(railLanes(one.depth, one.ancestorLines, one.isLast, false)).toEqual([
-      { active: false, level: 0, run: 20, shape: "tee", x: 8 },
+      { active: false, level: 0, run: 20, shape: "tee", x: 20 },
     ]);
     expect(railLanes(two.depth, two.ancestorLines, two.isLast, true)).toEqual([
-      { active: true, level: 0, run: 20, shape: "elbow", x: 8 },
+      { active: true, level: 0, run: 20, shape: "elbow", x: 20 },
     ]);
   });
 
   it("draws pass-through lanes only where the ancestor continues", () => {
     expect(railLanes(3, [true, false, true], true, false)).toEqual([
-      { active: false, level: 0, run: 1, shape: "pass", x: 8 },
-      { active: false, level: 2, run: 20, shape: "elbow", x: 32 },
+      { active: false, level: 0, run: 1, shape: "pass", x: 20 },
+      { active: false, level: 2, run: 20, shape: "elbow", x: 44 },
     ]);
   });
 
   it("keeps deeper rails on one evenly spaced grid and clamps at five levels", () => {
+    // Level 1 at x=32 (base 12 + 12 + 8) sits under a depth-1 chevron centre.
     const lanes = railLanes(7, [true, true, true, true, true, true, true], true, false);
-    expect(lanes.map((lane) => lane.x)).toEqual([8, 20, 32, 44, 56]);
+    expect(lanes.map((lane) => lane.x)).toEqual([20, 32, 44, 56, 68]);
   });
 });

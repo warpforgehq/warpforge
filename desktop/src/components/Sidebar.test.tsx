@@ -746,6 +746,46 @@ describe("Sidebar workspace tree", () => {
     expect(quiet.querySelector('[data-lane="title"]')?.previousElementSibling).toBeNull();
   });
 
+  it("pins the row's left inset and the trimmed meta lane", () => {
+    const state = makeState([
+      task("lead", { prompt: "Lead", status: "running" }),
+      task("child", { parentTaskId: "lead", prompt: "Child", status: "running" }),
+    ]);
+    renderSidebar(state);
+    fireEvent.click(screen.getByRole("button", { name: /^Expand 1 subtask of Lead/ }));
+
+    // padding-left = base inset 12 + depth × 12 + twisty lane 16.
+    expect(taskRows("lead")[0]).toHaveStyle({ paddingLeft: "28px" });
+    expect(taskRows("child")[0]).toHaveStyle({ paddingLeft: "40px" });
+
+    // The meta lane fits count + logo + elapsed at 68px (was 72px).
+    const meta = taskRows("child")[0].querySelector<HTMLElement>('[data-lane="meta"]')!;
+    expect(meta).toHaveStyle({ width: "68px" });
+  });
+
+  it("keeps depth-1 and depth-2 rails under the parent chevron after the inset", () => {
+    const state = makeState([
+      task("lead", { prompt: "Lead", status: "running" }),
+      task("mid", { parentTaskId: "lead", prompt: "Mid", status: "running" }),
+      task("leaf", { parentTaskId: "mid", prompt: "Leaf", status: "running" }),
+    ]);
+    renderSidebar(state);
+    fireEvent.click(screen.getByRole("button", { name: / of Lead$/ }));
+    fireEvent.click(screen.getByRole("button", { name: / of Mid$/ }));
+
+    const rail = (id: string, level: number) =>
+      taskRows(id)[0]
+        .closest("[data-rail-depth]")!
+        .querySelector<HTMLElement>(`[data-rail-level="${level}"]`);
+    // Lead's chevron centre = 12 + 0 × 12 + 8 = 20; Mid's = 12 + 12 + 8 = 32.
+    // So Mid's connector (level 0) at 20 sits under Lead's chevron, and Leaf's
+    // connector (level 1) at 32 sits under Mid's. Lead has no following sibling,
+    // so Leaf draws no pass-through on level 0.
+    expect(rail("mid", 0)).toHaveStyle({ left: "20px" });
+    expect(rail("leaf", 0)).toBeNull();
+    expect(rail("leaf", 1)).toHaveStyle({ left: "32px" });
+  });
+
   it("draws a lane for every continuing ancestor", () => {
     const state = makeState([
       task("a", { prompt: "A", updatedAt: 100 }),

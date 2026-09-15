@@ -5,15 +5,21 @@ import type { SidebarTaskState } from "./stateMeta";
 /** Indent applied per nesting level of a subtask row, in px. On the 4px grid. */
 export const SIDEBAR_INDENT_PX = 12;
 
+/** Base left inset before the twisty lane, uniform at every depth: keeps the
+ *  chevron and glyph off the sidebar edge. */
+export const SIDEBAR_ROW_INSET_PX = 12;
+
 /** Deeper nesting stops indenting here so the title lane keeps its minimum. */
 export const SIDEBAR_MAX_INDENT_LEVELS = 5;
 
 export const RAIL_W = 1;
 export const RAIL_W_ACTIVE = 2;
-export const RAIL_ELBOW_RADIUS = 4;
+export const RAIL_ELBOW_RADIUS = 8;
 export const LANE_TWISTY_PX = 16;
 export const LANE_GLYPH_PX = 16;
-export const LANE_META_PX = 72;
+/** Fits count (16) + agent logo (14) + elapsed (28) at the meta lane's 4px
+ *  internal gaps, on the 4px grid: 66px of content in 68px. */
+export const LANE_META_PX = 68;
 
 export interface RailLane {
   level: number;
@@ -51,14 +57,14 @@ export function railLanes(
   const lanes: RailLane[] = [];
   for (let level = 0; level < levels; level += 1) {
     const connector = level === levels - 1;
-    const x = level * SIDEBAR_INDENT_PX + RAIL_LANE_OFFSET_PX;
+    const x = SIDEBAR_ROW_INSET_PX + level * SIDEBAR_INDENT_PX + RAIL_LANE_OFFSET_PX;
     if (connector) {
       const childGutter = Math.min(depth, SIDEBAR_MAX_INDENT_LEVELS) * SIDEBAR_INDENT_PX;
       lanes.push({
         active: onActivePath,
         level,
-        // Ends where the child's content starts: gutter + its twisty lane.
-        run: childGutter + LANE_TWISTY_PX - x,
+        // Ends where the child's content starts: base inset + gutter + twisty.
+        run: SIDEBAR_ROW_INSET_PX + childGutter + LANE_TWISTY_PX - x,
         shape: isLast ? "elbow" : "tee",
         x,
       });
