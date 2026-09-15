@@ -135,7 +135,13 @@ export function deriveTranscriptRows(
 
   const flushGroup = () => {
     if (group.length === 0) return;
-    const first = group[0];
+    const first = group.find((entry) => !sessionUpdateKey(entry.update, entry.mergedIndex).startsWith("i:")) ?? group[0];
+    // The group's identity has to survive the session cap. `capSessionUpdates`
+    // drops the oldest updates, so an index-based key changes under a long
+    // session and every override keyed on the old id is orphaned — which is
+    // why a group could refuse to stay folded once the transcript was big.
+    // Anchor on the first item that has a real id (a tool call, an edit, a
+    // permission) and keep the index only for a group that has none.
     const groupId = `work:${sessionUpdateKey(first.update, first.mergedIndex)}`;
     const items: ActivityItem[] = group.map((entry) => ({
       key: sessionUpdateKey(entry.update, entry.mergedIndex),

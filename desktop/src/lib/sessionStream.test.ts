@@ -69,6 +69,45 @@ describe("session stream coalescing", () => {
     expect(reopened.id).toBe(group.id);
   });
 
+  it("keeps a group's identity when the session cap drops its oldest lines", () => {
+    const updates: SessionUpdate[] = [
+      { kind: "agent_thought", text: "Looking at the two files" },
+      {
+        kind: "tool_call",
+        status: "completed",
+        title: "Read file '/repo/a.ts'",
+        tool_call_id: "r1",
+        tool_kind: "read",
+      },
+      {
+        kind: "tool_call",
+        status: "completed",
+        title: "Read file '/repo/b.ts'",
+        tool_call_id: "r2",
+        tool_kind: "read",
+      },
+    ];
+
+    const whole = deriveTranscriptRows(updates, new Map(), null, null, false)[0];
+    const trimmed = deriveTranscriptRows(updates.slice(1), new Map(), null, null, false)[0];
+    if (whole.kind !== "activity" || trimmed.kind !== "activity") {
+      throw new Error("expected activity groups");
+    }
+    // The leading thought has no id, so an index-based key would change here and
+    // orphan the reader's fold on every cap trim.
+    expect(trimmed.groupId).toBe(whole.groupId);
+
+    const folded = deriveTranscriptRows(
+      updates.slice(1),
+      new Map([[whole.groupId, false]]),
+      null,
+      null,
+      false,
+    )[0];
+    if (folded.kind !== "activity") throw new Error("expected an activity group");
+    expect(folded.open).toBe(false);
+  });
+
   it("stops a group pulsing once the session is no longer working", () => {
     // A call left in progress by a killed session rests in the transcript as
     // history. Reading it as activity made every group pulse forever after a
