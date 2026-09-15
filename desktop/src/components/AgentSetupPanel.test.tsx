@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { PropsWithChildren, ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { agentUpdatesQueryKey } from "@/hooks/useAgentUpdates";
 import type { DetectedAgent } from "@/protocol";
 
 const { daemonState, detectAgents, installAgent, probeAgent, saveAgents } = vi.hoisted(() => ({
@@ -50,6 +51,19 @@ const render = (ui: ReactElement) => renderBare(ui, { wrapper });
 describe("AgentSetupPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient.clear();
+  });
+
+  it("seeds the list from the app-wide detection, skipping the detecting skeleton", () => {
+    queryClient.setQueryData(agentUpdatesQueryKey, [
+      agent("claude", { installed: true, version: "1.0.0" }),
+    ]);
+    render(<AgentSetupPanel />);
+
+    expect(screen.getByText("Claude")).toBeInTheDocument();
+    expect(screen.queryByTestId("settings-list-skeleton")).not.toBeInTheDocument();
+    // The cache is this same detection; no second shell-out on open.
+    expect(detectAgents).not.toHaveBeenCalled();
   });
 
   it("auto-detects agents when no detected prop is provided", async () => {

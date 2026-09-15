@@ -1,6 +1,8 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Bot, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft } from "lucide-react";
 import * as React from "react";
 
+import { daemon } from "@/daemon";
 import { elapsed } from "@/lib/status";
 import type { PrAssistantState } from "@/lib/taskOrigin";
 import { cn } from "@/lib/utils";
@@ -44,6 +46,7 @@ export const PullRequestRow = React.memo(function PullRequestRow({
   actions: PullRequestRowActions;
 }) {
   const ref = React.useRef<HTMLButtonElement>(null);
+  const queryClient = useQueryClient();
 
   // Keyboard navigation moves the selection, and the row it lands on has to
   // be on screen. `nearest` keeps a click from scrolling anything.
@@ -51,6 +54,28 @@ export const PullRequestRow = React.memo(function PullRequestRow({
     if (!active) return;
     ref.current?.scrollIntoView({ block: "nearest" });
   }, [active]);
+
+  // Warm the review the row points at, on the enter events only: hovering does
+  // not fire per pointer move, and an already-cached key skips the request
+  // entirely. Same keys and staleness the detail pane reads, or this is wasted.
+  const prefetch = React.useCallback(() => {
+    const detailsKey = ["pull", "details", pr.project, pr.number] as const;
+    const threadKey = ["pull", "thread", pr.project, pr.number] as const;
+    if (queryClient.getQueryData(detailsKey) === undefined) {
+      void queryClient.prefetchQuery({
+        queryKey: detailsKey,
+        queryFn: () => daemon.pullDetails(pr.project, pr.number),
+        staleTime: 60_000,
+      });
+    }
+    if (queryClient.getQueryData(threadKey) === undefined) {
+      void queryClient.prefetchQuery({
+        queryKey: threadKey,
+        queryFn: () => daemon.pullThread(pr.project, pr.number),
+        staleTime: 30_000,
+      });
+    }
+  }, [pr.number, pr.project, queryClient]);
 
   const draft = pr.draft && pr.state === "open";
   // The listing carries these, but an older cached payload may not.
@@ -61,6 +86,8 @@ export const PullRequestRow = React.memo(function PullRequestRow({
       ref={ref}
       type="button"
       onClick={() => actions.onOpen(pr)}
+      onFocus={prefetch}
+      onMouseEnter={prefetch}
       title={pr.title}
       aria-current={active ? "true" : undefined}
       className={cn(

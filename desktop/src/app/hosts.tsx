@@ -1,13 +1,20 @@
-import { type ComponentProps, useCallback, useState, useSyncExternalStore } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { type ComponentProps, useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import { FindInFiles, FIND_LIMIT } from "@/components/FindInFiles";
+import { LANGUAGE_SERVERS_QUERY_KEY } from "@/components/LanguageServersPanel";
 import { QuickOpen } from "@/components/QuickOpen";
 import Sidebar from "@/components/Sidebar";
 import { daemon } from "@/daemon";
-import { useAgentUpdates } from "@/hooks/useAgentUpdates";
+import {
+  AGENT_UPDATE_POLL_MS,
+  agentUpdatesQueryKey,
+  useAgentUpdates,
+} from "@/hooks/useAgentUpdates";
 import { useFindInFilesShortcut } from "@/hooks/useFindInFilesShortcut";
 import { usePrAssistantLifecycle } from "@/hooks/usePrAssistantLifecycle";
 import { useQuickOpenShortcut } from "@/hooks/useQuickOpenShortcut";
+import { runOnIdle } from "@/lib/idle";
 import { ensureTask, setTaskFind } from "@/lib/sessionStore";
 import type { FileDoc, SymbolMatch } from "@/protocol";
 import { useProjectFileListQuery } from "@/query";
@@ -42,6 +49,37 @@ export function PrAssistantLifecycleHost({ projects }: { projects: string[] }) {
  */
 export function AgentUpdatesHost() {
   useAgentUpdates();
+  return null;
+}
+
+/**
+ * Warms the two Settings detections the user would otherwise watch paint a
+ * skeleton. Both shell out and take seconds; on idle after the daemon connects,
+ * the cache already holds the answer the page will read. Keys already in cache
+ * are skipped, and the agent key is the same one `AgentUpdatesHost` polls.
+ */
+export function SettingsPrefetchHost() {
+  const connection = useSyncExternalStore(daemon.subscribe, getConnection);
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (connection !== "connected") return;
+    return runOnIdle(() => {
+      if (queryClient.getQueryData(LANGUAGE_SERVERS_QUERY_KEY) === undefined) {
+        void queryClient.prefetchQuery({
+          queryKey: LANGUAGE_SERVERS_QUERY_KEY,
+          queryFn: () => daemon.detectLanguageServers(),
+          staleTime: 5 * 60_000,
+        });
+      }
+      if (queryClient.getQueryData(agentUpdatesQueryKey) === undefined) {
+        void queryClient.prefetchQuery({
+          queryKey: agentUpdatesQueryKey,
+          queryFn: () => daemon.detectAgents(),
+          staleTime: AGENT_UPDATE_POLL_MS - 5_000,
+        });
+      }
+    });
+  }, [connection, queryClient]);
   return null;
 }
 

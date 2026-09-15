@@ -26,7 +26,7 @@ export function TrackerImage({ src, alt, title }: MarkdownImageProps) {
     // Bytes, and possibly megabytes, held for the session: reopening a work
     // item must show its screenshots immediately, not re-download them after a
     // minute and paint the placeholder again.
-    gcTime: 60_000,
+    gcTime: Infinity,
     queryFn: () => daemon.trackerAttachment(src),
     queryKey: ["trackerAttachment", src],
     // The signed URL behind an attachment is short-lived, but the daemon

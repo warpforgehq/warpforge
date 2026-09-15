@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { daemon } from "../daemon";
 import { SettingsListSkeleton } from "./SettingsListSkeleton";
 
-const QUERY_KEY = ["languageServers"];
+export const LANGUAGE_SERVERS_QUERY_KEY = ["languageServers"];
 
 /** Last meaningful line of command output, skipping npm's log-file boilerplate
  * so a failed install surfaces the actual error ("404 Not Found", etc.). */
@@ -40,7 +40,7 @@ export default function LanguageServersPanel() {
     error: loadError,
     refetch,
   } = useQuery({
-    queryKey: QUERY_KEY,
+    queryKey: LANGUAGE_SERVERS_QUERY_KEY,
     queryFn: () => daemon.detectLanguageServers(),
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
@@ -60,7 +60,7 @@ export default function LanguageServersPanel() {
           [id]: lastLine(result.output) || "install failed",
         }));
       }
-      queryClient.setQueryData(QUERY_KEY, await daemon.detectLanguageServers());
+      queryClient.setQueryData(LANGUAGE_SERVERS_QUERY_KEY, await daemon.detectLanguageServers());
     } catch (e) {
       setErrors((prev) => ({ ...prev, [id]: e instanceof Error ? e.message : String(e) }));
     } finally {

@@ -1,10 +1,30 @@
-import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { PropsWithChildren, ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { daemon } from "@/daemon";
 import type { PullRequestSummary } from "@/protocol";
 
 import { PullRequestRow } from "./PullRequestRow";
 import { ReviewDecisionChip } from "./ReviewDecisionChip";
+
+vi.mock("@/daemon", () => ({
+  daemon: {
+    pullDetails: vi.fn<(project: string, number: number) => Promise<unknown>>(async () => ({})),
+    pullThread: vi.fn<(project: string, number: number) => Promise<unknown>>(async () => ({})),
+  },
+}));
+
+function renderWithQuery(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(ui, {
+    wrapper: ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    ),
+  });
+}
 
 function pr(overrides: Partial<PullRequestSummary> = {}): PullRequestSummary {
   return {
@@ -31,14 +51,16 @@ function pr(overrides: Partial<PullRequestSummary> = {}): PullRequestSummary {
 describe("PullRequestRow", () => {
   it("opens the pull request when clicked", async () => {
     const onOpen = vi.fn<(pr: PullRequestSummary) => void>();
-    render(<PullRequestRow pr={pr()} unseen={false} active={false} actions={{ onOpen }} />);
+    renderWithQuery(
+      <PullRequestRow pr={pr()} unseen={false} active={false} actions={{ onOpen }} />,
+    );
     const user = (await import("@testing-library/user-event")).default.setup();
     await user.click(screen.getByRole("button", { name: /Add widget/ }));
     expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ number: 7 }));
   });
 
   it("shows how big the review is", () => {
-    render(
+    renderWithQuery(
       <PullRequestRow pr={pr()} unseen={false} active={false} actions={{ onOpen: () => {} }} />,
     );
     expect(screen.getByText("+312")).toBeInTheDocument();
@@ -46,7 +68,7 @@ describe("PullRequestRow", () => {
   });
 
   it("leaves the counts off a pull request whose size is unknown", () => {
-    render(
+    renderWithQuery(
       <PullRequestRow
         pr={pr({ additions: 0, deletions: 0 })}
         unseen={false}
@@ -58,7 +80,7 @@ describe("PullRequestRow", () => {
   });
 
   it("reads the review decision off a glyph, not a full-width chip", () => {
-    render(
+    renderWithQuery(
       <PullRequestRow
         pr={pr({ reviewDecision: "APPROVED" })}
         unseen={false}
@@ -72,7 +94,7 @@ describe("PullRequestRow", () => {
   });
 
   it("says a PR is a draft with its glyph rather than a word", () => {
-    render(
+    renderWithQuery(
       <PullRequestRow
         pr={pr({ draft: true })}
         unseen={false}
@@ -85,7 +107,7 @@ describe("PullRequestRow", () => {
   });
 
   it("keeps the row to meta over title, leaving labels to the review's meta rail", () => {
-    const { container } = render(
+    const { container } = renderWithQuery(
       <PullRequestRow
         pr={pr({
           labels: ["a", "b", "c", "d", "e"].map((name) => ({ name, color: "ff0000" })),
@@ -104,7 +126,7 @@ describe("PullRequestRow", () => {
   });
 
   it("marks an unseen PR in a lane that is reserved on every row", () => {
-    const { container, rerender } = render(
+    const { container, rerender } = renderWithQuery(
       <PullRequestRow pr={pr()} unseen={true} active={false} actions={{ onOpen: () => {} }} />,
     );
     const lane = () => container.querySelector("button")!.lastElementChild!.firstElementChild!;
@@ -121,7 +143,7 @@ describe("PullRequestRow", () => {
   });
 
   it("keeps the compact two-line composition with smaller type and room to breathe", () => {
-    const { container } = render(
+    const { container } = renderWithQuery(
       <PullRequestRow pr={pr()} unseen={false} active={false} actions={{ onOpen: () => {} }} />,
     );
     const row = container.querySelector("button")!;
@@ -146,7 +168,7 @@ describe("PullRequestRow", () => {
   });
 
   it("keeps the repo truncating while the numeric lanes stay fixed", () => {
-    const { container } = render(
+    const { container } = renderWithQuery(
       <PullRequestRow
         pr={pr({
           additions: 28525,
@@ -182,7 +204,7 @@ describe("PullRequestRow", () => {
       { additions: 1, deletions: 1, text: "+1 −1" },
     ];
     for (const item of cases) {
-      const { container, unmount } = render(
+      const { container, unmount } = renderWithQuery(
         <PullRequestRow
           pr={pr({ additions: item.additions, deletions: item.deletions })}
           unseen={false}
@@ -204,7 +226,7 @@ describe("PullRequestRow", () => {
   });
 
   it("renders no diffstat at all when a size is unknown", () => {
-    const { container } = render(
+    const { container } = renderWithQuery(
       <PullRequestRow
         pr={pr({ additions: 0, deletions: 0 })}
         unseen={false}
@@ -217,7 +239,7 @@ describe("PullRequestRow", () => {
   });
 
   it("marks a running assistant review with the house working glyph", () => {
-    render(
+    renderWithQuery(
       <PullRequestRow
         pr={pr()}
         unseen={false}
@@ -232,7 +254,7 @@ describe("PullRequestRow", () => {
   });
 
   it("marks a finished assistant review that has not been opened", () => {
-    render(
+    renderWithQuery(
       <PullRequestRow
         pr={pr()}
         unseen={false}
@@ -245,7 +267,7 @@ describe("PullRequestRow", () => {
   });
 
   it("keeps one status lane for the assistant and the decision, so glyphs never stair-step", () => {
-    const { container, rerender } = render(
+    const { container, rerender } = renderWithQuery(
       <PullRequestRow
         pr={pr({ reviewDecision: "APPROVED" })}
         unseen={false}
@@ -276,7 +298,7 @@ describe("PullRequestRow", () => {
   });
 
   it("wears the sidebar's row language rather than a full-bleed band", () => {
-    const { container, rerender } = render(
+    const { container, rerender } = renderWithQuery(
       <PullRequestRow pr={pr()} unseen={false} active={false} actions={{ onOpen: () => {} }} />,
     );
     const row = () => container.querySelector("button")!;
@@ -291,11 +313,43 @@ describe("PullRequestRow", () => {
     );
     expect(row().className).toContain("bg-accent");
   });
+
+  it("prefetches the review on the first enter, and skips it once cached", async () => {
+    vi.clearAllMocks();
+    renderWithQuery(
+      <PullRequestRow pr={pr()} unseen={false} active={false} actions={{ onOpen: () => {} }} />,
+    );
+    const button = screen.getByRole("button", { name: /Add widget/ });
+
+    expect(daemon.pullDetails).not.toHaveBeenCalled();
+    await userEvent.hover(button);
+    await waitFor(() => expect(daemon.pullDetails).toHaveBeenCalledTimes(1));
+    expect(daemon.pullDetails).toHaveBeenCalledWith("warpforge", 7);
+    expect(daemon.pullThread).toHaveBeenCalledTimes(1);
+
+    // Re-entering a row whose review is already cached spends nothing.
+    await userEvent.unhover(button);
+    await userEvent.hover(button);
+    await Promise.resolve();
+    expect(daemon.pullDetails).toHaveBeenCalledTimes(1);
+    expect(daemon.pullThread).toHaveBeenCalledTimes(1);
+  });
+
+  it("prefetches on keyboard focus, not just the pointer", async () => {
+    vi.clearAllMocks();
+    renderWithQuery(
+      <PullRequestRow pr={pr()} unseen={false} active={false} actions={{ onOpen: () => {} }} />,
+    );
+
+    screen.getByRole("button", { name: /Add widget/ }).focus();
+    await waitFor(() => expect(daemon.pullThread).toHaveBeenCalledTimes(1));
+    expect(daemon.pullDetails).toHaveBeenCalledWith("warpforge", 7);
+  });
 });
 
 describe("ReviewDecisionChip", () => {
   it("names the three GitHub decisions and renders nothing without one", () => {
-    const { rerender } = render(<ReviewDecisionChip decision="APPROVED" />);
+    const { rerender } = renderWithQuery(<ReviewDecisionChip decision="APPROVED" />);
     expect(screen.getByText("Approved")).toBeInTheDocument();
     rerender(<ReviewDecisionChip decision="CHANGES_REQUESTED" />);
     expect(screen.getByText("Changes requested")).toBeInTheDocument();

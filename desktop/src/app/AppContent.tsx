@@ -1,19 +1,29 @@
 import { Loader2 } from "lucide-react";
-import { Suspense, lazy, useSyncExternalStore } from "react";
+import { Suspense, lazy, useEffect, useSyncExternalStore } from "react";
 
 import AppHeader from "@/components/AppHeader";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { daemon } from "@/daemon";
 import type { ConnectionState } from "@/daemon/types";
+import { runOnIdle } from "@/lib/idle";
 import type { Snapshot, TaskInfo } from "@/protocol";
 import type { View } from "@/store/ui";
 
-const Automations = lazy(() => import("../views/Automations"));
-const InboxView = lazy(() => import("../views/InboxView"));
-const MissionControl = lazy(() => import("../views/MissionControl"));
+import {
+  loadAutomations,
+  loadInboxView,
+  loadMissionControl,
+  loadProjects,
+  loadTaskDetail,
+  prefetchRouteChunks,
+} from "./routePrefetch";
+
+const Automations = lazy(loadAutomations);
+const InboxView = lazy(loadInboxView);
+const MissionControl = lazy(loadMissionControl);
 const NewTaskDialog = lazy(() => import("../views/NewTaskDialog"));
-const Projects = lazy(() => import("../views/Projects"));
-const TaskDetail = lazy(() => import("../views/TaskDetail"));
+const Projects = lazy(loadProjects);
+const TaskDetail = lazy(loadTaskDetail);
 
 function LiveMissionControl({
   onOpenTask,
@@ -65,6 +75,14 @@ export function AppContent({
   projectNames,
   showPersistent,
 }: AppContentProps) {
+  // The route chunks are the only reason the Suspense fallback ever paints.
+  // Once the daemon is up, load them on idle so the first visit to each view
+  // renders from an already-warm chunk.
+  useEffect(() => {
+    if (connection !== "connected") return;
+    return runOnIdle(prefetchRouteChunks);
+  }, [connection]);
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {!newTaskOpen && (

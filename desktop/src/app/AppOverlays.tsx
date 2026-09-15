@@ -8,8 +8,14 @@ import { useTauriClose } from "@/hooks/useTauriClose";
 import type { Snapshot, TaskInfo } from "@/protocol";
 import { useUi } from "@/store/ui";
 
-import { getPendingAgentSetup, AgentUpdatesHost, PrAssistantLifecycleHost, QuickOpenHost } from "./hosts";
 import type { AppDialogs } from "./dialogs";
+import {
+  getPendingAgentSetup,
+  AgentUpdatesHost,
+  PrAssistantLifecycleHost,
+  QuickOpenHost,
+  SettingsPrefetchHost,
+} from "./hosts";
 
 const AddProjectDialog = lazy(() => import("../views/AddProjectDialog"));
 const AgentSetupDialog = lazy(() => import("../views/AgentSetupDialog"));
@@ -53,6 +59,7 @@ export function AppOverlays({
       <QuickOpenHost openTaskId={openTaskId} hasOpenTask={hasOpenTask} />
       <PrAssistantLifecycleHost projects={projects} />
       <AgentUpdatesHost />
+      <SettingsPrefetchHost />
       {addProjectOpen && (
         <AddProjectDialog
           open

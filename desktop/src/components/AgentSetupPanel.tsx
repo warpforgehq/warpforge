@@ -46,9 +46,12 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
   const state = useSyncExternalStore(daemon.subscribe, daemon.getState);
   const configured = state.snapshot.agents;
   const queryClient = useQueryClient();
+  // The app-wide agent poll already detects on connect; seeding from its cache
+  // means Settings renders rows immediately instead of its detecting skeleton.
+  const cachedAgents = () => queryClient.getQueryData<DetectedAgent[]>(agentUpdatesQueryKey);
 
   const [agents, setAgents] = useState<DetectedAgent[]>(
-    () => detected ?? (configured ?? []).map(fromConfig),
+    () => detected ?? cachedAgents() ?? (configured ?? []).map(fromConfig),
   );
   const [enabled, setEnabled] = useState<Set<string>>(
     () =>
@@ -67,7 +70,7 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
   const [busy, setBusy] = useState<Set<string>>(() => new Set());
   const [probing, setProbing] = useState<Set<string>>(() => new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [refreshing, setRefreshing] = useState(!detected);
+  const [refreshing, setRefreshing] = useState(() => !detected && cachedAgents() === undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -76,6 +79,9 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
 
   useEffect(() => {
     if (detected) return;
+    // The app-wide poll's cache is this same detection; re-running it on every
+    // Settings open is the redundant shell-out the seed above avoids.
+    if (queryClient.getQueryData(agentUpdatesQueryKey) !== undefined) return;
     let cancelled = false;
     setRefreshing(true);
     daemon
