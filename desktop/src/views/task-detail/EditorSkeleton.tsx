@@ -12,14 +12,17 @@ import { ROW_HEIGHT_PX } from "../../components/inbox/PullDiffHunk";
 
 /**
  * Placeholder for an editor or diff body whose module or document has not
- * arrived: a 40px gutter of right-aligned line numbers beside a code column,
- * on the diff's measured 20px row. The indent cycles a fixed pattern so the
- * block reads as code, and the line count comes from the slot the real
- * content will fill, so the swap is a fill rather than a layout change.
+ * arrived: CodeMirror's own 26px gutter of right-aligned line numbers, flush
+ * to the left edge, beside a code column on the diff's measured 20px row. The
+ * indent cycles a fixed pattern so the block reads as code, and the line count
+ * comes from the slot the real content will fill, so the swap is a fill rather
+ * than a layout change.
  */
 
 const INDENT_STEPS = [0, 0, 2, 4, 4, 2, 0, 2, 4, 0] as const;
 const FALLBACK_LINES = 12;
+/** `.cm-gutters` sits flush left at 26px; this is the air after its rule. */
+const GUTTER_GAP_PX = 8;
 
 export function EditorSkeleton({
   height,
@@ -78,15 +81,15 @@ export function EditorSkeleton({
           return (
             <div
               key={line}
-              className="flex shrink-0 items-center gap-3 px-3"
+              className="flex shrink-0 items-center"
               style={{ height: ROW_HEIGHT_PX }}
             >
-              <span className="flex w-10 shrink-0 justify-end">
+              <span className="flex w-[26px] shrink-0 justify-end border-r border-border pr-1">
                 <SkeletonBar h={SKELETON_LINE_BAR_PX} className="w-3" />
               </span>
               <span
-                className="flex h-full min-w-0 flex-1 items-center"
-                style={{ paddingLeft: indent * 8 }}
+                className="flex h-full min-w-0 flex-1 items-center pr-3"
+                style={{ paddingLeft: GUTTER_GAP_PX + indent * 8 }}
               >
                 <SkeletonBar h={SKELETON_LINE_BAR_PX} w={skeletonWidth(line, indent)} />
               </span>

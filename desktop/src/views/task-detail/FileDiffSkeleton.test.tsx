@@ -79,7 +79,9 @@ describe("FileDiffSkeleton", () => {
     expect(new Set(lanes.map((lane) => lane.className)).size).toBe(1);
     for (const row of rows) {
       expect(row.className).not.toContain("ml-auto");
-      expect(row.firstElementChild!.className).toContain("w-10");
+      // CodeMirror's gutter width, flush to the block's left edge.
+      expect(row.firstElementChild!.className).toContain("w-[26px]");
+      expect(row.children).toHaveLength(2);
     }
   });
 

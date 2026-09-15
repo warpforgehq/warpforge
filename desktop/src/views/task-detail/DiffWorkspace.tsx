@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { daemon } from "../../daemon";
 import type { EditHunk, FileDiff, HunkResolution, TaskDiff } from "../../protocol";
 import { fileAnchor, hunkKey } from "./diffAnchors";
+import { estimateFileHeight, measureDiffRow } from "./diffRowLayout";
 import { DiffSkeleton } from "./DiffSurface";
 import { matchingHunkIndexes } from "./editHunkMatch";
 import { EditorSkeleton } from "./EditorSkeleton";
@@ -31,26 +32,10 @@ const UnifiedDiff = lazy(async () => ({
 }));
 const EMPTY_DIFF_FILES: FileDiff[] = [];
 
-/**
- * A file's rendered height, from its own line counts — the last hunk's reach
- * into the new file, since the CodeMirror editor inside renders the whole
- * document (its own viewport virtualizes, the spacer stays full-height).
- *
- * The fixed 384px estimate this replaces was fine for small diffs and poison
- * for big ones: a 10k-line file is ~200kpx, so `measureElement` kept
- * rewriting every position below it while scrolling, and the whole list
- * lurched. A close estimate means measurement confirms instead of corrects.
- */
-export function estimateFileHeight(file: FileDiff | undefined): number {
-  const HEADER_PX = 36;
-  const LINE_PX = 20;
-  if (!file) return 384;
-  let lastLine = 0;
-  for (const hunk of file.hunks) {
-    lastLine = Math.max(lastLine, hunk.newStart + hunk.newLines);
-  }
-  return HEADER_PX + Math.max(lastLine, 8) * LINE_PX;
-}
+/** Row height model (estimate + measurement guard). Re-exported so the
+ *  surface that paints the shell skeleton and the tests keep one import path,
+ *  while `diffRowLayout` stays free of this component's daemon/query graph. */
+export { estimateFileHeight };
 
 function EmptyChangesState({ onOpenFiles }: { onOpenFiles: () => void }) {
   return (
@@ -138,6 +123,13 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
   const explicitScrollRef = useRef(0);
   const files = diff?.files ?? EMPTY_DIFF_FILES;
 
+  // The measurement guard lives in `diffRowLayout` — see `measureDiffRow`.
+  const measureRow = useCallback(
+    (element: HTMLElement, _entry: ResizeObserverEntry | undefined): number =>
+      measureDiffRow(element, files),
+    [files],
+  );
+
   // Overscan 2, not 1: `scrollToFile` targets a file that may be off screen,
   // and the editor inside it cannot report its hunk position until it is
   // mounted. One row of slack left the target unmounted exactly when it was
@@ -146,12 +138,14 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
     count: files.length,
     estimateSize: (index) => estimateFileHeight(files[index]),
     getScrollElement: () => unifiedScrollParent.current,
+    measureElement: measureRow,
     overscan: 2,
   });
   const splitVirtualizer = useVirtualizer({
     count: files.length,
     estimateSize: (index) => estimateFileHeight(files[index]),
     getScrollElement: () => splitScrollParent.current,
+    measureElement: measureRow,
     overscan: 1,
   });
   const unifiedItems = unifiedVirtualizer.getVirtualItems();

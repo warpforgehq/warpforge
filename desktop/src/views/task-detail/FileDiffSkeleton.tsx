@@ -8,12 +8,13 @@ import type { FileDiff } from "../../protocol";
  * `MergeDiff` / `UnifiedDiff` header (36px, same borders and fill) and the
  * measured 20px diff rows, so the swap is a fill rather than a layout change.
  *
- * A row is the diff's own three columns — a 40px number gutter, the 12px sign
- * lane, then the text — so every content bar starts on one x and the tinted
- * ones are that same column, tinted. Every width comes from the file's index
- * and the row's index, never `Math.random()`, so screenshots and tests are
- * stable. One opacity pulse per block, and the block is only mounted when its
- * row is virtualized in.
+ * A row is the diff's own two columns — CodeMirror's 26px number gutter flush
+ * to the left edge, then the text — so every content bar starts on one x, and
+ * a changed row is that same column tinted over a tinted row, the way
+ * `unifiedMergeView` marks one. Every width comes from the file's index and
+ * the row's index, never `Math.random()`, so screenshots and tests are stable.
+ * One opacity pulse per block, and the block is only mounted when its row is
+ * virtualized in.
  */
 
 /** Path-bar width, percent. Deterministic per file index, 45–65%. */
@@ -87,22 +88,14 @@ export function FileDiffSkeleton({
               data-kind={kind}
               className={cn(
                 "flex h-5 shrink-0 items-center",
-                kind === "add" && "bg-ok/5",
-                kind === "del" && "bg-destructive/5",
+                kind === "add" && "bg-ok/10",
+                kind === "del" && "bg-destructive/10",
               )}
             >
-              <span className="flex w-10 shrink-0 justify-end pr-1.5">
-                <SkeletonBar h={SKELETON_LINE_BAR_PX} className="w-3.5" />
+              <span className="flex w-[26px] shrink-0 justify-end border-r border-border pr-1">
+                <SkeletonBar h={SKELETON_LINE_BAR_PX} className="w-3" />
               </span>
-              <span className="flex w-3 shrink-0 justify-center">
-                {kind !== "ctx" && (
-                  <SkeletonBar
-                    h={SKELETON_LINE_BAR_PX}
-                    className={cn("w-1.5", kind === "add" ? "bg-ok/25" : "bg-destructive/25")}
-                  />
-                )}
-              </span>
-              <span data-lane="text" className="flex min-w-0 flex-1 items-center pr-3">
+              <span data-lane="text" className="flex min-w-0 flex-1 items-center pl-2 pr-3">
                 <SkeletonBar
                   h={SKELETON_LINE_BAR_PX}
                   w={lineWidth(index, row)}
@@ -119,7 +112,7 @@ export function FileDiffSkeleton({
           <div
             aria-hidden
             data-testid="file-skeleton-tail"
-            className="ml-[52px] mr-3 min-h-0 flex-1"
+            className="ml-[34px] mr-3 min-h-0 flex-1"
             style={{
               backgroundImage: TAIL_STRIPES,
               maskImage: TAIL_FADE,
