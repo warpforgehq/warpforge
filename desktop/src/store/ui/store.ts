@@ -17,8 +17,8 @@ export const useUi = create<UiState>()(
     }),
     {
       name: "wf-ui",
-      // Next persisted-shape change must bump this to 7.
-      version: 6,
+      // Next persisted-shape change must bump this to 8.
+      version: 7,
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
         if (version === 0 && state && "sidebarWidth" in state) {
@@ -62,6 +62,13 @@ export const useUi = create<UiState>()(
         // after the caller finds it in the snapshot.
         if (version < 6 && state) {
           state = { ...state, lastTaskId: null };
+        }
+        // Glass is the app's look, not just the chrome's: an install that kept
+        // the work surface solid read as one opaque block beside translucent
+        // panels. The main pane joins the glass for everyone; the Appearance
+        // toggle still turns it back off per machine.
+        if (version < 7 && state) {
+          state = { ...state, bodyGlass: true };
         }
         return state;
       },

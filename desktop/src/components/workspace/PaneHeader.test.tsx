@@ -11,7 +11,7 @@ describe("PaneHeader", () => {
     expect(header.tagName).toBe("HEADER");
     expect(header).toHaveAttribute("data-pane-header");
     expect(header.className).toContain("h-9");
-    expect(header.className).toContain("border-rule");
+    expect(header.className).toContain("border-border");
     expect(header.className).toContain("px-3");
     expect(header.className).not.toMatch(/\bbg-/);
   });

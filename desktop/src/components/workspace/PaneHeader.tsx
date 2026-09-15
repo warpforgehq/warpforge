@@ -28,7 +28,7 @@ export const PaneHeader = React.forwardRef<HTMLElement, PaneHeaderProps>(
     <header
       ref={ref}
       data-pane-header=""
-      className={cn("flex h-9 shrink-0 items-center gap-2 border-b border-rule px-3", className)}
+      className={cn("flex h-9 shrink-0 items-center gap-2 border-b border-border px-3", className)}
       {...props}
     >
       {leading}

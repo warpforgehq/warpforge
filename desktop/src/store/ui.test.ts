@@ -386,7 +386,10 @@ describe("task workspace surface state", () => {
 
     await useUi.persist.rehydrate();
 
-    expect(useUi.getState().bodyGlass).toBe(false);
+    // The v4 pass lowered the floor and pinned glass off; the v7 pass put the
+    // main pane back into the glass so the work surface stops reading as one
+    // opaque block beside translucent panels.
+    expect(useUi.getState().bodyGlass).toBe(true);
     expect(useUi.getState().sidebarOpacity).toBe(SIDEBAR_OPACITY_MIN);
   });
 
@@ -396,6 +399,14 @@ describe("task workspace surface state", () => {
     await useUi.persist.rehydrate();
 
     expect(useUi.getState().sidebarOpacity).toBe(0.75);
+  });
+
+  it("brings the main pane into the glass on upgrade", async () => {
+    localStorage.setItem("wf-ui", JSON.stringify({ state: { bodyGlass: false }, version: 6 }));
+
+    await useUi.persist.rehydrate();
+
+    expect(useUi.getState().bodyGlass).toBe(true);
   });
 });
 

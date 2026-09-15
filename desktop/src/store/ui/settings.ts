@@ -114,7 +114,7 @@ export const createSettingsSlice: UiSlice<SettingsState> = (set) => ({
   transparentWindow: false,
   sidebarOpacity: SIDEBAR_OPACITY_DEFAULT,
   blurRadius: BLUR_RADIUS_DEFAULT,
-  bodyGlass: false,
+  bodyGlass: true,
   lspEnabled: true,
   settingsPage: "appearance",
 

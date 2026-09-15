@@ -57,7 +57,7 @@
    */
   --color-edge: hsl(var(--border) / 1);
   --color-border: hsl(var(--border) / 0.6);
-  --color-rule: hsl(var(--border) / 0.3);
+  --color-rule: hsl(var(--border) / 0.4);
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
