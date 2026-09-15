@@ -100,7 +100,7 @@ export function CollapsedRail({
       onKeyDown={onKeyDown}
       className="flex h-full min-h-0 flex-col items-start border-r border-edge bg-card py-2"
     >
-      <div className="flex w-12 shrink-0 flex-col items-center gap-1 px-2">
+      <div className="flex w-16 shrink-0 flex-col items-center gap-1 px-2">
         <div className="relative flex size-8 items-center justify-center">
           <span
             aria-hidden
@@ -135,7 +135,7 @@ export function CollapsedRail({
 
       <Rule />
 
-      <div className="flex w-12 shrink-0 flex-col items-center gap-1 px-2">
+      <div className="flex w-16 shrink-0 flex-col items-center gap-1 px-2">
         {SEGMENTS.map((item) => (
           <RailButton
             key={item.id}
@@ -165,7 +165,7 @@ export function CollapsedRail({
       {liveLane.tasks.length > 0 && (
         <>
           <Rule />
-          <div className="flex w-12 shrink-0 flex-col items-center gap-1 px-2">
+          <div className="flex w-16 shrink-0 flex-col items-center gap-1 px-2">
             {liveLane.tasks.map((item) => (
               <LiveChip
                 key={item.task.id}
@@ -194,7 +194,7 @@ export function CollapsedRail({
 
       <Rule />
 
-      <div className="flex w-12 shrink-0 flex-col items-center gap-1 px-2">
+      <div className="flex w-16 shrink-0 flex-col items-center gap-1 px-2">
         {agentUpdates > 0 && (
           <RailButton
             icon={Bot}
