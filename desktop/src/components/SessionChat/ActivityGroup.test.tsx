@@ -31,6 +31,7 @@ const updates: SessionUpdate[] = [
     title: "npm test",
     status: "completed",
     tool_kind: "execute",
+    content: "1 test passed",
   },
 ];
 
@@ -79,9 +80,10 @@ describe("ActivityGroup", () => {
 
     const header = screen.getByRole("button", { name: /show the work/i });
     expect(header).toHaveAttribute("aria-expanded", "false");
-    expect(header).toHaveTextContent("Read a.ts");
-    expect(header).toHaveTextContent("Edited b.ts");
-    expect(header).toHaveTextContent("Ran a command");
+    const headerText = header.closest("div")?.textContent ?? "";
+    expect(headerText).toContain("Read a.ts");
+    expect(headerText).toContain("Edited b.ts");
+    expect(headerText).toContain("Ran a command");
     expect(screen.queryByText(/completed/i)).not.toBeInTheDocument();
   });
 
@@ -154,5 +156,69 @@ describe("ActivityGroup", () => {
       "true",
     );
     expect(screen.getByText(/1 failed/)).toBeInTheDocument();
+  });
+
+  it("toggles a step's output from its label, not just the chevron", async () => {
+    renderExpanded();
+
+    const label = screen.getByText("npm test");
+    expect(screen.queryByText("1 test passed")).not.toBeInTheDocument();
+
+    await userEvent.click(label);
+    expect(screen.getByText("1 test passed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /hide output for npm test/i })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+
+    await userEvent.click(label);
+    expect(screen.queryByText("1 test passed")).not.toBeInTheDocument();
+  });
+
+  it("keeps the step chevron visible without hover", () => {
+    renderExpanded();
+
+    const row = screen.getByText("npm test").closest("div.group");
+    const chevron = row?.querySelector(".lucide-chevron-right");
+    expect(chevron?.getAttribute("class")).toContain("opacity-60");
+    expect(row?.className).toContain("hover:bg-accent/40");
+    expect(row?.className).toContain("cursor-pointer");
+  });
+
+  it("leaves a step with nothing to reveal inert", () => {
+    const source: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        tool_call_id: "t1",
+        title: "Use tool",
+        status: "completed",
+        tool_kind: "other",
+      },
+      {
+        kind: "tool_call",
+        tool_call_id: "x1",
+        title: "npm test",
+        status: "completed",
+        tool_kind: "execute",
+        content: "1 test passed",
+      },
+    ];
+    renderGroup(activityRow(source, new Map([["work:tool:t1", true]])));
+
+    const row = screen.getByText("Use tool").closest("div");
+    expect(row?.className).not.toContain("hover:bg-accent");
+    expect(row?.className).not.toContain("cursor-pointer");
+    expect(row?.querySelector(".lucide-chevron-right")).toBeNull();
+    expect(screen.queryByRole("button", { name: /output for Use tool/i })).not.toBeInTheDocument();
+  });
+
+  it("clicks a step chip without toggling the step", async () => {
+    const onOpenFile = vi.fn<(path: string) => void>();
+    renderExpanded({ onOpenFile });
+
+    await userEvent.click(screen.getByTitle("src/a.ts"));
+
+    expect(onOpenFile).toHaveBeenCalledWith("src/a.ts");
+    expect(screen.queryByText("1 test passed")).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
 import { ChevronRight, TriangleAlert } from "lucide-react";
-import { memo, useContext, useState } from "react";
+import { memo, useContext, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { toolDisplayTitle } from "@/lib/toolDisplay";
@@ -16,11 +16,52 @@ type ToolCall = Extract<SessionUpdate, { kind: "tool_call" }>;
 type FileEdit = Extract<SessionUpdate, { kind: "file_edit" }>;
 
 const STEP = "flex min-w-0 items-center gap-1.5 py-1 text-[13px] leading-5";
+/**
+ * The hit area of an interactive step is the whole 24px line: an invisible
+ * button covers it (keeping real button semantics and a focus ring) while the
+ * content above stays selectable text and the chips above it stay clickable.
+ * The overlay sits first, so positioned chips at `z-10` win the hit test.
+ */
+const STEP_TOGGLE =
+  "absolute inset-0 cursor-pointer rounded focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring";
+const STEP_CHIP = "relative z-10";
+const CHEVRON =
+  "size-3.5 shrink-0 text-muted-foreground opacity-60 transition-transform group-hover:opacity-100";
 
 function useTranscriptContext(): TranscriptRowContextValue {
   const shared = useContext(TranscriptRowContext);
   if (!shared) throw new Error("Activity step rendered outside its context");
   return shared;
+}
+
+/** One step line, clickable end-to-end only when there is a body to reveal. */
+function StepRow({
+  children,
+  expandable,
+  open,
+  label,
+  onToggle,
+  tone,
+}: {
+  children: ReactNode;
+  expandable: boolean;
+  open: boolean;
+  label: string;
+  onToggle: () => void;
+  tone?: string;
+}) {
+  if (!expandable) {
+    return <div className={cn(STEP, tone)}>{children}</div>;
+  }
+  return (
+    <div
+      className={cn(STEP, tone, "group relative cursor-pointer rounded hover:bg-accent/40")}
+      onClick={onToggle}
+    >
+      <button type="button" aria-expanded={open} aria-label={label} className={STEP_TOGGLE} />
+      {children}
+    </div>
+  );
 }
 
 /** Repo-relative path for display; never the machine-absolute `/Users/...`. */
@@ -48,7 +89,7 @@ function PathChip({ raw }: { raw: string }) {
     "inline-flex min-w-0 max-w-[60%] items-center gap-1 rounded px-1 py-0.5 font-mono text-[12px]";
   if (!path) {
     return (
-      <span className={className} title={title}>
+      <span className={cn(className, STEP_CHIP)} title={title}>
         {body}
       </span>
     );
@@ -61,7 +102,11 @@ function PathChip({ raw }: { raw: string }) {
         event.stopPropagation();
         shared.onOpenFile(path);
       }}
-      className={cn(className, "text-muted-foreground hover:bg-accent/40 hover:text-foreground")}
+      className={cn(
+        className,
+        STEP_CHIP,
+        "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
+      )}
     >
       {body}
     </button>
@@ -91,7 +136,7 @@ function Diffstat({
   const label = `${additions} lines added, ${deletions} lines deleted`;
   if (!path) {
     return (
-      <span className={className} aria-label={label}>
+      <span className={cn(className, STEP_CHIP)} aria-label={label}>
         {body}
       </span>
     );
@@ -105,7 +150,7 @@ function Diffstat({
         event.stopPropagation();
         shared.onOpenFileDiff(path, hunks);
       }}
-      className={cn(className, "hover:bg-accent/40")}
+      className={cn(className, STEP_CHIP, "hover:bg-accent/40")}
     >
       {body}
     </button>
@@ -137,7 +182,13 @@ function ToolCallStep({
 
   return (
     <div className="flex min-w-0 flex-col">
-      <div className={cn(STEP, awaiting && "text-warn")}>
+      <StepRow
+        expandable={hasContent}
+        open={open}
+        label={open ? `Hide output for ${label}` : `Show output for ${label}`}
+        onToggle={() => setOpen((value) => !value)}
+        tone={awaiting ? "text-warn" : undefined}
+      >
         {!bare && <CategoryIcon category={category} />}
         <span className="min-w-0 flex-1 truncate text-foreground/80" title={label}>
           {label}
@@ -145,20 +196,9 @@ function ToolCallStep({
         {chipped && target ? <PathChip raw={target} /> : null}
         <ActivityStatusIcon status={update.status} />
         {hasContent ? (
-          <button
-            type="button"
-            aria-expanded={open}
-            aria-label={open ? "Hide output" : "Show output"}
-            onClick={() => setOpen((value) => !value)}
-            className="-m-1 shrink-0 rounded p-1"
-          >
-            <ChevronRight
-              className={cn("size-3.5 transition-transform", open && "rotate-90")}
-              strokeWidth={1.75}
-            />
-          </button>
+          <ChevronRight className={cn(CHEVRON, open && "rotate-90")} strokeWidth={1.75} />
         ) : null}
-      </div>
+      </StepRow>
       {awaiting && permission ? (
         <div className="flex flex-wrap items-center gap-1.5 py-1 pl-5">
           <TriangleAlert className="size-3.5 shrink-0 text-warn" />
@@ -220,19 +260,15 @@ function ThoughtStep({ text, streaming }: { text: string; streaming: boolean }) 
       ?.trim() ?? "Thinking";
   return (
     <div className="flex min-w-0 flex-col">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-label={open ? "Hide thinking" : "Show thinking"}
-        onClick={() => setOpen((value) => !value)}
-        className={cn(STEP, "text-left")}
+      <StepRow
+        expandable
+        open={open}
+        label={open ? "Hide thinking" : "Show thinking"}
+        onToggle={() => setOpen((value) => !value)}
       >
         <span className="min-w-0 flex-1 truncate text-muted-foreground">{firstLine}</span>
-        <ChevronRight
-          className={cn("size-3.5 shrink-0 transition-transform", open && "rotate-90")}
-          strokeWidth={1.75}
-        />
-      </button>
+        <ChevronRight className={cn(CHEVRON, open && "rotate-90")} strokeWidth={1.75} />
+      </StepRow>
       {open ? (
         <div className="min-w-0 py-1">
           <ThinkingBlock

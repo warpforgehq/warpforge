@@ -68,7 +68,7 @@ function HeaderDiffstat({
   const label = `${clip.additions} lines added, ${clip.deletions} lines deleted`;
   if (!path) {
     return (
-      <span className={className} aria-label={label}>
+      <span className={cn(className, "relative z-10")} aria-label={label}>
         {body}
       </span>
     );
@@ -82,7 +82,7 @@ function HeaderDiffstat({
         event.stopPropagation();
         shared.onOpenFileDiff(path);
       }}
-      className={cn(className, "hover:bg-accent/40")}
+      className={cn(className, "relative z-10", "hover:bg-accent/40")}
     >
       {body}
     </button>
@@ -114,13 +114,16 @@ export const ActivityGroup = memo(function ActivityGroup({ row }: { row: Activit
 
   return (
     <div className="flex min-w-0 flex-col">
-      <button
-        type="button"
-        aria-expanded={row.open}
-        aria-label={row.open ? "Hide the work" : "Show the work"}
+      <div
+        className="group relative flex w-full min-w-0 cursor-pointer items-center gap-1.5 rounded py-1 text-left hover:bg-accent/40"
         onClick={() => shared.onToggleWorkGroup(row.groupId, !row.open)}
-        className="group flex w-full min-w-0 items-center gap-1.5 py-1 text-left"
       >
+        <button
+          type="button"
+          aria-expanded={row.open}
+          aria-label={row.open ? "Hide the work" : "Show the work"}
+          className="absolute inset-0 cursor-pointer rounded focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+        />
         <span className="relative flex size-3.5 shrink-0 items-center justify-center">
           <CategoryIcon
             category={dominantCategory(row.items)}
@@ -128,7 +131,7 @@ export const ActivityGroup = memo(function ActivityGroup({ row }: { row: Activit
           />
           <ChevronRight
             className={cn(
-              "absolute size-3.5 text-muted-foreground opacity-0 transition-[transform,opacity] duration-200 group-hover:opacity-100 group-focus-visible:opacity-100",
+              "absolute size-3.5 text-muted-foreground opacity-0 transition-[transform,opacity] duration-200 group-hover:opacity-100 group-focus-within:opacity-100",
               row.open && "rotate-90 opacity-100",
             )}
             strokeWidth={1.75}
@@ -144,7 +147,7 @@ export const ActivityGroup = memo(function ActivityGroup({ row }: { row: Activit
           {row.summary.text}
         </span>
         {editClip ? <HeaderDiffstat clip={editClip} /> : null}
-      </button>
+      </div>
       {row.open ? (
         <div
           ref={railRef}
