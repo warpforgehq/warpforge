@@ -1,8 +1,7 @@
-import { Loader2 } from "lucide-react";
-
 import { TrackerImage } from "@/components/backlog/TrackerImage";
 import { PullActivity } from "@/components/inbox/PullActivity";
 import { PullMetaRail, type PullReviewer } from "@/components/inbox/PullMetaRail";
+import { PullOverviewSkeleton } from "@/components/inbox/PullOverviewSkeleton";
 import { Markdown } from "@/components/Markdown";
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -70,7 +69,7 @@ export function PullOverview({
       <section className="flex min-w-0 flex-col gap-2">
         <h3 className="text-xs font-medium text-muted-foreground">Description</h3>
         {detailsLoading && !details ? (
-          <Spinner label="Loading description…" />
+          <PullOverviewSkeleton variant="description" />
         ) : detailsError ? (
           <p className="text-sm text-destructive">
             Could not load the pull request: {detailsError.message}
@@ -94,7 +93,7 @@ export function PullOverview({
           Could not load the conversation: {threadError.message}
         </p>
       ) : threadLoading && !thread ? (
-        <Spinner label="Loading activity…" />
+        <PullOverviewSkeleton variant="activity" />
       ) : (
         <PullActivity pr={pr} thread={thread} onPosted={onThreadChanged} onOpenDiff={onOpenDiff} />
       )}
@@ -137,14 +136,5 @@ export function PullOverview({
         <div className="flex h-full min-h-0 flex-col overflow-y-auto px-4 py-4">{metaRail}</div>
       </Panel>
     </PanelGroup>
-  );
-}
-
-function Spinner({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-      <Loader2 className="size-3.5 animate-spin" aria-hidden />
-      <span>{label}</span>
-    </div>
   );
 }

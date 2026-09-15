@@ -138,6 +138,15 @@ describe("PullRequestDetail refreshing", () => {
     await user.click(screen.getByRole("button", { name: "Refresh this pull request" }));
     await waitFor(() => expect(pullThread).toHaveBeenCalledTimes(2));
   });
+
+  it("has no spinner in Send to agent while details load — disabled is the signal", () => {
+    pullDetails.mockImplementation(() => new Promise(() => {}));
+    renderDetail(pr(), { onSendToAgent: vi.fn<() => void>() });
+
+    const trigger = screen.getByTestId("inbox-send-to-agent");
+    expect(trigger).toBeDisabled();
+    expect(trigger.querySelector(".animate-spin")).toBeNull();
+  });
 });
 
 describe("PullRequestDetail reviewers", () => {

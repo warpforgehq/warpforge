@@ -178,4 +178,14 @@ describe("ShelfTab", () => {
     );
     expect(screen.queryByText("Shelved Files")).not.toBeInTheDocument();
   });
+
+  it("shows a file-row skeleton while the shelf loads, not a sentence", () => {
+    vi.spyOn(daemon, "request").mockImplementation(() => new Promise(() => {}));
+
+    renderTab(<ShelfTab taskId="task-1" onRefresh={vi.fn<() => void>()} />);
+
+    const skeleton = screen.getByTestId("file-list-skeleton");
+    expect(skeleton).toHaveAttribute("aria-label", "Loading shelf");
+    expect(screen.queryByText("Loading shelf…")).not.toBeInTheDocument();
+  });
 });

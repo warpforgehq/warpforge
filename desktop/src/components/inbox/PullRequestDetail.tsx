@@ -4,7 +4,6 @@ import {
   Check,
   ChevronDown,
   FileDiff,
-  Loader2,
   MessageSquareWarning,
   Send,
   SquareChartGantt,
@@ -364,11 +363,7 @@ export function PullRequestDetail({
                 data-testid="inbox-send-to-agent"
                 className="flex h-6 shrink-0 items-center gap-1.5 rounded-md border border-border px-2 text-xs text-foreground hover:bg-secondary disabled:text-muted-foreground/40"
               >
-                {detailsQuery.isLoading ? (
-                  <Loader2 className="size-3 animate-spin" aria-hidden />
-                ) : (
-                  <Send className="size-3" aria-hidden />
-                )}
+                <Send className="size-3" aria-hidden />
                 Send to agent
                 <ChevronDown className="size-3" aria-hidden />
               </DropdownMenuTrigger>

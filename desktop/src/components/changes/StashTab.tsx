@@ -3,11 +3,13 @@ import { ArrowDownToLine, Loader2, PackageOpen, RefreshCw, Trash2 } from "lucide
 import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
+import { EditorSkeleton } from "@/views/task-detail/EditorSkeleton";
 
 import { daemon } from "../../daemon";
 import type { FileDiff, StashList } from "../../protocol";
 import { daemonQuery } from "../../query";
 import { BundleConfirmDialog, type BundleConfirmRequest } from "./BundleConfirmDialog";
+import { FileListSkeleton } from "./FileListSkeleton";
 import { IgnoredFiles } from "./IgnoredFiles";
 import { reportGitFailure } from "./reportGitFailure";
 
@@ -206,7 +208,7 @@ export function StashTab({
 
       <div className="min-h-0 flex-1 overflow-auto py-1.5">
         {listQuery.isPending ? (
-          <p className="px-3 py-2 text-xs text-muted-foreground">Loading stash…</p>
+          <FileListSkeleton rows={4} label="Loading stash" />
         ) : listQuery.isError ? (
           <p className="px-3 py-2 text-xs text-warn">Stash unavailable.</p>
         ) : entries.length === 0 ? (
@@ -266,7 +268,9 @@ export function StashTab({
             />
 
             {detailQuery.isPending ? (
-              <p className="px-3 py-1 text-xs text-muted-foreground">Loading preview…</p>
+              <div role="status" aria-label="Loading preview">
+                <EditorSkeleton maxLines={8} aria-label="Loading preview" />
+              </div>
             ) : (
               preview && (
                 <StashFilePreview

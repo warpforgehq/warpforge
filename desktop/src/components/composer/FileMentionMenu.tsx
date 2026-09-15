@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 
 import type { ProjectFile } from "../../protocol";
+import { MenuRowsSkeleton } from "../MenuRowsSkeleton";
 
 export function FileMentionMenu({
   files,
@@ -17,7 +18,7 @@ export function FileMentionMenu({
 }) {
   return (
     <div className="absolute bottom-full left-2 right-2 z-30 mb-1 max-h-64 overflow-y-auto rounded-md border bg-popover shadow-md">
-      {loading && <div className="px-3 py-2 text-xs text-muted-foreground">Loading files…</div>}
+      {loading && <MenuRowsSkeleton rows={5} label="Loading files" />}
       {!loading && files.length === 0 && (
         <div className="px-3 py-2 text-xs text-muted-foreground">No matching files</div>
       )}

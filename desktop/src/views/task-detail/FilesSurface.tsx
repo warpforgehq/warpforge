@@ -9,19 +9,12 @@ import { useUi } from "@/store/ui";
 
 import type { FileDoc, FileRange, ProjectFile, SymbolMatch } from "../../protocol";
 import type { EditorPosition } from "../../components/CodeEditor/session";
+import { EditorSkeleton } from "./EditorSkeleton";
 import { ProjectFilesPanel, type ProjectTreeState } from "./ProjectFilesPanel";
 
 const CodeEditor = lazy(async () => ({
   default: (await import("../../components/CodeEditor")).CodeEditor,
 }));
-
-function EditorLoading() {
-  return (
-    <div className="flex h-full items-center px-4 text-sm text-muted-foreground">
-      Loading editor…
-    </div>
-  );
-}
 
 export interface OpenFileTab {
   path: string;
@@ -163,7 +156,7 @@ export function FilesSurface({
             {!activeFilePath ? (
               <p className="p-3 text-sm text-muted-foreground">Select a file to open it.</p>
             ) : fileDoc ? (
-              <Suspense fallback={<EditorLoading />}>
+              <Suspense fallback={<EditorSkeleton />}>
                 <CodeEditor
                   key={`${fileDoc.path}:${editable}`}
                   doc={fileDoc}
@@ -185,7 +178,7 @@ export function FilesSurface({
                 Could not read {activeFilePath}: {fileDocError}
               </p>
             ) : (
-              <p className="p-3 text-sm text-muted-foreground">Loading file…</p>
+              <EditorSkeleton />
             )}
           </div>
         </Panel>

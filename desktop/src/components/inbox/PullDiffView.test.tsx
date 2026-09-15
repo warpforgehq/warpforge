@@ -360,12 +360,22 @@ describe("PullDiffView", () => {
     expect(screen.getByRole("button", { name: /Commits/ })).toBeEnabled();
     expect(screen.getByText("new line")).toBeInTheDocument();
     expect(screen.getByTestId("pull-diff-body")).toHaveAttribute("aria-busy", "true");
+    // The previous patch stays on screen and dims; it must never be replaced
+    // by a skeleton while a commit is picked.
+    expect(screen.queryByTestId("pull-diff-skeleton")).not.toBeInTheDocument();
+    expect(screen.getByText("new line").closest(".opacity-50")).not.toBeNull();
   });
 
-  it("shows the toolbar before the first patch arrives", () => {
-    renderView({ diff: null, loading: true });
+  it("shows the toolbar and a file-shaped skeleton before the first patch arrives", () => {
+    const { container } = renderView({ diff: null, loading: true });
     expect(screen.getByRole("button", { name: /Files/ })).toBeInTheDocument();
-    expect(screen.getByText("Loading changes…")).toBeInTheDocument();
+    const skeleton = screen.getByTestId("pull-diff-skeleton");
+    expect(skeleton).toHaveAttribute("role", "status");
+    expect(skeleton).toHaveAttribute("aria-label", "Loading changes");
+    expect(screen.getAllByTestId("file-skeleton")).toHaveLength(3);
+    expect(screen.queryByText(/Loading changes/)).not.toBeInTheDocument();
+    // One pulse per file block, not one per bar.
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(3);
   });
 
   it("reports a failed diff in place, keeping the controls", () => {

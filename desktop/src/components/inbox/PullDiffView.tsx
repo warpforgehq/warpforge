@@ -1,4 +1,3 @@
-import { Loader2 } from "lucide-react";
 import * as React from "react";
 
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
@@ -25,6 +24,7 @@ import { PANEL_BOUNDS, useAutoHiddenRail, usePanelSize } from "@/store/panelLayo
 import { useUi } from "@/store/ui";
 
 import { PullDiffFile } from "./PullDiffFile";
+import { PullDiffSkeleton } from "./PullDiffSkeleton";
 import { PullDiffToolbar } from "./PullDiffToolbar";
 import { PullFilesRail } from "./PullFilesRail";
 
@@ -309,7 +309,7 @@ export function PullDiffView({
                 </p>
               ) : blocks.length === 0 ? (
                 loading ? (
-                  <Spinner label="Loading changes…" />
+                  <PullDiffSkeleton files={diff?.files} mode={mode} />
                 ) : (
                   <p className="px-4 py-6 text-sm text-muted-foreground/60">No file changes.</p>
                 )
@@ -375,15 +375,6 @@ export function PullDiffView({
           />
         </Panel>
       </PanelGroup>
-    </div>
-  );
-}
-
-function Spinner({ label }: { label: string }) {
-  return (
-    <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground">
-      <Loader2 className="size-3.5 animate-spin" aria-hidden />
-      <span>{label}</span>
     </div>
   );
 }

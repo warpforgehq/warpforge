@@ -9,13 +9,14 @@ import { useUi } from "@/store/ui";
 import { ChangesRail } from "../../components/ChangesRail";
 import type { EditHunk, FileDiff, HunkResolution, TaskDiff } from "../../protocol";
 import type { DiffView } from "../../store/ui";
+import { ChangesRailSkeleton } from "./ChangesRailSkeleton";
 import { DiffWorkspace, estimateFileHeight, type DiffWorkspaceHandle } from "./DiffWorkspace";
 import { FileDiffSkeleton } from "./FileDiffSkeleton";
 
 /** The shell's placeholder while the diff workspace is still unmounted. It is
  *  the same file skeleton the workspace shows per loading file, so the two
  *  loading states share one visual language. */
-function DiffSkeleton({ files }: { files: readonly FileDiff[] }) {
+export function DiffSkeleton({ files }: { files: readonly FileDiff[] }) {
   const shown = files.slice(0, 6);
   return (
     <div
@@ -178,7 +179,10 @@ export function DiffSurface({
           maxSize={bounds.max}
           defaultSize={bounds.default}
           collapsed={collapsed}
-          keepMounted={false}
+          // Kept mounted so folding the rail — and every task switch that
+          // re-renders this surface — reuses the live `ChangesRail` (its tab,
+          // its scroll) instead of rebuilding it and repainting the skeleton.
+          keepMounted
           onCollapsedChange={setCollapsed}
           onSizeChange={setSize}
           className="min-w-0"
@@ -199,7 +203,7 @@ export function DiffSurface({
               onOpenFile={onOpenFile}
             />
           ) : (
-            <p className="p-3 text-sm text-muted-foreground">Loading changes…</p>
+            <ChangesRailSkeleton />
           )}
         </Panel>
       </PanelGroup>

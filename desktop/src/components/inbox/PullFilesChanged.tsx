@@ -20,6 +20,8 @@ import {
 import { cn } from "@/lib/utils";
 import type { PullRequestFile } from "@/protocol";
 
+import { PullFilesChangedSkeleton } from "./PullFilesChangedSkeleton";
+
 /** A glyph per group, so the list reads even when the labels are scrolled off. */
 export const PULL_GROUP_ICONS: Record<PullFileGroupId, LucideIcon> = {
   config: Settings2,
@@ -85,7 +87,7 @@ export function PullFilesChanged({
           ))}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground/60">Loading files…</p>
+        <PullFilesChangedSkeleton />
       )}
     </section>
   );

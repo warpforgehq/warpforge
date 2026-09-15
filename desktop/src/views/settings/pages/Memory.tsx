@@ -50,7 +50,7 @@ export default function MemoryPage() {
         title="Search"
         description={
           memoryStats.isLoading
-            ? "Loading…"
+            ? ""
             : hybrid
               ? "Hybrid: keywords plus meaning."
               : "Keywords only (FTS)."

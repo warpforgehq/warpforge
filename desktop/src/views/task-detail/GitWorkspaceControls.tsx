@@ -451,9 +451,6 @@ export function GitWorkspaceControls({
               <div className="px-2 pb-1 pt-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
                 Branches
               </div>
-              {branchesQuery.isLoading && (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">Loading…</div>
-              )}
               {!branchesQuery.isLoading && (
                 <BranchList
                   localRows={localRows}

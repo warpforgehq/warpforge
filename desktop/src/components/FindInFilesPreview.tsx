@@ -1,8 +1,8 @@
-import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { highlightSegments, previewWindow, splitPath } from "@/lib/searchMatches";
 import { cn } from "@/lib/utils";
+import { EditorSkeleton } from "@/views/task-detail/EditorSkeleton";
 
 import type { SymbolMatch } from "../protocol";
 
@@ -67,9 +67,8 @@ export function FindInFilesPreview({
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-1 pb-2 font-mono text-xs">
         {loading && !window && (
-          <div className="flex items-center gap-2 px-2 py-2 text-muted-foreground">
-            <Loader2 className="size-3.5 animate-spin" />
-            Loading preview…
+          <div role="status" aria-label="Loading preview" className="h-full min-h-0">
+            <EditorSkeleton maxLines={8} aria-label="Loading preview" />
           </div>
         )}
         {!loading && !window && <p className="px-2 py-2 text-muted-foreground">No preview</p>}

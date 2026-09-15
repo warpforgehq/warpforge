@@ -38,7 +38,8 @@ import { useChangesContextMenu } from "./useChangesContextMenu";
  * are mounted in the DOM, so 900+ files render without jank.
  */
 
-const ROW_HEIGHT = 28;
+/** One tree row's height; the rail's skeleton reserves the same slot. */
+export const ROW_HEIGHT = 28;
 
 export function CommitPane({
   project,

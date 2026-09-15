@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 
 import type { ProjectFile, SymbolMatch } from "../protocol";
 
+import { MenuRowsSkeleton } from "./MenuRowsSkeleton";
+
 /**
  * Quick-open palette — the "double ‹⇧› Shift" file switcher. Filters the
  * task's project files by the typed query (reusing the composer's file@ ranker)
@@ -184,12 +186,7 @@ export function QuickOpen({
           )}
         </div>
         <div ref={listRef} className="max-h-[50vh] overflow-y-auto py-1.5">
-          {loading && (
-            <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" />
-              Loading files…
-            </div>
-          )}
+          {loading && <MenuRowsSkeleton rows={8} label="Loading files" />}
           {error && <p className="px-3 py-2 text-xs text-destructive">{error}</p>}
           {!loading && !error && items.length === 0 && (
             <p className="px-3 py-2 text-xs text-muted-foreground">

@@ -1,7 +1,8 @@
-import { Check, ChevronDown, Loader2, Search, Settings2, X } from "lucide-react";
+import { Check, ChevronDown, Search, Settings2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { SkeletonBar, SkeletonBlock } from "@/components/ui/skeleton";
 import { configRole } from "@/lib/configRole";
 import { cn } from "@/lib/utils";
 
@@ -65,10 +66,15 @@ export function AgentConfigBar({
 
   if (loading) {
     return (
-      <span className="flex items-center gap-1 px-1 py-0.5 text-xs text-muted-foreground">
-        <Loader2 className="size-3 animate-spin" />
-        Probe…
-      </span>
+      <SkeletonBlock
+        role="status"
+        aria-label="Loading agent settings"
+        data-testid="agent-config-bar-skeleton"
+        className="flex items-center gap-0.5"
+      >
+        <SkeletonBar className="h-5 w-16 shrink-0" />
+        <SkeletonBar className="h-5 w-12 shrink-0" />
+      </SkeletonBlock>
     );
   }
 

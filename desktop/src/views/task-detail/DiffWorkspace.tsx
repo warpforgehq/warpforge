@@ -17,6 +17,8 @@ import { daemon } from "../../daemon";
 import type { EditHunk, FileDiff, HunkResolution, TaskDiff } from "../../protocol";
 import { fileAnchor, hunkKey } from "./diffAnchors";
 import { matchingHunkIndexes } from "./editHunkMatch";
+import { DiffSkeleton } from "./DiffSurface";
+import { EditorSkeleton } from "./EditorSkeleton";
 import { FileDiffSkeleton } from "./FileDiffSkeleton";
 import { useSplitFileQueries } from "./useTaskQueries";
 
@@ -47,14 +49,6 @@ export function estimateFileHeight(file: FileDiff | undefined): number {
     lastLine = Math.max(lastLine, hunk.newStart + hunk.newLines);
   }
   return HEADER_PX + Math.max(lastLine, 8) * LINE_PX;
-}
-
-function EditorLoading() {
-  return (
-    <div className="flex h-full items-center px-4 text-sm text-muted-foreground">
-      Loading editor…
-    </div>
-  );
 }
 
 function EmptyChangesState({ onOpenFiles }: { onOpenFiles: () => void }) {
@@ -295,7 +289,7 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
     return (
       <div ref={unifiedScrollParent} onScroll={handleScroll} className="min-h-0 flex-1 overflow-auto">
         {diffError && <p className="p-3 text-sm text-destructive">{diffError}</p>}
-        {!diff && !diffError && <p className="p-3 text-sm text-muted-foreground">Loading diff…</p>}
+        {!diff && !diffError && <DiffSkeleton files={[]} />}
         {diff && files.length === 0 && <EmptyChangesState onOpenFiles={onOpenFiles} />}
         {diff && files.length > 0 && (
           <div className="relative w-full" style={{ height: unifiedVirtualizer.getTotalSize() }}>
@@ -313,7 +307,7 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
                   style={{ transform: `translateY(${item.start}px)` }}
                 >
                   {doc ? (
-                    <Suspense fallback={<EditorLoading />}>
+                    <Suspense fallback={<EditorSkeleton height={estimateFileHeight(file)} />}>
                       <UnifiedDiff
                         key={`${doc.path}:${editable}`}
                         doc={doc}
@@ -360,7 +354,7 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
   return (
     <div ref={splitScrollParent} onScroll={handleScroll} className="min-h-0 flex-1 overflow-auto">
       {!diff ? (
-        <p className="p-3 text-sm text-muted-foreground">Loading diff…</p>
+        <DiffSkeleton files={[]} />
       ) : files.length === 0 ? (
         <EmptyChangesState onOpenFiles={onOpenFiles} />
       ) : (
@@ -379,7 +373,7 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
                 style={{ transform: `translateY(${item.start}px)` }}
               >
                 {doc ? (
-                  <Suspense fallback={<EditorLoading />}>
+                  <Suspense fallback={<EditorSkeleton height={estimateFileHeight(file)} />}>
                     <MergeDiff
                       key={`${doc.path}:${editable}`}
                       doc={doc}

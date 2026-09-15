@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { daemon } from "../daemon";
 import type { AgentConfig, DetectedAgent } from "../protocol";
 import { AgentLogo } from "./AgentLogo";
+import { SettingsListSkeleton } from "./SettingsListSkeleton";
 
 interface Props {
   /** Pre-loaded agents (dialog path: pendingAgentSetup already resolved). */
@@ -214,12 +215,7 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
   };
 
   if (agents.length === 0 && refreshing) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        Detecting agents…
-      </div>
-    );
+    return <SettingsListSkeleton rows={4} label="Loading agents" />;
   }
 
   if (agents.length === 0 && loadError) {

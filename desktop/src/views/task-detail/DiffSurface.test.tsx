@@ -1,8 +1,10 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { FileDiff, TaskDiff } from "../../protocol";
+import { useUi } from "../../store/ui";
 import { DiffSurface } from "./DiffSurface";
 import type { DiffWorkspaceHandle } from "./DiffWorkspace";
 
@@ -93,5 +95,28 @@ describe("DiffSurface", () => {
 
     renderSurface();
     expect(screen.getAllByTestId("file-skeleton")).toHaveLength(3);
+  });
+
+  it("reserves the changes rail with a tree-shaped skeleton, never a sentence", () => {
+    renderSurface();
+
+    expect(screen.getByTestId("changes-rail-skeleton")).toBeInTheDocument();
+    expect(screen.queryByText("Loading changes…")).not.toBeInTheDocument();
+  });
+
+  it("keeps the changes rail mounted across a fold, so its state is not rebuilt", async () => {
+    useUi.setState({ diffPanelCollapsed: false });
+    renderSurface({ diff: taskDiff(2) });
+    const rail = () => screen.queryByTestId("changes-rail");
+
+    expect(rail()).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Collapse changes panel" }));
+    // Folded, not unmounted: keepMounted leaves the rail's tab and scroll on
+    // the element that stays in the tree, so expanding again is not a rebuild.
+    expect(rail()).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Expand changes panel" }));
+    expect(rail()).toBeInTheDocument();
   });
 });

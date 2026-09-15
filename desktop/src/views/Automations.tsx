@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Loader2, Plus, Search } from "lucide-react";
+import { CalendarClock, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import type { Automation, AutomationRun, Snapshot } from "@/protocol";
 
 import { AutomationCard } from "./automations/AutomationCard";
+import { AutomationCardSkeleton } from "./automations/AutomationCardSkeleton";
 import { AutomationDialog } from "./automations/AutomationDialog";
 import { AutomationDrawer } from "./automations/AutomationDrawer";
 import { AutomationLiveStrip } from "./automations/AutomationLiveStrip";
@@ -196,10 +197,11 @@ export default function Automations({ onOpenTask, snapshot }: Props) {
         </div>
 
         {automationsQuery.isLoading ? (
-          <p className="mt-10 flex items-center justify-center gap-2 text-xs text-muted-foreground/70">
-            <Loader2 aria-hidden className="size-3.5 animate-spin" />
-            Loading automations…
-          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 3 }, (_, index) => (
+              <AutomationCardSkeleton key={index} />
+            ))}
+          </div>
         ) : automationsQuery.error ? (
           <p className="mt-10 text-center text-xs text-destructive">
             {automationsQuery.error instanceof Error

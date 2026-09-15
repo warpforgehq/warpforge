@@ -77,9 +77,14 @@ describe("QuickOpen", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("shows a loading state", () => {
+  it("shows a row skeleton instead of a loading sentence", () => {
     setup({ loading: true, files: [] });
-    expect(screen.getByText("Loading files…")).toBeInTheDocument();
+    const skeleton = screen.getByTestId("menu-rows-skeleton");
+    expect(skeleton).toHaveAttribute("aria-busy", "true");
+    expect(skeleton).toHaveAttribute("role", "status");
+    expect(skeleton).toHaveAttribute("aria-label", "Loading files");
+    expect(screen.queryByText("Loading files…")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("menu-rows-skeleton-row")).toHaveLength(8);
   });
 
   it("closes on an overlay click", () => {

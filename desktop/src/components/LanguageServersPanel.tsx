@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { daemon } from "../daemon";
+import { SettingsListSkeleton } from "./SettingsListSkeleton";
 
 const QUERY_KEY = ["languageServers"];
 
@@ -72,12 +73,7 @@ export default function LanguageServersPanel() {
   };
 
   if (servers.length === 0 && isFetching) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        Detecting language servers…
-      </div>
-    );
+    return <SettingsListSkeleton rows={4} label="Loading language servers" />;
   }
 
   if (servers.length === 0 && loadError) {

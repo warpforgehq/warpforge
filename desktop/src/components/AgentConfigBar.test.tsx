@@ -132,4 +132,15 @@ describe("AgentConfigBar", () => {
       expect.objectContaining({ description: "agent rejected 'model'" }),
     );
   });
+
+  it("shows two pill bars while the probe runs, not a spinner and a sentence", () => {
+    const { container } = render(<AgentConfigBar taskId="task-1" options={[]} loading />);
+    const skeleton = screen.getByTestId("agent-config-bar-skeleton");
+
+    expect(skeleton).toHaveAttribute("aria-busy", "true");
+    expect(skeleton).toHaveAttribute("role", "status");
+    expect(skeleton).toHaveAttribute("aria-label", "Loading agent settings");
+    expect(screen.queryByText("Probe…")).not.toBeInTheDocument();
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(1);
+  });
 });

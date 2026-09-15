@@ -4,7 +4,6 @@ import {
   FolderTree,
   GitBranch,
   GitCommitHorizontal,
-  Loader2,
   RefreshCw,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -21,6 +20,7 @@ import type { GitOpResult, GitPushCommit, GitPushInfo, TaskInfo } from "../proto
 import { PrFooter } from "./push/PrFooter";
 import { PrForm } from "./push/PrForm";
 import { PushFooter } from "./push/PushFooter";
+import { PushPreviewSkeleton } from "./push/PushPreviewSkeleton";
 
 interface Props {
   open: boolean;
@@ -255,7 +255,7 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
                 </div>
               )}
               <div className="min-h-0 flex-1 overflow-y-auto p-2">
-                {loading && !info && <LoadingState label="Reading outgoing commits…" />}
+                {loading && !info && <PushPreviewSkeleton />}
                 {error && (
                   <div className="m-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                     {error}
@@ -388,15 +388,6 @@ function CommitRow({
         </span>
       </span>
     </button>
-  );
-}
-
-function LoadingState({ label }: { label: string }) {
-  return (
-    <div className="flex h-full min-h-40 items-center justify-center gap-2 text-sm text-muted-foreground">
-      <Loader2 className="size-4 animate-spin" />
-      {label}
-    </div>
   );
 }
 

@@ -191,7 +191,37 @@ describe("PullOverview", () => {
     // follows on its own, and the rail never asked for a second click.
     renderOverview(emptyThread, { files: null });
     expect(screen.getByText("3 files changed")).toBeInTheDocument();
-    expect(screen.getByText("Loading files…")).toBeInTheDocument();
+    expect(screen.getByTestId("pull-files-changed-skeleton")).toBeInTheDocument();
+    expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Show file list/ })).not.toBeInTheDocument();
+  });
+
+  it("draws a description-shaped skeleton, not a sentence, before the body lands", () => {
+    const { container } = renderOverview(emptyThread, { details: null, detailsLoading: true });
+    const block = screen.getByTestId("pull-description-skeleton");
+
+    expect(block).toHaveAttribute("aria-busy", "true");
+    expect(block).toHaveAttribute("aria-label", "Loading description");
+    expect(screen.queryByText(/Loading description/)).not.toBeInTheDocument();
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(1);
+    // The live heading stays mounted while only the body swaps.
+    expect(screen.getByText("Description")).toBeInTheDocument();
+  });
+
+  it("draws three activity-card shells before the conversation lands", () => {
+    const { container } = renderOverview(null, { thread: null, threadLoading: true });
+    const block = screen.getByTestId("pull-activity-skeleton");
+
+    expect(block).toHaveAttribute("aria-busy", "true");
+    expect(block).toHaveAttribute("aria-label", "Loading activity");
+    expect(screen.getAllByTestId("pull-activity-skeleton-card")).toHaveLength(3);
+    expect(screen.queryByText(/Loading activity/)).not.toBeInTheDocument();
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(1);
+  });
+
+  it("still reports a failed conversation rather than a skeleton", () => {
+    renderOverview(null, { thread: null, threadLoading: false, threadError: new Error("nope") });
+    expect(screen.getByText(/Could not load the conversation: nope/)).toBeInTheDocument();
+    expect(screen.queryByTestId("pull-activity-skeleton")).not.toBeInTheDocument();
   });
 });

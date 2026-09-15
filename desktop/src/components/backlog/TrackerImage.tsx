@@ -5,6 +5,7 @@ import {
   MarkdownImageLink,
   type MarkdownImageProps,
 } from "@/components/Markdown";
+import { SkeletonBlock } from "@/components/ui/skeleton";
 import { daemon } from "@/daemon";
 
 /**
@@ -22,7 +23,9 @@ import { daemon } from "@/daemon";
  */
 export function TrackerImage({ src, alt, title }: MarkdownImageProps) {
   const attachment = useQuery({
-    // Bytes, and possibly megabytes: not worth holding once the drawer closes.
+    // Bytes, and possibly megabytes, held for the session: reopening a work
+    // item must show its screenshots immediately, not re-download them after a
+    // minute and paint the placeholder again.
     gcTime: 60_000,
     queryFn: () => daemon.trackerAttachment(src),
     queryKey: ["trackerAttachment", src],
@@ -33,9 +36,12 @@ export function TrackerImage({ src, alt, title }: MarkdownImageProps) {
 
   if (attachment.isPending) {
     return (
-      <span className="my-2 block text-xs text-muted-foreground" aria-busy>
-        Loading {alt}…
-      </span>
+      <SkeletonBlock
+        role="status"
+        aria-label={alt}
+        data-testid="tracker-image-skeleton"
+        className="my-2 block aspect-video max-w-sm rounded-md"
+      />
     );
   }
   if (!attachment.data) return <MarkdownImageLink href={src} label={alt} />;

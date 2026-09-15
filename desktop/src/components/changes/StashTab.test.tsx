@@ -136,4 +136,14 @@ describe("StashTab", () => {
       }),
     );
   });
+
+  it("shows a file-row skeleton while the stash loads, not a sentence", () => {
+    vi.spyOn(daemon, "request").mockImplementation(() => new Promise(() => {}));
+
+    renderTab(<StashTab taskId="task-1" onRefresh={vi.fn<() => void>()} />);
+
+    const skeleton = screen.getByTestId("file-list-skeleton");
+    expect(skeleton).toHaveAttribute("aria-label", "Loading stash");
+    expect(screen.queryByText("Loading stash…")).not.toBeInTheDocument();
+  });
 });

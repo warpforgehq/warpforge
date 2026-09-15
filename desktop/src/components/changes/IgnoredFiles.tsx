@@ -11,6 +11,7 @@ import {
   type IgnoredSectionState,
   type IgnoredTreeNode,
 } from "./changesTree";
+import { FileListSkeleton } from "./FileListSkeleton";
 
 /**
  * The `.gitignore`'d paths, behind the rail's toggle. Entries group into a
@@ -136,7 +137,7 @@ export function IgnoredFiles({
         )}
       </p>
       {state === "loading" && (
-        <p className="px-3 py-1 text-xs text-muted-foreground">Loading ignored files…</p>
+        <FileListSkeleton rows={6} label="Loading ignored files" meta={false} />
       )}
       {state === "unavailable" && (
         <p className="px-3 py-1 text-xs text-warn">Ignored files unavailable.</p>
