@@ -22,6 +22,9 @@ import {
   type SidebarRow,
 } from "./logic";
 
+/** Most chips the collapsed rail shows before folding the rest into `+N`. */
+export const LIVE_LANE_MAX = 6;
+
 export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   const pinned = useUi((store) => store.pinnedTaskIds);
   const setPinnedTaskIds = useUi((store) => store.setPinnedTaskIds);
@@ -71,6 +74,31 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   );
 
   /**
+   * The collapsed rail's live lane: work in flight or waiting on a human,
+   * most-recent first. The rail's job is presence, so this is data the expanded
+   * tree already has — no separate daemon query.
+   */
+  const liveLane = useMemo(() => {
+    const attentionIds = new Set(queue.map((item) => item.task.id));
+    const live = tasks
+      .filter((task) => !isSettledTask(task))
+      .map((task) => {
+        const attention = attentionIds.has(task.id);
+        return { attention, state: resolveTaskState(task, { attention, nowSec }), task };
+      })
+      .filter(({ state: rowState }) => rowState === "working" || needsHuman(rowState))
+      .sort((a, b) => b.task.updatedAt - a.task.updatedAt || a.task.id.localeCompare(b.task.id));
+    return { overflow: Math.max(0, live.length - LIVE_LANE_MAX), tasks: live.slice(0, LIVE_LANE_MAX) };
+  }, [nowSec, queue, tasks]);
+
+  /** The open task plus every ancestor: the branch the row rails paint. */
+  const activePathIds = useMemo(() => {
+    const ids = new Set(ancestorIds(taskById, openTaskId));
+    if (openTaskId) ids.add(openTaskId);
+    return ids;
+  }, [openTaskId, taskById]);
+
+  /**
    * The badge counts what genuinely wants a human right now, not the whole
    * attention queue: that queue also holds every finished task awaiting review,
    * so it reads in the dozens and a permanent "23" is not a signal.
@@ -113,6 +141,7 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   const rows = useMemo(
     () =>
       buildSidebarRows({
+        activePathIds,
         collapsedProjects,
         expandedShelves,
         expandedTaskIds,
@@ -125,6 +154,7 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
         tasks,
       }),
     [
+      activePathIds,
       collapsedProjects,
       expandedShelves,
       expandedTaskIds,
@@ -223,6 +253,7 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     agentUpdates,
     deletingShelf,
     handlePin,
+    liveLane,
     navCount,
     nowSec,
     pinned,

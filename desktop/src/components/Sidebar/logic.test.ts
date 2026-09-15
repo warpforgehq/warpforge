@@ -14,6 +14,7 @@ import {
   isSnoozed,
   needsHuman,
   projectNames,
+  railLanes,
   resolveTaskState,
   rowHeight,
   snoozeWakeLabel,
@@ -48,6 +49,7 @@ function attention(item: TaskInfo): AttentionItem {
 
 function build(tasks: TaskInfo[], overrides: Partial<Parameters<typeof buildSidebarRows>[0]> = {}) {
   return buildSidebarRows({
+    activePathIds: new Set(),
     collapsedProjects: new Set(),
     expandedShelves: new Set(),
     expandedTaskIds: new Set(),
@@ -504,5 +506,82 @@ describe("the done shelf", () => {
     const shelf = rows.find((row) => row.kind === "shelf");
     expect(shelf).toMatchObject({ keptCount: 1 });
     expect(shelf?.kind === "shelf" && shelf.deletableIds.includes("dirty")).toBe(false);
+  });
+});
+
+describe("nested rail data", () => {
+  const tasks = [
+    task("a", { updatedAt: 100 }),
+    task("a2", { updatedAt: 1 }),
+    task("b", { parentTaskId: "a" }),
+    task("c", { parentTaskId: "b" }),
+  ];
+
+  it("threads ancestor lines, last-child and active-path flags per row", () => {
+    const rows = taskRows(
+      build(tasks, {
+        activePathIds: new Set(["a", "b", "c"]),
+        expandedTaskIds: new Set(["a", "b"]),
+      }),
+    );
+    const a = rows.find((row) => row.task.id === "a")!;
+    const b = rows.find((row) => row.task.id === "b")!;
+    const c = rows.find((row) => row.task.id === "c")!;
+
+    // A is not last (a2 follows), so its lane must pass beside C.
+    expect(a.isLast).toBe(false);
+    expect(c.ancestorLines).toHaveLength(c.depth);
+    expect(c.ancestorLines[0]).toBe(true);
+    // C is an only child, so its connector ends in an elbow.
+    expect(c.isLast).toBe(true);
+    for (const row of [a, b, c]) expect(row.onActivePath).toBe(true);
+    for (const row of taskRows(build(tasks, { expandedTaskIds: new Set(["a", "b"]) }))) {
+      expect(row.onActivePath).toBe(false);
+    }
+  });
+
+  it("marks only the open task and its ancestors on the active path", () => {
+    const rows = taskRows(
+      build(tasks, {
+        activePathIds: new Set(["b", "c"]),
+        expandedTaskIds: new Set(["a", "b"]),
+      }),
+    );
+    const path = (id: string) => rows.find((row) => row.task.id === id)!.onActivePath;
+    expect(path("a")).toBe(false);
+    expect(path("b")).toBe(true);
+    expect(path("c")).toBe(true);
+    expect(path("a2")).toBe(false);
+  });
+
+  it("computes elbow vs tee from the row's own last-child flag", () => {
+    const kids = [
+      task("lead"),
+      task("one", { parentTaskId: "lead" }),
+      task("two", { parentTaskId: "lead" }),
+    ];
+    const rows = taskRows(build(kids, { expandedTaskIds: new Set(["lead"]) }));
+    const one = rows.find((row) => row.task.id === "one")!;
+    const two = rows.find((row) => row.task.id === "two")!;
+    // x = level × INDENT + half the twisty lane, so the vertical sits under
+    // the ancestor's chevron; the run ends at the child's glyph lane.
+    expect(railLanes(one.depth, one.ancestorLines, one.isLast, false)).toEqual([
+      { active: false, level: 0, run: 20, shape: "tee", x: 8 },
+    ]);
+    expect(railLanes(two.depth, two.ancestorLines, two.isLast, true)).toEqual([
+      { active: true, level: 0, run: 20, shape: "elbow", x: 8 },
+    ]);
+  });
+
+  it("draws pass-through lanes only where the ancestor continues", () => {
+    expect(railLanes(3, [true, false, true], true, false)).toEqual([
+      { active: false, level: 0, run: 1, shape: "pass", x: 8 },
+      { active: false, level: 2, run: 20, shape: "elbow", x: 32 },
+    ]);
+  });
+
+  it("keeps deeper rails on one evenly spaced grid and clamps at five levels", () => {
+    const lanes = railLanes(7, [true, true, true, true, true, true, true], true, false);
+    expect(lanes.map((lane) => lane.x)).toEqual([8, 20, 32, 44, 56]);
   });
 });

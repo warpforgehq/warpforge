@@ -161,7 +161,7 @@ describe("App sidebar layout", () => {
     // The rail keeps its place in the split and narrows: moving it out of the
     // panel group would remount every view beside it.
     expect(screen.getByTestId("persistent-sidebar").parentElement).toHaveStyle({
-      width: "64px",
+      width: "48px",
     });
     expect(screen.queryByTestId("sidebar-resize-handle")).not.toBeInTheDocument();
   });

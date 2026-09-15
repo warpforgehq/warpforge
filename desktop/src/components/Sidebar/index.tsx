@@ -68,6 +68,7 @@ function Sidebar({
     agentUpdates,
     deletingShelf,
     handlePin,
+    liveLane,
     navCount,
     nowSec,
     pinned,
@@ -104,12 +105,14 @@ function Sidebar({
         connection={connection}
         connectionError={connectionError}
         agentUpdates={agentUpdates}
+        liveLane={liveLane}
         navCount={navCount}
         segment={segment}
         onToggleCollapsed={onToggleCollapsed}
         onSelectView={onSelectView}
         onSelectSegment={handleSelectSegment}
         onNewTask={onNewTask}
+        onOpenTask={onOpenTask}
         onOpenSettings={onOpenSettings}
       />
     );
@@ -274,6 +277,9 @@ function Sidebar({
                           task={row.task}
                           state={row.state}
                           depth={row.depth}
+                          ancestorLines={row.ancestorLines}
+                          isLast={row.isLast}
+                          onActivePath={row.onActivePath}
                           active={openTaskId === row.task.id}
                           childCount={row.childCount}
                           expanded={row.expanded}

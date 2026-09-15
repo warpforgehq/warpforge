@@ -86,7 +86,7 @@ import type { ProjectInfo, PullRequestSummary, TaskInfo } from "../protocol";
 import { useUi } from "../store/ui";
 import type { GlobalView } from "../store/ui";
 import Sidebar from "./Sidebar";
-import { SidebarTaskTooltipBody } from "./SidebarTaskRow";
+import { SidebarTaskTooltipBody } from "./Sidebar/SidebarTaskTooltip";
 import { TooltipProvider } from "./ui/tooltip";
 
 function task(id: string, overrides: Partial<TaskInfo> = {}): TaskInfo {
@@ -298,6 +298,23 @@ describe("Sidebar shell", () => {
     fireEvent.click(toggle);
     expect(handlers.onToggleCollapsed).toHaveBeenCalled();
   });
+
+  it("is one vertical toolbar tab stop with roving arrow navigation", () => {
+    renderSidebar(makeState([]), { collapsed: true });
+
+    const toolbar = screen.getByRole("toolbar");
+    expect(toolbar).toHaveAttribute("aria-orientation", "vertical");
+    const toggle = screen.getByRole("button", { name: "Expand sidebar" });
+    expect(toggle).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("button", { name: "Settings" })).toHaveAttribute("tabindex", "-1");
+
+    toggle.focus();
+    fireEvent.keyDown(toolbar, { key: "ArrowDown" });
+    expect(screen.getByRole("button", { name: "New task" })).toHaveFocus();
+
+    fireEvent.keyDown(toolbar, { key: "End" });
+    expect(screen.getByRole("button", { name: "Settings" })).toHaveFocus();
+  });
 });
 
 describe("Sidebar body segments", () => {
@@ -438,17 +455,17 @@ describe("Sidebar status encoding", () => {
     for (const id of ["rev", "queued", "idle"]) expect(rowGlyph(id)).toBeNull();
   });
 
-  it("gives a silent row no glyph lane at all", () => {
-    // Most rows are silent by design, so reserving an icon column for them
-    // indented the whole list on behalf of the minority that draws one.
+  it("reserves the glyph lane on a silent row but draws nothing in it", () => {
+    // The lane is fixed so titles align across states; only the content is
+    // conditional, preserving the four-glyph restraint.
     renderSidebar(makeState([task("rev", { status: "waiting", filesChanged: 1 })]));
 
     const row = taskRows("rev")[0];
+    expect(row.querySelector('[data-lane="glyph"]')).not.toBeNull();
     expect(row.querySelector("[data-task-glyph]")).toBeNull();
-    expect(row.firstElementChild!.className).not.toContain("size-3.5");
   });
 
-  it("keeps the working row's spinner", () => {
+  it("keeps the working row's dashed spinner", () => {
     renderSidebar(makeState([task("run", { status: "running" })]));
 
     const glyph = taskRows("run")[0].querySelector("[data-task-glyph]")!;
@@ -683,7 +700,7 @@ describe("Sidebar workspace tree", () => {
     expect(screen.queryByText("Update the daemon")).not.toBeInTheDocument();
   });
 
-  it("indents a subtask below its parent instead of nesting containers", () => {
+  it("draws a synthetic rail for a subtask instead of shifting its box", () => {
     const state = makeState([
       task("lead", { prompt: "Lead" }),
       task("child", { parentTaskId: "lead", prompt: "Child" }),
@@ -691,9 +708,80 @@ describe("Sidebar workspace tree", () => {
     renderSidebar(state);
     fireEvent.click(screen.getByRole("button", { name: /^Expand 1 subtask of Lead/ }));
 
-    const child = taskRows("child")[0].closest("div")!;
-    expect(child).toHaveStyle({ marginLeft: "14px" });
-    expect(child.className).toContain("border-l");
+    const child = taskRows("child")[0].closest("[data-rail-depth]")!;
+    expect(child).toHaveAttribute("data-rail-depth", "1");
+    expect(child.className).not.toContain("border-l");
+    expect(child).not.toHaveStyle({ marginLeft: "14px" });
+    // One connector lane, drawn as an elbow because the child is an only child.
+    const connector = child.querySelector('[data-rail-level="0"]');
+    expect(connector).not.toBeNull();
+    expect(connector).toHaveAttribute("data-rail-shape", "elbow");
+  });
+
+  it("gives a working and a silent sibling the same title start", () => {
+    const state = makeState([
+      task("lead", { prompt: "Lead" }),
+      task("busy", { parentTaskId: "lead", prompt: "Busy", status: "running" }),
+      task("quiet", { parentTaskId: "lead", prompt: "Quiet" }),
+    ]);
+    renderSidebar(state);
+    fireEvent.click(screen.getByRole("button", { name: /^Expand 2 subtasks of Lead/ }));
+
+    const busyLane = taskRows("busy")[0].querySelector('[data-lane="glyph"]')!;
+    const quietLane = taskRows("quiet")[0].querySelector('[data-lane="glyph"]')!;
+    expect(busyLane).not.toBeNull();
+    expect(quietLane).not.toBeNull();
+    expect(busyLane.className).toBe(quietLane.className);
+  });
+
+  it("draws a lane for every continuing ancestor", () => {
+    const state = makeState([
+      task("a", { prompt: "A", updatedAt: 100 }),
+      task("a2", { prompt: "A2", updatedAt: 1 }),
+      task("b", { parentTaskId: "a", prompt: "B" }),
+      task("c", { parentTaskId: "b", prompt: "C" }),
+    ]);
+    renderSidebar(state);
+    fireEvent.click(screen.getByRole("button", { name: / of A$/ }));
+    fireEvent.click(screen.getByRole("button", { name: / of B$/ }));
+
+    // A has a following sibling, so its lane passes beside C; level 1 is C's
+    // own connector.
+    const c = taskRows("c")[0].closest("[data-rail-depth]")!;
+    expect(c.querySelector('[data-rail-level="0"]')).not.toBeNull();
+    expect(c.querySelector('[data-rail-level="1"]')).not.toBeNull();
+  });
+
+  it("ends the rail with an elbow for a last child and a tee otherwise", () => {
+    const state = makeState([
+      task("lead", { prompt: "Lead", status: "running" }),
+      task("one", { parentTaskId: "lead", prompt: "One", status: "running" }),
+      task("two", { parentTaskId: "lead", prompt: "Two", status: "running" }),
+    ]);
+    renderSidebar(state);
+    fireEvent.click(screen.getByRole("button", { name: /^Expand 2 subtasks of Lead/ }));
+
+    const one = taskRows("one")[0].closest("[data-rail-depth]")!;
+    const two = taskRows("two")[0].closest("[data-rail-depth]")!;
+    expect(one.querySelector('[data-rail-level="0"]')).toHaveAttribute("data-rail-shape", "tee");
+    expect(two.querySelector('[data-rail-level="0"]')).toHaveAttribute("data-rail-shape", "elbow");
+  });
+
+  it("paints the primary rail along the open task's branch only", () => {
+    const state = makeState([
+      task("lead", { prompt: "Lead", status: "running" }),
+      task("mid", { parentTaskId: "lead", prompt: "Mid", status: "running" }),
+      task("leaf", { parentTaskId: "mid", prompt: "Leaf", status: "running" }),
+      task("other", { parentTaskId: "lead", prompt: "Other", status: "running" }),
+    ]);
+    renderSidebar(state, { openTaskId: "leaf" });
+
+    const mid = taskRows("mid")[0].closest("[data-rail-depth]")!;
+    const leaf = taskRows("leaf")[0].closest("[data-rail-depth]")!;
+    const other = taskRows("other")[0].closest("[data-rail-depth]")!;
+    expect(mid.querySelector("[data-rail-active]")).not.toBeNull();
+    expect(leaf.querySelector("[data-rail-active]")).not.toBeNull();
+    expect(other.querySelector("[data-rail-active]")).toBeNull();
   });
 
   it("has no expand control for a task without children", () => {

@@ -23,6 +23,9 @@ export interface SidebarRowsInput {
   forceVisibleTaskIds: ReadonlySet<string>;
   /** The project subject the app is on — what a row's `selected` reports. */
   selectedProject: string | null;
+  /** The open task and every ancestor above it: the branch a row's rail paints
+   *  `primary`. Computed once by the caller so the tree stays a pure function. */
+  activePathIds: ReadonlySet<string>;
   nowSec: number;
 }
 
@@ -37,6 +40,7 @@ export interface SidebarRowsInput {
  */
 export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
   const {
+    activePathIds,
     collapsedProjects,
     expandedShelves,
     expandedTaskIds,
@@ -71,23 +75,33 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
   const byRecency = (a: TaskTree, b: TaskTree) =>
     b.task.updatedAt - a.task.updatedAt || a.task.id.localeCompare(b.task.id);
 
-  const pushTree = (tree: TaskTree, depth: number) => {
+  const pushTree = (tree: TaskTree, depth: number, ancestorLines: boolean[], isLast: boolean) => {
     const expanded = expandedTaskIds.has(tree.task.id);
     const attention = attentionIds.has(tree.task.id);
     rows.push({
+      ancestorLines,
       attention,
       childCount: tree.children.length,
       depth,
       expanded,
+      isLast,
       key: `workspace:${tree.task.id}`,
       kind: "task",
+      onActivePath: activePathIds.has(tree.task.id),
       state: resolveTaskState(tree.task, { attention, nowSec }),
       task: tree.task,
     });
     if (!expanded) return;
     // Subtasks are the parent's story, so a settled one stays inline: the shelf
     // only ever holds whole groups.
-    for (const child of [...tree.children].sort(byPriority)) pushTree(child, depth + 1);
+    const kids = [...tree.children].sort(byPriority);
+    kids.forEach((child, index) =>
+      pushTree(child, depth + 1, [...ancestorLines, !isLast], index === kids.length - 1),
+    );
+  };
+  const pushRoots = (trees: TaskTree[], by: (a: TaskTree, b: TaskTree) => number) => {
+    const sorted = [...trees].sort(by);
+    sorted.forEach((tree, index) => pushTree(tree, 0, [], index === sorted.length - 1));
   };
 
   for (const name of input.projectOrder) {
@@ -117,7 +131,7 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
     const shelved: TaskTree[] = [];
     const active: TaskTree[] = [];
     for (const tree of roots) (isSettledTree(tree) ? shelved : active).push(tree);
-    for (const tree of active.sort(byPriority)) pushTree(tree, 0);
+    pushRoots(active, byPriority);
     if (shelved.length === 0) continue;
 
     const forced = shelved.some((tree) =>
@@ -141,7 +155,7 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
       project: name,
     });
     if (!shelfExpanded) continue;
-    for (const tree of shelved.sort(byRecency)) pushTree(tree, 0);
+    pushRoots(shelved, byRecency);
   }
 
   return rows;

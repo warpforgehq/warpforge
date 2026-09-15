@@ -13,7 +13,20 @@
 
 export { buildSidebarRows, type SidebarRowsInput } from "./buildRows";
 export { projectActivityAt, projectNames, sortProjectsByActivity } from "./projects";
-export { rowHeight, SIDEBAR_INDENT_PX, type SidebarRow } from "./row";
+export {
+  LANE_GLYPH_PX,
+  LANE_META_PX,
+  LANE_TWISTY_PX,
+  RAIL_ELBOW_RADIUS,
+  RAIL_W,
+  RAIL_W_ACTIVE,
+  railLanes,
+  rowHeight,
+  SIDEBAR_INDENT_PX,
+  SIDEBAR_MAX_INDENT_LEVELS,
+  type RailLane,
+  type SidebarRow,
+} from "./row";
 export { isSnoozed, snoozeWakeLabel } from "./snooze";
 export {
   SIDEBAR_STATE_META,
