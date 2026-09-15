@@ -111,3 +111,64 @@ describe("diffLineKind", () => {
     expect(diffLineKind(" untouched")).toBe("context");
   });
 });
+
+describe("markdown tables in tool output", () => {
+  const table = [
+    "| id | agent | status |",
+    "| :--- | :---: | ---: |",
+    "| t_1 | opencode | waiting |",
+    "| t_2 | claude | running |",
+  ].join("\n");
+
+  it("reads a table as a table, not as text", () => {
+    const blocks = parseToolOutput(table);
+    expect(blocks).toHaveLength(1);
+    const block = blocks[0];
+    if (block.kind !== "table") throw new Error("expected a table");
+    expect(block.header).toEqual(["id", "agent", "status"]);
+    expect(block.rows).toEqual([
+      ["t_1", "opencode", "waiting"],
+      ["t_2", "claude", "running"],
+    ]);
+    expect(block.align).toEqual(["left", "center", "right"]);
+
+    // A bare `---` claims nothing; only colons ask for an alignment.
+    const plain = parseToolOutput("| a | b |\n| --- | --- |\n| 1 | 2 |")[0];
+    if (plain.kind !== "table") throw new Error("expected a table");
+    expect(plain.align).toEqual([null, null]);
+    expect(block.text).toBe(table);
+  });
+
+  it("keeps the lines around a table as their own text blocks", () => {
+    const blocks = parseToolOutput(`some preamble\n${table}\ntrailing note`);
+    expect(blocks.map((block) => block.kind)).toEqual(["text", "table", "text"]);
+  });
+
+  it("pads a short row and truncates a long one to the header's width", () => {
+    const blocks = parseToolOutput("| a | b |\n| --- | --- |\n| 1 |\n| 1 | 2 | 3 |");
+    const block = blocks[0];
+    if (block.kind !== "table") throw new Error("expected a table");
+    expect(block.rows).toEqual([
+      ["1", ""],
+      ["1", "2"],
+    ]);
+  });
+
+  it("treats an escaped pipe as cell text", () => {
+    const blocks = parseToolOutput("| flag | note |\n| --- | --- |\n| a\\|b | x |");
+    const block = blocks[0];
+    if (block.kind !== "table") throw new Error("expected a table");
+    expect(block.rows).toEqual([["a|b", "x"]]);
+  });
+
+  it("leaves pipes that are not a table alone", () => {
+    for (const content of [
+      "ps aux | grep node | head",
+      "| not | a table |",
+      "| a | b |\n| 1 | 2 |",
+      "| a | b |\n| --- | --- |",
+    ]) {
+      expect(parseToolOutput(content).every((block) => block.kind !== "table")).toBe(true);
+    }
+  });
+});

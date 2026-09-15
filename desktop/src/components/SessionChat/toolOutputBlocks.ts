@@ -1,8 +1,19 @@
-/** One run of tool output: prose, a fenced code block, or a diff. */
+/** One run of tool output: prose, a fenced code block, a diff, or a table. */
 export type ToolOutputBlock =
   | { kind: "text"; text: string }
   | { kind: "code"; lang: string | null; label: string | null; text: string }
-  | { kind: "diff"; text: string };
+  | { kind: "diff"; text: string }
+  | {
+      kind: "table";
+      /** The source lines, kept for keys and for copying the block as text. */
+      text: string;
+      header: string[];
+      rows: string[][];
+      align: TableAlign[];
+    };
+
+/** Per-column alignment from the separator row; null when it says nothing. */
+export type TableAlign = "left" | "center" | "right" | null;
 
 /** How a diff line is tinted. `meta` covers hunk headers and file headers. */
 export type DiffLineKind = "add" | "del" | "meta" | "context";
@@ -115,10 +126,115 @@ function codeBlock(tag: string, text: string): ToolOutputBlock {
   return { kind: "code", label: LANGUAGE_LABELS[lang] ?? null, lang: lang || null, text };
 }
 
-function textBlock(lines: string[]): ToolOutputBlock | null {
-  const text = lines.join("\n").replace(/^\n+|\n+$/g, "");
-  if (!text.trim()) return null;
-  return looksLikeDiff(text) ? { kind: "diff", text } : { kind: "text", text };
+/**
+ * A table's cells: split on unescaped pipes, then trim. A leading or trailing
+ * pipe (the usual markdown shape) leaves empty edge cells that are dropped;
+ * `\|` is a literal pipe inside a cell.
+ */
+function splitRow(line: string): string[] {
+  const cells: string[] = [];
+  let current = "";
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (char === "\\" && line[i + 1] === "|") {
+      current += "|";
+      i += 1;
+      continue;
+    }
+    if (char === "|") {
+      cells.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  cells.push(current);
+
+  if (cells.length > 1 && cells[0].trim() === "") cells.shift();
+  if (cells.length > 1 && cells[cells.length - 1].trim() === "") cells.pop();
+  return cells.map((cell) => cell.trim());
+}
+
+/** A `|---|:--:|` row: only dashes, colons and pipes, with at least one dash. */
+function isSeparatorRow(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed.includes("-") || !trimmed.includes("|")) return false;
+  return /^\|?[\s:|-]+\|?$/.test(trimmed) && /-/.test(trimmed);
+}
+
+function separatorAlign(line: string): TableAlign[] {
+  return splitRow(line).map((cell) => {
+    const left = cell.startsWith(":");
+    const right = cell.endsWith(":");
+    if (left && right) return "center";
+    if (right) return "right";
+    if (left) return "left";
+    return null;
+  });
+}
+
+/**
+ * Whether `lines[index]` starts a markdown table: a header row with a pipe, a
+ * separator row under it, and at least one body row. The separator is what
+ * keeps a command's `ps | grep` line from being read as a table.
+ */
+function tableAt(lines: string[], index: number): Extract<ToolOutputBlock, { kind: "table" }> | null {
+  const header = lines[index];
+  const separator = lines[index + 1];
+  const firstBody = lines[index + 2];
+  if (header === undefined || separator === undefined || firstBody === undefined) return null;
+  if (!header.includes("|") || !isSeparatorRow(separator) || !firstBody.includes("|")) return null;
+
+  const columns = splitRow(header);
+  if (columns.length < 2) return null;
+  const align = separatorAlign(separator);
+  const rows: string[][] = [];
+  let last = index + 1;
+  for (let i = index + 2; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (line.trim() === "" || !line.includes("|")) break;
+    const cells = splitRow(line);
+    rows.push(columns.map((_, column) => cells[column] ?? ""));
+    last = i;
+  }
+  return {
+    align,
+    header: columns,
+    kind: "table",
+    rows,
+    text: lines.slice(index, last + 1).join("\n"),
+  };
+}
+
+/**
+ * One run of text as blocks: a markdown table becomes a table, everything
+ * around it stays the plain text it was. Only tables are recognised — this is
+ * terminal output, where `*`, `_` and `#` mean what the shell says they mean,
+ * so the rest of markdown is deliberately not interpreted.
+ */
+function textBlocks(lines: string[]): ToolOutputBlock[] {
+  const blocks: ToolOutputBlock[] = [];
+  let pending: string[] = [];
+
+  const flushText = () => {
+    const text = pending.join("\n").replace(/^\n+|\n+$/g, "");
+    pending = [];
+    if (!text.trim()) return;
+    blocks.push(looksLikeDiff(text) ? { kind: "diff", text } : { kind: "text", text });
+  };
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const table = tableAt(lines, i);
+    if (!table) {
+      pending.push(lines[i]);
+      continue;
+    }
+    flushText();
+    blocks.push(table);
+    i += 1 + table.rows.length;
+  }
+  flushText();
+  return blocks;
 }
 
 /**
@@ -128,8 +244,7 @@ function textBlock(lines: string[]): ToolOutputBlock | null {
  */
 export function parseToolOutput(content: string): ToolOutputBlock[] {
   if (!content.includes("```") && !content.includes("~~~")) {
-    const only = textBlock(content.split("\n"));
-    return only ? [only] : [];
+    return textBlocks(content.split("\n"));
   }
 
   const blocks: ToolOutputBlock[] = [];
@@ -137,9 +252,8 @@ export function parseToolOutput(content: string): ToolOutputBlock[] {
   let fence: { marker: string; tag: string; body: string[] } | null = null;
 
   const flushText = () => {
-    const block = textBlock(pending);
+    blocks.push(...textBlocks(pending));
     pending.length = 0;
-    if (block) blocks.push(block);
   };
 
   for (const line of content.split("\n")) {

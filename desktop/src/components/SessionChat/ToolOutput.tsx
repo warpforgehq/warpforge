@@ -61,8 +61,62 @@ const DiffBody = memo(function DiffBody({ text }: { text: string }) {
   );
 });
 
+const ALIGN: Record<"center" | "left" | "right", string> = {
+  center: "text-center",
+  left: "text-left",
+  right: "text-right",
+};
+
+/** A markdown table from tool output — the shape `list_agents`-style replies
+ *  arrive in. Cells stay text; wide tables scroll rather than wrap. */
+const TableBlock = memo(function TableBlock({
+  block,
+}: {
+  block: Extract<ToolOutputBlock, { kind: "table" }>;
+}) {
+  const cellAlign = (column: number) =>
+    block.align[column] === null ? "text-left" : ALIGN[block.align[column]];
+  return (
+    <div className="my-1.5 overflow-x-auto rounded-md border first:mt-0 last:mb-0">
+      <table className="border-collapse font-mono text-[12px] leading-5">
+        <thead>
+          <tr className="border-b border-rule bg-muted/40 text-muted-foreground">
+            {block.header.map((cell, column) => (
+              <th
+                key={column}
+                scope="col"
+                className={cn("whitespace-nowrap px-2.5 py-1 font-medium", cellAlign(column))}
+              >
+                {cell || " "}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {block.rows.map((row, index) => (
+            <tr key={index} className="border-b border-rule last:border-b-0">
+              {row.map((cell, column) => (
+                <td
+                  key={column}
+                  className={cn(
+                    "whitespace-nowrap px-2.5 py-1 text-foreground/80",
+                    cellAlign(column),
+                  )}
+                >
+                  {cell || " "}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
 function Block({ block }: { block: ToolOutputBlock }) {
   if (block.kind === "text") return <pre className={PROSE}>{block.text}</pre>;
+  if (block.kind === "table") return <TableBlock block={block} />;
   if (block.kind === "diff") {
     return (
       <div className={SURFACE}>

@@ -56,4 +56,16 @@ describe("ToolOutput", () => {
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByText("<img src=x onerror=1>")).toBeTruthy();
   });
+
+  it("renders a markdown table as a table", () => {
+    const { container } = render(
+      <ToolOutput content={"| id | status |\n| --- | --- |\n| t_1 | waiting |"} />,
+    );
+    const table = container.querySelector("table");
+    expect(table).not.toBeNull();
+    expect(container.querySelectorAll("th")).toHaveLength(2);
+    expect(container.querySelectorAll("tbody td")).toHaveLength(2);
+    expect(container.textContent).toContain("t_1");
+    expect(container.textContent).not.toContain("|");
+  });
 });
