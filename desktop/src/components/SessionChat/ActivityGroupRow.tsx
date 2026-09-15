@@ -10,6 +10,7 @@ import { daemon } from "../../daemon";
 import type { EditHunk, SessionUpdate } from "../../protocol";
 import { ThinkingBlock } from "../ThinkingBlock";
 import { ActivityStatusIcon, CategoryIcon, FileTypeIcon } from "./ActivityIcons";
+import { ToolOutput } from "./ToolOutput";
 import { TranscriptRowContext, type TranscriptRowContextValue } from "./TranscriptRow";
 
 type ToolCall = Extract<SessionUpdate, { kind: "tool_call" }>;
@@ -229,11 +230,7 @@ function ToolCallStep({
             : null}
         </div>
       ) : null}
-      {open && update.content ? (
-        <pre className="my-1 max-h-56 overflow-auto whitespace-pre-wrap break-words px-2 font-mono text-[12px] leading-5 text-muted-foreground [overflow-wrap:anywhere]">
-          {update.content}
-        </pre>
-      ) : null}
+      {open && update.content ? <ToolOutput content={update.content} /> : null}
     </div>
   );
 }
