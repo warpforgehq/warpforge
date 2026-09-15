@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 
 import {
+  LANE_GAP_PX,
   LANE_META_PX,
   LANE_TWISTY_PX,
   SIDEBAR_INDENT_PX,
@@ -289,9 +290,9 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
             data-task-state={state}
             onClick={() => onOpen(task.id)}
             aria-label={`Open task: ${label}`}
-            style={{ paddingLeft: gutterWidth + LANE_TWISTY_PX }}
+            style={{ paddingLeft: gutterWidth + LANE_TWISTY_PX + LANE_GAP_PX }}
             className={cn(
-              "flex h-8 w-full items-center rounded-md pr-2 text-left transition-colors",
+              "flex h-8 w-full items-center gap-2 rounded-md pr-2 text-left transition-colors",
               "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
               active ? "font-medium text-foreground" : "hover:bg-accent/60",
             )}
@@ -326,7 +327,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
             <span
               data-lane="meta"
               style={{ width: LANE_META_PX }}
-              className="relative ml-auto flex h-6 shrink-0 items-center justify-end gap-1 pl-1 transition-opacity group-hover/row:opacity-0 group-focus-within/row:opacity-0"
+              className="relative ml-auto flex h-6 shrink-0 items-center justify-end gap-1 transition-opacity group-hover/row:opacity-0 group-focus-within/row:opacity-0"
             >
               {childCount > 0 && (
                 <span className="tnum w-4 text-right text-[10px] text-muted-foreground/45">

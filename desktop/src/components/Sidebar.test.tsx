@@ -734,6 +734,23 @@ describe("Sidebar workspace tree", () => {
     expect(busyLane.className).toBe(quietLane.className);
   });
 
+  it("keeps a uniform inter-lane gap so a glyph never touches the title", () => {
+    const state = makeState([
+      task("lead", { prompt: "Lead", status: "running" }),
+      task("child", { parentTaskId: "lead", prompt: "Child", status: "running" }),
+    ]);
+    renderSidebar(state);
+    fireEvent.click(screen.getByRole("button", { name: /^Expand 1 subtask of Lead/ }));
+
+    // Every task row carries the gap, glyph or not, so the state icon, the
+    // title, the orchestrator mark and the meta lane are all separated.
+    for (const id of ["lead", "child"]) {
+      expect(taskRows(id)[0].className).toContain("gap-2");
+    }
+    // …and the reserved glyph lane still holds its box, keeping title x stable.
+    expect(taskRows("child")[0].querySelector('[data-lane="glyph"]')).not.toBeNull();
+  });
+
   it("draws a lane for every continuing ancestor", () => {
     const state = makeState([
       task("a", { prompt: "A", updatedAt: 100 }),

@@ -14,6 +14,7 @@
 export { buildSidebarRows, type SidebarRowsInput } from "./buildRows";
 export { projectActivityAt, projectNames, sortProjectsByActivity } from "./projects";
 export {
+  LANE_GAP_PX,
   LANE_GLYPH_PX,
   LANE_META_PX,
   LANE_TWISTY_PX,
