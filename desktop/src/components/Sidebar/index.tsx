@@ -163,7 +163,7 @@ function Sidebar({
             >
               <div className="flex items-center gap-1.5">
                 <strong className="select-none text-[11px] font-bold uppercase tracking-[0.2em] text-foreground">
-                  WARP<span>FORGE</span>
+                  WARP<span className="text-primary">FORGE</span>
                 </strong>
                 <ConnectionDot connection={connection} connectionError={connectionError} />
               </div>
