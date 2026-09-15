@@ -194,20 +194,23 @@ export function PullRequestDetail({
     commitsQuery.isFetching;
 
   /**
-   * Who has said what so far, as one entry per reviewer: the latest review
-   * state wins. The conversation already ships every review; only the rail
-   * renders them, and "who is this waiting on" is half of what a review
-   * surface exists to answer.
+   * Who is on this review, as one entry per person: a requested reviewer who
+   * has not answered reads `REQUESTED`, and the latest review state wins over
+   * it once they do. GitHub drops a login from `reviewRequests` the moment
+   * they review, so the two sources do not disagree on the wire.
    */
   const reviewers = React.useMemo(() => {
     const byLogin = new Map<string, { login: string; state: string }>();
+    for (const login of detailsQuery.data?.reviewRequests ?? []) {
+      if (login.trim()) byLogin.set(login, { login, state: "REQUESTED" });
+    }
     for (const comment of threadQuery.data?.comments ?? []) {
       if (comment.kind !== "review" || !comment.author?.login || !comment.state) continue;
       if (!REVIEWER_STATES.has(comment.state)) continue;
       byLogin.set(comment.author.login, { login: comment.author.login, state: comment.state });
     }
     return [...byLogin.values()];
-  }, [threadQuery.data]);
+  }, [detailsQuery.data, threadQuery.data]);
 
   /**
    * The review verdict being written, if any. A draft PR cannot receive one

@@ -1,4 +1,4 @@
-import { CircleDot, GitBranch, GitPullRequest, GitPullRequestClosed } from "lucide-react";
+import { CircleDot, Clock, GitBranch, GitPullRequest, GitPullRequestClosed } from "lucide-react";
 import * as React from "react";
 
 import { AuthorBadge } from "@/components/inbox/AuthorBadge";
@@ -48,7 +48,7 @@ export function PullMetaRail({
 
       <Section title="Reviewers">
         {reviewers.length === 0 ? (
-          <p className="text-xs text-muted-foreground/60">No reviews yet.</p>
+          <p className="text-xs text-muted-foreground/60">No reviewers yet.</p>
         ) : (
           reviewers.map((reviewer) => <ReviewerLine key={reviewer.login} reviewer={reviewer} />)
         )}
@@ -165,8 +165,20 @@ const REVIEWER_FALLBACK = {
   label: "Reviewed",
 };
 
+/** Asked for a review, has not answered yet — the state a reviewer line was
+ *  missing entirely, which left the rail listing only people who had already
+ *  replied. */
+const REQUESTED_REVIEW = {
+  glyphClassName: "text-warn",
+  icon: Clock,
+  label: "Review requested",
+};
+
 function ReviewerLine({ reviewer }: { reviewer: PullReviewer }) {
-  const meta = REVIEW_DECISION_META[reviewer.state] ?? REVIEWER_FALLBACK;
+  const meta =
+    reviewer.state === "REQUESTED"
+      ? REQUESTED_REVIEW
+      : (REVIEW_DECISION_META[reviewer.state] ?? REVIEWER_FALLBACK);
   const Icon = meta.icon;
   return (
     <span

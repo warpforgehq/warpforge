@@ -26,6 +26,8 @@ pub(crate) async fn github_pr_details(
              pullRequest(number: $number) { \
                title url state isDraft body author { login } \
                baseRefName headRefName reviewDecision \
+               reviewRequests(first: 10) { nodes { requestedReviewer { \
+                 ... on User { login } } } } \
                additions deletions changedFiles } } }",
         serde_json::json!({"owner": owner, "repo": repo, "number": number}),
     )
@@ -43,6 +45,21 @@ pub(crate) async fn github_pr_details(
                 avatar_url: actor_avatar(login),
             })
         });
+    // Team review requests carry no `login`, so only users survive the filter.
+    let review_requests = pr
+        .pointer("/reviewRequests/nodes")
+        .and_then(|nodes| nodes.as_array())
+        .map(|nodes| {
+            nodes
+                .iter()
+                .filter_map(|node| node.pointer("/requestedReviewer/login"))
+                .filter_map(|login| login.as_str())
+                .map(str::trim)
+                .filter(|login| !login.is_empty())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
     Ok(wire::PullRequestDetails {
         title: pr
             .get("title")
@@ -81,6 +98,7 @@ pub(crate) async fn github_pr_details(
             .filter(|v| !v.is_null())
             .and_then(|v| v.as_str())
             .map(str::to_string),
+        review_requests,
         additions: pr.get("additions").and_then(|v| v.as_u64()).unwrap_or(0),
         deletions: pr.get("deletions").and_then(|v| v.as_u64()).unwrap_or(0),
         changed_files: pr.get("changedFiles").and_then(|v| v.as_u64()).unwrap_or(0),

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PullRequestDetails, PullRequestSummary, PullThread } from "@/protocol";
+import type { PullComment, PullRequestDetails, PullRequestSummary, PullThread } from "@/protocol";
 import { useUi } from "@/store/ui";
 
 const { pullDetails, pullThread, pullDiff, pullReview } = vi.hoisted(() => ({
@@ -137,6 +137,40 @@ describe("PullRequestDetail refreshing", () => {
 
     await user.click(screen.getByRole("button", { name: "Refresh this pull request" }));
     await waitFor(() => expect(pullThread).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("PullRequestDetail reviewers", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    pullDetails.mockResolvedValue({ ...details, reviewRequests: ["ada", "linus"] });
+    pullThread.mockResolvedValue({
+      ...thread,
+      comments: [
+        {
+          id: "r1",
+          kind: "review",
+          author: { login: "ada" },
+          body: "looks good",
+          createdAt: new Date(0).toISOString(),
+          url: "",
+          state: "APPROVED",
+          replies: [],
+        } satisfies PullComment,
+      ],
+    });
+  });
+
+  it("lists a reviewer who has been asked but has not answered", async () => {
+    renderDetail(pr());
+
+    // The request is what puts them on the rail at all; before this only the
+    // people who had already reviewed showed up.
+    expect(await screen.findByText("linus")).toBeInTheDocument();
+    expect(screen.getByTitle("linus — review requested")).toBeInTheDocument();
+    // An answer replaces the request rather than duplicating the person: one
+    // rail line with the verdict, not a request line beside it.
+    expect(screen.getByTitle("ada — approved")).toBeInTheDocument();
   });
 });
 

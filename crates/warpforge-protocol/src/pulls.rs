@@ -86,6 +86,11 @@ pub struct PullRequestDetails {
     pub head_ref_name: String,
     #[serde(default)]
     pub review_decision: Option<String>,
+    /// Logins GitHub has asked for a review from, minus anyone who has since
+    /// answered. Without these the rail only listed people who had already
+    /// reviewed, which is the opposite of "waiting on whom".
+    #[serde(default)]
+    pub review_requests: Vec<String>,
     #[serde(default)]
     pub additions: u64,
     #[serde(default)]

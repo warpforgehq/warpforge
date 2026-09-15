@@ -51,6 +51,8 @@ export interface PullRequestDetails {
   baseRefName: string;
   headRefName: string;
   reviewDecision?: string | null;
+  /** Logins GitHub has requested a review from and who have not answered yet. */
+  reviewRequests?: string[];
   additions: number;
   deletions: number;
   changedFiles: number;
