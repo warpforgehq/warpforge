@@ -1,5 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -151,6 +151,36 @@ describe("Markdown embedded HTML", () => {
 
     expect(document.querySelector("script")).toBeNull();
     expect(screen.getByText("text")).not.toHaveAttribute("onclick");
+  });
+});
+
+describe("Markdown code blocks", () => {
+  it("copies a fenced code block's exact text", async () => {
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    const { container } = render(<Markdown>{"```ts\nconst a = 1;\n```"}</Markdown>);
+    expect(container.querySelectorAll("pre")).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy code" }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("const a = 1;"));
+  });
+
+  it("does not add a copy button to inline code", () => {
+    render(<Markdown>{"Open `src/main.rs`"}</Markdown>);
+
+    expect(screen.queryByRole("button", { name: "Copy code" })).not.toBeInTheDocument();
+  });
+
+  it("renders an untagged fence with one border and a copy button", () => {
+    const { container } = render(<Markdown>{"```\nplain text\n```"}</Markdown>);
+
+    expect(container.querySelectorAll("pre")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Copy code" })).toBeInTheDocument();
   });
 });
 

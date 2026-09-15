@@ -1,4 +1,14 @@
-import { createContext, memo, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Children,
+  createContext,
+  isValidElement,
+  memo,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
@@ -6,6 +16,7 @@ import remarkGfm from "remark-gfm";
 import type { PluggableList } from "unified";
 
 import { MarkdownAlert, splitMarkdownAlert } from "@/components/MarkdownAlert";
+import { MarkdownCodeBlock } from "@/components/MarkdownCodeBlock";
 import { MermaidDiagram } from "@/components/MermaidDiagram";
 import { isExternalLink, openExternalLink } from "@/lib/externalLinks";
 import { cn } from "@/lib/utils";
@@ -64,20 +75,13 @@ const MarkdownAnchor: NonNullable<Components["a"]> = ({ children: content, href 
 };
 
 const MarkdownCode: NonNullable<Components["code"]> = ({
-  className: codeClassName,
   children: content,
+  node: _node,
   ...rest
 }) => {
   const { resolveFilePath, onOpenFile } = useContext(MarkdownContext);
-  const inline = !codeClassName;
   const text = String(content ?? "");
-  // A mermaid fence is a picture, not code: agents reach for one when the
-  // shape of a change is the point (see `prAssistantPrompt`). Lazily loaded,
-  // and it falls back to this same block when the diagram will not parse.
-  if (!inline && /(^|\s)language-mermaid(\s|$)/.test(codeClassName ?? "")) {
-    return <MermaidDiagram code={text.trimEnd()} />;
-  }
-  const filePath = inline ? resolveFilePath?.(text) : null;
+  const filePath = resolveFilePath?.(text);
   if (filePath && onOpenFile) {
     return (
       <button
@@ -90,15 +94,11 @@ const MarkdownCode: NonNullable<Components["code"]> = ({
       </button>
     );
   }
-  return inline ? (
+  return (
     <code
-      className="break-words rounded bg-muted px-1 py-0.5 font-mono text-[0.85em] [overflow-wrap:anywhere]"
       {...rest}
+      className="break-words rounded bg-muted px-1 py-0.5 font-mono text-[0.85em] [overflow-wrap:anywhere]"
     >
-      {content}
-    </code>
-  ) : (
-    <code className={cn("font-mono", codeClassName)} {...rest}>
       {content}
     </code>
   );
@@ -195,11 +195,34 @@ const MARKDOWN_COMPONENTS: Components = {
   h3: ({ children: content }) => <h3 className="mb-1 mt-2 text-sm font-semibold">{content}</h3>,
   ol: ({ children: content }) => <ol className="my-1 list-decimal space-y-0.5 pl-5">{content}</ol>,
   p: ({ children: content }) => <p className="my-1">{content}</p>,
-  pre: ({ children: content }) => (
-    <pre className="my-2 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-md border bg-muted/50 p-2.5 font-mono text-xs leading-relaxed [overflow-wrap:anywhere]">
-      {content}
-    </pre>
-  ),
+  pre: ({ children: content }) => {
+    // react-markdown hands `pre` the unrendered `code` element, not its output,
+    // so a fenced block's own frame (mermaid or the copy-button block) has to
+    // be built here — rendering the child as-is would add this generic `<pre>`
+    // on top of it.
+    const kids = Children.toArray(content);
+    const onlyChild = kids.length === 1 ? kids[0] : undefined;
+    if (isValidElement(onlyChild) && onlyChild.type === MarkdownCode) {
+      const { className, children: rawChildren } = onlyChild.props as {
+        className?: string;
+        children?: React.ReactNode;
+      };
+      const source = String(rawChildren ?? "").trimEnd();
+      if (/(^|\s)language-mermaid(\s|$)/.test(className ?? "")) {
+        return <MermaidDiagram code={source} />;
+      }
+      return (
+        <MarkdownCodeBlock text={source}>
+          <code className={cn("font-mono", className)}>{rawChildren}</code>
+        </MarkdownCodeBlock>
+      );
+    }
+    return (
+      <pre className="my-2 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-md border bg-muted/50 p-2.5 font-mono text-xs leading-relaxed [overflow-wrap:anywhere]">
+        {content}
+      </pre>
+    );
+  },
   table: ({ children: content }) => (
     <div className="my-2 overflow-x-auto">
       <table className="w-full table-fixed border-collapse text-xs">{content}</table>
