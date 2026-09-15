@@ -198,17 +198,20 @@ pub(crate) fn truncate_chars(s: &str, cap: usize) -> String {
     format!("{cut}…")
 }
 
-/// One line per child task, pipe-separated. The daemon's `orchestrator.listAgents`
-/// reply carries each task's full `configOptions` model selector (100–400
-/// entries) and the entire prompt — dumping it raw blew the tool-result limit
-/// with four children. Projection keeps only what the caller needs to decide
-/// what to do next: id, agent, status, last activity, a short label, changed
-/// file count, blockage, and for pipelines the stage/round/waiting state.
+/// One line per child task, as a markdown table. The daemon's
+/// `orchestrator.listAgents` reply carries each task's full `configOptions`
+/// model selector (100–400 entries) and the entire prompt — dumping it raw blew
+/// the tool-result limit with four children. Projection keeps only what the
+/// caller needs to decide what to do next: id, agent, status, last activity, a
+/// short label, changed file count, blockage, and for pipelines the
+/// stage/round/waiting state. The separator row is what makes the transcript
+/// render this as a table rather than as pipes in a monospace block.
 pub(crate) fn render_agents_listing(agents: &[Value]) -> String {
     if agents.is_empty() {
         return "No sub-agent sessions — nothing spawned yet.".into();
     }
-    let mut out = String::from("id | agent | status | updated | label [| extras]\n");
+    let mut out = String::from("| id | agent | status | updated | label | extras |\n");
+    out.push_str("| --- | --- | --- | --- | --- | --- |\n");
     for agent in agents {
         out.push_str(&render_agent_line(agent));
         out.push('\n');
@@ -226,14 +229,11 @@ fn render_agent_line(agent: &Value) -> String {
         // TaskInfo timestamps are Unix seconds; fmt_utc wants millis.
         .map(|secs| fmt_utc(secs.saturating_mul(1000)))
         .unwrap_or_else(|| "?".into());
-    let mut line = format!("{id} | {name} | {status} | {updated}");
-    let label = short_label(agent);
-    if !label.is_empty() {
-        line.push_str(&format!(" | {label}"));
-    }
+    let label = cell(short_label(agent));
+    let mut extras = String::new();
     let files = agent.get("filesChanged").and_then(Value::as_u64);
     if let Some(files) = files.filter(|f| *f > 0) {
-        line.push_str(&format!(" | files={files}"));
+        extras.push_str(&format!("files={files}"));
     }
     if let Some(reason) = agent
         .get("blockedReason")
@@ -244,15 +244,26 @@ fn render_agent_line(agent: &Value) -> String {
             .get("blockedKind")
             .and_then(Value::as_str)
             .unwrap_or("blocked");
-        line.push_str(&format!(" | {kind}: {}", truncate_chars(reason, 120)));
+        extras.push_str(&format!(" {kind}: {}", truncate_chars(reason, 120)));
     }
     if let Some(wf) = agent.get("workflowRun").filter(|v| !v.is_null()) {
-        line.push_str(&render_workflow_run(wf));
+        extras.push_str(&render_workflow_run(wf));
     }
     if let Some(graph) = agent.get("orchestrationGraph").filter(|v| !v.is_null()) {
         if let Some(summary) = graph_node_summary(graph) {
-            line.push_str(&format!(" | graph: {summary}"));
+            extras.push_str(&format!(" graph: {summary}"));
         }
     }
-    line
+    // Six cells, always: a row shorter than the header is a row the reader has
+    // to re-align by eye, and the table shape is the point.
+    format!(
+        "| {id} | {name} | {status} | {updated} | {label} | {} |",
+        cell(extras)
+    )
+}
+
+/// A cell never contains a raw pipe — it would split the row. The renderer
+/// understands `\|`, but `/` reads better in a log-shaped value.
+fn cell(value: String) -> String {
+    value.replace('|', "/")
 }

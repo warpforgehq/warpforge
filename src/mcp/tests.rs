@@ -273,12 +273,23 @@ fn agents_listing_projection_is_compact_and_keeps_decision_critical_fields() {
     assert!(!out.contains("kilobytes"), "got: {out}");
     assert_eq!(
         out.lines()
-            .find(|l| l.starts_with("t_1"))
-            .expect("t_1 line"),
-        "t_1 | opencode | running | 2025-08-28 08:25:00Z | Fix auth middleware refresh handling | files=3"
+            .find(|l| l.starts_with("| t_1"))
+            .expect("t_1 row"),
+        "| t_1 | opencode | running | 2025-08-28 08:25:00Z | Fix auth middleware refresh handling | files=3 |"
+    );
+    // The header and its separator make this a markdown table for the
+    // transcript, not pipes in a monospace block.
+    let header = out.lines().next().unwrap();
+    assert!(
+        header.starts_with("| id | agent | status | updated | label | extras |"),
+        "got: {header}"
+    );
+    assert!(
+        out.lines().nth(1).is_some_and(|l| l.starts_with("| --- |")),
+        "separator row missing: {out}"
     );
     // Workflow stage/round/waiting survive the projection.
-    let t2 = out.lines().find(|l| l.starts_with("t_2")).unwrap();
+    let t2 = out.lines().find(|l| l.starts_with("| t_2")).unwrap();
     assert!(t2.contains("wf stage=review"), "got: {t2}");
     assert!(t2.contains("round=2/3"), "got: {t2}");
     assert!(t2.contains("waiting=question"), "got: {t2}");
@@ -309,12 +320,14 @@ fn agents_listing_handles_blocked_and_truncates_long_prompts() {
         }
     ]);
     let out = render_agents_listing(agents.as_array().unwrap());
-    let line = out.lines().find(|l| l.starts_with("t_3")).unwrap();
+    let line = out.lines().find(|l| l.starts_with("| t_3")).unwrap();
     // No title set -> truncated first (only) line of the prompt, hard-capped.
     assert!(line.contains(&"x".repeat(80)), "got: {line}");
     assert!(!line.contains(&"x".repeat(81)), "got: {line}");
     // blockedKind/reason kept; zero filesChanged omitted.
     assert!(line.contains("session_lost:"), "got: {line}");
+    // A raw pipe would split the row; the cell swaps it for a slash.
+    assert_eq!(line.matches('|').count(), 7, "got: {line}");
     assert!(line.contains("no longer exists"), "got: {line}");
     assert!(!line.contains("files="), "got: {line}");
     assert!(render_agents_listing(&[]).contains("No sub-agent sessions"));
