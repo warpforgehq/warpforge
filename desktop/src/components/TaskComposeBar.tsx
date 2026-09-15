@@ -202,7 +202,7 @@ export function TaskComposeBar({
         </div>
       </div>
 
-      <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+      <p className="flex flex-wrap items-center gap-x-1.5 text-[13px] text-muted-foreground">
         {branch && (
           <span className="inline-flex items-center gap-1">
             <GitBranch className="size-3 shrink-0" />
@@ -273,7 +273,7 @@ function ProjectPicker({
   onChange: (v: string) => void;
 }) {
   if (projects.length === 0) {
-    return <span className="text-xs text-muted-foreground">No projects added.</span>;
+    return <span className="text-[13px] text-muted-foreground">No projects added.</span>;
   }
   return (
     <DropdownMenu>
@@ -357,7 +357,7 @@ export function WorkflowPicker({
           type="button"
           title="Which pipeline to run"
           className={cn(
-            "flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors",
+            "flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-[13px] transition-colors",
             FOCUS_RING,
             selected ? ACTIVE_CONTROL : "border-border text-muted-foreground",
           )}
@@ -370,7 +370,7 @@ export function WorkflowPicker({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-72">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
           Pipelines
         </DropdownMenuLabel>
         {workflows.map((w) => (
@@ -402,9 +402,9 @@ export function WorkflowPicker({
               />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="flex items-center gap-1.5">
-                  <span className="truncate text-xs">{w.name}</span>
+                  <span className="truncate text-[13px]">{w.name}</span>
                   {w.source === "builtin" && (
-                    <span className="shrink-0 rounded bg-secondary px-1 text-[10px] text-muted-foreground">
+                    <span className="shrink-0 rounded bg-secondary px-1 text-[11px] text-muted-foreground">
                       built-in
                     </span>
                   )}

@@ -100,7 +100,7 @@ export function BacklogList({
 
 function Message({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-full items-center justify-center px-4 py-8 text-center text-xs text-muted-foreground">
+    <div className="flex h-full items-center justify-center px-4 py-8 text-center text-[13px] text-muted-foreground">
       {children}
     </div>
   );

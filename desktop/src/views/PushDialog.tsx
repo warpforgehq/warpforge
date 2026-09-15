@@ -382,7 +382,7 @@ function CommitRow({
       />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm">{commit.subject}</span>
-        <span className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="mt-0.5 flex items-center gap-2 text-[13px] text-muted-foreground">
           <span className="font-mono">{commit.shortHash}</span>
           <span className="truncate">{commit.author}</span>
           <span className="ml-auto shrink-0">

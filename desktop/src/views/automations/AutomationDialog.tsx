@@ -157,7 +157,7 @@ export function AutomationDialog({
                 <select
                   value={form.agent}
                   onChange={(event) => patch({ agent: event.target.value, model: "" })}
-                  className="bg-deep-surface h-8 min-w-0 flex-1 rounded-md border px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+                  className="bg-deep-surface h-8 min-w-0 flex-1 rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring"
                 >
                   {agents.length === 0 && <option value={form.agent}>{form.agent}</option>}
                   {agents.map((agent) => (
@@ -174,7 +174,7 @@ export function AutomationDialog({
                 value={form.model}
                 disabled={!modelOption}
                 onChange={(event) => patch({ model: event.target.value })}
-                className="bg-deep-surface h-8 w-full rounded-md border px-2 text-xs outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+                className="bg-deep-surface h-8 w-full rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
               >
                 <option
                   value=""

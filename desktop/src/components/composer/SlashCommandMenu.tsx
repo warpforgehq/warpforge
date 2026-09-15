@@ -28,7 +28,7 @@ export function SlashCommandMenu({ commands, menuIndex, onPick, onHover }: Slash
         >
           <span className="font-mono text-primary">/{command.name}</span>
           {command.description && (
-            <span className="text-xs text-muted-foreground">{command.description}</span>
+            <span className="text-[13px] text-muted-foreground">{command.description}</span>
           )}
         </button>
       ))}

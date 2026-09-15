@@ -68,7 +68,7 @@ export function SettingRow({
           <h3 className="text-[13px] font-semibold text-foreground">{title}</h3>
           {resetAction}
         </div>
-        <p className="flex items-center gap-1 text-xs text-muted-foreground/80">
+        <p className="flex items-center gap-1 text-[13px] text-muted-foreground/80">
           {description}
           {hint && (
             <span
@@ -138,7 +138,7 @@ export function NumberInput({
         type="button"
         size="sm"
         variant="outline"
-        className="h-7 w-7 p-0 text-xs"
+        className="h-7 w-7 p-0 text-[13px]"
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
       >
@@ -149,7 +149,7 @@ export function NumberInput({
         type="button"
         size="sm"
         variant="outline"
-        className="h-7 w-7 p-0 text-xs"
+        className="h-7 w-7 p-0 text-[13px]"
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
       >
@@ -192,7 +192,9 @@ export function Slider({
         onChange={(e) => onChange(Number(e.target.value))}
         className="h-1 w-32 cursor-pointer appearance-none rounded-full bg-muted-foreground/30 accent-primary disabled:cursor-not-allowed disabled:opacity-50"
       />
-      <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{display}</span>
+      <span className="w-10 text-right text-[11px] tabular-nums text-muted-foreground">
+        {display}
+      </span>
     </div>
   );
 }

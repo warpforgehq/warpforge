@@ -131,7 +131,7 @@ export function PullFilesRail({
           placeholder="Filter files"
           aria-label="Filter changed files"
           spellCheck={false}
-          className="h-7 min-w-0 flex-1 border-transparent bg-transparent px-2 text-xs shadow-none focus-visible:border-border"
+          className="h-7 min-w-0 flex-1 border-transparent bg-transparent px-2 text-[13px] shadow-none focus-visible:border-border"
         />
         <div
           role="group"
@@ -155,7 +155,7 @@ export function PullFilesRail({
       <div className="min-h-0 flex-1 overflow-y-auto py-1">
         {needle ? (
           matches.length === 0 ? (
-            <p className="px-2.5 py-2 text-xs text-muted-foreground/60">No matching files.</p>
+            <p className="px-2.5 py-2 text-[13px] text-muted-foreground/60">No matching files.</p>
           ) : (
             matches.map((block) => (
               <FileRow
@@ -281,8 +281,8 @@ function FolderRow({
       ) : (
         <ChevronRight aria-hidden className="size-3 shrink-0 text-muted-foreground/70" />
       )}
-      <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{node.name}</span>
-      <span className="tnum shrink-0 font-mono text-[10px] text-muted-foreground/50">
+      <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">{node.name}</span>
+      <span className="tnum shrink-0 font-mono text-[11px] text-muted-foreground/50">
         {pullTreeFileCount(node)}
       </span>
     </button>
@@ -332,13 +332,13 @@ function GroupSection({
         />
         <span
           className={cn(
-            "min-w-0 flex-1 truncate text-xs font-medium",
+            "min-w-0 flex-1 truncate text-[13px] font-medium",
             group.tone === "noise" ? "text-muted-foreground/70" : "text-foreground/85",
           )}
         >
           {group.label}
         </span>
-        <span className="tnum shrink-0 font-mono text-[10px] text-muted-foreground/50">
+        <span className="tnum shrink-0 font-mono text-[11px] text-muted-foreground/50">
           {done}/{group.files.length}
         </span>
       </button>
@@ -426,11 +426,13 @@ function FileRow({
       </span>
       {/* In folder-tree mode the folders already carry the directory; in the
           grouped reading the row has to say where the file lives itself. */}
-      <span className="min-w-0 max-w-[70%] flex-1 truncate text-xs text-foreground/85">{name}</span>
+      <span className="min-w-0 max-w-[70%] flex-1 truncate text-[13px] text-foreground/85">
+        {name}
+      </span>
       {dir && (
         <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground/60">{dir}</span>
       )}
-      <span className="tnum flex shrink-0 items-center gap-1 font-mono text-[10px]">
+      <span className="tnum flex shrink-0 items-center gap-1 font-mono text-[11px]">
         {additions > 0 && <span className="text-ok">+{additions}</span>}
         {deletions > 0 && <span className="text-destructive">−{deletions}</span>}
       </span>

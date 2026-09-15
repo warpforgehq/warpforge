@@ -79,7 +79,7 @@ export function IgnoredFiles({
           onClick={() => openFile(node.path)}
           style={pad}
           className={cn(
-            "flex h-7 w-max min-w-full items-center pr-2 text-left text-xs text-muted-foreground select-none hover:bg-secondary/50",
+            "flex h-7 w-max min-w-full items-center pr-2 text-left text-[13px] text-muted-foreground select-none hover:bg-secondary/50",
             selected === node.path && "bg-secondary text-foreground",
           )}
         >
@@ -93,7 +93,7 @@ export function IgnoredFiles({
           key={node.path}
           title={`${node.path}/ — ignored as a whole, not expandable`}
           style={pad}
-          className="flex h-7 w-max min-w-full cursor-default items-center gap-1.5 pr-2 text-xs text-muted-foreground select-none"
+          className="flex h-7 w-max min-w-full cursor-default items-center gap-1.5 pr-2 text-[13px] text-muted-foreground select-none"
         >
           <Folder className="size-3.5 shrink-0" />
           <span className="whitespace-nowrap">{node.name}</span>
@@ -109,7 +109,7 @@ export function IgnoredFiles({
           onClick={() => toggleFolder(node.path)}
           title={node.path}
           style={pad}
-          className="flex h-7 w-max min-w-full items-center gap-1.5 pr-2 text-left text-xs text-muted-foreground select-none hover:bg-secondary/50"
+          className="flex h-7 w-max min-w-full items-center gap-1.5 pr-2 text-left text-[13px] text-muted-foreground select-none hover:bg-secondary/50"
         >
           <ChevronRight
             className={cn("size-3.5 shrink-0 transition-transform", open && "rotate-90")}
@@ -117,7 +117,7 @@ export function IgnoredFiles({
           <Folder className="size-3.5 shrink-0" />
           <span className="whitespace-nowrap">{node.name}</span>
           {inner.length > 0 && (
-            <span className="ml-auto shrink-0 pl-2 text-[10px] opacity-70">{inner}</span>
+            <span className="ml-auto shrink-0 pl-2 text-[11px] opacity-70">{inner}</span>
           )}
         </button>
         {open && node.children.map((child) => renderNode(child, depth + 1))}
@@ -140,14 +140,14 @@ export function IgnoredFiles({
         <FileListSkeleton rows={6} label="Loading ignored files" meta={false} />
       )}
       {state === "unavailable" && (
-        <p className="px-3 py-1 text-xs text-warn">Ignored files unavailable.</p>
+        <p className="px-3 py-1 text-[13px] text-warn">Ignored files unavailable.</p>
       )}
       {state === "empty" && (
-        <p className="px-3 py-1 text-xs text-muted-foreground">No ignored files.</p>
+        <p className="px-3 py-1 text-[13px] text-muted-foreground">No ignored files.</p>
       )}
       {state === "list" && tree.map((node) => renderNode(node, 0))}
       {state === "list" && truncated && (
-        <p className="px-3 py-1 text-xs text-warn">
+        <p className="px-3 py-1 text-[13px] text-warn">
           Not all ignored files are shown — the list was truncated.
         </p>
       )}

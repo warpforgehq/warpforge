@@ -300,7 +300,7 @@ export default function NewTaskDialog({
                 value={tags}
                 onChange={(event) => setTags(event.target.value)}
                 placeholder="Tags"
-                className="h-8 w-28 shrink-0 rounded-md bg-transparent px-2 text-xs transition-colors placeholder:text-muted-foreground/70 hover:bg-secondary/60 focus-visible:bg-secondary/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="h-8 w-28 shrink-0 rounded-md bg-transparent px-2 text-[13px] transition-colors placeholder:text-muted-foreground/70 hover:bg-secondary/60 focus-visible:bg-secondary/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <Button
                 type="button"

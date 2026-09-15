@@ -66,7 +66,7 @@ export function PullThreadCard({
           </span>
           <span className="ml-auto flex shrink-0 items-center gap-2">
             {resolved && (
-              <span className="rounded border border-ok/40 bg-ok/10 px-1.5 py-px text-[10px] font-medium text-ok">
+              <span className="rounded border border-ok/40 bg-ok/10 px-1.5 py-px text-[11px] font-medium text-ok">
                 Resolved
               </span>
             )}
@@ -119,7 +119,7 @@ export function PullThreadCard({
             {index > 0 && <span aria-hidden className="mt-5 w-px shrink-0 bg-border/70" />}
             <AuthorBadge login={comment.author?.login ?? ""} />
             <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-2 text-xs">
+              <div className="flex min-w-0 items-center gap-2 text-[13px]">
                 <span className="font-medium text-foreground/85">
                   {comment.author?.login || "ghost"}
                 </span>
@@ -164,7 +164,7 @@ export function PullThreadCard({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-6 gap-1 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+              className="h-6 gap-1 px-1.5 text-[13px] text-muted-foreground hover:text-foreground"
               onClick={onReply}
             >
               <Reply className="size-3" />

@@ -1,5 +1,6 @@
-import { GitPullRequest } from "lucide-react";
+import { FolderGit2, GitPullRequest } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import type { PrAssistantState } from "@/lib/taskOrigin";
@@ -20,6 +21,8 @@ export interface PullRequestListProps {
   isLoading: boolean;
   error?: string;
   emptyHint?: string;
+  /** Set only when the list is empty because no project is registered yet. */
+  onAddProject?: () => void;
 }
 
 /**
@@ -40,6 +43,7 @@ export function PullRequestList({
   isLoading,
   error,
   emptyHint,
+  onAddProject,
 }: PullRequestListProps) {
   if (error) {
     return <Message tone="error">{error}</Message>;
@@ -52,8 +56,17 @@ export function PullRequestList({
       <EmptyState
         compact
         className="h-full"
-        icon={GitPullRequest}
-        title={emptyHint ?? "No open pull requests"}
+        icon={onAddProject ? FolderGit2 : GitPullRequest}
+        title={onAddProject ? "No projects yet" : (emptyHint ?? "No open pull requests")}
+        hint={onAddProject ? "Add a project to fill the inbox." : undefined}
+        action={
+          onAddProject && (
+            <Button variant="outline" size="sm" onClick={onAddProject}>
+              <FolderGit2 className="size-4" />
+              Add project
+            </Button>
+          )
+        }
       />
     );
   }
@@ -82,7 +95,7 @@ function Message({ children, tone }: { children: React.ReactNode; tone?: "error"
   return (
     <div
       className={cn(
-        "flex h-full items-center justify-center px-4 py-8 text-center text-xs",
+        "flex h-full items-center justify-center px-4 py-8 text-center text-[13px]",
         tone === "error" ? "text-destructive" : "text-muted-foreground",
       )}
     >
@@ -109,8 +122,8 @@ export function InboxToolbar({
 }) {
   return (
     <div className="flex h-9 shrink-0 items-center gap-1.5 px-2 pt-1">
-      {/* `text-xs!` because the shared `Input` ships `md:text-sm`, which
-          outranks a plain `text-xs` and left the placeholder visibly larger
+      {/* `text-[13px]!` because the shared `Input` ships `md:text-sm`, which
+          outranks a plain utility and left the placeholder visibly larger
           than every row around it in the sidebar. */}
       <Input
         value={search}
@@ -118,7 +131,7 @@ export function InboxToolbar({
         placeholder="Filter pull requests"
         aria-label="Filter pull requests"
         spellCheck={false}
-        className="h-7 min-w-0 flex-1 border-transparent bg-transparent px-2 text-xs! shadow-none focus-visible:border-border"
+        className="h-7 min-w-0 flex-1 border-transparent bg-transparent px-2 text-[13px]! shadow-none focus-visible:border-border"
       />
       <div
         role="tablist"
@@ -133,7 +146,7 @@ export function InboxToolbar({
             aria-selected={state === value}
             onClick={() => onStateChange(value)}
             className={cn(
-              "rounded px-2 py-0.5 text-xs capitalize transition-colors",
+              "rounded px-2 py-0.5 text-[13px] capitalize transition-colors",
               state === value
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",

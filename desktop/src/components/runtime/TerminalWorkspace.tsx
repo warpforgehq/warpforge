@@ -82,21 +82,21 @@ function TerminalEmptyState({
   return (
     <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 px-6 text-center">
       <div className="space-y-1">
-        <p className="text-sm font-medium text-foreground">Interactive terminal</p>
-        <p className="max-w-xs text-xs text-muted-foreground">
+        <p className="text-[15px] font-medium text-foreground">Interactive terminal</p>
+        <p className="max-w-xs text-[13px] text-muted-foreground">
           Start a shell session managed by the daemon.
         </p>
       </div>
       {error ? (
         <div className="flex flex-col items-center gap-2">
-          <div role="alert" className="flex items-center gap-1.5 text-xs text-destructive">
+          <div role="alert" className="flex items-center gap-1.5 text-[13px] text-destructive">
             <AlertCircle className="size-3.5" />
             {error}
           </div>
           <button
             type="button"
             onClick={onRetry}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-secondary"
           >
             <RefreshCw className="size-3.5" />
             Retry
@@ -106,7 +106,7 @@ function TerminalEmptyState({
         <button
           type="button"
           onClick={onNew}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-secondary"
           aria-label="Start terminal"
         >
           <Plus className="size-3.5" />
@@ -342,21 +342,21 @@ const TerminalPane = memo(function TerminalPane({
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
           <div className="flex flex-col items-center gap-2 text-center">
             {lifecycle === "starting" && (
-              <p className="text-xs text-muted-foreground">Starting terminal…</p>
+              <p className="text-[13px] text-muted-foreground">Starting terminal…</p>
             )}
             {lifecycle === "closing" && (
-              <p className="text-xs text-muted-foreground">Closing terminal…</p>
+              <p className="text-[13px] text-muted-foreground">Closing terminal…</p>
             )}
             {lifecycle === "disconnected" && (
-              <p className="text-xs text-muted-foreground">Daemon disconnected</p>
+              <p className="text-[13px] text-muted-foreground">Daemon disconnected</p>
             )}
             {lifecycle === "exited" && (
               <div className="flex flex-col items-center gap-2">
-                <p className="text-xs text-muted-foreground">Terminal exited</p>
+                <p className="text-[13px] text-muted-foreground">Terminal exited</p>
                 <button
                   type="button"
                   onClick={onRestart}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-secondary"
                 >
                   <RefreshCw className="size-3.5" />
                   Restart
@@ -365,11 +365,11 @@ const TerminalPane = memo(function TerminalPane({
             )}
             {lifecycle === "error" && (
               <div className="flex flex-col items-center gap-2">
-                <p className="text-xs text-destructive">{error ?? "Terminal error"}</p>
+                <p className="text-[13px] text-destructive">{error ?? "Terminal error"}</p>
                 <button
                   type="button"
                   onClick={onRetryClose}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:bg-secondary"
                 >
                   <RefreshCw className="size-3.5" />
                   Retry

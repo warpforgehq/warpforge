@@ -72,7 +72,7 @@ export default function MemoryPage() {
               }
               void applyEmbeddingMode(mode);
             }}
-            className="h-7 rounded-md border bg-background px-2 text-xs"
+            className="h-7 rounded-md border bg-background px-2 text-[13px]"
           >
             <option value="none">Keywords</option>
             <option value="fastembed">Hybrid (~80 MB)</option>

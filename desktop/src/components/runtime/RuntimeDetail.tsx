@@ -46,8 +46,8 @@ export function ServiceHeading({ service }: { service: ServiceInfo }) {
   return (
     <>
       <StatusDot variant={badge.variant} />
-      <span className="text-xs font-medium">{service.name}</span>
-      <span className="rounded border border-border px-1.5 py-px text-[10px] text-muted-foreground">
+      <span className="text-[13px] font-medium">{service.name}</span>
+      <span className="rounded border border-border px-1.5 py-px text-[11px] text-muted-foreground">
         {badge.label}
       </span>
       <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-muted-foreground">
@@ -76,8 +76,8 @@ export function PortForwardHeading({ pf }: { pf: PortForwardInfo }) {
   return (
     <>
       <PlugZap className="size-3.5 text-muted-foreground" />
-      <span className="text-xs font-medium">{pf.name}</span>
-      <span className="rounded border border-border px-1.5 py-px text-[10px] text-muted-foreground">
+      <span className="text-[13px] font-medium">{pf.name}</span>
+      <span className="rounded border border-border px-1.5 py-px text-[11px] text-muted-foreground">
         {badge.label}
       </span>
       <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">

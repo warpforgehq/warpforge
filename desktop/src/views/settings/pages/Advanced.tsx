@@ -34,7 +34,7 @@ export default function AdvancedPage() {
             value={backlogSettings.data?.mode ?? "sqlite"}
             disabled={backlogSettings.isLoading || backlogStorage.isPending}
             onChange={(event) => backlogStorage.mutate(event.target.value as "sqlite" | "yaml")}
-            className="h-7 rounded-md border bg-background px-2 text-xs"
+            className="h-7 rounded-md border bg-background px-2 text-[13px]"
           >
             <option value="sqlite">SQLite</option>
             <option value="yaml">YAML files</option>
@@ -51,7 +51,7 @@ export default function AdvancedPage() {
               aria-label="Dream project"
               value={dreamProject}
               onChange={(e) => setDreamProject(e.target.value)}
-              className="h-7 rounded-md border bg-background px-2 text-xs"
+              className="h-7 rounded-md border bg-background px-2 text-[13px]"
             >
               <option value="">global</option>
               {(state.snapshot.projects ?? []).map((p: any) => (
@@ -64,7 +64,7 @@ export default function AdvancedPage() {
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 text-xs"
+              className="h-7 text-[13px]"
               onClick={async () => {
                 const pid = effectiveDreamProject || state.snapshot.projects[0]?.name || "global";
                 const agent =
@@ -97,7 +97,7 @@ export default function AdvancedPage() {
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 text-xs"
+              className="h-7 text-[13px]"
               onClick={async () => {
                 const pid = effectiveDreamProject || state.snapshot.projects[0]?.name || "global";
                 const res: any = await (daemon as any).request("memory.dream", {

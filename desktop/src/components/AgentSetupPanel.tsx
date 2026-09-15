@@ -275,16 +275,16 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                   <span className="truncate">{agent.displayName}</span>
                   {agent.installed ? (
                     behind ? (
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[10px] font-medium text-warn">
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[11px] font-medium text-warn">
                         update available
                       </span>
                     ) : (
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-ok/15 px-1.5 py-0.5 text-[10px] font-medium text-ok">
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-ok/15 px-1.5 py-0.5 text-[11px] font-medium text-ok">
                         {agent.version ? `v${agent.version}` : "installed"}
                       </span>
                     )
                   ) : (
-                    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
                       <Download className="size-2.5" />
                       not found
                     </span>
@@ -321,7 +321,7 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                   <Button
                     size="sm"
                     variant={behind ? "default" : "secondary"}
-                    className="h-7 whitespace-nowrap px-2 text-xs"
+                    className="h-7 whitespace-nowrap px-2 text-[13px]"
                     disabled={isBusy}
                     onClick={(e) => {
                       e.stopPropagation();

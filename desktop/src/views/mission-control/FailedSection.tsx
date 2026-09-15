@@ -43,12 +43,12 @@ export function FailedSection({
           <CircleX className="mt-0.5 size-4 shrink-0 text-destructive" />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-foreground">Failed</h2>
+              <h2 className="text-[15px] font-semibold text-foreground">Failed</h2>
               <span className="tnum rounded-full bg-destructive/10 px-1.5 py-px text-[11px] text-destructive">
                 {failures.length}
               </span>
             </div>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
               Something went wrong — open to retry.
             </p>
           </div>
@@ -70,12 +70,12 @@ export function FailedSection({
                 <span className="shrink-0 text-[11px] font-medium text-muted-foreground">
                   {failureKindLabel(item.kind)}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-foreground">
                   {taskLabel(item.task)}
                 </span>
                 <span className="shrink-0 text-[11px] font-medium text-primary">Retry</span>
               </div>
-              <p className="truncate pl-1 text-xs text-muted-foreground" title={item.reason}>
+              <p className="truncate pl-1 text-[13px] text-muted-foreground" title={item.reason}>
                 {item.reason}
               </p>
               <div className="flex min-w-0 items-center gap-2 pl-1 text-[11px] text-muted-foreground/80">

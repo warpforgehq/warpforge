@@ -1,6 +1,8 @@
+import { FolderGit2 } from "lucide-react";
 import * as React from "react";
 
 import { InboxDetailPane } from "@/components/inbox/InboxDetailPane";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { inboxItemKey } from "@/lib/inboxSeen";
@@ -24,6 +26,7 @@ import { useInboxItems } from "./useInboxItems";
 export function InboxPane({
   projects,
   onSendToAgent,
+  onAddProject,
   emptyHint,
   listPlacement = "pane",
 }: {
@@ -31,6 +34,8 @@ export function InboxPane({
   projects: readonly string[];
   /** Fired by the review pane's "Send to agent" action; the host owns creation. */
   onSendToAgent?: (project: string, prompt: string) => void;
+  /** Opens the host's add-project dialog from the "no projects" state. */
+  onAddProject?: () => void;
   emptyHint?: string;
   /** Where the "which pull request" list renders. `sidebar` means the app
    *  sidebar is already showing it and this pane is review only. */
@@ -73,8 +78,17 @@ export function InboxPane({
     return (
       <EmptyState
         className="h-full"
+        icon={FolderGit2}
         title="No projects yet"
         hint="Add a project to fill the inbox."
+        action={
+          onAddProject && (
+            <Button variant="outline" onClick={onAddProject}>
+              <FolderGit2 className="size-4" />
+              Add project
+            </Button>
+          )
+        }
       />
     );
   }
@@ -95,7 +109,7 @@ export function InboxPane({
         onSizeChange={setListSize}
         className="min-w-0"
       >
-        <InboxListPane projects={projects} emptyHint={emptyHint} />
+        <InboxListPane projects={projects} emptyHint={emptyHint} onAddProject={onAddProject} />
       </Panel>
       <PanelSeparator aria-label="Resize pull request list" />
       <Panel pin className="min-w-0">

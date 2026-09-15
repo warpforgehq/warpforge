@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils";
 
 import type { FileDiff } from "../protocol";
 import { CommitPane } from "./changes/CommitPane";
-import { ShelveDialog } from "./changes/ShelveDialog";
 import { ShelfTab } from "./changes/ShelfTab";
+import { ShelveDialog } from "./changes/ShelveDialog";
 import { StashTab } from "./changes/StashTab";
 
 type RailTab = "commit" | "shelf" | "stash";
@@ -71,7 +71,7 @@ export function ChangesRail({
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
             className={cn(
-              "rounded-t px-2.5 py-1.5 text-xs font-medium transition-colors",
+              "rounded-t px-2.5 py-1.5 text-[13px] font-medium transition-colors",
               tab === t.id
                 ? "bg-secondary/60 text-foreground"
                 : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground",

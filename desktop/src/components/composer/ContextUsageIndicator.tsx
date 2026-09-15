@@ -72,11 +72,11 @@ export const ContextUsageIndicator = memo(function ContextUsageIndicator({
             style={{ width: `${percentage}%` }}
           />
         </div>
-        <p className="text-xs leading-relaxed text-muted-foreground">
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
           The agent can compact its context automatically when needed.
         </p>
         {usage.cost && (
-          <p className="tnum border-t pt-3 text-xs text-muted-foreground">
+          <p className="tnum border-t pt-3 text-[11px] text-muted-foreground">
             Session cost ·{" "}
             {usage.cost.amount.toLocaleString("en-US", {
               minimumFractionDigits: 2,

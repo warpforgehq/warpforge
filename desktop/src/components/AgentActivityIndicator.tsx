@@ -31,7 +31,7 @@ export function AgentActivityIndicator({
         activity.tone === "thinking" && "border-primary/20 bg-primary/[0.055] text-primary",
         activity.tone === "working" && "border-warn/25 bg-warn/[0.06] text-warn",
         activity.tone === "writing" && "border-ok/25 bg-ok/[0.06] text-ok",
-        compact ? "px-2.5 py-2 text-xs" : "px-3 py-2.5 text-sm",
+        compact ? "px-2.5 py-2 text-[13px]" : "px-3 py-2.5 text-sm",
       )}
     >
       <div className="flex shrink-0 items-center gap-1.5">

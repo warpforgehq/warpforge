@@ -46,9 +46,7 @@ export function StashTab({
   // Same contract as the Shelf tab: auto-first only until the user picks;
   // a vanished pick selects nothing rather than substituting silently.
   const selected =
-    selectedId !== null
-      ? (entries.find((e) => e.id === selectedId) ?? null)
-      : (entries[0] ?? null);
+    selectedId !== null ? (entries.find((e) => e.id === selectedId) ?? null) : (entries[0] ?? null);
 
   const detailQuery = useQuery({
     enabled: selected !== null,
@@ -86,7 +84,10 @@ export function StashTab({
       setConfirm(null);
       await refreshAll();
     } catch (e) {
-      reportGitFailure(pop ? "Could not pop the stash entry" : "Could not apply the stash entry", e);
+      reportGitFailure(
+        pop ? "Could not pop the stash entry" : "Could not apply the stash entry",
+        e,
+      );
     } finally {
       setBusy(false);
     }
@@ -166,7 +167,7 @@ export function StashTab({
               title="Apply the entry, keeping it in the stash"
               disabled={busy || !selected}
               onClick={() => void apply(false)}
-              className="flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
+              className="flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-[13px] font-normal text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
             >
               {busy ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -181,9 +182,13 @@ export function StashTab({
               title="Apply the entry and drop it from the stash"
               disabled={busy || !selected}
               onClick={() => selected && setConfirm({ action: "apply-drop", id: selected.id })}
-              className="flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
+              className="flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-[13px] font-normal text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
             >
-              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <PackageOpen className="size-3.5" />}
+              {busy ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <PackageOpen className="size-3.5" />
+              )}
               Apply & Drop
             </button>
           </>
@@ -218,9 +223,9 @@ export function StashTab({
         {listQuery.isPending ? (
           <FileListSkeleton rows={4} label="Loading stash" />
         ) : listQuery.isError ? (
-          <p className="px-3 py-2 text-xs text-warn">Stash unavailable.</p>
+          <p className="px-3 py-2 text-[13px] text-warn">Stash unavailable.</p>
         ) : entries.length === 0 ? (
-          <p className="px-3 py-2 text-xs text-muted-foreground">
+          <p className="px-3 py-2 text-[13px] text-muted-foreground">
             No stash entries. Stash from the terminal with `git stash push -m "name"`.
           </p>
         ) : (
@@ -244,13 +249,13 @@ export function StashTab({
                 >
                   <span
                     className={cn(
-                      "truncate text-xs font-medium",
+                      "truncate text-[13px] font-medium",
                       active ? "text-foreground" : "text-muted-foreground",
                     )}
                   >
                     {entry.message || "(no message)"}
                   </span>
-                  <span className="tnum truncate text-[10px] text-muted-foreground/70">
+                  <span className="tnum truncate text-[11px] text-muted-foreground/70">
                     <span className="mr-1.5 font-mono text-info">{entry.id}</span>
                     {entry.createdAt > 0
                       ? `${new Date(entry.createdAt * 1000).toLocaleString()} · `
@@ -292,7 +297,7 @@ export function StashTab({
         )}
 
         {entries.length > 0 && (
-          <p className="px-3 py-2 text-[10px] text-muted-foreground/70">
+          <p className="px-3 py-2 text-[11px] text-muted-foreground/70">
             The stash is shared across every worktree of this repo.
           </p>
         )}

@@ -31,7 +31,7 @@ export function PickerMenu({
 }) {
   if (disabled) {
     return (
-      <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+      <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
         {icon}
         <span className="truncate">{label}</span>
       </span>
@@ -41,7 +41,7 @@ export function PickerMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         title={title}
-        className="flex h-6 min-w-0 items-center gap-1.5 rounded px-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+        className="flex h-6 min-w-0 items-center gap-1.5 rounded px-1.5 text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground"
       >
         {icon}
         <span className="max-w-40 truncate">{label}</span>
@@ -112,7 +112,7 @@ export function IntentButton({
       variant="outline"
       size="sm"
       title={title}
-      className="h-6 shrink-0 gap-1.5 px-2 text-xs"
+      className="h-6 shrink-0 gap-1.5 px-2 text-[13px]"
       disabled={disabled}
       onClick={onClick}
     >

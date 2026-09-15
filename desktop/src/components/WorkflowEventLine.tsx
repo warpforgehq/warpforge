@@ -57,7 +57,7 @@ export function WorkflowEventLine({
               type="button"
               disabled={!onOpenTask}
               onClick={() => onOpenTask?.(agent.taskId)}
-              className="flex max-w-44 shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-background/50 hover:text-foreground disabled:pointer-events-none"
+              className="flex max-w-44 shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[13px] text-muted-foreground hover:bg-background/50 hover:text-foreground disabled:pointer-events-none"
               aria-label={`Open ${agent.label} agent session`}
             >
               <AgentBadge agentId={agent.agent} size="xs" className="min-w-0" />
@@ -83,7 +83,7 @@ export function WorkflowEventLine({
             >
               <span className="size-2 shrink-0 rounded-full bg-current" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-semibold">{agent.label}</span>
+                <span className="block truncate text-[13px] font-semibold">{agent.label}</span>
                 <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
                   <AgentBadge
                     agentId={agent.agent}
@@ -91,7 +91,7 @@ export function WorkflowEventLine({
                     className="min-w-0 text-muted-foreground"
                   />
                   {agent.model && (
-                    <span className="truncate text-[10px] text-muted-foreground">
+                    <span className="truncate text-[11px] text-muted-foreground">
                       {agent.model}
                     </span>
                   )}

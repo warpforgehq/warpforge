@@ -68,7 +68,7 @@ export function SidebarTaskTooltipBody({
         <TooltipLine icon={FolderTree}>{task.project}</TooltipLine>
         {worktree && (
           <TooltipLine icon={GitBranch}>
-            <span className="font-mono text-[10px]">{worktree}</span>
+            <span className="font-mono text-[11px]">{worktree}</span>
           </TooltipLine>
         )}
         <div className="flex min-w-0 items-start gap-2">

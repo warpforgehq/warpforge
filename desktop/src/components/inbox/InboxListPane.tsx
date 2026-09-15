@@ -35,9 +35,11 @@ import { useInboxItems } from "./useInboxItems";
 export function InboxListPane({
   projects,
   emptyHint,
+  onAddProject,
 }: {
   projects: readonly string[];
   emptyHint?: string;
+  onAddProject?: () => void;
 }) {
   const { filters, items, listing, openPull, selected, setFilters } = useInboxItems(projects);
 
@@ -110,7 +112,7 @@ export function InboxListPane({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground"
+            className="h-7 shrink-0 px-2 text-[13px] text-muted-foreground hover:text-foreground"
             onClick={() => setFilters(DEFAULT_INBOX_FILTERS)}
           >
             Reset
@@ -129,6 +131,7 @@ export function InboxListPane({
             listing.isError ? `Could not load pull requests: ${listing.error?.message}` : undefined
           }
           emptyHint={emptyHint}
+          onAddProject={projects.length === 0 ? onAddProject : undefined}
         />
       </div>
     </div>

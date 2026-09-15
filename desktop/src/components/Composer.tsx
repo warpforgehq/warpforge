@@ -425,7 +425,7 @@ export const Composer = forwardRef<
             )}
           />
           {error && (
-            <div role="alert" className="px-3 pb-1 text-xs text-destructive">
+            <div role="alert" className="px-3 pb-1 text-[13px] text-destructive">
               {error}
             </div>
           )}

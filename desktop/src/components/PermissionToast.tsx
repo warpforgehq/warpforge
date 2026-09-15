@@ -47,7 +47,7 @@ export default function PermissionToast({
         <div className="min-w-0 flex-1">
           <p className="font-medium leading-5 text-popover-foreground">Permission needed</p>
           {identity && (
-            <p className="mt-0.5 truncate text-xs text-muted-foreground" title={identity}>
+            <p className="mt-0.5 truncate text-[11px] text-muted-foreground" title={identity}>
               {identity}
             </p>
           )}

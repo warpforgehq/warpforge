@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { PaneHeader } from "@/components/workspace";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PaneHeader } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { useUi } from "@/store/ui";
 
@@ -496,7 +496,7 @@ export function CommitPane({
           </>
         }
       />
-      <div className="flex h-8 items-center gap-2 border-b border-rule bg-secondary/55 px-3 text-xs text-muted-foreground">
+      <div className="flex h-8 items-center gap-2 border-b border-rule bg-secondary/55 px-3 text-[13px] text-muted-foreground">
         <input
           aria-label="Stage all files"
           type="checkbox"
@@ -514,7 +514,7 @@ export function CommitPane({
       </div>
 
       {!untrackedAvailable && (
-        <p className="border-b border-rule px-3 py-1.5 text-xs text-warn">
+        <p className="border-b border-rule px-3 py-1.5 text-[13px] text-warn">
           Unversioned files unavailable.
         </p>
       )}

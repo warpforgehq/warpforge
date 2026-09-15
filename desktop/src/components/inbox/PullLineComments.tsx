@@ -213,7 +213,7 @@ function Composer({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-6 shrink-0 gap-1 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+            className="h-6 shrink-0 gap-1 px-1.5 text-[13px] text-muted-foreground hover:text-foreground"
             title="Propose a replacement for these lines"
             onClick={() => setBody((current) => appendSuggestion(current, suggestionSeed ?? []))}
           >
@@ -242,13 +242,13 @@ function Composer({
         aria-label="Comment body"
         className="max-h-80 min-h-24 resize-none overflow-y-auto border-border bg-background/40 text-sm"
       />
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-[13px] text-destructive">{error}</p>}
       <div className="flex items-center justify-end gap-1.5">
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-xs"
+          className="h-7 px-2 text-[13px]"
           onClick={onCancel}
         >
           Cancel
@@ -256,7 +256,7 @@ function Composer({
         <Button
           type="button"
           size="sm"
-          className="h-7 px-2.5 text-xs"
+          className="h-7 px-2.5 text-[13px]"
           disabled={!body.trim() || posting}
           onClick={() => void submit()}
         >

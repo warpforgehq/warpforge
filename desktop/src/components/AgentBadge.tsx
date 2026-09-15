@@ -7,7 +7,7 @@ type BadgeSize = "xs" | "sm" | "md";
 
 const SIZE_TEXT: Record<BadgeSize, string> = {
   xs: "gap-1 text-[11px]",
-  sm: "gap-1.5 text-xs",
+  sm: "gap-1.5 text-[13px]",
   md: "gap-1.5 text-sm",
 };
 

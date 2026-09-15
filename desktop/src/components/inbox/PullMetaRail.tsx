@@ -48,7 +48,7 @@ export function PullMetaRail({
 
       <Section title="Reviewers">
         {reviewers.length === 0 ? (
-          <p className="text-xs text-muted-foreground/60">No reviewers yet.</p>
+          <p className="text-[13px] text-muted-foreground/60">No reviewers yet.</p>
         ) : (
           reviewers.map((reviewer) => <ReviewerLine key={reviewer.login} reviewer={reviewer} />)
         )}
@@ -58,7 +58,7 @@ export function PullMetaRail({
         {/* Deliberately empty rather than optimistic: nothing on the wire
             carries a check run yet (ADR-0010, deferred), and a green tick
             this surface invented is worse than no tick at all. */}
-        <p className="text-xs text-muted-foreground/60" title="Planned — see docs/adr/0010">
+        <p className="text-[13px] text-muted-foreground/60" title="Planned — see docs/adr/0010">
           Status checks aren't read yet.
         </p>
       </Section>
@@ -114,7 +114,7 @@ export function PullMetaRail({
       {pr.assignees.length > 0 && (
         <Section title="Assignees">
           {pr.assignees.map((login) => (
-            <span key={login} className="flex items-center gap-1.5 text-xs text-foreground/85">
+            <span key={login} className="flex items-center gap-1.5 text-[13px] text-foreground/85">
               <AuthorBadge login={login} size={4} />
               {login}
             </span>
@@ -134,7 +134,7 @@ export function PullMetaRail({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex min-w-0 flex-col gap-1.5">
-      <h4 className="text-xs text-muted-foreground">{title}</h4>
+      <h4 className="text-[13px] text-muted-foreground">{title}</h4>
       {children}
     </section>
   );
@@ -182,7 +182,7 @@ function ReviewerLine({ reviewer }: { reviewer: PullReviewer }) {
   const Icon = meta.icon;
   return (
     <span
-      className="flex min-w-0 items-center gap-1.5 text-xs"
+      className="flex min-w-0 items-center gap-1.5 text-[13px]"
       title={`${reviewer.login} — ${meta.label.toLowerCase()}`}
     >
       <AuthorBadge login={reviewer.login} size={4} />

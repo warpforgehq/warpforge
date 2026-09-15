@@ -13,7 +13,7 @@ export function AuthorBadge({ login, size = 5 }: { login: string; size?: number 
   const initial = login.trim().charAt(0).toUpperCase() || "?";
   return (
     <Avatar className="shrink-0" style={{ width: `${size * 4}px`, height: `${size * 4}px` }}>
-      <AvatarFallback className="bg-secondary text-xs font-semibold text-muted-foreground">
+      <AvatarFallback className="bg-secondary text-[11px] font-semibold text-muted-foreground">
         {initial}
       </AvatarFallback>
     </Avatar>

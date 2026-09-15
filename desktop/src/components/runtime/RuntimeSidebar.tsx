@@ -123,7 +123,7 @@ const ServiceRow = memo(function ServiceRow({
   return (
     <div
       className={cn(
-        "group flex w-full items-center gap-1.5 px-2 py-1 text-xs",
+        "group flex w-full items-center gap-1.5 px-2 py-1 text-[13px]",
         selected
           ? "bg-secondary text-foreground"
           : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
@@ -209,7 +209,7 @@ const PortForwardRow = memo(function PortForwardRow({
   return (
     <div
       className={cn(
-        "group flex w-full items-center gap-1.5 px-2 py-1 text-xs",
+        "group flex w-full items-center gap-1.5 px-2 py-1 text-[13px]",
         selected
           ? "bg-secondary text-foreground"
           : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",

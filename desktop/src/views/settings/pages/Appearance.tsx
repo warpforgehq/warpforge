@@ -69,7 +69,7 @@ export default function AppearancePage() {
                   style={{ background: swatch("accent") }}
                 />
               </span>
-              <span className="text-xs font-medium text-foreground">{t.name}</span>
+              <span className="text-[13px] font-medium text-foreground">{t.name}</span>
             </button>
           );
         })}
@@ -85,7 +85,7 @@ export default function AppearancePage() {
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="h-7 text-xs text-muted-foreground"
+                className="h-7 text-[13px] text-muted-foreground"
                 onClick={resetFontSizes}
               >
                 Reset
@@ -151,12 +151,7 @@ export default function AppearancePage() {
         description="Extend the translucent treatment to the work surface."
         hint="Off keeps diffs, editors and the task pane solid while the chrome stays glass."
         control={
-          <Toggle
-            id="body-glass"
-            checked={bodyGlass}
-            onChange={setBodyGlass}
-            disabled={glassOff}
-          />
+          <Toggle id="body-glass" checked={bodyGlass} onChange={setBodyGlass} disabled={glassOff} />
         }
       />
       <SettingRow

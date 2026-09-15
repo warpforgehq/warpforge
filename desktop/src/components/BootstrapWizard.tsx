@@ -69,7 +69,7 @@ function RadioRow({
 }) {
   return (
     <fieldset>
-      <legend className="mb-1 block text-xs font-medium text-muted-foreground">{label}</legend>
+      <legend className="mb-1 block text-[13px] font-medium text-muted-foreground">{label}</legend>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => (
           <button
@@ -114,7 +114,7 @@ function PathRow({
   };
   return (
     <div>
-      <label htmlFor={inputId} className="mb-1 block text-xs font-medium text-muted-foreground">
+      <label htmlFor={inputId} className="mb-1 block text-[13px] font-medium text-muted-foreground">
         {label}
       </label>
       <div className="flex gap-2">
@@ -249,7 +249,7 @@ export default function BootstrapWizard({ project, agents, open, onOpenChange, o
                 <div>
                   <label
                     htmlFor="bootstrap-k8s-releases"
-                    className="mb-1 block text-xs font-medium text-muted-foreground"
+                    className="mb-1 block text-[13px] font-medium text-muted-foreground"
                   >
                     Release / service names (optional, comma-separated)
                   </label>
@@ -265,7 +265,7 @@ export default function BootstrapWizard({ project, agents, open, onOpenChange, o
                 <div>
                   <label
                     htmlFor="bootstrap-k8s-namespace"
-                    className="mb-1 block text-xs font-medium text-muted-foreground"
+                    className="mb-1 block text-[13px] font-medium text-muted-foreground"
                   >
                     Namespace (optional)
                   </label>
@@ -287,7 +287,7 @@ export default function BootstrapWizard({ project, agents, open, onOpenChange, o
           <div>
             <label
               htmlFor="bootstrap-service-details"
-              className="mb-1 block text-xs font-medium text-muted-foreground"
+              className="mb-1 block text-[13px] font-medium text-muted-foreground"
             >
               Known services, commands, and ports (optional)
             </label>
@@ -300,7 +300,7 @@ export default function BootstrapWizard({ project, agents, open, onOpenChange, o
               }
               rows={5}
             />
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-[13px] text-muted-foreground">
               The repository is scanned automatically; add facts that are hard to infer.
             </p>
           </div>
@@ -310,7 +310,7 @@ export default function BootstrapWizard({ project, agents, open, onOpenChange, o
           <div>
             <label
               htmlFor="bootstrap-notes"
-              className="mb-1 block text-xs font-medium text-muted-foreground"
+              className="mb-1 block text-[13px] font-medium text-muted-foreground"
             >
               Variants and dependency notes (optional)
             </label>
@@ -346,11 +346,11 @@ export default function BootstrapWizard({ project, agents, open, onOpenChange, o
         </DialogHeader>
 
         <div className="flex flex-col gap-3 py-1">
-          <div className="text-xs text-muted-foreground">
+          <div className="text-[13px] text-muted-foreground">
             Step {stepIndex + 1} of {steps.length}
           </div>
           {renderForm()}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-[13px] text-destructive">{error}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={isFirst ? close : () => setStepIndex((i) => i - 1)}>

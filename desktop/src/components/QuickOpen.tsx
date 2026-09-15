@@ -8,7 +8,6 @@ import { highlightSegments } from "@/lib/searchMatches";
 import { cn } from "@/lib/utils";
 
 import type { ProjectFile, SymbolMatch } from "../protocol";
-
 import { MenuRowsSkeleton } from "./MenuRowsSkeleton";
 
 /**
@@ -187,16 +186,16 @@ export function QuickOpen({
         </div>
         <div ref={listRef} className="max-h-[50vh] overflow-y-auto py-1.5">
           {loading && <MenuRowsSkeleton rows={8} label="Loading files" />}
-          {error && <p className="px-3 py-2 text-xs text-destructive">{error}</p>}
+          {error && <p className="px-3 py-2 text-[13px] text-destructive">{error}</p>}
           {!loading && !error && items.length === 0 && (
-            <p className="px-3 py-2 text-xs text-muted-foreground">
+            <p className="px-3 py-2 text-[13px] text-muted-foreground">
               {searching ? "Searching…" : "No matching files"}
             </p>
           )}
           {items.map((item, index) => (
             <div key={item.key}>
               {index === firstTextIndex && (
-                <p className="px-3 pb-1 pt-2 text-[10px] uppercase tracking-wide text-muted-foreground">
+                <p className="px-3 pb-1 pt-2 text-[11px] uppercase tracking-wide text-muted-foreground">
                   Text
                 </p>
               )}
@@ -243,7 +242,7 @@ export function QuickOpen({
             </div>
           ))}
           {searching && firstTextIndex === -1 && items.length > 0 && (
-            <p className="flex items-center gap-1.5 px-3 pb-1 pt-2 text-[10px] uppercase tracking-wide text-muted-foreground">
+            <p className="flex items-center gap-1.5 px-3 pb-1 pt-2 text-[11px] uppercase tracking-wide text-muted-foreground">
               <Loader2 className="size-3 animate-spin" />
               Searching text
             </p>

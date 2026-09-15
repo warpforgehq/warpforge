@@ -5,6 +5,8 @@ interface InboxViewProps {
   /** Every registered project's name, from the daemon snapshot. */
   projects: readonly string[];
   onSendToAgent?: (project: string, prompt: string) => void;
+  /** Opens the add-project dialog from the "no projects" state. */
+  onAddProject: () => void;
   /** Whether the app sidebar is showing the pull-request list. False on a
    *  window too narrow for a sidebar, where the pane carries its own list. */
   listInSidebar: boolean;
@@ -16,7 +18,12 @@ interface InboxViewProps {
  * Scoped to one project it becomes the project page's Pull Requests tab —
  * same pane, different `projects` argument.
  */
-export default function InboxView({ projects, onSendToAgent, listInSidebar }: InboxViewProps) {
+export default function InboxView({
+  projects,
+  onSendToAgent,
+  onAddProject,
+  listInSidebar,
+}: InboxViewProps) {
   // The count mirrors the sidebar's badge and costs nothing: same query key,
   // so this is a cache read, not a second poll.
   useInboxUnseenCount(projects);
@@ -26,6 +33,7 @@ export default function InboxView({ projects, onSendToAgent, listInSidebar }: In
       <InboxPane
         projects={projects}
         onSendToAgent={onSendToAgent}
+        onAddProject={onAddProject}
         emptyHint={projects.length === 0 ? undefined : "No open pull requests in your projects."}
         listPlacement={listInSidebar ? "sidebar" : "pane"}
       />

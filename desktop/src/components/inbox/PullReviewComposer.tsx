@@ -76,13 +76,15 @@ export function PullReviewComposer({
         className="min-h-[3rem] w-full resize-y rounded-md border border-border bg-background/50 px-2.5 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:border-border focus-visible:outline-none"
       />
       <div className="flex min-w-0 items-center gap-2">
-        {error && <span className="min-w-0 flex-1 truncate text-xs text-destructive">{error}</span>}
+        {error && (
+          <span className="min-w-0 flex-1 truncate text-[13px] text-destructive">{error}</span>
+        )}
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs"
+            className="h-7 px-2 text-[13px]"
             disabled={pending}
             onClick={onClose}
           >
@@ -91,7 +93,7 @@ export function PullReviewComposer({
           <Button
             type="button"
             size="sm"
-            className="h-7 gap-1.5 px-2.5 text-xs"
+            className="h-7 gap-1.5 px-2.5 text-[13px]"
             disabled={pending || !ready}
             onClick={() => void submit()}
           >

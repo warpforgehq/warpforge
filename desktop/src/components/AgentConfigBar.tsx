@@ -115,7 +115,7 @@ export function AgentConfigBar({
           {moreOpen && (
             <div className="absolute bottom-full left-0 z-20 mb-1 flex min-w-[220px] flex-col gap-1 rounded-md border bg-popover p-1.5 shadow-md">
               {overflow.map((opt) => (
-                <div key={opt.id} className="flex items-center justify-between gap-3 text-xs">
+                <div key={opt.id} className="flex items-center justify-between gap-3 text-[13px]">
                   <span className="min-w-0 truncate px-1 text-muted-foreground">{opt.name}</span>
                   <AgentConfigSelect
                     taskId={taskId}
@@ -260,7 +260,7 @@ function AgentConfigSelect({
       {open && (
         <div className="absolute bottom-full left-0 z-30 mb-1 flex max-h-80 min-w-[200px] flex-col overflow-hidden rounded-md border bg-popover shadow-md">
           <div className="shrink-0 border-b p-1.5">
-            <div className="px-1 text-[10px] uppercase leading-5 tracking-wider text-muted-foreground">
+            <div className="px-1 text-[11px] uppercase leading-5 tracking-wider text-muted-foreground">
               {opt.name}
             </div>
             {searchable && (
@@ -277,7 +277,7 @@ function AgentConfigSelect({
                     if (e.key === "Escape") onClose();
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
-                  className="h-7 w-full rounded border bg-background pl-7 pr-7 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="h-7 w-full rounded border bg-background pl-7 pr-7 text-[13px] placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                 />
                 {searchQuery && (
                   <button
@@ -303,7 +303,7 @@ function AgentConfigSelect({
                   pick(undefined);
                 }}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs",
+                  "flex w-full items-center gap-2 rounded px-2 py-1 text-left text-[13px]",
                   shownValue === undefined ? "bg-accent" : "hover:bg-accent/50",
                 )}
               >
@@ -326,7 +326,7 @@ function AgentConfigSelect({
                   if (o.value !== shownValue) pick(o.value);
                 }}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs",
+                  "flex w-full items-center gap-2 rounded px-2 py-1 text-left text-[13px]",
                   o.value === shownValue ? "bg-accent" : "hover:bg-accent/50",
                 )}
               >
@@ -340,7 +340,7 @@ function AgentConfigSelect({
               </button>
             ))}
             {filteredOptions.length === 0 && (
-              <div className="px-2 py-2 text-center text-xs text-muted-foreground">
+              <div className="px-2 py-2 text-center text-[13px] text-muted-foreground">
                 No matches for &ldquo;{searchQuery}&rdquo;
               </div>
             )}

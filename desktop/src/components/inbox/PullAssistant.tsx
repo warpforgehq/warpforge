@@ -143,7 +143,7 @@ export function PullAssistant({
         {/* The harness a live conversation runs on cannot change under it, so
             the picker becomes a label once there is a task. */}
         {task ? (
-          <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
             {agent && <AgentLogo agentId={agent} displayName={agentLabel} className="size-3.5" />}
             <span className="truncate">{agentLabel}</span>
             {modelLabel && <span className="truncate text-muted-foreground/60">{modelLabel}</span>}
@@ -208,7 +208,7 @@ export function PullAssistant({
         </div>
       </div>
 
-      {error && <p className="shrink-0 px-3 py-2 text-xs text-destructive">{error}</p>}
+      {error && <p className="shrink-0 px-3 py-2 text-[13px] text-destructive">{error}</p>}
 
       {task ? (
         <AssistantThread task={task} agents={agents} />
@@ -231,7 +231,7 @@ function EmptyState({ agent, starting }: { agent: string | null; starting: boole
             wrong with it. Both continue in the same conversation.
           </p>
           {starting && (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
               <Loader2 className="size-3.5 animate-spin" aria-hidden />
               Reading the pull request…
             </span>

@@ -95,7 +95,7 @@ export default function AccountsPanel() {
             </header>
 
             {own.length === 0 && strays.length === 0 ? (
-              <p className="px-4 pb-2 text-xs text-muted-foreground">
+              <p className="px-4 pb-2 text-[13px] text-muted-foreground">
                 No accounts yet. Sign in to {displayName}, then import the login below.
               </p>
             ) : (
@@ -148,13 +148,13 @@ export default function AccountsPanel() {
                   onChange={(e) => setLabels((prev) => ({ ...prev, [agentId]: e.target.value }))}
                   placeholder="personal"
                   aria-label={`New ${displayName} account name`}
-                  className="bg-deep-surface h-7 w-40 rounded-md border px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+                  className="bg-deep-surface h-7 w-40 rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring"
                 />
                 <Button
                   type="submit"
                   size="sm"
                   variant="outline"
-                  className="h-7 gap-1.5 text-xs"
+                  className="h-7 gap-1.5 text-[13px]"
                   disabled={!label.trim() || busy !== null}
                 >
                   {busy === `import:${agentId}` ? (
@@ -171,7 +171,7 @@ export default function AccountsPanel() {
       })}
 
       {error && (
-        <p className="border-t border-rule px-4 py-2 text-xs text-warn" role="status">
+        <p className="border-t border-rule px-4 py-2 text-[13px] text-warn" role="status">
           {error}
         </p>
       )}
@@ -181,13 +181,13 @@ export default function AccountsPanel() {
           <span className="mr-auto text-[11px] text-muted-foreground/80">{SPEND_DISCLAIMER}</span>
         )}
         {limitsError && (
-          <span className="text-xs text-red-600 dark:text-red-400">{limitsError}</span>
+          <span className="text-[13px] text-red-600 dark:text-red-400">{limitsError}</span>
         )}
         <Button
           type="button"
           size="sm"
           variant="outline"
-          className="ml-auto h-7 gap-1.5 text-xs"
+          className="ml-auto h-7 gap-1.5 text-[13px]"
           disabled={refreshing}
           onClick={() => {
             setRefreshing(true);
@@ -261,7 +261,7 @@ function AccountRow({
         onClick={onActivate}
         disabled={disabled || active || !onActivate}
         aria-label={`Use ${label}`}
-        className="flex min-w-0 flex-1 items-center gap-2 text-left text-xs disabled:cursor-default"
+        className="flex min-w-0 flex-1 items-center gap-2 text-left text-[13px] disabled:cursor-default"
       >
         {busy ? (
           <Loader2 className="size-3.5 shrink-0 animate-spin" />
@@ -274,7 +274,7 @@ function AccountRow({
             {outdated && limits && (
               <span
                 title={lastUpdatedSentence(limits.fetchedAt, nowSec)}
-                className="shrink-0 rounded-sm border border-amber-500/40 bg-amber-500/15 px-1 text-[10px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400"
+                className="shrink-0 rounded-sm border border-amber-500/40 bg-amber-500/15 px-1 text-[11px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400"
               >
                 Outdated
               </span>

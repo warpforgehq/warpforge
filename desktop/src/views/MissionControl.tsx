@@ -241,7 +241,7 @@ export default function MissionControl({ state, onOpenTask, onNewTask }: Props) 
               >
                 {TAB_LABEL[tab]}{" "}
                 <span
-                  className={`ml-1 rounded-full px-1.5 py-0.5 text-xs ${active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                  className={`ml-1 rounded-full px-1.5 py-0.5 text-[11px] ${active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
                 >
                   {count}
                 </span>

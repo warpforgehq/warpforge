@@ -77,7 +77,7 @@ export default function TasksPage() {
             <select
               value={textGenAgentId ?? ""}
               onChange={(e) => setTextGenAgentId(e.target.value || null)}
-              className="bg-deep-surface h-7 rounded-md border px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+              className="bg-deep-surface h-7 rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring"
             >
               <option value="">None</option>
               {enabledAgents.map((a) => (
@@ -106,7 +106,7 @@ export default function TasksPage() {
                 value={textGenModel ?? ""}
                 onChange={(e) => setTextGenModel(e.target.value || null)}
                 disabled={!modelOption}
-                className="bg-deep-surface h-7 max-w-56 rounded-md border px-2 text-xs outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+                className="bg-deep-surface h-7 max-w-56 rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
               >
                 <option value="">Agent default</option>
                 {modelOption?.options.map((o) => (
@@ -133,7 +133,7 @@ export default function TasksPage() {
               onChange={(event) =>
                 applyRetention.mutate({ retentionDays: Number(event.target.value) })
               }
-              className="h-7 rounded-md border bg-background px-2 text-xs"
+              className="h-7 rounded-md border bg-background px-2 text-[13px]"
             >
               <option value={15}>15 days</option>
               <option value={30}>30 days</option>
@@ -154,7 +154,7 @@ export default function TasksPage() {
               onChange={(event) =>
                 applyRetention.mutate({ settleIgnoredAfterDays: Number(event.target.value) })
               }
-              className="h-7 rounded-md border bg-background px-2 text-xs"
+              className="h-7 rounded-md border bg-background px-2 text-[13px]"
             >
               <option value={7}>7 days</option>
               <option value={14}>14 days</option>
@@ -175,7 +175,7 @@ export default function TasksPage() {
               onChange={(event) =>
                 applyRetention.mutate({ deleteClosedAfterDays: Number(event.target.value) })
               }
-              className="h-7 rounded-md border bg-background px-2 text-xs"
+              className="h-7 rounded-md border bg-background px-2 text-[13px]"
             >
               <option value={60}>60 days</option>
               <option value={90}>90 days</option>

@@ -64,7 +64,7 @@ export function ScheduleFields({ form, now, patch, problems, projects }: Props) 
             aria-checked={form.preset === preset.id}
             onClick={() => patch({ preset: preset.id })}
             className={cn(
-              "h-7 rounded-md px-2.5 text-xs transition-colors",
+              "h-7 rounded-md px-2.5 text-[13px] transition-colors",
               form.preset === preset.id
                 ? "bg-secondary text-foreground"
                 : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
@@ -98,7 +98,7 @@ export function ScheduleFields({ form, now, patch, problems, projects }: Props) 
               <select
                 value={form.weekday}
                 onChange={(event) => patch({ weekday: Number(event.target.value) })}
-                className="bg-deep-surface h-8 rounded-md border px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+                className="bg-deep-surface h-8 rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring"
               >
                 {WEEKDAY_LABELS.map((label, index) => (
                   <option key={label} value={index + 1}>
@@ -114,7 +114,7 @@ export function ScheduleFields({ form, now, patch, problems, projects }: Props) 
               <select
                 value={form.minute}
                 onChange={(event) => patch({ minute: Number(event.target.value) })}
-                className="bg-deep-surface h-8 w-24 rounded-md border px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+                className="bg-deep-surface h-8 w-24 rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring"
               >
                 {Array.from({ length: 12 }, (_, index) => index * 5).map((minute) => (
                   <option key={minute} value={minute}>
@@ -133,7 +133,7 @@ export function ScheduleFields({ form, now, patch, problems, projects }: Props) 
                   const [hour, minute] = event.target.value.split(":");
                   patch({ hour: Number(hour ?? 9), minute: Number(minute ?? 0) });
                 }}
-                className="h-8 w-28 text-xs"
+                className="h-8 w-28 text-[13px]"
               />
             </label>
           )}
@@ -141,7 +141,7 @@ export function ScheduleFields({ form, now, patch, problems, projects }: Props) 
       )}
 
       <div className="rounded-md border border-border bg-secondary/25 px-3 py-2">
-        <p className="flex items-center gap-1.5 text-xs">
+        <p className="flex items-center gap-1.5 text-[13px]">
           <CalendarClock aria-hidden className="size-3.5 shrink-0 text-primary" />
           {problems.cron ? (
             <span className="text-destructive">{problems.cron}</span>
@@ -169,7 +169,7 @@ export function ScheduleFields({ form, now, patch, problems, projects }: Props) 
           <select
             value={form.project}
             onChange={(event) => patch({ project: event.target.value })}
-            className="bg-deep-surface h-8 w-full rounded-md border px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+            className="bg-deep-surface h-8 w-full rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring"
           >
             {projects.length === 0 && <option value="">No projects registered</option>}
             {projects.map((project) => (
@@ -185,7 +185,7 @@ export function ScheduleFields({ form, now, patch, problems, projects }: Props) 
             spellCheck={false}
             placeholder={runtimeTimezone()}
             onChange={(event) => patch({ timezone: event.target.value })}
-            className={cn("h-8 text-xs", problems.timezone && "border-destructive/60")}
+            className={cn("h-8 text-[13px]", problems.timezone && "border-destructive/60")}
           />
         </Field>
         <Field
@@ -210,7 +210,10 @@ export function ScheduleFields({ form, now, patch, problems, projects }: Props) 
               value={form.graceMinutes}
               inputMode="numeric"
               onChange={(event) => patch({ graceMinutes: event.target.value })}
-              className={cn("h-8 w-24 text-xs", problems.graceMinutes && "border-destructive/60")}
+              className={cn(
+                "h-8 w-24 text-[13px]",
+                problems.graceMinutes && "border-destructive/60",
+              )}
             />
             <span className="text-[11px] text-muted-foreground">minutes</span>
           </div>
@@ -284,7 +287,7 @@ function ToggleRow({
   return (
     <div className="flex items-center gap-2" title={hint}>
       <EnabledSwitch id={id} checked={checked} label={label} onChange={onChange} />
-      <span className="text-xs text-foreground">{label}</span>
+      <span className="text-[13px] text-foreground">{label}</span>
     </div>
   );
 }

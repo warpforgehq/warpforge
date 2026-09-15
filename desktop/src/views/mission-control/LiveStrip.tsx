@@ -40,7 +40,7 @@ export const LiveStrip = memo(function LiveStrip({ items, nowMs, onOpenTask }: L
             className="flex w-full flex-col gap-1 rounded-md border border-border p-3 text-left hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             <span className="flex w-full items-center gap-2">
-              <span className={cn("truncate text-xs font-semibold", TONE_CLASS[item.tone])}>
+              <span className={cn("truncate text-[13px] font-semibold", TONE_CLASS[item.tone])}>
                 {item.label}
               </span>
               <span className="ml-auto shrink-0 tnum text-[11px] text-muted-foreground">
@@ -52,7 +52,7 @@ export const LiveStrip = memo(function LiveStrip({ items, nowMs, onOpenTask }: L
                 </span>
               )}
             </span>
-            <span className="truncate text-sm font-medium text-foreground">{item.title}</span>
+            <span className="truncate text-[15px] font-medium text-foreground">{item.title}</span>
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
               <span className="truncate uppercase tracking-wide">{item.project}</span>
               <span className="h-1 w-1 shrink-0 rounded-full bg-muted-foreground/40" />
@@ -60,10 +60,10 @@ export const LiveStrip = memo(function LiveStrip({ items, nowMs, onOpenTask }: L
               <span className="truncate">{item.agent}</span>
             </div>
             {item.detail ? (
-              <span className="truncate text-xs text-muted-foreground">{item.detail}</span>
+              <span className="truncate text-[13px] text-muted-foreground">{item.detail}</span>
             ) : null}
             {item.previewText ? (
-              <span className="line-clamp-2 text-xs text-muted-foreground/90">
+              <span className="line-clamp-2 text-[13px] text-muted-foreground/90">
                 {item.previewText}
               </span>
             ) : null}

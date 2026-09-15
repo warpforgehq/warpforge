@@ -77,18 +77,18 @@ export function AgentAccountLimitsRow({
         {outdated && (
           <span
             title={lastUpdatedSentence(account.fetchedAt, nowSec)}
-            className="shrink-0 rounded-sm border border-amber-500/40 bg-amber-500/15 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400"
+            className="shrink-0 rounded-sm border border-amber-500/40 bg-amber-500/15 px-1.5 py-px text-[11px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400"
           >
             Outdated
           </span>
         )}
         {account.plan && (
-          <span className="rounded-sm border border-border bg-muted/50 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          <span className="rounded-sm border border-border bg-muted/50 px-1.5 py-px text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             {account.plan}
           </span>
         )}
         {account.active && (
-          <span className="rounded-sm border border-primary/40 bg-primary/15 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-primary">
+          <span className="rounded-sm border border-primary/40 bg-primary/15 px-1.5 py-px text-[11px] font-medium uppercase tracking-wide text-primary">
             active
           </span>
         )}
@@ -101,7 +101,7 @@ export function AgentAccountLimitsRow({
           ))}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-[13px] text-muted-foreground">
           {account.error ?? "No usage windows reported."}
         </p>
       )}
@@ -115,7 +115,7 @@ export function AgentAccountLimitsRow({
           place on the right. Staleness worth acting on is the header's
           "Outdated" tag; this is just the raw age. */}
       <div className="flex items-center justify-between gap-2 border-t border-rule pt-2">
-        <span className="text-[10px] text-muted-foreground/70" title={`source: ${account.source}`}>
+        <span className="text-[11px] text-muted-foreground/70" title={`source: ${account.source}`}>
           updated {formatFetched(account.fetchedAt, nowSec)}
         </span>
         {action}
@@ -135,7 +135,7 @@ function SpendBlock({ spend }: { spend: AgentSpend }) {
   if (!spend.reported) {
     return (
       <div
-        className="flex items-center gap-2 border-t border-rule pt-2 text-xs text-muted-foreground"
+        className="flex items-center gap-2 border-t border-rule pt-2 text-[13px] text-muted-foreground"
         title={SPEND_DISCLAIMER}
       >
         <span>Spend</span>
@@ -158,7 +158,7 @@ function SpendBlock({ spend }: { spend: AgentSpend }) {
 
 function SpendLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2 text-xs">
+    <div className="flex items-center gap-2 text-[13px]">
       <span className="text-muted-foreground">{label}</span>
       <span className="ml-auto tabular-nums text-foreground">{value}</span>
     </div>
@@ -173,14 +173,14 @@ function WindowBlock({ window, error }: { window: AgentLimitWindow; error?: stri
   const rateLimited = window.id === "rate_limited";
   return (
     <div className="space-y-1">
-      <span className="text-xs text-muted-foreground">{window.label}</span>
+      <span className="text-[13px] text-muted-foreground">{window.label}</span>
       <div className="h-2 overflow-hidden rounded-full bg-muted">
         <div
           className={`h-full rounded-full ${LIMIT_BAR_RAMP_CLASSES[ramp]}`}
           style={{ width: `${left}%` }}
         />
       </div>
-      <div className="flex items-center gap-2 text-xs">
+      <div className="flex items-center gap-2 text-[13px]">
         <span
           className={
             ramp === "danger"
@@ -192,7 +192,7 @@ function WindowBlock({ window, error }: { window: AgentLimitWindow; error?: stri
         </span>
         {rateLimited && (
           <span
-            className="rounded-sm border border-red-500/40 bg-red-500/15 px-1.5 py-px text-[10px] font-medium text-red-600 dark:text-red-400"
+            className="rounded-sm border border-red-500/40 bg-red-500/15 px-1.5 py-px text-[11px] font-medium text-red-600 dark:text-red-400"
             title={error ?? "The harness asked us to back off"}
           >
             Limit reached

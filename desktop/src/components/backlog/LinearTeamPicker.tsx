@@ -67,7 +67,10 @@ export function ProjectLinearTeamSelect({ project }: { project: string }) {
     >
       <SelectTrigger
         aria-label={`Linear team for ${project}`}
-        className={cn("h-7 w-auto gap-1.5 text-xs", current === null && "text-muted-foreground")}
+        className={cn(
+          "h-7 w-auto gap-1.5 text-[13px]",
+          current === null && "text-muted-foreground",
+        )}
       >
         <SelectValue placeholder="Linear team" />
       </SelectTrigger>

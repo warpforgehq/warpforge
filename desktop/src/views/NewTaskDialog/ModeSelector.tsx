@@ -35,7 +35,7 @@ export function ModeSelector({
             title={disabled ? "This project has no valid workflows" : undefined}
             onClick={() => onChange(id)}
             className={cn(
-              "h-7 shrink-0 rounded-md px-3 text-xs transition-colors",
+              "h-7 shrink-0 rounded-md px-3 text-[13px] transition-colors",
               mode === id
                 ? "bg-secondary text-foreground"
                 : "text-muted-foreground hover:text-foreground",

@@ -88,7 +88,7 @@ function FieldChip<T extends string>({
         type="button"
         aria-label={ariaLabel}
         className={cn(
-          "flex h-7 shrink-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-xs transition-colors",
+          "flex h-7 shrink-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[13px] transition-colors",
           "hover:bg-secondary hover:text-foreground data-[state=open]:bg-secondary data-[state=open]:text-foreground",
           triggerClassName,
         )}
@@ -101,7 +101,7 @@ function FieldChip<T extends string>({
             <span className="flex items-center gap-1.5">
               {option.label}
               {option.hint && (
-                <span className="text-[10px] text-muted-foreground/70">{option.hint}</span>
+                <span className="text-[11px] text-muted-foreground/70">{option.hint}</span>
               )}
             </span>
           </SelectItem>
@@ -330,7 +330,7 @@ export function NewWorkItemDrawer({ open, onOpenChange, project }: NewWorkItemDr
           {/* Header: breadcrumb on the left, dialog actions on the right. */}
           <header className="flex h-11 shrink-0 items-center justify-between gap-2 px-4">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="flex max-w-40 shrink-0 items-center gap-1.5 truncate rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-foreground">
+              <span className="flex max-w-40 shrink-0 items-center gap-1.5 truncate rounded-md bg-secondary px-2 py-0.5 text-[13px] font-medium text-foreground">
                 <span
                   className="size-1.5 shrink-0 rounded-full bg-muted-foreground/60"
                   aria-hidden
@@ -478,7 +478,7 @@ export function NewWorkItemDrawer({ open, onOpenChange, project }: NewWorkItemDr
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 gap-1.5 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                  className="h-7 gap-1.5 px-2.5 text-[13px] text-muted-foreground hover:text-foreground"
                   onClick={() => void handleEnhance()}
                   disabled={!title.trim() || !textGenAgentId || enhancing}
                   title={

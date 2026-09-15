@@ -32,7 +32,7 @@ export default function AttentionToast({
         <BellRing className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className="font-medium leading-5">{title}</p>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground" title={identity}>
+          <p className="mt-0.5 truncate text-[11px] text-muted-foreground" title={identity}>
             {identity}
           </p>
           <p className="mt-2 line-clamp-3 break-words text-sm leading-5 [overflow-wrap:anywhere]">

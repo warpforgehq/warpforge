@@ -44,9 +44,7 @@ export function ShelfTab({
   // (dropped elsewhere), select nothing — firing header actions against a
   // silently substituted entry is worse than asking to pick again.
   const selected =
-    selectedId !== null
-      ? (entries.find((e) => e.id === selectedId) ?? null)
-      : (entries[0] ?? null);
+    selectedId !== null ? (entries.find((e) => e.id === selectedId) ?? null) : (entries[0] ?? null);
 
   const detailQuery = useQuery({
     enabled: selected !== null,
@@ -141,20 +139,30 @@ export function ShelfTab({
               title="Apply the entry, keeping it on the shelf"
               disabled={busy || !selected}
               onClick={() => void unshelve(false)}
-              className="flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
+              className="flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-[13px] font-normal text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
             >
-              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <ArrowDownToLine className="size-3.5" />}
+              {busy ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <ArrowDownToLine className="size-3.5" />
+              )}
               Apply
             </button>
             <button
               type="button"
-              aria-label={selected ? `Apply and drop ${selected.name}` : "Apply and drop shelf entry"}
+              aria-label={
+                selected ? `Apply and drop ${selected.name}` : "Apply and drop shelf entry"
+              }
               title="Apply the entry and delete it from the shelf"
               disabled={busy || !selected}
               onClick={() => selected && setConfirm({ action: "apply-drop", id: selected.id })}
-              className="flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
+              className="flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-[13px] font-normal text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
             >
-              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <PackageOpen className="size-3.5" />}
+              {busy ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <PackageOpen className="size-3.5" />
+              )}
               Apply & Drop
             </button>
           </>
@@ -189,9 +197,9 @@ export function ShelfTab({
         {listQuery.isPending ? (
           <FileListSkeleton rows={4} label="Loading shelf" />
         ) : listQuery.isError ? (
-          <p className="px-3 py-2 text-xs text-warn">Shelf unavailable.</p>
+          <p className="px-3 py-2 text-[13px] text-warn">Shelf unavailable.</p>
         ) : entries.length === 0 ? (
-          <p className="px-3 py-2 text-xs text-muted-foreground">
+          <p className="px-3 py-2 text-[13px] text-muted-foreground">
             No shelved changes yet. Right-click files in Commit and choose Shelve….
           </p>
         ) : (
@@ -215,13 +223,13 @@ export function ShelfTab({
                 >
                   <span
                     className={cn(
-                      "truncate text-xs font-medium",
+                      "truncate text-[13px] font-medium",
                       active ? "text-foreground" : "text-muted-foreground",
                     )}
                   >
                     {entry.name}
                   </span>
-                  <span className="tnum text-[10px] text-muted-foreground/70">
+                  <span className="tnum text-[11px] text-muted-foreground/70">
                     {new Date(entry.createdAt * 1000).toLocaleString()}
                     {entry.branch ? ` · ${entry.branch}` : ""} · {entry.files.length} file
                     {entry.files.length === 1 ? "" : "s"}

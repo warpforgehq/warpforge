@@ -41,7 +41,7 @@ export const WorkflowControls = memo(function WorkflowControls({ task }: { task:
 
   return (
     <div className="shrink-0 border-t border-rule px-3 py-2">
-      <div className="flex flex-wrap items-center gap-2 text-xs">
+      <div className="flex flex-wrap items-center gap-2 text-[13px]">
         <StageIndicator run={run} />
         <span className="ml-auto flex items-center gap-1.5">
           {!finished && (waiting === null || waiting.kind === "paused") && (
@@ -50,7 +50,7 @@ export const WorkflowControls = memo(function WorkflowControls({ task }: { task:
                 <Button
                   size="sm"
                   variant="secondary"
-                  className="h-6 gap-1 px-2 text-xs"
+                  className="h-6 gap-1 px-2 text-[13px]"
                   disabled={busy}
                   onClick={() => void act("resume", () => daemon.workflowResume(task.id))}
                 >
@@ -65,7 +65,7 @@ export const WorkflowControls = memo(function WorkflowControls({ task }: { task:
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 gap-1 px-2 text-xs"
+                  className="h-6 gap-1 px-2 text-[13px]"
                   disabled={busy || run.pauseRequested}
                   title={
                     run.pauseRequested
@@ -88,7 +88,7 @@ export const WorkflowControls = memo(function WorkflowControls({ task }: { task:
             <Button
               size="sm"
               variant="destructive"
-              className="h-6 gap-1 px-2 text-xs"
+              className="h-6 gap-1 px-2 text-[13px]"
               disabled={busy}
               onClick={() =>
                 void act("stop the workflow", async () => {
@@ -117,7 +117,7 @@ export const WorkflowControls = memo(function WorkflowControls({ task }: { task:
       )}
 
       {waiting?.kind === "paused" && (
-        <p className="mt-1.5 text-xs text-muted-foreground">
+        <p className="mt-1.5 text-[13px] text-muted-foreground">
           Paused before the {workflowStageLabel(run.stage)} stage. Type a message to resume with it
           as guidance, or press Resume.
         </p>
@@ -147,11 +147,11 @@ function LimitDecision({
       <div className="flex items-start gap-2">
         <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn" />
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-foreground">Review limit reached</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="text-[13px] font-semibold text-foreground">Review limit reached</p>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
             Reviewers still request changes{summary ? ` — ${summary}` : ""}.
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-[13px] text-muted-foreground">
             Continue the fix → review loop, finish with the current changes, or stop the workflow.
           </p>
         </div>
@@ -250,7 +250,7 @@ function StageIndicator({ run }: { run: WorkflowRunInfo }) {
       {run.verdict && (
         <span
           className={cn(
-            "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+            "rounded-full px-1.5 py-0.5 text-[11px] font-medium",
             run.verdict === "approve" ? "bg-ok/12 text-ok" : "bg-warn/12 text-warn",
           )}
         >

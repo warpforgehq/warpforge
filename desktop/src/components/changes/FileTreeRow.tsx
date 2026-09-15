@@ -4,8 +4,8 @@ import type { MouseEvent } from "react";
 
 import { cn } from "@/lib/utils";
 
-import { leaves, STATUS, type FlatRow } from "./treeUtils";
 import { CHANGES_LABEL, UNVERSIONED_LABEL } from "./changesTree";
+import { leaves, STATUS, type FlatRow } from "./treeUtils";
 
 interface FileTreeRowProps {
   row: FlatRow;
@@ -42,7 +42,7 @@ export function FileTreeRow({
         // w-max + min-w-full: the row grows with its content and the rail
         // scrolls horizontally instead of clipping long paths and counts.
         className={cn(
-          "group absolute left-0 top-0 flex h-7 w-max min-w-full items-center gap-1.5 pr-2 text-xs select-none",
+          "group absolute left-0 top-0 flex h-7 w-max min-w-full items-center gap-1.5 pr-2 text-[13px] select-none",
           selected === row.node.path ? "bg-secondary text-foreground" : "hover:bg-secondary/50",
         )}
         style={{ ...pad, transform: `translateY(${vi.start}px)` }}
@@ -67,7 +67,7 @@ export function FileTreeRow({
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
         >
           <span className="truncate">{row.node.name}</span>
-          <span className="tnum ml-auto shrink-0 font-mono text-[10px]">
+          <span className="tnum ml-auto shrink-0 font-mono text-[11px]">
             {st.adds > 0 && <span className="text-ok">+{st.adds}</span>}
             {st.adds > 0 && st.dels > 0 && " "}
             {st.dels > 0 && <span className="text-destructive">-{st.dels}</span>}
@@ -91,7 +91,7 @@ export function FileTreeRow({
   return (
     <div
       key={vi.key}
-      className="absolute left-0 top-0 flex h-7 w-max min-w-full items-center gap-1.5 pr-2 text-xs text-muted-foreground select-none"
+      className="absolute left-0 top-0 flex h-7 w-max min-w-full items-center gap-1.5 pr-2 text-[13px] text-muted-foreground select-none"
       style={{ ...pad, transform: `translateY(${vi.start}px)` }}
       onContextMenu={(e) => onContextMenu(e, row)}
     >
@@ -117,11 +117,11 @@ export function FileTreeRow({
           className={cn("size-3.5 shrink-0 transition-transform", isOpen && "rotate-90")}
         />
         <span className="truncate">{row.node.name}</span>
-        <span className="ml-1 shrink-0 text-[10px] text-muted-foreground/70">
+        <span className="ml-1 shrink-0 text-[11px] text-muted-foreground/70">
           {paths.length} files
         </span>
         {row.node.suffix && (
-          <span className="ml-1 shrink-0 font-mono text-[10px] text-muted-foreground/70">
+          <span className="ml-1 shrink-0 font-mono text-[11px] text-muted-foreground/70">
             {row.node.suffix}
           </span>
         )}

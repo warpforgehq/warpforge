@@ -53,10 +53,10 @@ export function RunOutputDialog({ automationName, onClose, onOpenTask, run }: Pr
               </DialogDescription>
             </DialogHeader>
 
-            <p className="text-xs text-muted-foreground">{meta.hint}</p>
+            <p className="text-[13px] text-muted-foreground">{meta.hint}</p>
 
             {run.error && (
-              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-[13px] text-destructive">
                 {run.error}
               </p>
             )}
@@ -66,7 +66,9 @@ export function RunOutputDialog({ automationName, onClose, onOpenTask, run }: Pr
                 {run.output}
               </pre>
             ) : (
-              <p className="text-xs text-muted-foreground/80">No output recorded for this run.</p>
+              <p className="text-[13px] text-muted-foreground/80">
+                No output recorded for this run.
+              </p>
             )}
 
             <div className="flex justify-end gap-2">

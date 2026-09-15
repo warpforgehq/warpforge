@@ -143,7 +143,7 @@ function AssigneeFilter({
     <Select value={value ?? ALL} onValueChange={(next) => onChange(next === ALL ? null : next)}>
       <SelectTrigger
         aria-label="Assignee"
-        className={cn("h-7 w-auto gap-1.5 text-xs", value === null && "text-muted-foreground")}
+        className={cn("h-7 w-auto gap-1.5 text-[13px]", value === null && "text-muted-foreground")}
       >
         <SelectValue placeholder="Assignee" />
       </SelectTrigger>
@@ -153,7 +153,7 @@ function AssigneeFilter({
           <SelectItem value={me}>
             <span className="flex items-center gap-1.5">
               {me}
-              <span className="text-[10px] text-muted-foreground/70">you</span>
+              <span className="text-[11px] text-muted-foreground/70">you</span>
             </span>
           </SelectItem>
         )}
@@ -180,7 +180,7 @@ function SortControl({
   return (
     <div className="flex items-center gap-1">
       <Select value={sortBy} onValueChange={(next) => onChange({ sortBy: next as BacklogSortKey })}>
-        <SelectTrigger aria-label="Sort by" className="h-7 w-auto gap-1.5 text-xs">
+        <SelectTrigger aria-label="Sort by" className="h-7 w-auto gap-1.5 text-[13px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -253,7 +253,7 @@ function FilterSelect<T extends string>({
     >
       <SelectTrigger
         aria-label={label}
-        className={cn("h-7 w-auto gap-1.5 text-xs", value === null && "text-muted-foreground")}
+        className={cn("h-7 w-auto gap-1.5 text-[13px]", value === null && "text-muted-foreground")}
       >
         <SelectValue placeholder={label} />
       </SelectTrigger>

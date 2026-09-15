@@ -222,6 +222,7 @@ function Sidebar({
               emptyHint={
                 projectNames.length === 0 ? undefined : "No open pull requests in your projects."
               }
+              onAddProject={onAddProject}
             />
           </div>
         ) : (

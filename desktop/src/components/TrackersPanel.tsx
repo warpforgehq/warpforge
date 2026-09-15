@@ -93,7 +93,7 @@ export default function TrackersPanel() {
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
               placeholder="lin_api_…"
-              className="h-7 flex-1 text-xs"
+              className="h-7 flex-1 text-[13px]"
               aria-label="Linear API key"
             />
             <Button
@@ -115,7 +115,7 @@ export default function TrackersPanel() {
             </Button>
           </div>
         )}
-        <p className="text-xs text-muted-foreground/80">
+        <p className="text-[13px] text-muted-foreground/80">
           A personal API key, stored in your keychain by the daemon.{" "}
           <button
             type="button"
@@ -133,7 +133,7 @@ export default function TrackersPanel() {
             </p>
             {snapshot.projects.map((project) => (
               <div key={project.name} className="flex items-center justify-between gap-3">
-                <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">
                   {project.name}
                 </span>
                 <ProjectLinearTeamSelect project={project.name} />
@@ -176,7 +176,7 @@ export default function TrackersPanel() {
               value={githubToken}
               onChange={(e) => setGithubToken(e.target.value)}
               placeholder={github?.connected ? "replace token (ghp_…)" : "ghp_… or github_pat_…"}
-              className="h-7 flex-1 text-xs"
+              className="h-7 flex-1 text-[13px]"
               aria-label="GitHub token"
             />
             <Button
@@ -203,7 +203,7 @@ export default function TrackersPanel() {
               )}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground/80">
+          <p className="text-[13px] text-muted-foreground/80">
             Personal access token (classic with{" "}
             <code className="rounded bg-secondary px-1">repo, read:project</code> or fine-grained).
             Stored in keychain.{" "}
@@ -221,7 +221,7 @@ export default function TrackersPanel() {
               </>
             )}
           </p>
-          {github?.warning && <p className="text-xs text-amber-500">{github.warning}</p>}
+          {github?.warning && <p className="text-[13px] text-amber-500">{github.warning}</p>}
         </div>
       </div>
     </div>

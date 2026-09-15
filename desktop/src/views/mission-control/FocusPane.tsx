@@ -3,12 +3,12 @@ import { Activity, ExternalLink, FileText, MoreHorizontal, PinOff, Wrench } from
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Card } from "@/components/ui/card";
-import { PaneHeader } from "@/components/workspace";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PaneHeader } from "@/components/workspace";
 import { sessionActivity } from "@/lib/sessionActivity";
 import { latestPendingPermission } from "@/lib/sessionPermissions";
 import { latestCommands, summarizeFiles, summarizeTools } from "@/lib/sessionUpdatesSummary";
@@ -308,7 +308,7 @@ function ActivityChip({
   return (
     <span
       className={cn(
-        "flex min-w-0 max-w-full items-center gap-1 rounded px-1.5 py-0.5 text-xs [&_svg]:size-3 [&_svg]:shrink-0",
+        "flex min-w-0 max-w-full items-center gap-1 rounded px-1.5 py-0.5 text-[11px] [&_svg]:size-3 [&_svg]:shrink-0",
         tone === "muted" && "bg-background/25 text-muted-foreground",
         tone === "warn" && "bg-warn/10 text-warn",
       )}

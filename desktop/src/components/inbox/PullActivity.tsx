@@ -68,9 +68,9 @@ export function PullActivity({
 
   return (
     <section className="flex min-w-0 flex-col gap-2">
-      <h3 className="text-xs font-medium text-muted-foreground">Activity</h3>
+      <h3 className="text-[13px] font-medium text-muted-foreground">Activity</h3>
 
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <GitPullRequest aria-hidden className="size-3.5 shrink-0 text-ok" />
         <span>Opened by {pr.author?.login || "ghost"}</span>
         {pr.createdAt > 0 && (
@@ -86,7 +86,7 @@ export function PullActivity({
       </div>
 
       {thread?.truncated && (
-        <p className="text-xs text-muted-foreground/60">
+        <p className="text-[11px] text-muted-foreground/60">
           Older comments and reviews are hidden by GitHub's page limits.
         </p>
       )}
@@ -188,7 +188,7 @@ function ActivityCard({
         {codeComments > 0 && (
           <button
             type="button"
-            className="flex items-center gap-1.5 self-start text-xs text-muted-foreground hover:text-foreground"
+            className="flex items-center gap-1.5 self-start text-[13px] text-muted-foreground hover:text-foreground"
             title="These comments sit on the lines they were written about"
             onClick={onOpenDiff}
           >
@@ -228,14 +228,14 @@ function ActivityCard({
         verdict ? (
           <span
             className={cn(
-              "shrink-0 rounded border px-1.5 py-px text-[10px] font-medium",
+              "shrink-0 rounded border px-1.5 py-px text-[11px] font-medium",
               verdict.className,
             )}
           >
             {verdict.label}
           </span>
         ) : outdated ? (
-          <span className="shrink-0 rounded border border-border bg-secondary/40 px-1.5 py-px text-[10px] font-medium text-muted-foreground/80">
+          <span className="shrink-0 rounded border border-border bg-secondary/40 px-1.5 py-px text-[11px] font-medium text-muted-foreground/80">
             Outdated
           </span>
         ) : undefined

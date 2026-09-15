@@ -61,7 +61,7 @@ export function FindInFilesPreview({
 
   return (
     <div className="flex min-h-0 flex-col border-t bg-muted/20">
-      <div className="flex items-center gap-2 px-3 py-1.5 text-xs">
+      <div className="flex items-center gap-2 px-3 py-1.5 text-[13px]">
         <span className="font-medium">{name}</span>
         <span className="truncate text-muted-foreground">{dir}</span>
       </div>

@@ -99,16 +99,16 @@ export default function LanguageServersPanel() {
                 {server.language}
                 {server.installed ? (
                   behind ? (
-                    <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[10px] font-medium text-warn">
+                    <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[11px] font-medium text-warn">
                       update available
                     </span>
                   ) : (
-                    <span className="rounded-full bg-ok/15 px-1.5 py-0.5 text-[10px] font-medium text-ok">
+                    <span className="rounded-full bg-ok/15 px-1.5 py-0.5 text-[11px] font-medium text-ok">
                       {server.version ? `v${server.version}` : "installed"}
                     </span>
                   )
                 ) : (
-                  <span className="flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
                     <Download className="size-2.5" />
                     not found
                   </span>
@@ -147,7 +147,7 @@ export default function LanguageServersPanel() {
           type="button"
           size="sm"
           variant="outline"
-          className="h-7 gap-1.5 text-xs"
+          className="h-7 gap-1.5 text-[13px]"
           onClick={() => void refetch()}
           disabled={isFetching}
         >

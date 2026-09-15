@@ -52,7 +52,7 @@ export function ReviewDecisionChip({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-px text-xs",
+        "inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-px text-[11px]",
         meta.className,
         className,
       )}

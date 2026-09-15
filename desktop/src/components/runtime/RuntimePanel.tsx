@@ -117,7 +117,7 @@ export function RuntimePanel({
                     onAppendToChat={onAppendToChat}
                   />
                 ) : (
-                  <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
+                  <div className="flex flex-1 items-center justify-center text-[13px] text-muted-foreground">
                     Select a service to view logs
                   </div>
                 )}

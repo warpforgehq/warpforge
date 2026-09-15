@@ -13,7 +13,7 @@ export function ModelMismatchBanner({ task }: { task: TaskInfo }) {
   if (task.blockedKind !== "model_mismatch") return null;
 
   return (
-    <div className="flex items-start gap-2 border-b border-rule bg-muted/50 px-4 py-2 text-xs">
+    <div className="flex items-start gap-2 border-b border-rule bg-muted/50 px-4 py-2 text-[13px]">
       <Info className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
         <p className="font-medium text-foreground">

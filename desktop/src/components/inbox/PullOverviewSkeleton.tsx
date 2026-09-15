@@ -31,7 +31,7 @@ export function PullOverviewSkeleton({ variant }: { variant: "description" | "ac
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <h3 className="text-xs font-medium text-muted-foreground">Activity</h3>
+      <h3 className="text-[13px] font-medium text-muted-foreground">Activity</h3>
       <SkeletonBlock
         role="status"
         aria-label="Loading activity"

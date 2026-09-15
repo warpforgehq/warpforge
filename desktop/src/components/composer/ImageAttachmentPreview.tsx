@@ -12,7 +12,7 @@ export function ImageAttachmentPreview({
   return (
     <div className="group relative w-28 overflow-hidden rounded-md border bg-secondary/60">
       <img src={image.previewUrl} alt={image.name} className="h-16 w-full object-cover" />
-      <div className="truncate px-1.5 py-1 text-[10px]" title={image.name}>
+      <div className="truncate px-1.5 py-1 text-[11px]" title={image.name}>
         {image.name}
       </div>
       <div className="px-1.5 pb-1 text-[9px] text-muted-foreground">

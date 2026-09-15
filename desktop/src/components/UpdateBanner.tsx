@@ -50,7 +50,7 @@ export function UpdateBanner() {
             : undefined
       }
       className={cn(
-        "flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-md px-2.5 text-xs font-medium",
+        "flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
         state.status === "error"
           ? "bg-destructive text-destructive-foreground"

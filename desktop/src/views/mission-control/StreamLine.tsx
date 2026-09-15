@@ -83,12 +83,14 @@ function ToolCallLine({
           </span>
         )}
         {permission && answered ? (
-          <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
+          <span className="shrink-0 whitespace-nowrap text-[11px] text-muted-foreground">
             ✓ {answered.replace("_", " ")}
           </span>
         ) : (
           !awaiting && (
-            <span className={cn("shrink-0 text-xs", dot)}>{update.status.replace("_", " ")}</span>
+            <span className={cn("shrink-0 text-[11px]", dot)}>
+              {update.status.replace("_", " ")}
+            </span>
           )
         )}
       </button>
@@ -114,7 +116,7 @@ function ToolCallLine({
               </Button>
             ))
           ) : (
-            <span className="text-xs text-muted-foreground">Open the task to respond.</span>
+            <span className="text-[13px] text-muted-foreground">Open the task to respond.</span>
           )}
         </div>
       )}
@@ -160,7 +162,9 @@ function PermissionLine({
         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
         <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">{update.title}</span>
         {answered && (
-          <span className="shrink-0 whitespace-nowrap text-xs">✓ {answered.replace("_", " ")}</span>
+          <span className="shrink-0 whitespace-nowrap text-[11px]">
+            ✓ {answered.replace("_", " ")}
+          </span>
         )}
       </p>
       {!answered &&
@@ -185,7 +189,7 @@ function PermissionLine({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Open the task to respond.</p>
+          <p className="text-[13px] text-muted-foreground">Open the task to respond.</p>
         ))}
     </div>
   );

@@ -77,7 +77,7 @@ export function TaskTitleEditor({ task }: { task: TaskInfo }) {
 
   return (
     <div className="group/title flex min-w-0 flex-1 items-center gap-1" aria-busy={regenerating}>
-      <h1 className={cn("min-w-0 max-w-full text-xs font-medium", editing && "flex-1")}>
+      <h1 className={cn("min-w-0 max-w-full text-[13px] font-medium", editing && "flex-1")}>
         {editing ? (
           <input
             ref={inputRef}

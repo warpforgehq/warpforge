@@ -98,7 +98,7 @@ export function AutomationCard({
         )}
       </div>
 
-      <div className="mt-2.5 space-y-1 px-3 text-xs text-muted-foreground">
+      <div className="mt-2.5 space-y-1 px-3 text-[13px] text-muted-foreground">
         <p className="flex items-center gap-1.5">
           <Clock aria-hidden className="size-3.5 shrink-0 text-muted-foreground/70" />
           <span className="truncate">

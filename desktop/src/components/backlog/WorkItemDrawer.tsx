@@ -296,7 +296,7 @@ function WorkItemDetails({
           at a readable measure rather than run edge to edge. */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <span className="inline-flex h-7 items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="inline-flex h-7 items-center gap-1.5 text-[13px] text-muted-foreground">
             <SourceDot source={item.source} />
             {SOURCE_LABEL[item.source]}
             {item.number && <span className="tnum"> · {item.number}</span>}
@@ -304,7 +304,7 @@ function WorkItemDetails({
           {statusIsRemote ? (
             <span
               className={cn(
-                "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs",
+                "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[13px]",
                 statusMeta.className,
               )}
               title={`${SOURCE_LABEL[item.source]} owns this status`}
@@ -359,7 +359,7 @@ function WorkItemDetails({
               <span className="truncate">{assignee ?? "Unassigned"}</span>
             </FieldChip>
           ) : (
-            <span className="inline-flex h-7 items-center gap-1.5 px-1 text-xs text-muted-foreground">
+            <span className="inline-flex h-7 items-center gap-1.5 px-1 text-[13px] text-muted-foreground">
               <UserRound className="size-3.5" />
               {item.assignee || "Unassigned"}
             </span>
@@ -506,7 +506,7 @@ const TASK_TONE: Record<string, string> = {
 function LinkedTaskSummary({ task }: { task: TaskInfo }) {
   const visual = taskStatusVisual(task.status);
   return (
-    <div className="flex min-w-0 max-w-[80ch] items-center gap-2 rounded-md border border-border bg-background/30 px-3 py-2 text-xs">
+    <div className="flex min-w-0 max-w-[80ch] items-center gap-2 rounded-md border border-border bg-background/30 px-3 py-2 text-[13px]">
       <span className={cn("size-1.5 shrink-0 rounded-full", TASK_TONE[visual.tone])} aria-hidden />
       <span className="min-w-0 flex-1 truncate text-foreground">{task.title || task.prompt}</span>
       <span className="shrink-0 text-muted-foreground">{statusLabel(task.status)}</span>
@@ -544,7 +544,7 @@ function FieldChip<T extends string>({
         type="button"
         aria-label={ariaLabel}
         className={cn(
-          "flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-xs transition-colors",
+          "flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[13px] transition-colors",
           "hover:text-foreground data-[state=open]:bg-secondary data-[state=open]:text-foreground",
           triggerClassName,
         )}

@@ -101,14 +101,14 @@ export function AppContent({
         <ErrorBoundary>
           <Suspense
             fallback={
-              <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground/70">
+              <div className="flex h-full items-center justify-center gap-2 text-[13px] text-muted-foreground/70">
                 <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
                 <span>Loading…</span>
               </div>
             }
           >
             {connection !== "connected" ? (
-              <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground/70">
+              <div className="flex h-full items-center justify-center gap-2 text-[13px] text-muted-foreground/70">
                 <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
                 <span>
                   {connectionError && !connectionError.includes("daemon.json")
@@ -144,6 +144,7 @@ export function AppContent({
               <InboxView
                 projects={projectNames}
                 onSendToAgent={(project, prompt) => onNewTask(project, prompt)}
+                onAddProject={onAddProject}
                 listInSidebar={showPersistent}
               />
             ) : view === "automations" ? (

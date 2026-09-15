@@ -61,9 +61,9 @@ function Choice({
       <span className="flex items-baseline gap-2">
         <Check className={cn("size-3.5 shrink-0 text-primary", selected ? "" : "opacity-0")} />
         <span className="flex-1 text-sm font-medium text-foreground">{title}</span>
-        <span className="shrink-0 text-xs text-muted-foreground">{cost}</span>
+        <span className="shrink-0 text-[11px] text-muted-foreground">{cost}</span>
       </span>
-      <span className="mt-1 block pl-[1.375rem] text-xs text-muted-foreground">{children}</span>
+      <span className="mt-1 block pl-[1.375rem] text-[13px] text-muted-foreground">{children}</span>
     </button>
   );
 }
@@ -87,7 +87,7 @@ function Picker({
           type="button"
           aria-label={label}
           title={label}
-          className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-xs text-foreground hover:bg-secondary/60"
+          className="flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-[13px] text-foreground hover:bg-secondary/60"
         >
           {icon}
           <span className="max-w-32 truncate">{value}</span>
@@ -291,7 +291,7 @@ export function ContinueSessionDialog({
           // is not — it only chooses who reads the transcript and writes the
           // brief. The note gets its own row so a long harness name cannot push
           // it into an unpredictable wrap.
-          <div className="space-y-1.5 text-xs text-muted-foreground">
+          <div className="space-y-1.5 text-[13px] text-muted-foreground">
             <div className="flex min-w-0 items-center gap-2">
               <span className="shrink-0">Written by</span>
               <Picker
@@ -310,7 +310,7 @@ export function ContinueSessionDialog({
                   return (
                     <DropdownMenuItem
                       key={agent.id}
-                      className="text-xs"
+                      className="text-[13px]"
                       onSelect={() => chooseCompactAgent(agent.id)}
                     >
                       <AgentLogo
@@ -335,7 +335,7 @@ export function ContinueSessionDialog({
                   {compactAccounts.map((account) => (
                     <DropdownMenuItem
                       key={account.id}
-                      className="text-xs"
+                      className="text-[13px]"
                       onSelect={() => chooseCompactAccount(account.id)}
                     >
                       <span className="flex-1 truncate">
@@ -385,13 +385,13 @@ export function ContinueSessionDialog({
             </Choice>
           </div>
         ) : (
-          <p className="border-t border-rule pt-3 text-xs text-muted-foreground">
+          <p className="border-t border-rule pt-3 text-[13px] text-muted-foreground">
             Opens a new task seeded with the context. This one is left as it stands.
           </p>
         )}
 
         {destination === "new" && (
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
             <input
               type="checkbox"
               checked={branchWorktree}

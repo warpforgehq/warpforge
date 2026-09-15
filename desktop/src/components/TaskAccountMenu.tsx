@@ -71,7 +71,7 @@ export function TaskAccountMenu({
     // a first account appears.
     return (
       <span
-        className="flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground"
+        className="flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground"
         title={displayName}
       >
         <AgentLogo agentId={agentId} displayName={displayName} />
@@ -103,7 +103,7 @@ export function TaskAccountMenu({
     <div className="flex min-w-0 items-center gap-1.5">
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          className="flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           aria-label={`${displayName} account`}
           title={`${titleHead}${shown.map((w) => ` · ${w.label}: ${quotaSentence(w)}`).join("")}`}
         >
@@ -112,7 +112,7 @@ export function TaskAccountMenu({
             <EmailBlur text={label} />
           </span>
           {shown.length > 0 && (
-            <span className="flex flex-col items-end text-[10px] font-medium leading-[1.1] tabular-nums">
+            <span className="flex flex-col items-end text-[11px] font-medium leading-[1.1] tabular-nums">
               {shown.map((window) => (
                 <span
                   key={window.id}
@@ -143,7 +143,7 @@ export function TaskAccountMenu({
             />
           ))}
           {spend && spend.length > 0 && (
-            <p className="px-1 text-[10px] text-muted-foreground/80">{SPEND_DISCLAIMER}</p>
+            <p className="px-1 text-[11px] text-muted-foreground/80">{SPEND_DISCLAIMER}</p>
           )}
           <p className="px-1 text-[11px] leading-snug text-muted-foreground">{SWITCH_NOTE}</p>
           <button
@@ -262,12 +262,12 @@ function PlainAccountCard({ card, action }: { card: AccountCard; action: ReactNo
           )}
         </span>
         {card.plan && (
-          <span className="rounded-sm border border-border bg-muted/50 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          <span className="rounded-sm border border-border bg-muted/50 px-1.5 py-px text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             {card.plan}
           </span>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">No usage reported for this account yet.</p>
+      <p className="text-[13px] text-muted-foreground">No usage reported for this account yet.</p>
       {/* Never polled, so there is no timestamp to sit on the left of this row —
           only the action, and nothing at all when it is the active account. */}
       {action && (

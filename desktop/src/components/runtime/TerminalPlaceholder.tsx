@@ -7,12 +7,12 @@ export function TerminalPlaceholder() {
         <TerminalSquare className="size-5 text-muted-foreground" />
       </div>
       <div className="space-y-1">
-        <p className="text-sm font-medium text-foreground">Interactive terminal</p>
-        <p className="max-w-xs text-xs text-muted-foreground">
+        <p className="text-[15px] font-medium text-foreground">Interactive terminal</p>
+        <p className="max-w-xs text-[13px] text-muted-foreground">
           Interactive terminal sessions will be available in a future release.
         </p>
       </div>
-      <div className="mt-1 rounded-full border bg-muted/20 px-3 py-1 text-[10px] text-muted-foreground">
+      <div className="mt-1 rounded-full border bg-muted/20 px-3 py-1 text-[11px] text-muted-foreground">
         Coming soon
       </div>
     </div>

@@ -126,7 +126,7 @@ export function AutomationLiveStrip({ automations, runsById, now, onOpenRun }: P
             );
           })}
         </div>
-        <div className="flex justify-between text-[10px] text-muted-foreground/70">
+        <div className="flex justify-between text-[11px] text-muted-foreground/70">
           <span>24h ago</span>
           <span>now</span>
         </div>

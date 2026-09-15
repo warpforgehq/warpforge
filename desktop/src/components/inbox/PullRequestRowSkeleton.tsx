@@ -37,7 +37,6 @@ export function PullRequestRowSkeleton() {
               </span>
             </span>
             <span className="flex min-w-0 items-center gap-1.5">
-              <span className="flex size-1.5 shrink-0 items-center justify-center" />
               <SkeletonBar w={skeletonWidth(row, 1)} h={10} className="shrink-0" />
             </span>
           </div>

@@ -208,7 +208,7 @@ export function BranchActionsDialog({
               </div>
             )}
             {remoteConflict && !overwrite && (
-              <p className="text-xs text-warn">
+              <p className="text-[13px] text-warn">
                 Remote branch with this name already exists. Enable override to continue.
               </p>
             )}
@@ -230,7 +230,9 @@ export function BranchActionsDialog({
               </SelectContent>
             </Select>
             {candidates.length === 0 && (
-              <p className="text-xs text-muted-foreground">No other local branches available.</p>
+              <p className="text-[13px] text-muted-foreground">
+                No other local branches available.
+              </p>
             )}
           </>
         )}

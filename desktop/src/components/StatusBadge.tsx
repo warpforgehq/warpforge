@@ -131,7 +131,7 @@ export function StatusBadge(props: StatusBadgeProps) {
     <span
       className={cn(
         "inline-flex shrink-0 items-center whitespace-nowrap rounded-full border font-medium normal-case tracking-normal",
-        size === "xs" ? "gap-1 px-1.5 py-px text-[11px]" : "gap-1.5 px-2 py-0.5 text-xs",
+        size === "xs" ? "gap-1 px-1.5 py-px text-[11px]" : "gap-1.5 px-2 py-0.5 text-[13px]",
         pillTone,
         className,
       )}

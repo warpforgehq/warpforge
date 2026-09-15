@@ -22,7 +22,7 @@ export function AgentUpdateBanner({ onOpenSettings }: { onOpenSettings: () => vo
       }}
       title="Open Settings → Agents to update"
       className={cn(
-        "flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-md px-2.5 text-xs font-medium",
+        "flex h-8 w-full shrink-0 items-center justify-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium",
         "bg-primary text-primary-foreground",
         "shadow-sm transition-opacity hover:opacity-90",
       )}

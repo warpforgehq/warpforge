@@ -175,7 +175,7 @@ function Node({
     >
       <span className="flex items-center gap-1.5">
         {icon}
-        <span className="truncate text-xs font-medium text-foreground">{title}</span>
+        <span className="truncate text-[13px] font-medium text-foreground">{title}</span>
       </span>
       <span className="truncate pl-[22px] text-[11px] text-muted-foreground">{caption}</span>
     </div>
@@ -187,7 +187,7 @@ function Arrow({ label, loop = false }: { label?: string; loop?: boolean }) {
   return (
     <span className="flex shrink-0 flex-col items-center justify-center gap-0.5 self-center text-muted-foreground">
       <Icon aria-hidden className={cn("size-3.5", loop && "text-primary")} />
-      {label && <span className="tnum text-[10px] leading-none text-primary">{label}</span>}
+      {label && <span className="tnum text-[11px] leading-none text-primary">{label}</span>}
     </span>
   );
 }

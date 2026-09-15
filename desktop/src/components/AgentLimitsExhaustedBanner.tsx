@@ -46,7 +46,7 @@ export function AgentLimitsExhaustedBanner({ agentId }: { agentId: string }) {
       : "";
 
   return (
-    <div className="flex items-start gap-2 border-b border-red-500/30 bg-red-500/10 px-4 py-2 text-xs">
+    <div className="flex items-start gap-2 border-b border-red-500/30 bg-red-500/10 px-4 py-2 text-[13px]">
       <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-red-600 dark:text-red-400" />
       <div className="min-w-0 flex-1">
         <p className="font-medium text-foreground">

@@ -175,7 +175,7 @@ export function FindInFiles({
           />
           {loading && <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />}
         </div>
-        <div className="border-b px-3 py-1.5 text-xs text-muted-foreground">
+        <div className="border-b px-3 py-1.5 text-[13px] text-muted-foreground">
           {error ? (
             <span className="text-destructive">{error}</span>
           ) : trimmed === "" ? (
@@ -193,7 +193,7 @@ export function FindInFiles({
             const iconUrl = getFileIconUrl(group.path);
             return (
               <div key={group.path}>
-                <div className="flex items-center gap-2 px-3 py-1.5 text-xs">
+                <div className="flex items-center gap-2 px-3 py-1.5 text-[13px]">
                   {iconUrl ? (
                     <img src={iconUrl} alt="" aria-hidden className="size-3.5 shrink-0" />
                   ) : (
@@ -201,7 +201,7 @@ export function FindInFiles({
                   )}
                   <span className="font-medium">{name}</span>
                   <span className="min-w-0 flex-1 truncate text-muted-foreground">{dir}</span>
-                  <span className="shrink-0 rounded bg-muted px-1.5 text-[10px] text-muted-foreground">
+                  <span className="shrink-0 rounded bg-muted px-1.5 text-[11px] text-muted-foreground">
                     {group.matches.length}
                   </span>
                 </div>
@@ -245,7 +245,7 @@ export function FindInFiles({
             );
           })}
           {!loading && trimmed !== "" && !error && flat.length === 0 && (
-            <p className="px-3 py-2 text-xs text-muted-foreground">No matches</p>
+            <p className="px-3 py-2 text-[13px] text-muted-foreground">No matches</p>
           )}
         </div>
         <div className="flex min-h-0 flex-[2] flex-col">

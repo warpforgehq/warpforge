@@ -198,7 +198,7 @@ const LogViewer = memo(function LogViewer({
       {copyFeedback && (
         <span
           className={cn(
-            "absolute left-2 top-2 rounded border px-1.5 py-0.5 text-[10px]",
+            "absolute left-2 top-2 rounded border px-1.5 py-0.5 text-[11px]",
             copyFeedback === "ok"
               ? "border-ok/30 bg-ok/10 text-ok"
               : "border-destructive/30 bg-destructive/10 text-destructive",
@@ -217,7 +217,7 @@ const LogViewer = memo(function LogViewer({
             setShowJumpButton(false);
             scrollToBottom();
           }}
-          className="absolute bottom-2 right-3 flex items-center gap-1 rounded-md border bg-card px-2 py-1 text-[10px] text-muted-foreground shadow-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="absolute bottom-2 right-3 flex items-center gap-1 rounded-md border bg-card px-2 py-1 text-[11px] text-muted-foreground shadow-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Jump to latest log line"
         >
           <ChevronDown className="size-3" />
@@ -259,7 +259,7 @@ const SelectionToolbar = memo(function SelectionToolbar({
       <button
         type="button"
         onClick={onCopy}
-        className="flex items-center gap-1 rounded px-1.5 py-1 text-[10px] text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex items-center gap-1 rounded px-1.5 py-1 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         title="Copy selected text"
         aria-label="Copy selected log text"
       >
@@ -270,7 +270,7 @@ const SelectionToolbar = memo(function SelectionToolbar({
         <button
           type="button"
           onClick={onAddToChat}
-          className="flex items-center gap-1 rounded px-1.5 py-1 text-[10px] text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex items-center gap-1 rounded px-1.5 py-1 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           title="Add selection to chat composer"
           aria-label="Add selected log text to chat"
         >

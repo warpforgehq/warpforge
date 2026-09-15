@@ -20,7 +20,7 @@ export function FileMentionMenu({
     <div className="absolute bottom-full left-2 right-2 z-30 mb-1 max-h-64 overflow-y-auto rounded-md border bg-popover shadow-md">
       {loading && <MenuRowsSkeleton rows={5} label="Loading files" />}
       {!loading && files.length === 0 && (
-        <div className="px-3 py-2 text-xs text-muted-foreground">No matching files</div>
+        <div className="px-3 py-2 text-[13px] text-muted-foreground">No matching files</div>
       )}
       {files.map((file, index) => (
         <button

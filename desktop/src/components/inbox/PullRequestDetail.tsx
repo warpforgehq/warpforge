@@ -322,7 +322,7 @@ export function PullRequestDetail({
             variant="ghost"
             size="sm"
             className={cn(
-              "h-6 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground",
+              "h-6 gap-1.5 px-2 text-[13px] text-muted-foreground hover:text-foreground",
               verdict === "APPROVE" && "text-ok",
             )}
             disabled={pr.draft}
@@ -341,7 +341,7 @@ export function PullRequestDetail({
             variant="ghost"
             size="sm"
             className={cn(
-              "h-6 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground",
+              "h-6 gap-1.5 px-2 text-[13px] text-muted-foreground hover:text-foreground",
               verdict === "REQUEST_CHANGES" && "text-warn",
             )}
             disabled={pr.draft}
@@ -361,7 +361,7 @@ export function PullRequestDetail({
                 disabled={detailsQuery.isLoading}
                 title="Start a task from this pull request"
                 data-testid="inbox-send-to-agent"
-                className="flex h-6 shrink-0 items-center gap-1.5 rounded-md border border-border px-2 text-xs text-foreground hover:bg-secondary disabled:text-muted-foreground/40"
+                className="flex h-6 shrink-0 items-center gap-1.5 rounded-md border border-border px-2 text-[13px] text-foreground hover:bg-secondary disabled:text-muted-foreground/40"
               >
                 <Send className="size-3" aria-hidden />
                 Send to agent
@@ -372,7 +372,7 @@ export function PullRequestDetail({
                   buttons but not knowing which one leaves the pull request. */}
               <DropdownMenuPortal>
                 <DropdownMenuContent align="end" className="w-80">
-                  <DropdownMenuLabel className="py-1 text-xs font-normal text-muted-foreground">
+                  <DropdownMenuLabel className="py-1 text-[11px] font-normal text-muted-foreground">
                     Hand the work over
                   </DropdownMenuLabel>
                   <DropdownMenuItem
@@ -404,7 +404,7 @@ export function PullRequestDetail({
                     </span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="py-1 text-xs font-normal text-muted-foreground">
+                  <DropdownMenuLabel className="py-1 text-[11px] font-normal text-muted-foreground">
                     Assistant
                   </DropdownMenuLabel>
                   <AssistantThreadItem pr={pr} />

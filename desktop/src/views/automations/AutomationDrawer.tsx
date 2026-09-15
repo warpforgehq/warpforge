@@ -58,7 +58,7 @@ export function AutomationDrawer({
               <header className="flex shrink-0 items-center gap-2 border-b border-rule px-4 py-3">
                 <div className="min-w-0 flex-1">
                   <DialogTitle className="truncate text-base">{automation.name}</DialogTitle>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
                     {describeSchedule(automation.trigger)} ·{" "}
                     {automation.timezone || runtimeTimezone()} ·{" "}
                     {automation.enabled && (automation.nextRunAt ?? 0) > 0
@@ -86,7 +86,7 @@ export function AutomationDrawer({
               </header>
 
               <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[13px]">
                   <Fact label="Agent">
                     <span className="flex items-center gap-1.5">
                       <AgentLogo
@@ -140,7 +140,7 @@ export function AutomationDrawer({
                   Run history
                 </h3>
                 {runs.length === 0 ? (
-                  <p className="mt-1.5 text-xs text-muted-foreground/80">
+                  <p className="mt-1.5 text-[13px] text-muted-foreground/80">
                     No runs yet. “Run now” starts one without touching the schedule.
                   </p>
                 ) : (
@@ -231,7 +231,7 @@ function RunRow({
 }) {
   const meta = RUN_STATUS_META[run.status];
   return (
-    <li className="flex items-center gap-2 px-2.5 py-1.5 text-xs">
+    <li className="flex items-center gap-2 px-2.5 py-1.5 text-[13px]">
       <span className={cn("size-1.5 shrink-0 rounded-full", meta.dot)} aria-hidden />
       <button
         type="button"

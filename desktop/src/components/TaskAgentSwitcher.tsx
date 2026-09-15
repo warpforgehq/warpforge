@@ -79,7 +79,7 @@ export const TaskAgentSwitcher = memo(function TaskAgentSwitcher({
               ? "no worker sessions yet"
               : `${members.length - 1} worker sessions`
           }
-          className="flex h-7 shrink-0 items-center gap-1.5 rounded px-2 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className="flex h-7 shrink-0 items-center gap-1.5 rounded px-2 text-[13px] text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <Users className="size-3.5 text-muted-foreground" />
           <span className="text-[11px] text-muted-foreground">{members.length - 1}</span>
@@ -125,7 +125,7 @@ export const TaskAgentSwitcher = memo(function TaskAgentSwitcher({
                   )}
                   <StatusBadge status={member.status} size="xs" />
                 </span>
-                <span className="block truncate text-xs text-muted-foreground">
+                <span className="block truncate text-[13px] text-muted-foreground">
                   {taskLabel(member)}
                 </span>
               </span>

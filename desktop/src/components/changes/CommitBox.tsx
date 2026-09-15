@@ -37,7 +37,7 @@ export function CommitBox({
     <div className="flex flex-col gap-2 border-t border-rule bg-background/30 p-2.5">
       {commitExpanded ? (
         <>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
             <span className="tnum">{stagedSize} selected</span>
             <button
               type="button"
@@ -56,7 +56,7 @@ export function CommitBox({
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Commit message"
               rows={3}
-              className="bg-deep-surface min-h-20 w-full resize-none rounded-md py-1.5 pl-2 pr-9 text-xs outline-none placeholder:text-muted-foreground/80 focus:ring-1 focus:ring-ring"
+              className="bg-deep-surface min-h-20 w-full resize-none rounded-md py-1.5 pl-2 pr-9 text-[13px] outline-none placeholder:text-muted-foreground/80 focus:ring-1 focus:ring-ring"
             />
             <button
               type="button"
@@ -78,7 +78,7 @@ export function CommitBox({
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <label className="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground">
+            <label className="flex cursor-pointer items-center gap-1 text-[13px] text-muted-foreground">
               <input
                 type="checkbox"
                 checked={amend}
@@ -105,13 +105,13 @@ export function CommitBox({
         // rail's full width.
         <button
           type="button"
-          className="-m-2.5 flex items-center gap-1.5 p-2.5 text-left text-xs transition-colors hover:bg-secondary/50 disabled:pointer-events-none disabled:opacity-50"
+          className="-m-2.5 flex items-center gap-1.5 p-2.5 text-left text-[13px] transition-colors hover:bg-secondary/50 disabled:pointer-events-none disabled:opacity-50"
           disabled={stagedSize === 0}
           onClick={() => setCommitExpanded(true)}
         >
           <GitCommitVertical className="size-3.5 shrink-0" />
           Commit…
-          <span className="tnum ml-auto text-[10px] text-muted-foreground">
+          <span className="tnum ml-auto text-[11px] text-muted-foreground">
             {stagedSize} selected
           </span>
         </button>

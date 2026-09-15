@@ -28,7 +28,7 @@ export function RuntimeHeader({
             <span
               role="alert"
               aria-live="assertive"
-              className="flex items-center gap-1 rounded border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-[10px] text-destructive"
+              className="flex items-center gap-1 rounded border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-[11px] text-destructive"
               title={actionError}
             >
               <AlertTriangle className="size-3" />

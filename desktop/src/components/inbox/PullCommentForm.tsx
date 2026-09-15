@@ -116,11 +116,11 @@ export function PullCommentForm({
           )}
         </Button>
       </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-[13px] text-destructive">{error}</p>}
       {onCancel && !empty && (
         <button
           type="button"
-          className="self-start text-xs text-muted-foreground/70 hover:text-foreground"
+          className="self-start text-[13px] text-muted-foreground/70 hover:text-foreground"
           onClick={onCancel}
         >
           Cancel

@@ -125,21 +125,23 @@ describe("PullRequestRow", () => {
     expect(container.querySelector("button")!.children).toHaveLength(2);
   });
 
-  it("marks an unseen PR in a lane that is reserved on every row", () => {
+  it("marks an unseen PR with an inline dot and reserves nothing when read", () => {
     const { container, rerender } = renderWithQuery(
       <PullRequestRow pr={pr()} unseen={true} active={false} actions={{ onOpen: () => {} }} />,
     );
-    const lane = () => container.querySelector("button")!.lastElementChild!.firstElementChild!;
+    const titleLine = () => container.querySelector("button")!.lastElementChild!;
 
-    expect(lane().querySelector("[data-unread]")).not.toBeNull();
-    const width = lane().className;
+    expect(titleLine().querySelector("[data-unread]")).not.toBeNull();
+    const dot = titleLine().firstElementChild!;
+    expect(dot.className).toContain("shrink-0");
 
     rerender(
       <PullRequestRow pr={pr()} unseen={false} active={false} actions={{ onOpen: () => {} }} />,
     );
-    // Same lane, no dot — so a read title starts where an unread one does.
-    expect(lane().querySelector("[data-unread]")).toBeNull();
-    expect(lane().className).toBe(width);
+    // No dot and no placeholder: a read row's title starts at the lane edge,
+    // instead of every row paying for the minority that are unread.
+    expect(titleLine().querySelector("[data-unread]")).toBeNull();
+    expect(titleLine().firstElementChild).toBe(titleLine().lastElementChild);
   });
 
   it("keeps the compact two-line composition with smaller type and room to breathe", () => {

@@ -20,7 +20,7 @@ function OverviewMetric({
       )}
     >
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-xs text-muted-foreground">{label}</span>
+        <span className="text-[13px] text-muted-foreground">{label}</span>
         <span className={cn("tnum text-xl font-semibold", tone === "warn" && "text-warn")}>
           {value}
         </span>

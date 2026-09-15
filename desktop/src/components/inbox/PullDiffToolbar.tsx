@@ -56,10 +56,10 @@ export function PullDiffToolbar({
       {/* Adds/deletions/file count live in the detail header; repeating them
           here read as two different tallies. The toolbar keeps what only this
           surface knows: viewed progress. */}
-      <span className="tnum ml-1 text-xs text-muted-foreground">
+      <span className="tnum ml-1 text-[11px] text-muted-foreground">
         {viewed}/{files} viewed
       </span>
-      {truncated && <span className="text-xs text-warn">diff truncated by the size cap</span>}
+      {truncated && <span className="text-[11px] text-warn">diff truncated by the size cap</span>}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <div className="flex rounded-md border border-border bg-background/30 p-0.5">
           {(["unified", "split"] as const).map((value) => (
@@ -68,7 +68,7 @@ export function PullDiffToolbar({
               key={value}
               onClick={() => onModeChange(value)}
               className={cn(
-                "rounded px-2 py-0.5 text-xs capitalize transition-colors",
+                "rounded px-2 py-0.5 text-[13px] capitalize transition-colors",
                 mode === value
                   ? "bg-secondary text-foreground"
                   : "text-muted-foreground hover:text-foreground",
@@ -105,7 +105,7 @@ function Pill({
       aria-pressed={pressed}
       onClick={onClick}
       className={cn(
-        "flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs",
+        "flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-[13px]",
         pressed
           ? "border-border bg-secondary text-foreground"
           : "border-border text-muted-foreground hover:text-foreground",

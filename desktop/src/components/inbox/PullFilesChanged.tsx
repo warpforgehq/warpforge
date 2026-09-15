@@ -73,7 +73,7 @@ export function PullFilesChanged({
 
   return (
     <section className="flex min-w-0 flex-col gap-2 xl:min-h-0 xl:flex-1">
-      <h4 className="tnum shrink-0 text-xs text-muted-foreground">
+      <h4 className="tnum shrink-0 text-[13px] text-muted-foreground">
         {total} {total === 1 ? "file" : "files"} changed
       </h4>
       {files ? (
@@ -121,19 +121,21 @@ function FileGroup({
         <Icon aria-hidden className={cn("size-3 shrink-0", PULL_GROUP_ICON_CLASS[group.id])} />
         <span
           className={cn(
-            "min-w-0 truncate text-xs font-medium",
+            "min-w-0 truncate text-[13px] font-medium",
             noise ? "text-muted-foreground/70" : "text-foreground/85",
           )}
         >
           {group.label}
         </span>
-        <span className="tnum shrink-0 text-xs text-muted-foreground">{group.files.length}</span>
+        <span className="tnum shrink-0 text-[11px] text-muted-foreground">
+          {group.files.length}
+        </span>
         {open ? (
           <ChevronDown aria-hidden className="size-3 shrink-0 text-muted-foreground/70" />
         ) : (
           <ChevronRight aria-hidden className="size-3 shrink-0 text-muted-foreground/70" />
         )}
-        <span className="tnum ml-auto flex shrink-0 items-center gap-1.5 text-xs">
+        <span className="tnum ml-auto flex shrink-0 items-center gap-1.5 text-[11px]">
           {group.additions > 0 && <span className="text-ok">+{group.additions}</span>}
           {group.deletions > 0 && <span className="text-destructive">−{group.deletions}</span>}
         </span>
@@ -174,14 +176,16 @@ function FileRow({
       <Icon aria-hidden className="size-3 shrink-0 text-muted-foreground/60" />
       {/* The name gives up its room last: which file it is decides whether
           you open it, and the folder only says where it lives. */}
-      <span className="min-w-0 max-w-[70%] truncate text-xs text-foreground/85">{file.name}</span>
+      <span className="min-w-0 max-w-[70%] truncate text-[13px] text-foreground/85">
+        {file.name}
+      </span>
       {file.dir && (
         <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground/60">
           {file.dir}
         </span>
       )}
       {file.tag && (
-        <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground/50">
+        <span className="shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground/50">
           {file.tag}
         </span>
       )}

@@ -56,7 +56,7 @@ export default function AccountSwitcher({
           return (
             <span
               key={agent.id}
-              className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground"
+              className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground"
               title={agent.displayName}
             >
               <AgentLogo agentId={agent.id} displayName={agent.displayName} />
@@ -67,7 +67,7 @@ export default function AccountSwitcher({
         return (
           <DropdownMenu key={agent.id}>
             <DropdownMenuTrigger
-              className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              className="flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               aria-label={`${agent.displayName} account`}
               title={`${agent.displayName}: ${active ? accountLabel(active) : "no account selected"}`}
             >
@@ -80,7 +80,7 @@ export default function AccountSwitcher({
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-56">
-              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">
                 {agent.displayName} account
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

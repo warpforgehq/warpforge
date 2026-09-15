@@ -54,7 +54,7 @@ export function PullCommitPicker({
             : "Review one commit at a time"
         }
         className={cn(
-          "flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs disabled:text-muted-foreground/40",
+          "flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-[13px] disabled:text-muted-foreground/40",
           all
             ? "border-border text-muted-foreground hover:text-foreground"
             : "border-primary/50 bg-primary/10 text-foreground",
@@ -77,12 +77,12 @@ export function PullCommitPicker({
           >
             <span className="flex-1">All commits</span>
             {all && <Check aria-hidden className="text-primary" />}
-            <span className="tnum text-xs text-muted-foreground">
+            <span className="tnum text-[11px] text-muted-foreground">
               {commitRangeLabel(commits, null)}
             </span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="py-1 text-xs font-normal text-muted-foreground">
+          <DropdownMenuLabel className="py-1 text-[11px] font-normal text-muted-foreground">
             Specific commits
           </DropdownMenuLabel>
           {/* A long branch is a long list; the picker scrolls rather than
@@ -131,7 +131,7 @@ function CommitRow({
       <span className="tnum shrink-0 font-mono text-[11px] text-muted-foreground">
         {commit.abbreviatedOid || commit.oid.slice(0, 7)}
       </span>
-      <span className="min-w-0 flex-1 truncate text-xs text-foreground/90">
+      <span className="min-w-0 flex-1 truncate text-[13px] text-foreground/90">
         {commit.messageHeadline}
       </span>
       {Number.isFinite(committed) && (

@@ -67,7 +67,7 @@ export function PullOverview({
   const document = (
     <div className="flex w-full min-w-0 flex-col gap-6">
       <section className="flex min-w-0 flex-col gap-2">
-        <h3 className="text-xs font-medium text-muted-foreground">Description</h3>
+        <h3 className="text-[13px] font-medium text-muted-foreground">Description</h3>
         {detailsLoading && !details ? (
           <PullOverviewSkeleton variant="description" />
         ) : detailsError ? (

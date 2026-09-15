@@ -50,7 +50,7 @@ export function ProjectChip({
         {projects.map((candidate) => (
           <DropdownMenuItem
             key={candidate.name}
-            className="text-xs"
+            className="text-[13px]"
             onSelect={() => onChange(candidate.name)}
           >
             <Check
@@ -93,7 +93,7 @@ export function HarnessChip({
           return (
             <DropdownMenuItem
               key={candidate.id}
-              className="text-xs"
+              className="text-[13px]"
               onSelect={() => onChange(candidate.id)}
             >
               <AgentLogo agentId={candidate.id} displayName={name} className="size-3.5 shrink-0" />
