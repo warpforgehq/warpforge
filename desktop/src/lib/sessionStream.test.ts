@@ -173,6 +173,44 @@ describe("session stream coalescing", () => {
     expect(foldedGroup.open).toBe(false);
   });
 
+  it("does not force open a permission left behind by a finished session", () => {
+    // The daemon restart left permission requests that can never be answered.
+    // They are history: the reader's fold has to stick, or a handful of old
+    // groups in a long transcript become impossible to close.
+    const updates: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        pendingPermission: { options: ["allow", "deny"], request_id: "perm-stale" },
+        status: "pending",
+        title: "Run rm",
+        tool_call_id: "stale",
+        tool_kind: "execute",
+      },
+      {
+        kind: "tool_call",
+        status: "completed",
+        title: "Run ls",
+        tool_call_id: "done",
+        tool_kind: "execute",
+      },
+    ];
+
+    const settled = deriveTranscriptRows(updates, new Map(), null, null, false)[0];
+    if (settled.kind !== "activity") throw new Error("expected an activity group");
+    expect(settled.hasPendingApproval).toBe(true);
+    expect(settled.open).toBe(false);
+
+    const folded = deriveTranscriptRows(
+      updates,
+      new Map([[settled.groupId, false]]),
+      null,
+      null,
+      false,
+    )[0];
+    if (folded.kind !== "activity") throw new Error("expected an activity group");
+    expect(folded.open).toBe(false);
+  });
+
   it("forces a group open while a permission is unanswered, override or not", () => {
     const updates: SessionUpdate[] = [
       {

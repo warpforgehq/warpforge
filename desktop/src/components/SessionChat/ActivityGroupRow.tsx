@@ -171,17 +171,21 @@ function ToolCallStep({
   update,
   category,
   bare,
+  live,
 }: {
   update: ToolCall;
   category: ActivityItem["category"];
   bare: boolean;
+  /** Whether the session behind this row is still working — a permission left
+   *  behind by a killed session can never be answered, so it is not offered. */
+  live: boolean;
 }) {
   const shared = useTranscriptContext();
   const [open, setOpen] = useState(false);
   const [clicked, setClicked] = useState<string | null>(null);
   const permission = update.pendingPermission;
   const answered = clicked ?? (permission ? shared.resolved[permission.request_id] : undefined);
-  const awaiting = Boolean(permission) && !answered;
+  const awaiting = Boolean(permission) && !answered && live;
   const target = toolTarget(update);
   const hasContent = Boolean(update.content);
   // Only reads and edits name a file worth a chip; a command's label is its
@@ -317,7 +321,9 @@ export const ActivityGroupRow = memo(
       case "file_edit":
         return <FileEditStep update={update} bare={bare} />;
       case "tool_call":
-        return <ToolCallStep update={update} bare={bare} category={item.category} />;
+        return (
+          <ToolCallStep update={update} bare={bare} category={item.category} live={live} />
+        );
       default:
         return null;
     }

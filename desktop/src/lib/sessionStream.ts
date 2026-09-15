@@ -157,8 +157,10 @@ export function deriveTranscriptRows(
     );
     // A failure opens the group by default so it is not missed, but the reader
     // may fold it away — a non-zero exit is not a blocker. An unanswered prompt
-    // is a blocker: it forces the group open whatever the reader last chose.
-    const forcedOpen = hasPendingApproval;
+    // is a blocker, but only while the session that asked is still working: a
+    // request left behind by a killed session can never be answered, and
+    // forcing its group open made a handful of old groups impossible to close.
+    const forcedOpen = sessionLive && hasPendingApproval;
     rows.push({
       kind: "activity",
       id: `activity:${groupId}`,
