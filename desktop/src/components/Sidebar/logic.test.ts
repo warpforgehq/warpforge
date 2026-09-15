@@ -564,19 +564,19 @@ describe("nested rail data", () => {
     const one = rows.find((row) => row.task.id === "one")!;
     const two = rows.find((row) => row.task.id === "two")!;
     // x = level × INDENT + half the twisty lane, so the vertical sits under
-    // the ancestor's chevron; the run ends at the child's glyph lane.
+    // the ancestor's chevron; the run ends where the child's content starts.
     expect(railLanes(one.depth, one.ancestorLines, one.isLast, false)).toEqual([
-      { active: false, level: 0, run: 28, shape: "tee", x: 8 },
+      { active: false, level: 0, run: 20, shape: "tee", x: 8 },
     ]);
     expect(railLanes(two.depth, two.ancestorLines, two.isLast, true)).toEqual([
-      { active: true, level: 0, run: 28, shape: "elbow", x: 8 },
+      { active: true, level: 0, run: 20, shape: "elbow", x: 8 },
     ]);
   });
 
   it("draws pass-through lanes only where the ancestor continues", () => {
     expect(railLanes(3, [true, false, true], true, false)).toEqual([
       { active: false, level: 0, run: 1, shape: "pass", x: 8 },
-      { active: false, level: 2, run: 28, shape: "elbow", x: 32 },
+      { active: false, level: 2, run: 20, shape: "elbow", x: 32 },
     ]);
   });
 

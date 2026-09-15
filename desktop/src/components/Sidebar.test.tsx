@@ -455,14 +455,18 @@ describe("Sidebar status encoding", () => {
     for (const id of ["rev", "queued", "idle"]) expect(rowGlyph(id)).toBeNull();
   });
 
-  it("reserves the glyph lane on a silent row but draws nothing in it", () => {
-    // The lane is fixed so titles align across states; only the content is
-    // conditional, preserving the four-glyph restraint.
+  it("draws the glyph inline without reserving a lane for silent rows", () => {
+    // Owner override of the reserved-lane rule: most rows are silent, so a
+    // placeholder column indents the whole list for the minority that draws
+    // one. The glyph is a flow child only when `rowGlyph` is set.
     renderSidebar(makeState([task("rev", { status: "waiting", filesChanged: 1 })]));
 
     const row = taskRows("rev")[0];
-    expect(row.querySelector('[data-lane="glyph"]')).not.toBeNull();
     expect(row.querySelector("[data-task-glyph]")).toBeNull();
+    expect(row.querySelector('[data-lane="glyph"]')).toBeNull();
+    // No reserved spacer before the title: the title is the first content child.
+    const title = row.querySelector('[data-lane="title"]')!;
+    expect(title.previousElementSibling).toBeNull();
   });
 
   it("keeps the working row's dashed spinner", () => {
@@ -718,37 +722,28 @@ describe("Sidebar workspace tree", () => {
     expect(connector).toHaveAttribute("data-rail-shape", "elbow");
   });
 
-  it("gives a working and a silent sibling the same title start", () => {
+  it("keeps the gap around an inline glyph and no spacer when it is absent", () => {
     const state = makeState([
-      task("lead", { prompt: "Lead" }),
+      task("lead", { prompt: "Lead", status: "running" }),
       task("busy", { parentTaskId: "lead", prompt: "Busy", status: "running" }),
       task("quiet", { parentTaskId: "lead", prompt: "Quiet" }),
     ]);
     renderSidebar(state);
     fireEvent.click(screen.getByRole("button", { name: /^Expand 2 subtasks of Lead/ }));
 
-    const busyLane = taskRows("busy")[0].querySelector('[data-lane="glyph"]')!;
-    const quietLane = taskRows("quiet")[0].querySelector('[data-lane="glyph"]')!;
-    expect(busyLane).not.toBeNull();
-    expect(quietLane).not.toBeNull();
-    expect(busyLane.className).toBe(quietLane.className);
-  });
-
-  it("keeps a uniform inter-lane gap so a glyph never touches the title", () => {
-    const state = makeState([
-      task("lead", { prompt: "Lead", status: "running" }),
-      task("child", { parentTaskId: "lead", prompt: "Child", status: "running" }),
-    ]);
-    renderSidebar(state);
-    fireEvent.click(screen.getByRole("button", { name: /^Expand 1 subtask of Lead/ }));
-
-    // Every task row carries the gap, glyph or not, so the state icon, the
-    // title, the orchestrator mark and the meta lane are all separated.
-    for (const id of ["lead", "child"]) {
-      expect(taskRows(id)[0].className).toContain("gap-2");
-    }
-    // …and the reserved glyph lane still holds its box, keeping title x stable.
-    expect(taskRows("child")[0].querySelector('[data-lane="glyph"]')).not.toBeNull();
+    const busy = taskRows("busy")[0];
+    const quiet = taskRows("quiet")[0];
+    // A row with a glyph keeps the uniform inter-lane gap, icon inline.
+    expect(busy.className).toContain("gap-2");
+    const glyph = busy.querySelector("[data-task-glyph]")!;
+    expect(glyph).not.toBeNull();
+    expect(busy.querySelector('[data-lane="glyph"]')).toBeNull();
+    // …and the glyph sits directly before the title, separated by the gap.
+    expect(busy.querySelector('[data-lane="title"]')?.previousElementSibling).toBe(glyph);
+    // A silent row reserves nothing: the title is the first content child.
+    expect(quiet.querySelector("[data-task-glyph]")).toBeNull();
+    expect(quiet.querySelector('[data-lane="glyph"]')).toBeNull();
+    expect(quiet.querySelector('[data-lane="title"]')?.previousElementSibling).toBeNull();
   });
 
   it("draws a lane for every continuing ancestor", () => {

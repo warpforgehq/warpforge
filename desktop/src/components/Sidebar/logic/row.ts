@@ -14,8 +14,6 @@ export const RAIL_ELBOW_RADIUS = 4;
 export const LANE_TWISTY_PX = 16;
 export const LANE_GLYPH_PX = 16;
 export const LANE_META_PX = 72;
-/** Uniform inter-lane gap, mirrored by the row button's `gap-2` (8px). */
-export const LANE_GAP_PX = 8;
 
 export interface RailLane {
   level: number;
@@ -59,8 +57,8 @@ export function railLanes(
       lanes.push({
         active: onActivePath,
         level,
-        // Ends at the child's first glyph lane: gutter + twisty lane + gap.
-        run: childGutter + LANE_TWISTY_PX + LANE_GAP_PX - x,
+        // Ends where the child's content starts: gutter + its twisty lane.
+        run: childGutter + LANE_TWISTY_PX - x,
         shape: isLast ? "elbow" : "tee",
         x,
       });
