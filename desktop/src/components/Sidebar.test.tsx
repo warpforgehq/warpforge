@@ -351,6 +351,10 @@ describe("Sidebar shell", () => {
     expect(toolbar).toHaveAttribute("aria-orientation", "vertical");
     const toggle = screen.getByRole("button", { name: "Expand sidebar" });
     expect(toggle).toHaveAttribute("tabindex", "0");
+    // The explicit control wears the panel icon, so it pairs with the expanded
+    // sidebar's `PanelLeftClose`; the brand is a mark, not a second toggle.
+    expect(toggle.querySelector(".lucide-panel-left-open")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "W" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toHaveAttribute("tabindex", "-1");
 
     toggle.focus();

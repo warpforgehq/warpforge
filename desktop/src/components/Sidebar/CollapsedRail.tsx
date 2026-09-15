@@ -1,4 +1,4 @@
-import { Bot, Plus, Settings } from "lucide-react";
+import { Bot, PanelLeftOpen, Plus, Settings } from "lucide-react";
 import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useRef, useState } from "react";
 
 import { AgentLogo } from "@/components/AgentLogo";
@@ -10,10 +10,10 @@ import type { TaskInfo } from "@/protocol";
 import { useUi } from "@/store/ui";
 import type { GlobalView, View } from "@/store/ui";
 
+import { SIDEBAR_STATE_META, type SidebarTaskState } from "./logic";
 import { NAV } from "./nav";
 import { RailButton } from "./RailButton";
 import { SEGMENTS, type SidebarSegment } from "./segments";
-import { SIDEBAR_STATE_META, type SidebarTaskState } from "./logic";
 
 export interface LiveLaneItem {
   task: TaskInfo;
@@ -80,7 +80,8 @@ export function CollapsedRail({
     const last = items.length - 1;
     let next = current;
     if (event.key === "ArrowDown") next = current < 0 ? 0 : (current + 1) % items.length;
-    else if (event.key === "ArrowUp") next = current < 0 ? last : (current - 1 + items.length) % items.length;
+    else if (event.key === "ArrowUp")
+      next = current < 0 ? last : (current - 1 + items.length) % items.length;
     else if (event.key === "Home") next = 0;
     else next = last;
     event.preventDefault();
@@ -108,16 +109,21 @@ export function CollapsedRail({
               connection === "connected" ? "bg-primary" : "bg-warn",
             )}
           />
-          <RailButton
-            label="Expand sidebar"
-            shortcut="⌘\"
-            onClick={onToggleCollapsed}
-            ariaExpanded={false}
-            {...roving("toggle")}
-          >
-            <span className="text-[11px] font-bold tracking-tight">W</span>
-          </RailButton>
+          <span aria-hidden className="select-none text-[11px] font-bold tracking-tight">
+            W
+          </span>
         </div>
+        {/* Explicit expand: the identity mark above is a logo, not a control,
+            so the panel icon owns the action and matches the expanded
+            sidebar's `PanelLeftClose`. First stop in the rail's roving order. */}
+        <RailButton
+          icon={PanelLeftOpen}
+          label="Expand sidebar"
+          shortcut="⌘\"
+          onClick={onToggleCollapsed}
+          ariaExpanded={false}
+          {...roving("toggle")}
+        />
         <RailButton
           icon={Plus}
           label="New task"
@@ -214,12 +220,7 @@ export function CollapsedRail({
 
 /** A 1px full-bleed rule, not a floating stub inside the 48px column. */
 function Rule() {
-  return (
-    <span
-      aria-hidden
-      className="my-1 h-px w-full shrink-0 bg-rule"
-    />
-  );
+  return <span aria-hidden className="my-1 h-px w-full shrink-0 bg-rule" />;
 }
 
 function LiveChip({
