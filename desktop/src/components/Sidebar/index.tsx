@@ -11,11 +11,13 @@ import { isTaskGroupPinned } from "@/lib/taskGroups";
 import { cn } from "@/lib/utils";
 import type { GlobalView, View } from "@/store/ui";
 
+import { BodyPicker, SIDEBAR_BODY_ID, segmentTabId } from "./BodyPicker";
 import { CollapsedRail } from "./CollapsedRail";
 import { ConnectionDot } from "./ConnectionDot";
 import { DeleteShelfDialog } from "./DeleteShelfDialog";
 import { NAV } from "./nav";
 import { EmptyRow, ProjectRow, ShelfRow } from "./rows";
+import { sidebarSegment, type SidebarSegment } from "./segments";
 import { useSidebarTree } from "./useSidebarTree";
 
 interface SidebarProps {
@@ -29,6 +31,9 @@ interface SidebarProps {
   connectionError?: string | null;
   onToggleCollapsed: () => void;
   onSelectView: (view: GlobalView) => void;
+  /** Picking Tasks: the host restores the last task it can still find, else
+   *  the selected project, else Mission Control. */
+  onSelectTasksSegment: () => void;
   onOpenTask: (id: string) => void;
   onNewTask: () => void;
   onOpenProject: (name: string) => void;
@@ -50,6 +55,7 @@ function Sidebar({
   connectionError = null,
   onToggleCollapsed,
   onSelectView,
+  onSelectTasksSegment,
   onOpenTask,
   onNewTask,
   onOpenProject,
@@ -80,6 +86,16 @@ function Sidebar({
 
   const handleOpenProjects = useCallback((name: string) => onOpenProject(name), [onOpenProject]);
 
+  const segment = sidebarSegment(view, openTaskId);
+  const handleSelectSegment = useCallback(
+    (next: SidebarSegment) => {
+      if (next === segment) return;
+      if (next === "inbox") onSelectView("inbox");
+      else onSelectTasksSegment();
+    },
+    [onSelectTasksSegment, onSelectView, segment],
+  );
+
   if (collapsed) {
     return (
       <CollapsedRail
@@ -89,8 +105,10 @@ function Sidebar({
         connectionError={connectionError}
         agentUpdates={agentUpdates}
         navCount={navCount}
+        segment={segment}
         onToggleCollapsed={onToggleCollapsed}
         onSelectView={onSelectView}
+        onSelectSegment={handleSelectSegment}
         onNewTask={onNewTask}
         onOpenSettings={onOpenSettings}
       />
@@ -125,7 +143,15 @@ function Sidebar({
           </button>
         </div>
 
-        <div className="shrink-0 px-2 pb-2 pt-2.5">
+        <div className="shrink-0 px-2 pt-2.5">
+          <BodyPicker
+            segment={segment}
+            inboxCount={navCount("inbox")}
+            onSelect={handleSelectSegment}
+          />
+        </div>
+
+        <div className="shrink-0 px-2 pb-2 pt-2">
           <button
             type="button"
             onClick={onNewTask}
@@ -181,8 +207,13 @@ function Sidebar({
         {/* Reviewing is "pick one of many, then read it deeply", and the list
             it needs belongs at the window's left edge rather than beside a
             tree of tasks nobody is asking about mid-review. */}
-        {view === "inbox" && !openTaskId ? (
-          <div className="min-h-0 flex-1">
+        {segment === "inbox" ? (
+          <div
+            id={SIDEBAR_BODY_ID}
+            role="tabpanel"
+            aria-labelledby={segmentTabId("inbox")}
+            className="min-h-0 flex-1"
+          >
             <InboxListPane
               projects={projectNames}
               emptyHint={
@@ -193,6 +224,9 @@ function Sidebar({
         ) : (
           <div
             ref={scrollRef}
+            id={SIDEBAR_BODY_ID}
+            role="tabpanel"
+            aria-labelledby={segmentTabId("tasks")}
             className="min-h-0 flex-1 overflow-y-auto px-2 py-3 [scrollbar-gutter:stable]"
           >
             <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>

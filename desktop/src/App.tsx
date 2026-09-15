@@ -178,6 +178,8 @@ export default function App() {
   const openProject = useUi((s) => s.openProject);
   const openTaskId = useUi((s) => s.openTaskId);
   const setOpenTaskId = useUi((s) => s.openTask);
+  const lastTaskId = useUi((s) => s.lastTaskId);
+  const selectTasksSegment = useUi((s) => s.selectTasksSegment);
   const sidebarWidth = useUi((s) => s.sidebarWidth);
   const setSidebarWidth = useUi((s) => s.setSidebarWidth);
   const sidebarCollapsed = useUi((s) => s.sidebarCollapsed);
@@ -209,6 +211,20 @@ export default function App() {
   const handleSelectView = (nextView: GlobalView) => {
     setNewTaskOpen(false);
     setView(nextView);
+  };
+
+  // The remembered task is offered, never resurrected blind: one deleted while
+  // the app was closed would otherwise reopen from storage. An empty task list
+  // before the first handshake proves nothing, so the id is only dropped once
+  // the snapshot has actually loaded and shows the task is gone.
+  const handleSelectTasksSegment = () => {
+    setNewTaskOpen(false);
+    const snapshotLoaded = connection === "connected" || snapshot.tasks.length > 0;
+    const remembered =
+      snapshotLoaded && lastTaskId && !snapshot.tasks.some((t) => t.id === lastTaskId)
+        ? null
+        : lastTaskId;
+    selectTasksSegment(remembered);
   };
 
   const handleOpenProject = (name: string) => {
@@ -299,6 +315,7 @@ export default function App() {
     onDeleteSettledShelf: deleteSettledShelf,
     onOpenTask: handleOpenTask,
     onSelectView: handleSelectView,
+    onSelectTasksSegment: handleSelectTasksSegment,
     onOpenProject: handleOpenProject,
     onAddProject: () => setAddProjectOpen(true),
     onToggleCollapsed: toggleSidebarCollapsed,

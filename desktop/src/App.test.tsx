@@ -76,7 +76,13 @@ vi.mock("./views/BootstrapWizard", () => ({
   default: vi.fn<() => React.ReactNode>(() => <div data-testid="bootstrap-wizard" />),
 }));
 vi.mock("./components/Sidebar", () => ({
-  default: vi.fn<() => React.ReactNode>(() => <div data-testid="app-sidebar">Sidebar</div>),
+  default: ({ onSelectTasksSegment }: { onSelectTasksSegment: () => void }) => (
+    <div data-testid="app-sidebar">
+      <button type="button" onClick={onSelectTasksSegment}>
+        Tasks segment
+      </button>
+    </div>
+  ),
 }));
 vi.mock("./components/AttentionToast", () => ({
   default: vi.fn<() => React.ReactNode>(() => <div data-testid="attention-toast" />),
@@ -112,6 +118,7 @@ beforeEach(() => {
     sidebarCollapsed: false,
     sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
     view: "control",
+    lastTaskId: null,
     openTaskId: null,
     selectedProjectId: null,
   });
@@ -270,6 +277,22 @@ describe("App view branches", () => {
     expect(
       await screen.findByTestId("mission-control", undefined, { timeout: 5_000 }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("Tasks segment", () => {
+  it("does not resurrect a remembered task the daemon no longer has", async () => {
+    // Persisted across a restart in which the task was deleted: the offer has
+    // to be checked against the snapshot, not taken on trust.
+    useUi.setState({ lastTaskId: "deleted-while-away", view: "inbox" });
+    render(<App />);
+    await screen.findByTestId("inbox", undefined, { timeout: 5_000 });
+
+    fireEvent.click(screen.getByRole("button", { name: "Tasks segment" }));
+
+    expect(useUi.getState().openTaskId).toBeNull();
+    expect(useUi.getState().lastTaskId).toBeNull();
+    expect(useUi.getState().view).toBe("control");
   });
 });
 

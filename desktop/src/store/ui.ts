@@ -148,6 +148,10 @@ interface UiState extends SettingsState {
   // Navigation
   view: View;
   openTaskId: string | null; // Transient — not persisted
+  /** The task the Tasks segment returns to. Persisted, unlike `openTaskId`:
+   *  it is an offer the user takes by picking Tasks, never a task the app
+   *  opens on its own. */
+  lastTaskId: string | null;
   /** The project subject the app is on. The only current-project truth. */
   selectedProjectId: string | null;
   /** Transient intent to open a task at a specific file/diff. Not persisted. */
@@ -199,6 +203,10 @@ interface UiState extends SettingsState {
   lspEnabled: boolean;
 
   setView: (v: GlobalView) => void;
+  /** Land on the Tasks half of the sidebar: `validTaskId` if the caller found
+   *  it still in the daemon snapshot, else the selected project, else Mission
+   *  Control. A stale id is dropped rather than reopened. */
+  selectTasksSegment: (validTaskId: string | null) => void;
   openTask: (id: string | null) => void;
   /** Open a task and immediately surface a specific file/diff in its workspace. */
   openTaskWithNav: (id: string, nav: TaskOpenNav) => void;
@@ -253,6 +261,7 @@ export const useUi = create<UiState>()(
     (set) => ({
       view: "control",
       openTaskId: null,
+      lastTaskId: null,
       selectedProjectId: null,
       openTaskNav: null,
       attentionTargetId: null,
@@ -296,19 +305,40 @@ export const useUi = create<UiState>()(
       settingsPage: "appearance",
 
       setView: (view) => set({ openTaskId: null, openTaskNav: null, view }),
+      selectTasksSegment: (validTaskId) =>
+        set((s) => {
+          const view: View = s.selectedProjectId ? "project" : "control";
+          if (!validTaskId) return { lastTaskId: null, openTaskId: null, openTaskNav: null, view };
+          return {
+            activeSurface: DEFAULT_TASK_SURFACE,
+            lastTaskId: validTaskId,
+            openTaskId: validTaskId,
+            openTaskNav: null,
+            rightPanel: null,
+            view,
+          };
+        }),
       openProject: (selectedProjectId) =>
         set({ openTaskId: null, openTaskNav: null, view: "project", selectedProjectId }),
       // Contextual task tools must not leak from one task into the next.
       // Project-scoped layout preferences remain persisted.
+      // Closing a task keeps `lastTaskId`: that is what the Tasks segment returns to.
       openTask: (openTaskId) =>
-        set({
+        set((s) => ({
           openTaskId,
           openTaskNav: null,
           rightPanel: null,
           activeSurface: DEFAULT_TASK_SURFACE,
-        }),
+          lastTaskId: openTaskId ?? s.lastTaskId,
+        })),
       openTaskWithNav: (openTaskId, openTaskNav) =>
-        set({ openTaskId, openTaskNav, rightPanel: null, activeSurface: openTaskNav.surface }),
+        set({
+          openTaskId,
+          openTaskNav,
+          rightPanel: null,
+          activeSurface: openTaskNav.surface,
+          lastTaskId: openTaskId,
+        }),
       clearOpenTaskNav: () => set({ openTaskNav: null }),
       focusAttentionTask: (attentionTargetId) =>
         set((s) => ({
@@ -437,8 +467,8 @@ export const useUi = create<UiState>()(
     }),
     {
       name: "wf-ui",
-      // Next persisted-shape change must bump this to 6.
-      version: 5,
+      // Next persisted-shape change must bump this to 7.
+      version: 6,
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
         if (version === 0 && state && "sidebarWidth" in state) {
@@ -476,6 +506,12 @@ export const useUi = create<UiState>()(
         // lands the user on a project they never picked.
         if (version < 5 && state && state.view === "projects") {
           state = { ...state, view: state.selectedProjectId ? "project" : "control" };
+        }
+        // The Tasks segment returns to the last task. An install upgrading from
+        // 5 never stored one, and a task id from storage is only ever offered
+        // after the caller finds it in the snapshot.
+        if (version < 6 && state) {
+          state = { ...state, lastTaskId: null };
         }
         return state;
       },

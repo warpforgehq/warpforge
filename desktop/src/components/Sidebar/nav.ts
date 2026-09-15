@@ -1,7 +1,9 @@
-import { CalendarClock, Inbox, LayoutGrid } from "lucide-react";
+import { CalendarClock, LayoutGrid } from "lucide-react";
 
 import type { GlobalView } from "@/store/ui";
 
+/** Global destinations that are not the sidebar body. The inbox is not here:
+ *  it is a body segment, because it replaces the tree rather than the pane. */
 export const NAV: {
   id: GlobalView;
   label: string;
@@ -9,6 +11,5 @@ export const NAV: {
   attention?: boolean;
 }[] = [
   { attention: true, icon: LayoutGrid, id: "control", label: "Mission Control" },
-  { attention: true, icon: Inbox, id: "inbox", label: "Inbox" },
   { icon: CalendarClock, id: "automations", label: "Automations" },
 ];

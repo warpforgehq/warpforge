@@ -21,6 +21,10 @@ export interface PullRequestListProps {
  * The inbox's list. At most 50 rows per project arrive from the daemon, so
  * this is a plain list, not a virtualizer — paging a bounded list only adds
  * scrolling bugs.
+ *
+ * The gutter is the sidebar tree's own (`px-2`), because this list renders
+ * inside it; the rows carry their fill and their separation, so there are no
+ * divider lines running edge to edge.
  */
 export function PullRequestList({
   items,
@@ -46,19 +50,21 @@ export function PullRequestList({
     );
   }
   return (
-    <div className="h-full min-h-0 overflow-y-auto">
-      {items.map((pr) => {
-        const key = `${pr.repo}#${pr.number}`;
-        return (
-          <PullRequestRow
-            key={key}
-            pr={pr}
-            unseen={unseenKeys.has(key)}
-            active={key === selectedKey}
-            actions={actions}
-          />
-        );
-      })}
+    <div className="h-full min-h-0 overflow-y-auto px-2 py-2 [scrollbar-gutter:stable]">
+      <div className="flex flex-col gap-px">
+        {items.map((pr) => {
+          const key = `${pr.repo}#${pr.number}`;
+          return (
+            <PullRequestRow
+              key={key}
+              pr={pr}
+              unseen={unseenKeys.has(key)}
+              active={key === selectedKey}
+              actions={actions}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -76,7 +82,9 @@ function Message({ children, tone }: { children: React.ReactNode; tone?: "error"
   );
 }
 
-/** The toolbar row the inbox views share: search, state toggle. */
+/** The toolbar row the inbox views share: search, state toggle. It sits on the
+ *  list's own gutter with no rule under it — the sidebar already draws one
+ *  above, and two stacked lines is what made this read as a separate rail. */
 export function InboxToolbar({
   search,
   onSearch,
@@ -91,7 +99,7 @@ export function InboxToolbar({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-border/70 px-2">
+    <div className="flex h-9 shrink-0 items-center gap-1.5 px-2 pt-1">
       <Input
         value={search}
         onChange={(event) => onSearch(event.target.value)}

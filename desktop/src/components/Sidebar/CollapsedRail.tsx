@@ -8,6 +8,7 @@ import type { GlobalView, View } from "@/store/ui";
 import { ConnectionDot } from "./ConnectionDot";
 import { NAV } from "./nav";
 import { RailButton } from "./RailButton";
+import { SEGMENTS, type SidebarSegment } from "./segments";
 
 export function CollapsedRail({
   view,
@@ -16,8 +17,10 @@ export function CollapsedRail({
   connectionError,
   agentUpdates,
   navCount,
+  segment,
   onToggleCollapsed,
   onSelectView,
+  onSelectSegment,
   onNewTask,
   onOpenSettings,
 }: {
@@ -27,8 +30,10 @@ export function CollapsedRail({
   connectionError: string | null;
   agentUpdates: number;
   navCount: (id: GlobalView) => number;
+  segment: SidebarSegment;
   onToggleCollapsed: () => void;
   onSelectView: (view: GlobalView) => void;
+  onSelectSegment: (segment: SidebarSegment) => void;
   onNewTask: () => void;
   onOpenSettings: () => void;
 }) {
@@ -48,6 +53,20 @@ export function CollapsedRail({
       </div>
       <ConnectionDot connection={connection} connectionError={connectionError} />
       <RailButton icon={Plus} label="New task" onClick={onNewTask} />
+      <span aria-hidden className="my-1 h-px w-6 bg-border" />
+      {/* The body is gone at this width, so the segments become the way back to
+          the tasks side — the same one click the expanded picker offers. */}
+      {SEGMENTS.map((item) => (
+        <RailButton
+          key={item.id}
+          icon={item.icon}
+          label={item.label}
+          active={segment === item.id}
+          count={item.id === "inbox" ? navCount("inbox") : undefined}
+          hot
+          onClick={() => onSelectSegment(item.id)}
+        />
+      ))}
       <span aria-hidden className="my-1 h-px w-6 bg-border" />
       {NAV.map((item) => (
         <RailButton

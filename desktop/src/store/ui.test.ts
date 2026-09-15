@@ -100,6 +100,98 @@ describe("task-detail UI state", () => {
   });
 });
 
+describe("the task the Tasks segment returns to", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useUi.setState({
+      lastTaskId: null,
+      openTaskId: null,
+      selectedProjectId: null,
+      view: "control",
+    });
+  });
+
+  it("remembers the task that was opened, and keeps it after it is closed", () => {
+    useUi.getState().openTask("task-1");
+    expect(useUi.getState().lastTaskId).toBe("task-1");
+
+    useUi.getState().openTask(null);
+    expect(useUi.getState().openTaskId).toBeNull();
+    expect(useUi.getState().lastTaskId).toBe("task-1");
+  });
+
+  it("remembers a task opened straight onto a file", () => {
+    useUi.getState().openTaskWithNav("task-2", { path: "src/app.rs", surface: "files" });
+
+    expect(useUi.getState().lastTaskId).toBe("task-2");
+  });
+
+  it("reopens the last task and leaves the inbox behind", () => {
+    useUi.setState({ lastTaskId: "task-1", selectedProjectId: "warpforge", view: "inbox" });
+
+    useUi.getState().selectTasksSegment("task-1");
+
+    expect(useUi.getState().openTaskId).toBe("task-1");
+    // The view moves off the inbox too, so closing the task lands on the tasks
+    // side rather than bouncing back to the review queue.
+    expect(useUi.getState().view).toBe("project");
+    expect(useUi.getState().activeSurface).toBe(DEFAULT_TASK_SURFACE);
+  });
+
+  it("falls back to the selected project, then to Mission Control", () => {
+    useUi.setState({ lastTaskId: null, selectedProjectId: "warpforge", view: "inbox" });
+    useUi.getState().selectTasksSegment(null);
+    expect(useUi.getState().view).toBe("project");
+    expect(useUi.getState().openTaskId).toBeNull();
+
+    useUi.setState({ selectedProjectId: null, view: "inbox" });
+    useUi.getState().selectTasksSegment(null);
+    expect(useUi.getState().view).toBe("control");
+  });
+
+  it("drops a remembered task the caller could not find instead of reopening it", () => {
+    useUi.setState({ lastTaskId: "deleted-while-away", view: "inbox" });
+
+    // The host validates against the daemon snapshot and passes null when the
+    // task is gone.
+    useUi.getState().selectTasksSegment(null);
+
+    expect(useUi.getState().lastTaskId).toBeNull();
+    expect(useUi.getState().openTaskId).toBeNull();
+  });
+
+  it("persists the remembered task, but never the open one", async () => {
+    useUi.getState().openTask("task-1");
+
+    const stored = localStorage.getItem("wf-ui");
+    const persisted = JSON.parse(stored ?? "{}") as {
+      state?: { lastTaskId?: unknown; openTaskId?: unknown };
+    };
+    expect(persisted.state?.lastTaskId).toBe("task-1");
+    expect(persisted.state?.openTaskId).toBeUndefined();
+
+    // A reload offers the task; it must not force it open.
+    useUi.setState({ lastTaskId: null, openTaskId: null });
+    if (stored) localStorage.setItem("wf-ui", stored);
+    await useUi.persist.rehydrate();
+
+    expect(useUi.getState().lastTaskId).toBe("task-1");
+    expect(useUi.getState().openTaskId).toBeNull();
+  });
+
+  it("starts version 5 installs with no remembered task", async () => {
+    localStorage.setItem(
+      "wf-ui",
+      JSON.stringify({ state: { lastTaskId: "ancient", view: "control" }, version: 5 }),
+    );
+
+    await useUi.persist.rehydrate();
+
+    expect(useUi.getState().lastTaskId).toBeNull();
+    expect(useUi.getState().view).toBe("control");
+  });
+});
+
 describe("sidebar width state", () => {
   beforeEach(() => {
     localStorage.clear();

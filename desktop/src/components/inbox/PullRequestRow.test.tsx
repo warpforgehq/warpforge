@@ -84,8 +84,8 @@ describe("PullRequestRow", () => {
     expect(screen.queryByText("Draft")).not.toBeInTheDocument();
   });
 
-  it("counts labels it had no room for", () => {
-    render(
+  it("keeps the row to meta over title, leaving labels to the review's meta rail", () => {
+    const { container } = render(
       <PullRequestRow
         pr={pr({
           labels: ["a", "b", "c", "d", "e"].map((name) => ({ name, color: "ff0000" })),
@@ -95,16 +95,46 @@ describe("PullRequestRow", () => {
         actions={{ onOpen: () => {} }}
       />,
     );
-    expect(screen.getByText("+2")).toBeInTheDocument();
-    expect(screen.queryByText("d")).not.toBeInTheDocument();
+
+    expect(screen.getByTitle("acme/widgets#7")).toBeInTheDocument();
+    expect(screen.queryByText("bug")).not.toBeInTheDocument();
+    // Two lines, fixed height: a conditional third line is what made the list
+    // rag against the task rows beside it.
+    expect(container.querySelector("button")!.children).toHaveLength(2);
   });
 
-  it("marks an unseen PR with a dot and renders the label chips", () => {
-    render(
+  it("marks an unseen PR in a lane that is reserved on every row", () => {
+    const { container, rerender } = render(
       <PullRequestRow pr={pr()} unseen={true} active={false} actions={{ onOpen: () => {} }} />,
     );
-    expect(screen.getByTitle("acme/widgets#7")).toBeInTheDocument();
-    expect(screen.getByText("bug")).toBeInTheDocument();
+    const lane = () => container.querySelector("button")!.lastElementChild!.firstElementChild!;
+
+    expect(lane().querySelector("[data-unread]")).not.toBeNull();
+    const width = lane().className;
+
+    rerender(
+      <PullRequestRow pr={pr()} unseen={false} active={false} actions={{ onOpen: () => {} }} />,
+    );
+    // Same lane, no dot — so a read title starts where an unread one does.
+    expect(lane().querySelector("[data-unread]")).toBeNull();
+    expect(lane().className).toBe(width);
+  });
+
+  it("wears the sidebar's row language rather than a full-bleed band", () => {
+    const { container, rerender } = render(
+      <PullRequestRow pr={pr()} unseen={false} active={false} actions={{ onOpen: () => {} }} />,
+    );
+    const row = () => container.querySelector("button")!;
+
+    expect(row().className).toContain("rounded-md");
+    expect(row().className).toContain("px-2");
+    expect(row().className).toContain("hover:bg-accent/60");
+    expect(row().className).not.toContain("border-b");
+
+    rerender(
+      <PullRequestRow pr={pr()} unseen={false} active={true} actions={{ onOpen: () => {} }} />,
+    );
+    expect(row().className).toContain("bg-accent");
   });
 });
 
