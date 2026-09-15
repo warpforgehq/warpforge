@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.20.0
+
+### Minor Changes
+
+- [`b211978`](https://github.com/warpforgehq/warpforge/commit/b21197898c0d086a329b39f74bffe9068b569efd) Thanks [@ephor](https://github.com/ephor)! - Editing and reviewing got their shortcuts and their bearings back. Quick Open (double Shift) and Find in Files (Cmd+Shift+F) now work on a project page, not just inside a task, and picking a hit lands in the right file at the right line. Clicking a file in the changes rail puts it at the top of the diff instead of somewhere in the middle, and large diffs no longer open on a blank band or lurch while the editors measure themselves. Tool output in the conversation reads as what it is — fenced code with its language, diffs with their changes tinted — and a group of agent work folds into one line with a summary you can open, including when a step failed. Edits made by any agent report their real line counts.
+
+- [`b211978`](https://github.com/warpforgehq/warpforge/commit/b21197898c0d086a329b39f74bffe9068b569efd) Thanks [@ephor](https://github.com/ephor)! - The workspace remembers where you were, and pull requests moved into the sidebar. Reopen a task and the same file, cursor and scroll position are there; switch projects and your open tabs stay; a diff comes back on the same file and hunk with your folded files still folded. Flip the sidebar between Tasks and Inbox in place, come back to the task you were working in with one click, and see at a glance when an assistant review is running or waiting — including a count of what needs you. Projects open from the tree (the row shows an arrow on hover), and every project row shows what is inside without a second navigation stop.
+
+- [`30e17f2`](https://github.com/warpforgehq/warpforge/commit/30e17f29818db6bfd543ab69271578c54922d479) Thanks [@ephor](https://github.com/ephor)! - Pull request changes are grouped by what they need from you — migrations, implementation, tests, configuration, generated files and documentation — so a review starts with the part that carries risk instead of scrolling one flat list. On the diff, the changed-files rail can switch between the folder tree and the same grouped view.
+
+- [`c173b28`](https://github.com/warpforgehq/warpforge/commit/c173b2874dc9953dab489d4b5adc67f7376f2608) Thanks [@ephor](https://github.com/ephor)! - Copy what you need from a pull request without leaving it: its link, branch name, number, or a ready-to-paste Markdown title link. The actions hang off the pull request's own reference in the header, and the branch name has a copy button beside it on the overview.
+
+- [`ec86b13`](https://github.com/warpforgehq/warpforge/commit/ec86b13e7e258587deca5675f8829f625ad62a16) Thanks [@ephor](https://github.com/ephor)! - A review now shows who it is waiting on, not only who has already answered: reviewers who have been asked but have not responded yet are listed with a request marker until they review.
+
+### Patch Changes
+
+- [`b211978`](https://github.com/warpforgehq/warpforge/commit/b21197898c0d086a329b39f74bffe9068b569efd) Thanks [@ephor](https://github.com/ephor)! - Messages you send to an agent that is still working now wait their turn instead of cutting the current one short. Previously a note typed mid-task could look like the task had ended, delivering a half-written answer as the result; the text now queues and runs as the agent's next turn, in order, while Stop remains the way to interrupt.
+
+- [`b211978`](https://github.com/warpforgehq/warpforge/commit/b21197898c0d086a329b39f74bffe9068b569efd) Thanks [@ephor](https://github.com/ephor)! - Waiting looks like the work now. The conversation, pull request list, backlog, file editor, diffs, review panes and tracker images fill in place instead of flashing a spinner or a "Loading…" line, and empty screens offer the way out of being empty — an empty backlog offers to create its first item, an empty inbox offers to add a project. The chrome reads as one surface: a single type scale, visible seams, one focus ring, one tab look, and glass that covers the whole window rather than one pane.
+
+- [`1757c06`](https://github.com/warpforgehq/warpforge/commit/1757c0608770301a838eabe5ff0d111c9be018dd) Thanks [@ephor](https://github.com/ephor)! - Creating, renaming and deleting files now work on a project page, not only inside a task — the file tree's New File, Rename and Delete are available wherever you are browsing files. Paths are still confined to the project they belong to.
+
 ## 0.19.3
 
 ### Patch Changes
