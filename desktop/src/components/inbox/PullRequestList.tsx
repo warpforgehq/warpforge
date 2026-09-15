@@ -1,5 +1,6 @@
 import { GitPullRequest } from "lucide-react";
 
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import type { PrAssistantState } from "@/lib/taskOrigin";
 import { cn } from "@/lib/utils";
@@ -48,10 +49,12 @@ export function PullRequestList({
   }
   if (items.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-        <GitPullRequest aria-hidden className="size-5 text-muted-foreground/40" />
-        <p className="text-xs text-muted-foreground">{emptyHint ?? "No open pull requests."}</p>
-      </div>
+      <EmptyState
+        compact
+        className="h-full"
+        icon={GitPullRequest}
+        title={emptyHint ?? "No open pull requests"}
+      />
     );
   }
   return (

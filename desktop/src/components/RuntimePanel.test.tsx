@@ -164,7 +164,7 @@ afterEach(() => {
 describe("RuntimePanel — structure", () => {
   it("shows empty state when no services or port-forwards", () => {
     render(<RuntimePanel project="warpforge" services={[]} portforwards={[]} />);
-    expect(screen.getByText(/No services or port-forwards configured/)).toBeInTheDocument();
+    expect(screen.getByText(/No services or port-forwards/)).toBeInTheDocument();
   });
 
   // The shell moved out to a surface of its own, so this panel is services and

@@ -190,7 +190,7 @@ describe("Projects", () => {
 
     expect(() => renderProjects()).not.toThrow();
 
-    expect(screen.getByText(/No projects registered\./)).toBeInTheDocument();
+    expect(screen.getByText("No projects registered")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add Project" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "warpforge" })).not.toBeInTheDocument();
   });
@@ -340,7 +340,7 @@ describe("Projects", () => {
     renderProjects();
 
     // The backlog waits for its tracker pull before it can say it is empty.
-    expect(await screen.findByText("Nothing here yet.")).toBeInTheDocument();
+    expect(await screen.findByText("No work items yet")).toBeInTheDocument();
     await openSurface(/Terminal/);
 
     expect(useUi.getState().projectSurfaceByProject.warpforge).toBe("terminal");

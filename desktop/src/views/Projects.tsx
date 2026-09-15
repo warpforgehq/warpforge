@@ -3,6 +3,7 @@ import { EllipsisVertical, FolderGit2, Pencil, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -192,16 +193,18 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
 
   if (!project) {
     return (
-      <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
-        <p>
-          No projects registered. Run <code className="text-foreground">wf add &lt;path&gt;</code>{" "}
-          or add one below.
-        </p>
-        <Button variant="outline" onClick={onAddProject}>
-          <FolderGit2 className="mr-1 size-4" />
-          Add Project
-        </Button>
-      </div>
+      <EmptyState
+        className="mt-16"
+        icon={FolderGit2}
+        title="No projects registered"
+        hint="Run wf add <path>, or add one below."
+        action={
+          <Button variant="outline" onClick={onAddProject}>
+            <FolderGit2 className="mr-1 size-4" />
+            Add Project
+          </Button>
+        }
+      />
     );
   }
 
@@ -305,6 +308,7 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
               onOpenTask={onOpenTask}
               onOpenItem={setOpenItem}
               onStartTask={startTaskFromItem}
+              onCreate={() => setBacklogOpen(true)}
             />
           </div>
         )}

@@ -2,6 +2,7 @@ import { FileText, PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import { lazy, Suspense } from "react";
 
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PaneHeader } from "@/components/workspace";
 import type { EditorViewState } from "@/lib/sessionStore";
 import { cn } from "@/lib/utils";
@@ -159,7 +160,12 @@ export function FilesSurface({
         <Panel pin className="min-h-0 min-w-0">
           <div className="h-full min-h-0 min-w-0">
             {!activeFilePath ? (
-              <p className="p-3 text-sm text-muted-foreground">Select a file to open it.</p>
+              <EmptyState
+                className="h-full"
+                icon={FileText}
+                title="Select a file"
+                hint="Pick one from the tree to open it here."
+              />
             ) : fileDoc ? (
               <Suspense fallback={<EditorSkeleton />}>
                 <CodeEditor

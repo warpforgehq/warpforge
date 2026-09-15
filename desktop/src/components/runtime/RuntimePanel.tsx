@@ -1,5 +1,7 @@
+import { Server } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { PANEL_BOUNDS, useAutoHiddenRail, usePanelSize } from "@/store/panelLayout";
 import { useUi } from "@/store/ui";
@@ -91,8 +93,12 @@ export function RuntimePanel({
 
       <div className="min-h-0 flex-1">
         {!hasItems ? (
-          <div className="flex h-full items-center justify-center px-4 text-center text-xs text-muted-foreground">
-            No services or port-forwards configured for this project.
+          <div className="flex h-full items-center justify-center">
+            <EmptyState
+              icon={Server}
+              title="No services or port-forwards"
+              hint="Configure services in this project's workspace file to see them here."
+            />
           </div>
         ) : (
           <PanelGroup orientation="horizontal" className="h-full min-h-0">

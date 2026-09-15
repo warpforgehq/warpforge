@@ -92,7 +92,7 @@ describe("ChangesRail commit flow", () => {
   it("does not reserve commit space when there are no changes", () => {
     renderRail(<ChangesRail {...baseProps} files={[]} />);
 
-    expect(screen.getByText("No changes.")).toBeInTheDocument();
+    expect(screen.getByText("No changes")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /commit/i })).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Commit message")).not.toBeInTheDocument();
   });

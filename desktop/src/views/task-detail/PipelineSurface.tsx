@@ -6,6 +6,7 @@ import { ChatTranscript } from "@/components/ChatTranscript";
 import type { ComposerHandle } from "@/components/Composer";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PaneHeader } from "@/components/workspace";
@@ -199,15 +200,12 @@ export function PipelineSurface({
 
   if (steps.length === 0) {
     return (
-      <div className="flex h-full min-h-0 items-center justify-center p-6 text-center">
-        <div>
-          <ListTodo className="mx-auto size-5 text-muted-foreground" />
-          <p className="mt-2 text-sm font-medium text-foreground">Nothing farmed out yet</p>
-          <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-            Stages appear here once this task delegates to child agents.
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        className="h-full"
+        icon={ListTodo}
+        title="Nothing farmed out yet"
+        hint="Stages appear here once this task delegates to child agents."
+      />
     );
   }
 
@@ -251,9 +249,12 @@ export function PipelineSurface({
         {selected?.task ? (
           <StepTranscript task={selected.task} agents={agents} onOpenTask={onOpenTask} />
         ) : selected ? (
-          <div className="p-4 text-xs text-muted-foreground">
-            This stage has not started — no session to show yet.
-          </div>
+          <EmptyState
+            className="h-full"
+            icon={ListTodo}
+            title="This stage has not started"
+            hint="No session to show yet."
+          />
         ) : (
           <div className="overflow-auto p-4">
             <div className="text-xs font-semibold text-foreground">

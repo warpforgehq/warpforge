@@ -11,6 +11,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { openExternalLink } from "@/lib/externalLinks";
 import { cn } from "@/lib/utils";
 import { useUi } from "@/store/ui";
@@ -263,8 +264,9 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
                 )}
                 {info && info.commits.length === 0 && (
                   <EmptyState
+                    icon={GitCommitHorizontal}
                     title="Nothing to push"
-                    detail={`${info.branch} is up to date with ${info.upstream}.`}
+                    hint={`${info.branch} is up to date with ${info.upstream}.`}
                   />
                 )}
                 {info?.commits.map((commit) => (
@@ -314,8 +316,9 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
                 ) : (
                   !loading && (
                     <EmptyState
+                      icon={FileCode2}
                       title="Select a commit"
-                      detail="Its changed files will appear here."
+                      hint="Its changed files will appear here."
                     />
                   )
                 )}
@@ -388,14 +391,5 @@ function CommitRow({
         </span>
       </span>
     </button>
-  );
-}
-
-function EmptyState({ title, detail }: { title: string; detail: string }) {
-  return (
-    <div className="flex min-h-40 flex-col items-center justify-center px-6 text-center">
-      <div className="text-sm font-medium text-foreground">{title}</div>
-      <div className="mt-1 text-xs text-muted-foreground">{detail}</div>
-    </div>
   );
 }

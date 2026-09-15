@@ -175,7 +175,7 @@ describe("MissionControl failed section", () => {
     );
 
     await user.click(screen.getByRole("tab", { name: /Needs you/ }));
-    expect(screen.getByText("Nothing is waiting for you.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing is waiting for you")).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: /Failed/ }));
     expect(screen.getByText("Crashed work")).toBeInTheDocument();
     expect(screen.getByText("Retry")).toBeInTheDocument();

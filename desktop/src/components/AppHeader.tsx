@@ -70,14 +70,14 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
     // controls in this row still click.
     <header
       data-tauri-drag-region="deep"
-      className="flex h-10 shrink-0 items-center gap-2 border-b border-rule bg-card px-2.5"
+      className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-card px-2.5"
     >
       <nav
         aria-label="Breadcrumb"
         className="flex min-w-0 flex-1 items-center gap-2 text-muted-foreground"
       >
-        <span className="text-xs">{openTask ? openTask.project : "Warpforge"}</span>
-        <span aria-hidden className="text-xs text-muted-foreground/60">
+        <span className="text-[13px]">{openTask ? openTask.project : "Warpforge"}</span>
+        <span aria-hidden className="text-[13px] text-muted-foreground/60">
           /
         </span>
         {openTask ? (
@@ -90,7 +90,7 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
                   <button
                     type="button"
                     aria-label="Switch project"
-                    className="flex min-w-0 max-w-56 items-center gap-1 rounded px-1 py-0.5 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="flex min-w-0 max-w-56 items-center gap-1 rounded px-1 py-0.5 text-[15px] font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
                     <span className="truncate">{crumbProject.name}</span>
                     <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
@@ -118,7 +118,7 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
             )}
           </>
         ) : (
-          <strong className="min-w-0 truncate text-sm font-medium text-foreground">
+          <strong className="min-w-0 truncate text-[15px] font-medium text-foreground">
             {VIEW_LABEL[view]}
           </strong>
         )}

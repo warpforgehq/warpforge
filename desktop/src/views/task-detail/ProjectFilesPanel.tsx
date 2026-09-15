@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { PaneHeader } from "@/components/workspace";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getFileIconUrl } from "@/lib/fileIcon";
 import { cn } from "@/lib/utils";
 
@@ -394,7 +395,7 @@ export function ProjectFilesPanel({
         className="min-h-0 flex-1 overflow-auto overflow-x-auto py-1.5"
       >
         {rows.length === 0 && !error ? (
-          <p className="px-3 py-2 text-xs text-muted-foreground">No files found.</p>
+          <EmptyState compact icon={FileText} title="No files found" />
         ) : (
           <div
             className="relative"

@@ -77,7 +77,7 @@ export function SurfaceTabs<T extends string = WorkspaceSurface>({
             <Icon aria-hidden className="size-3.5" />
             {label}
             {count != null && (
-              <span className="tnum text-[10px] text-muted-foreground group-data-[state=active]:text-primary">
+              <span className="tnum text-[11px] text-muted-foreground group-data-[state=active]:text-primary">
                 {count}
               </span>
             )}

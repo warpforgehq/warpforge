@@ -71,7 +71,7 @@ export const RailButton = forwardRef<
             <span
               aria-hidden
               className={cn(
-                "tnum absolute bottom-0 right-0.5 text-[10px] leading-none",
+                "tnum absolute bottom-0 right-0.5 text-[11px] leading-none",
                 hot ? "text-warn" : "text-muted-foreground/60",
               )}
             >
@@ -87,7 +87,7 @@ export const RailButton = forwardRef<
       >
         <span>{label}</span>
         {shortcut && (
-          <kbd className="tnum rounded border border-border px-1 font-sans text-[10px]">
+          <kbd className="tnum rounded border border-border px-1 font-sans text-[11px]">
             {shortcut}
           </kbd>
         )}

@@ -1,6 +1,7 @@
 import { CircleX } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { elapsed } from "@/lib/status";
 import { taskLabel } from "@/lib/taskLabel";
 
@@ -54,7 +55,7 @@ export function FailedSection({
         </div>
       )}
       {failures.length === 0 ? (
-        <div className="px-3 py-8 text-center text-sm text-muted-foreground">No failures.</div>
+        <EmptyState compact icon={CircleX} title="No failures" />
       ) : (
         <div className="max-h-[28rem] overflow-y-auto">
           {failures.map((item) => (

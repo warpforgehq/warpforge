@@ -25,6 +25,8 @@ interface BacklogViewProps {
   liveTaskIds?: ReadonlySet<string>;
   /** Row click: opens the item's details. */
   onOpenItem?: (item: WorkItem) => void;
+  /** Adds a work item by hand. */
+  onCreate?: () => void;
 }
 
 export function BacklogView({
@@ -33,6 +35,7 @@ export function BacklogView({
   onOpenTask,
   liveTaskIds,
   onOpenItem,
+  onCreate,
 }: BacklogViewProps) {
   const queryClient = useQueryClient();
 
@@ -183,6 +186,7 @@ export function BacklogView({
           hasNextPage={hasNextPage}
           onEndReached={loadMore}
           error={list.isError ? `Could not load backlog: ${list.error.message}` : undefined}
+          onCreate={onCreate}
         />
       </div>
     </div>

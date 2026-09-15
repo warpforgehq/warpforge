@@ -1,6 +1,7 @@
 import { TriangleAlert } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { attentionAction, attentionStatus } from "@/lib/attentionLabels";
 import { elapsed } from "@/lib/status";
 import { taskLabel } from "@/lib/taskLabel";
@@ -39,9 +40,7 @@ export function DecisionQueue({
         </div>
       )}
       {items.length === 0 ? (
-        <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-          Nothing is waiting for you.
-        </div>
+        <EmptyState compact icon={TriangleAlert} title="Nothing is waiting for you" />
       ) : (
         <div className="max-h-[28rem] overflow-y-auto">
           {items.map((item) => (

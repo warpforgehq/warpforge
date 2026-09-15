@@ -4,6 +4,7 @@ import {
   Archive,
   Eye,
   EyeOff,
+  FileCheck2,
   FolderTree,
   FoldVertical,
   RefreshCw,
@@ -13,6 +14,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PaneHeader } from "@/components/workspace";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { useUi } from "@/store/ui";
 
@@ -519,7 +521,7 @@ export function CommitPane({
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto py-1.5">
         {rows.length === 0 ? (
-          <p className="px-3 py-2 text-xs text-muted-foreground">No changes.</p>
+          <EmptyState compact icon={FileCheck2} title="No changes" />
         ) : (
           <div className="relative w-max min-w-full" style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((vi) => {

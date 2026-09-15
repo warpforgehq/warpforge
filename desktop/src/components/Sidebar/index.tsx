@@ -162,7 +162,7 @@ function Sidebar({
           >
             <Plus className="size-4 shrink-0" />
             <span className="min-w-0 flex-1 truncate">New task</span>
-            <kbd className="tnum shrink-0 font-sans text-[10px] font-medium text-primary/60">
+            <kbd className="tnum shrink-0 font-sans text-[11px] font-medium text-primary/60">
               ⌘N
             </kbd>
           </button>

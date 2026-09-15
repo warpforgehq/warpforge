@@ -332,7 +332,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
               className="relative ml-auto flex h-6 shrink-0 items-center justify-end gap-1 transition-opacity group-hover/row:opacity-0 group-focus-within/row:opacity-0"
             >
               {childCount > 0 && (
-                <span className="tnum w-4 text-right text-[10px] text-muted-foreground/45">
+                <span className="tnum w-4 text-right text-[11px] text-muted-foreground/45">
                   {childCount}
                 </span>
               )}

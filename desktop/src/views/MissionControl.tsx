@@ -1,5 +1,5 @@
 import "react-grid-layout/css/styles.css";
-import { Plus } from "lucide-react";
+import { Activity, Pin, Plus } from "lucide-react";
 
 import "react-resizable/css/styles.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -7,6 +7,7 @@ import ReactGridLayout, { useContainerWidth } from "react-grid-layout";
 import type { LayoutItem } from "react-grid-layout";
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   buildTaskGroupIndex,
@@ -254,9 +255,18 @@ export default function MissionControl({ state, onOpenTask, onNewTask }: Props) 
             {liveStripItems.length > 0 ? (
               <LiveStrip items={liveStripItems} onOpenTask={onOpenTask} />
             ) : (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                Nothing running — start a task.
-              </p>
+              <EmptyState
+                compact
+                icon={Activity}
+                title="Nothing running"
+                hint="Start a task to see it here."
+                action={
+                  <Button variant="outline" size="sm" onClick={() => onNewTask()}>
+                    <Plus className="size-4" />
+                    Start a task
+                  </Button>
+                }
+              />
             )}
           </section>
         )}
@@ -307,25 +317,30 @@ export default function MissionControl({ state, onOpenTask, onNewTask }: Props) 
                   ))}
                 </ReactGridLayout>
               ) : (
-                <div className="flex flex-col items-center gap-1 rounded-md border border-dashed border-border px-4 py-8 text-center text-muted-foreground">
-                  <p className="text-sm text-foreground">No pinned sessions.</p>
-                  <p className="max-w-md text-xs">
-                    Pin sessions from the sidebar when you want them on the Mission Control board.
-                  </p>
-                </div>
+                <EmptyState
+                  icon={Pin}
+                  title="No pinned sessions"
+                  hint="Pin sessions from the sidebar when you want them on the Mission Control board."
+                  className="rounded-md border border-dashed border-border"
+                />
               )}
             </div>
           </section>
         )}
 
         {live.length === 0 && attentionQueue.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-border px-4 py-10 text-center text-muted-foreground">
-            <p>No live sessions.</p>
-            <Button variant="outline" onClick={() => onNewTask()}>
-              <Plus className="size-4" />
-              Start a task
-            </Button>
-          </div>
+          <EmptyState
+            icon={Activity}
+            title="No live sessions"
+            hint="When a task is running or needs you, it shows up here."
+            className="rounded-md border border-dashed border-border"
+            action={
+              <Button variant="outline" onClick={() => onNewTask()}>
+                <Plus className="size-4" />
+                Start a task
+              </Button>
+            }
+          />
         ) : null}
       </div>
     </ScrollArea>

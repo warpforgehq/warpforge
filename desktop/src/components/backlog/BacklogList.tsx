@@ -1,5 +1,9 @@
 import { LegendList } from "@legendapp/list/react";
+import { Inbox } from "lucide-react";
 import * as React from "react";
+
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 
 import { BacklogRow, type BacklogRowActions } from "./BacklogRow";
 import { BacklogRowSkeleton } from "./BacklogRowSkeleton";
@@ -16,6 +20,8 @@ export interface BacklogListProps {
   hasNextPage: boolean;
   onEndReached: () => void;
   error?: string;
+  /** Adds a work item by hand. The one action the emptiness can be fixed with. */
+  onCreate?: () => void;
 }
 
 /**
@@ -32,6 +38,7 @@ export function BacklogList({
   hasNextPage,
   onEndReached,
   error,
+  onCreate,
 }: BacklogListProps) {
   const renderItem = React.useCallback(
     ({ item }: { item: WorkItem }) => <BacklogRow item={item} actions={actions} />,
@@ -50,7 +57,22 @@ export function BacklogList({
     );
   }
   if (items.length === 0) {
-    return <Message>Nothing here yet.</Message>;
+    return (
+      <div className="flex h-full items-center justify-center">
+        <EmptyState
+          icon={Inbox}
+          title="No work items yet"
+          hint="Imported tracker items and anything you add by hand land here."
+          action={
+            onCreate && (
+              <Button variant="outline" size="sm" onClick={onCreate}>
+                Add work item
+              </Button>
+            )
+          }
+        />
+      </div>
+    );
   }
 
   return (

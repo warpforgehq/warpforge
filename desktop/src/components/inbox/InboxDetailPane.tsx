@@ -1,6 +1,7 @@
 import { GitPullRequest } from "lucide-react";
 
 import { PullRequestDetail } from "@/components/inbox/PullRequestDetail";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { PullRequestSummary } from "@/protocol";
 
 /**
@@ -21,10 +22,11 @@ export function InboxDetailPane({
 }) {
   if (!pr) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-        <GitPullRequest aria-hidden className="size-6 text-muted-foreground/30" />
-        <p className="text-xs text-muted-foreground">Select a pull request to review.</p>
-      </div>
+      <EmptyState
+        className="h-full"
+        icon={GitPullRequest}
+        title="Select a pull request to review"
+      />
     );
   }
   return (

@@ -83,7 +83,7 @@ export function EmptyRow({
         <button
           type="button"
           onClick={onAddProject}
-          className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+          className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[13px] font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
         >
           Add project
         </button>
@@ -136,13 +136,13 @@ export function ProjectRow({
       >
         <span
           aria-hidden
-          className="grid size-[18px] shrink-0 place-items-center rounded-[5px] bg-secondary text-[10px] font-bold uppercase leading-none text-muted-foreground"
+          className="grid size-[18px] shrink-0 place-items-center rounded-[5px] bg-secondary text-[11px] font-bold uppercase leading-none text-muted-foreground"
         >
           {row.name.slice(0, 1)}
         </span>
         <strong
           className={cn(
-            "min-w-0 flex-1 truncate text-[12px] font-semibold tracking-tight",
+            "min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight",
             row.selected ? "text-foreground" : "text-foreground/70",
           )}
         >

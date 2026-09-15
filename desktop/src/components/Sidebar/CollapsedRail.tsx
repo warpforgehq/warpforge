@@ -175,7 +175,7 @@ export function CollapsedRail({
                 onClick={onToggleCollapsed}
                 {...roving("live:overflow")}
               >
-                <span className="tnum text-[10px] text-muted-foreground/70">
+                <span className="tnum text-[11px] text-muted-foreground/70">
                   +{liveLane.overflow}
                 </span>
               </RailButton>

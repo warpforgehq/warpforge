@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { daemon } from "@/daemon";
 import {
@@ -209,27 +210,31 @@ export default function Automations({ onOpenTask, snapshot }: Props) {
               : "Could not load automations."}
           </p>
         ) : automations.length === 0 ? (
-          <div className="mt-16 flex flex-col items-center gap-3 text-center text-muted-foreground">
-            <CalendarClock aria-hidden className="size-6 text-muted-foreground/50" />
-            <p className="max-w-md text-sm">
-              No automations yet. Schedule a prompt — a morning PR triage, a nightly dependency
-              check — and every run shows up here with its own task.
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={snapshot.projects.length === 0}
-              onClick={() => setCreating(true)}
-            >
-              <Plus className="mr-1 size-4" />
-              New automation
-            </Button>
-          </div>
+          <EmptyState
+            className="mt-16"
+            icon={CalendarClock}
+            title="No automations yet"
+            hint="Schedule a prompt — a morning PR triage, a nightly dependency check — and every run shows up here with its own task."
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={snapshot.projects.length === 0}
+                onClick={() => setCreating(true)}
+              >
+                <Plus className="mr-1 size-4" />
+                New automation
+              </Button>
+            }
+          />
         ) : visible.length === 0 ? (
-          <p className="mt-16 text-center text-sm text-muted-foreground">
-            No automations match these filters.
-          </p>
+          <EmptyState
+            className="mt-16"
+            compact
+            icon={Search}
+            title="No automations match these filters"
+          />
         ) : (
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visible.map((automation) => (

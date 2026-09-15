@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { InboxDetailPane } from "@/components/inbox/InboxDetailPane";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { inboxItemKey } from "@/lib/inboxSeen";
 import { isTypingTarget } from "@/lib/typingTarget";
@@ -70,9 +71,11 @@ export function InboxPane({
 
   if (projects.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center px-6 text-center text-xs text-muted-foreground">
-        Add a project to fill the inbox.
-      </div>
+      <EmptyState
+        className="h-full"
+        title="No projects yet"
+        hint="Add a project to fill the inbox."
+      />
     );
   }
 
