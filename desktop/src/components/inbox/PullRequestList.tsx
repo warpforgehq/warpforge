@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { PullRequestSummary } from "@/protocol";
 
 import { PullRequestRow, type PullRequestRowActions } from "./PullRequestRow";
+import { PullRequestRowSkeleton } from "./PullRequestRowSkeleton";
 
 export interface PullRequestListProps {
   items: PullRequestSummary[];
@@ -43,7 +44,7 @@ export function PullRequestList({
     return <Message tone="error">{error}</Message>;
   }
   if (isLoading) {
-    return <Message>Loading pull requests…</Message>;
+    return <PullRequestRowSkeleton />;
   }
   if (items.length === 0) {
     return (

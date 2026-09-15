@@ -43,6 +43,7 @@ import {
 } from "./constants";
 import { renderTranscriptItem, transcriptRowKey, transcriptRowType } from "./TranscriptList";
 import { TranscriptRowContext, type TranscriptRowContextValue } from "./TranscriptRow";
+import { TranscriptSkeleton } from "./TranscriptSkeleton";
 import { useStableResolved } from "./useStableResolved";
 import { useTranscriptFollow } from "./useTranscriptFollow";
 
@@ -273,14 +274,7 @@ export function SessionChat({
               ListEmptyComponent={CHAT_LIST_EMPTY}
             />
           ) : (
-            <div
-              role="status"
-              aria-label="Loading conversation"
-              className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground"
-            >
-              <span className="size-3 animate-spin rounded-full border border-muted-foreground border-t-transparent" />
-              Loading conversation…
-            </div>
+            <TranscriptSkeleton />
           )}
         </TranscriptRowContext.Provider>
         {!following && (
