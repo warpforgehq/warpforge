@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { deriveTranscriptRows, type TranscriptListRow } from "@/lib/sessionStream";
@@ -74,6 +75,32 @@ function renderExpanded(handlers = {}) {
   return renderGroup(activityRow(updates, new Map([["work:tool:r1", true]])), handlers);
 }
 
+/** The real loop: derive rows, toggle through the context, re-derive. */
+function FoldHarness({ updates: source }: { updates: SessionUpdate[] }) {
+  const [overrides, setOverrides] = React.useState<ReadonlyMap<string, boolean>>(new Map());
+  const rows = deriveTranscriptRows(source, overrides, null, null, true);
+  const row = rows.find((candidate) => candidate.kind === "activity");
+  return (
+    <TranscriptRowContext.Provider
+      value={{
+        agents: [],
+        onOpenFile: vi.fn<(path: string) => void>(),
+        onOpenFileDiff: vi.fn<(path: string) => void>(),
+        onOpenTask: vi.fn<(id: string) => void>(),
+        onRequestBranch: vi.fn<(agent: string, index: number) => void>(),
+        onToggleWorkGroup: (id, open) =>
+          setOverrides((current) => new Map(current).set(id, open)),
+        project: "app",
+        resolveFilePath: (value) => value,
+        resolved: {},
+        taskId: "task-1",
+      }}
+    >
+      {row && row.kind === "activity" ? <ActivityGroup row={row} /> : null}
+    </TranscriptRowContext.Provider>
+  );
+}
+
 describe("ActivityGroup", () => {
   it("collapses a settled group behind one summary line with no status words", () => {
     renderGroup(activityRow(updates));
@@ -85,6 +112,36 @@ describe("ActivityGroup", () => {
     expect(headerText).toContain("Edited b.ts");
     expect(headerText).toContain("Ran a command");
     expect(screen.queryByText(/completed/i)).not.toBeInTheDocument();
+  });
+
+  it("closes a live group when its header is clicked", async () => {
+    // A group holding an in-progress call is live: open, pulsing, and still the
+    // reader's to fold. This walks the real path — derive, click, override,
+    // re-derive — because the wiring between the context and the row is where a
+    // refusal to close would actually live.
+    const live: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        status: "in_progress",
+        title: "Run tests",
+        tool_call_id: "live-1",
+        tool_kind: "execute",
+      },
+      {
+        kind: "tool_call",
+        status: "completed",
+        title: "Read file '/repo/a.ts'",
+        tool_call_id: "live-2",
+        tool_kind: "read",
+      },
+    ];
+
+    render(<FoldHarness updates={live} />);
+    expect(screen.getByText("Run tests")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /hide the work/i }));
+
+    expect(screen.queryByText("Run tests")).not.toBeInTheDocument();
   });
 
   it("opens on click and reports the desired state", async () => {
