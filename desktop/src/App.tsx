@@ -27,9 +27,11 @@ import { usePushShortcut } from "./hooks/usePushShortcut";
 import { useTheme } from "./hooks/useTheme";
 import { queryClient } from "./query";
 
-/** Icon-rail width when the sidebar is collapsed: a 32px target with 8px
- *  padding each side — a rail, not a 64px channel around 36px icons. */
-const SIDEBAR_COLLAPSED_WIDTH = 48;
+/** Icon-rail width when the sidebar is collapsed. The spec proposed 48px (a
+ *  32px target with 8px padding each side); the owner, who had been using the
+ *  64px rail all along, found that too thin on screen — the rail keeps the old
+ *  roomier channel. */
+const SIDEBAR_COLLAPSED_WIDTH = 64;
 
 export default function App() {
   const snapshot = useSyncExternalStore(daemon.subscribe, getSnapshot);
