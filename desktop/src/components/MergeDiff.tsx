@@ -2,7 +2,7 @@ import { MergeView } from "@codemirror/merge";
 import type { Extension } from "@codemirror/state";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
-import { Check, Send, Undo2 } from "lucide-react";
+import { Check, ChevronDown, Send, Undo2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,17 @@ export function MergeDiff({
   doc,
   file,
   editable,
+  collapsed,
+  onToggleCollapsed,
   onSave,
   onSendToChat,
 }: {
   doc: FileDoc;
   file?: FileDiff;
   editable: boolean;
+  /** The file's diff body is folded to its header. */
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
   onSave: (content: string) => void;
   onSendToChat?: (file: FileDiff) => void;
 }) {
@@ -72,7 +77,7 @@ export function MergeDiff({
 
   useEffect(() => {
     const parent = host.current;
-    if (!parent) {
+    if (!parent || collapsed) {
       return;
     }
     let disposed = false;
@@ -124,7 +129,7 @@ export function MergeDiff({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc.path, editable, themeMode]);
+  }, [doc.path, editable, themeMode, collapsed]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -152,8 +157,21 @@ export function MergeDiff({
 
   return (
     <div className="flex flex-col">
-      {(editable || onSendToChat) && (
+      {(editable || onSendToChat || onToggleCollapsed) && (
         <div className="flex h-9 shrink-0 items-center gap-2 border-b bg-secondary/30 px-3 text-xs">
+          {onToggleCollapsed && (
+            <button
+              type="button"
+              aria-label={collapsed ? `Expand ${doc.path}` : `Collapse ${doc.path}`}
+              title={collapsed ? "Expand this file's diff" : "Collapse this file's diff"}
+              onClick={onToggleCollapsed}
+              className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <ChevronDown
+                className={cn("size-3.5 transition-transform", collapsed && "-rotate-90")}
+              />
+            </button>
+          )}
           <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">
             {doc.path}
           </span>
@@ -201,11 +219,13 @@ export function MergeDiff({
           </span>
         </div>
       )}
-      <div
-        ref={host}
-        className="warpforge-merge-diff overflow-x-auto bg-card"
-        style={{ fontSize: "var(--app-mono-font-size)" }}
-      />
+      {!collapsed && (
+        <div
+          ref={host}
+          className="warpforge-merge-diff overflow-x-auto bg-card"
+          style={{ fontSize: "var(--app-mono-font-size)" }}
+        />
+      )}
     </div>
   );
 }

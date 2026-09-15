@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { daemon } from "@/daemon";
+import { resetPendingForTests, resetRegistryForTests } from "@/lib/sessionStore";
 import { useUi } from "@/store/ui";
 
 import { ProjectFilesSurface } from "./ProjectFilesSurface";
@@ -36,6 +37,8 @@ function renderSurface() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  resetPendingForTests();
+  resetRegistryForTests();
   useUi.setState({ filesPanelCollapsed: false });
   vi.spyOn(daemon, "request").mockImplementation(async (method: string, params?: unknown) => {
     if (method === "file.list") {
@@ -104,5 +107,32 @@ describe("ProjectFilesSurface", () => {
     await vi.waitFor(() =>
       expect(screen.getByTestId("editor")).toHaveTextContent("README.md editable"),
     );
+  });
+
+  it("restores open tabs when the surface remounts", async () => {
+    const first = renderSurface();
+    fireEvent.click(await screen.findByTitle("README.md"));
+    await screen.findByRole("button", { name: "Close README.md" });
+    first.unmount();
+
+    renderSurface();
+
+    expect(await screen.findByRole("button", { name: "Close README.md" })).toBeInTheDocument();
+  });
+
+  it("does not share tabs between projects", async () => {
+    const first = renderSurface();
+    fireEvent.click(await screen.findByTitle("README.md"));
+    await screen.findByRole("button", { name: "Close README.md" });
+    first.unmount();
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ProjectFilesSurface project="other" rootPath="/workspace/other" />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText("No file open")).toBeInTheDocument();
   });
 });

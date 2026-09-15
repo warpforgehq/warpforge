@@ -2,12 +2,14 @@ import { FileText, PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import { lazy, Suspense } from "react";
 
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
+import type { EditorViewState } from "@/lib/sessionStore";
 import { cn } from "@/lib/utils";
 import { PANEL_BOUNDS, useAutoHiddenRail, usePanelSize } from "@/store/panelLayout";
 import { useUi } from "@/store/ui";
 
 import type { FileDoc, FileRange, ProjectFile, SymbolMatch } from "../../protocol";
-import { ProjectFilesPanel } from "./ProjectFilesPanel";
+import type { EditorPosition } from "../../components/CodeEditor/session";
+import { ProjectFilesPanel, type ProjectTreeState } from "./ProjectFilesPanel";
 
 const CodeEditor = lazy(async () => ({
   default: (await import("../../components/CodeEditor")).CodeEditor,
@@ -51,6 +53,10 @@ export function FilesSurface({
   gotoLocation,
   onGotoLocationHandled,
   onAskFile,
+  restoreView,
+  onViewChange,
+  treeState,
+  treeResetKey,
 }: {
   projectFiles: ProjectFile[];
   fileListError: string | null;
@@ -74,6 +80,14 @@ export function FilesSurface({
   onGotoLocationHandled?: () => void;
   /** Send a selected editor line range to the task chat as a file reference. */
   onAskFile?: (path: string, range: FileRange) => void;
+  /** Saved cursor/scroll for the active file; applied when the editor mounts. */
+  restoreView?: EditorViewState | null;
+  /** Reports cursor/scroll movement for the active file. */
+  onViewChange?: (position: EditorPosition) => void;
+  /** Persisted file-tree expansion and scroll, when a session owns them. */
+  treeState?: ProjectTreeState;
+  /** Tree subject identity; a change re-arms scroll restore. */
+  treeResetKey?: string;
 }) {
   const collapsed = useUi((s) => s.filesPanelCollapsed);
   const setCollapsed = useUi((s) => s.setFilesPanelCollapsed);
@@ -162,6 +176,8 @@ export function FilesSurface({
                   gotoLocation={gotoLocation?.path === fileDoc.path ? gotoLocation : undefined}
                   onGotoLocationHandled={onGotoLocationHandled}
                   onAskFile={onAskFile}
+                  restoreView={restoreView}
+                  onViewChange={onViewChange}
                 />
               </Suspense>
             ) : fileDocError ? (
@@ -193,6 +209,8 @@ export function FilesSurface({
             rootPath={rootPath}
             onRefresh={onRefresh}
             taskId={taskId}
+            treeState={treeState}
+            resetKey={treeResetKey}
           />
         </Panel>
       </PanelGroup>

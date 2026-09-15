@@ -281,7 +281,7 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
 
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         {surface === "files" ? (
-          <ProjectFilesSurface key={project.name} project={project.name} rootPath={project.path} />
+          <ProjectFilesSurface project={project.name} rootPath={project.path} />
         ) : surface === "terminal" ? (
           <TerminalWorkspaceView key={project.name} project={project.name} />
         ) : surface === "runtime" ? (

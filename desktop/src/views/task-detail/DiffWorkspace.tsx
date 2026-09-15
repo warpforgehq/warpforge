@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 
 import { daemon } from "../../daemon";
 import type { EditHunk, FileDiff, HunkResolution, TaskDiff } from "../../protocol";
-import { fileAnchor } from "./diffAnchors";
+import { fileAnchor, hunkKey } from "./diffAnchors";
 import { matchingHunkIndexes } from "./editHunkMatch";
 import { FileDiffSkeleton } from "./FileDiffSkeleton";
 import { useSplitFileQueries } from "./useTaskQueries";
@@ -81,6 +81,9 @@ export interface DiffWorkspaceHandle {
   /** Scrolls to a file's diff. Returns false while the diff does not carry
    *  the path yet — the caller retries rather than dropping the request. */
   scrollToFile: (path: string, editHunks?: EditHunk[]) => boolean;
+  /** Scrolls to a semantic hunk key inside a file's diff. Returns false when
+   *  the file or the hunk is no longer present. */
+  scrollToHunk: (path: string, hunkKey: string) => boolean;
 }
 
 interface Props {
@@ -93,6 +96,12 @@ interface Props {
   onResolve: (file: string, hunkIndex: number, resolution: HunkResolution) => void;
   onSendToChat: (file: FileDiff) => void;
   taskId: string;
+  /** Saved scroll offset, applied once when the workspace mounts. */
+  initialScrollTop?: number;
+  onScrollTopChange?: (scrollTop: number) => void;
+  /** Files whose diff body is collapsed in this session. */
+  collapsedFiles?: ReadonlySet<string>;
+  onToggleCollapsed?: (path: string) => void;
 }
 
 export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function DiffWorkspace(
@@ -106,11 +115,16 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
     onResolve: _onResolve,
     onSendToChat,
     taskId,
+    initialScrollTop,
+    onScrollTopChange,
+    collapsedFiles,
+    onToggleCollapsed,
   },
   ref,
 ) {
   const unifiedScrollParent = useRef<HTMLDivElement>(null);
   const splitScrollParent = useRef<HTMLDivElement>(null);
+  const restoredScrollRef = useRef(false);
   const [splitRange, setSplitRange] = useState({ start: 0, end: -1 });
   const [unifiedRange, setUnifiedRange] = useState({ start: 0, end: -1 });
   // kept for scrollToFile hunk-highlight; unified CM does not render it yet
@@ -162,6 +176,29 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
     );
   }, [unifiedVisibleEnd, unifiedVisibleStart]);
 
+  useEffect(() => {
+    if (restoredScrollRef.current) return;
+    restoredScrollRef.current = true;
+    if (!initialScrollTop) return;
+    const container =
+      diffView === "unified" ? unifiedScrollParent.current : splitScrollParent.current;
+    if (container) container.scrollTop = initialScrollTop;
+  }, [diffView, initialScrollTop]);
+
+  // Folding a file changes its row height; the cached measurement would leave
+  // the rows below it spaced for the expanded body.
+  useEffect(() => {
+    unifiedVirtualizer.measure();
+    splitVirtualizer.measure();
+  }, [collapsedFiles, splitVirtualizer, unifiedVirtualizer]);
+
+  const handleScroll = useCallback(
+    (event: React.UIEvent<HTMLDivElement>) => {
+      onScrollTopChange?.(event.currentTarget.scrollTop);
+    },
+    [onScrollTopChange],
+  );
+
   const splitFileQueries = useSplitFileQueries(taskId, files, diffView === "split", splitRange);
   const unifiedFileQueries = useSplitFileQueries(
     taskId,
@@ -188,6 +225,51 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
     }, 2400);
   }, []);
 
+  /** Scroll to one file row, highlighting matched hunks (indexes). */
+  const scrollToFileIndex = useCallback(
+    (index: number, path: string, matchingHunks: number[]): boolean => {
+      if (highlightTimerRef.current !== null) {
+        window.clearTimeout(highlightTimerRef.current);
+        highlightTimerRef.current = null;
+      }
+      // No timer here. The editor that consumes this is lazy-loaded and waits
+      // on its own document fetch, so on a cold open it can mount well after
+      // the request — a fixed 2.4s window expired first and the request
+      // arrived as `undefined`, which is why the diff opened at the top of
+      // the file instead of at the change. The fade is armed by
+      // `onScrolledToHunk`, once the scroll has actually happened.
+      setHighlightedEdit(
+        matchingHunks.length > 0 ? { hunks: new Set(matchingHunks), path } : null,
+      );
+      const container =
+        diffView === "unified" ? unifiedScrollParent.current : splitScrollParent.current;
+      const virtualizer = diffView === "unified" ? unifiedVirtualizer : splitVirtualizer;
+      virtualizer.scrollToIndex(index, { align: "start" });
+      // In unified mode the editor scrolls to the hunk itself via the
+      // highlighted-hunks decoration; here we only ensure the file is on
+      // screen (the file-level anchor still exists in the virtualized list).
+      if (diffView === "unified") return true;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const anchorEl = document.getElementById(fileAnchor(path));
+          // Scroll only the virtualized list's own container. Native
+          // Element.scrollIntoView() walks every scrollable ancestor
+          // (including ones with overflow: hidden), which can drag
+          // unrelated chrome like the surface tabs or app sidebar with it.
+          if (container && anchorEl) {
+            const offset =
+              anchorEl.getBoundingClientRect().top -
+              container.getBoundingClientRect().top +
+              container.scrollTop;
+            container.scrollTo({ behavior: "smooth", top: offset });
+          }
+        });
+      });
+      return true;
+    },
+    [diffView, splitVirtualizer, unifiedVirtualizer],
+  );
+
   useImperativeHandle(
     ref,
     () => ({
@@ -196,52 +278,22 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
         if (index < 0) return false;
         const matchingHunks =
           editHunks.length > 0 ? matchingHunkIndexes(files[index].hunks, editHunks) : [];
-        if (highlightTimerRef.current !== null) {
-          window.clearTimeout(highlightTimerRef.current);
-          highlightTimerRef.current = null;
-        }
-        // No timer here. The editor that consumes this is lazy-loaded and waits
-        // on its own document fetch, so on a cold open it can mount well after
-        // the request — a fixed 2.4s window expired first and the request
-        // arrived as `undefined`, which is why the diff opened at the top of
-        // the file instead of at the change. The fade is armed by
-        // `onScrolledToHunk`, once the scroll has actually happened.
-        setHighlightedEdit(
-          matchingHunks.length > 0 ? { hunks: new Set(matchingHunks), path } : null,
-        );
-        const container =
-          diffView === "unified" ? unifiedScrollParent.current : splitScrollParent.current;
-        const virtualizer = diffView === "unified" ? unifiedVirtualizer : splitVirtualizer;
-        virtualizer.scrollToIndex(index, { align: "start" });
-        // In unified mode the editor scrolls to the hunk itself via the
-        // highlighted-hunks decoration; here we only ensure the file is on
-        // screen (the file-level anchor still exists in the virtualized list).
-        if (diffView === "unified") return true;
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            const anchorEl = document.getElementById(fileAnchor(path));
-            // Scroll only the virtualized list's own container. Native
-            // Element.scrollIntoView() walks every scrollable ancestor
-            // (including ones with overflow: hidden), which can drag
-            // unrelated chrome like the surface tabs or app sidebar with it.
-            if (container && anchorEl) {
-              const offset =
-                anchorEl.getBoundingClientRect().top -
-                container.getBoundingClientRect().top +
-                container.scrollTop;
-              container.scrollTo({ behavior: "smooth", top: offset });
-            }
-          });
-        });
-        return true;
+        return scrollToFileIndex(index, path, matchingHunks);
+      },
+      scrollToHunk(path, key) {
+        const index = files.findIndex((file) => file.path === path);
+        if (index < 0) return false;
+        const hunkIndex = files[index].hunks.findIndex((hunk) => hunkKey(hunk) === key);
+        if (hunkIndex < 0) return false;
+        return scrollToFileIndex(index, path, [hunkIndex]);
       },
     }),
-    [diffView, files, splitVirtualizer, unifiedVirtualizer],
+    [files, scrollToFileIndex],
   );
 
   if (diffView === "unified") {
     return (
-      <div ref={unifiedScrollParent} className="min-h-0 flex-1 overflow-auto">
+      <div ref={unifiedScrollParent} onScroll={handleScroll} className="min-h-0 flex-1 overflow-auto">
         {diffError && <p className="p-3 text-sm text-destructive">{diffError}</p>}
         {!diff && !diffError && <p className="p-3 text-sm text-muted-foreground">Loading diff…</p>}
         {diff && files.length === 0 && <EmptyChangesState onOpenFiles={onOpenFiles} />}
@@ -267,6 +319,10 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
                         doc={doc}
                         file={file}
                         editable={editable}
+                        collapsed={collapsedFiles?.has(file.path) ?? false}
+                        onToggleCollapsed={
+                          onToggleCollapsed ? () => onToggleCollapsed(file.path) : undefined
+                        }
                         highlightedHunks={
                           _highlightedEdit?.path === file.path ? _highlightedEdit.hunks : undefined
                         }
@@ -302,7 +358,7 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
   }
 
   return (
-    <div ref={splitScrollParent} className="min-h-0 flex-1 overflow-auto">
+    <div ref={splitScrollParent} onScroll={handleScroll} className="min-h-0 flex-1 overflow-auto">
       {!diff ? (
         <p className="p-3 text-sm text-muted-foreground">Loading diff…</p>
       ) : files.length === 0 ? (
@@ -329,6 +385,10 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
                       doc={doc}
                       file={file}
                       editable={editable}
+                      collapsed={collapsedFiles?.has(file.path) ?? false}
+                      onToggleCollapsed={
+                        onToggleCollapsed ? () => onToggleCollapsed(file.path) : undefined
+                      }
                       onSave={(content) =>
                         void daemon.request("file.save", {
                           content,

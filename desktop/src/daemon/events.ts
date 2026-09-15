@@ -1,3 +1,4 @@
+import { forgetTask } from "../lib/sessionStore";
 import { appendCoalescedUpdate, coalesceUpdates } from "../lib/sessionStream";
 import { stampSessionHistoryStartTimes } from "../lib/sessionTiming";
 import type { DaemonEvent, SessionUpdate, TaskInfo } from "../protocol";
@@ -170,6 +171,9 @@ export class DaemonEvents extends DaemonStore {
       case "task.removed": {
         const prefix = `${ev.data.id}\0`;
         this.historyLoads.delete(ev.data.id);
+        // A deleted task's workspace session must not linger for the 90-day
+        // TTL; drop it (and its cache entry) as it leaves the snapshot.
+        forgetTask(ev.data.id);
         for (const key of this.toolCallStarts.keys()) {
           if (key.startsWith(prefix)) this.toolCallStarts.delete(key);
         }

@@ -26,20 +26,32 @@ export function FindInFiles({
   loadFile,
   onPick,
   onClose,
+  initialQuery,
+  initialActiveIndex,
+  onSessionChange,
 }: {
   open: boolean;
   onSearch: (query: string) => Promise<SymbolMatch[]>;
   loadFile: (path: string) => Promise<string>;
   onPick: (path: string, line: number, column: number) => void;
   onClose: () => void;
+  /** Query to seed when the palette opens, from the task's workspace session. */
+  initialQuery?: string;
+  /** Match index to seed when the palette opens. */
+  initialActiveIndex?: number;
+  /** Reports query/active-index so the caller can persist them per task. */
+  onSessionChange?: (session: { query: string; activeIndex: number }) => void;
 }) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery ?? "");
   const [matches, setMatches] = useState<SymbolMatch[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  // Index to keep across the first results arriving after an open; a query the
+  // user typed resets to the top instead.
+  const pendingIndexRef = useRef<number | null>(null);
 
   const trimmed = query.trim();
 
@@ -47,9 +59,19 @@ export function FindInFiles({
 
   useEffect(() => {
     if (!open) return;
-    setActiveIndex(0);
+    pendingIndexRef.current = initialActiveIndex ?? 0;
+    setQuery(initialQuery ?? "");
+    setActiveIndex(initialActiveIndex ?? 0);
     requestAnimationFrame(() => inputRef.current?.focus());
+    // Re-seed only when the palette opens; `initialQuery` arriving later must
+    // not stomp on what the user is typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    onSessionChange?.({ activeIndex, query });
+  }, [activeIndex, onSessionChange, open, query]);
 
   useEffect(() => {
     if (!open || trimmed === "") {
@@ -66,7 +88,9 @@ export function FindInFiles({
           if (cancelled) return;
           setMatches(found);
           setError(null);
-          setActiveIndex(0);
+          const restored = pendingIndexRef.current;
+          pendingIndexRef.current = null;
+          setActiveIndex(restored ?? 0);
         })
         .catch((cause: unknown) => {
           if (cancelled) return;
@@ -137,7 +161,11 @@ export function FindInFiles({
             ref={inputRef}
             aria-label="Find in files"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              // Typing is a new search: the restored match index no longer applies.
+              pendingIndexRef.current = null;
+              setQuery(event.target.value);
+            }}
             onKeyDown={onKeyDown}
             placeholder="Find in files…"
             spellCheck={false}

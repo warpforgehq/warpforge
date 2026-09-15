@@ -2,6 +2,14 @@ import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { DEFAULT_SURFACE_TABS, type SurfaceTab } from "@/components/workspace";
+import { useTaskSession } from "@/hooks/useWorkspaceSession";
+import {
+  pruneTaskDiff,
+  setTaskDiff,
+  setTaskDiffHunkPosition,
+  setTaskFiles,
+  setTaskSurface,
+} from "@/lib/sessionStore";
 import { buildTaskGroupIndex } from "@/lib/taskGroups";
 
 import { type ComposerHandle } from "../../components/Composer";
@@ -18,16 +26,12 @@ import type {
 import { usePanelLayout } from "../../store/panelLayout";
 import { useUi } from "../../store/ui";
 import { type DiffWorkspaceHandle } from "./DiffWorkspace";
+import { hunkKey } from "./diffAnchors";
 import { formatFileDiffAsMessage } from "./FileDiffView";
 import { useTaskQueries, type ActiveTab } from "./useTaskQueries";
+import { useSplitResize } from "./useSplitResize";
 
-/**
- * Narrowest each side of the split may be dragged to. Reaching either one is
- * also what hides that side: the drag is tracked against these, so the moment
- * the hint appears is the moment releasing folds the pane away.
- */
-const CHAT_MIN_WIDTH = 360;
-export const WORKSPACE_MIN_WIDTH = 360;
+export { WORKSPACE_MIN_WIDTH } from "./useSplitResize";
 
 export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
   const [localRes, setLocalRes] = useState<Record<string, HunkResolution>>({});
@@ -43,7 +47,10 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     column: number;
   } | null>(null);
   const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null);
+  const [restoreHunk, setRestoreHunk] = useState<{ path: string; hunkKey: string } | null>(null);
   const [commitExpanded, setCommitExpanded] = useState(false);
+  const { session: taskSession, ready: taskSessionReady } = useTaskSession(task);
+  const [sessionHydrated, setSessionHydrated] = useState(false);
   const diffView = useUi((s) => s.diffView);
   const setDiffView = useUi((s) => s.setDiffView);
   const showChat = useUi((s) => s.showChat);
@@ -57,11 +64,8 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
   const clearOpenTaskNav = useUi((s) => s.clearOpenTaskNav);
   const chatOnRight = usePanelLayout((s) => s.chatOnRight);
   const toggleChatOnRight = usePanelLayout((s) => s.toggleChatOnRight);
-  const [workspaceSize, setWorkspaceSize] = useState<`${number}%`>("58%");
-  const [resizing, setResizing] = useState(false);
-  const [foldTarget, setFoldTarget] = useState<"chat" | "workspace" | null>(null);
-  const foldTargetRef = useRef<"chat" | "workspace" | null>(null);
-  const splitRef = useRef<HTMLDivElement>(null);
+  const { foldTarget, handleWorkspaceResize, resizing, setResizing, splitRef, workspaceSize } =
+    useSplitResize({ chatOnRight, setShowChat, setShowDiff });
   const repositoryOperation = useUi((s) =>
     s.repositoryOperation?.taskId === task.id ? s.repositoryOperation : null,
   );
@@ -146,10 +150,19 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
       setShowDiff(true);
       if (hunks.length > 0) {
         setDiffView("unified");
+        // The hunk the user was sent to is the position worth remembering; a
+        // volatile row index would be wrong the next time the diff loads.
+        setTaskDiffHunkPosition(
+          task.id,
+          task.project,
+          path,
+          hunkKey(hunks[0]),
+          task.worktree ?? undefined,
+        );
       }
       setDiffNavigation({ hunks, path });
     },
-    [setActiveSurface, setDiffView, setShowDiff],
+    [setActiveSurface, setDiffView, setShowDiff, task.id, task.project, task.worktree],
   );
 
   useEffect(() => {
@@ -290,6 +303,100 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     [knownFilePaths, projectRoot],
   );
 
+  // Restore this task's editor workspace once its session has been read. An
+  // explicit `openTaskNav` runs after this and wins, because it is applied in
+  // an effect declared below.
+  useEffect(() => {
+    if (!taskSessionReady || sessionHydrated) return;
+    if (taskSession.files.tabs.length > 0) setOpenFileTabs(taskSession.files.tabs);
+    if (taskSession.files.activePath) setActiveFilePath(taskSession.files.activePath);
+    if (taskSession.diff.selectedFile) setSelectedDiffFile(taskSession.diff.selectedFile);
+    setActiveSurface(taskSession.activeSurface);
+    const storedPosition = taskSession.diff.selectedFile
+      ? taskSession.diff.positions[taskSession.diff.selectedFile]
+      : undefined;
+    if (taskSession.activeSurface === "diff" && taskSession.diff.selectedFile && storedPosition) {
+      setRestoreHunk({ hunkKey: storedPosition.hunkKey, path: taskSession.diff.selectedFile });
+    }
+    setSessionHydrated(true);
+  }, [sessionHydrated, taskSession, taskSessionReady, setActiveSurface]);
+
+  // Persist the editor workspace back to the session. Guarded on hydration so
+  // the pre-restore defaults never overwrite the stored record.
+  useEffect(() => {
+    if (!sessionHydrated) return;
+    setTaskFiles(
+      task.id,
+      task.project,
+      { activePath: activeFilePath, tabs: openFileTabs },
+      task.worktree ?? undefined,
+    );
+  }, [activeFilePath, openFileTabs, sessionHydrated, task.id, task.project, task.worktree]);
+
+  useEffect(() => {
+    if (!sessionHydrated) return;
+    setTaskDiff(
+      task.id,
+      task.project,
+      { selectedFile: selectedDiffFile },
+      task.worktree ?? undefined,
+    );
+  }, [selectedDiffFile, sessionHydrated, task.id, task.project, task.worktree]);
+
+  useEffect(() => {
+    if (!sessionHydrated) return;
+    setTaskSurface(task.id, task.project, activeSurface, task.worktree ?? undefined);
+  }, [activeSurface, sessionHydrated, task.id, task.project, task.worktree]);
+
+  // A file that no longer appears in the project tree or the diff is dropped
+  // from the strip rather than reopened against a path the daemon rejects.
+  const listedPaths = useMemo(() => {
+    const paths = new Set<string>();
+    for (const file of projectFiles) paths.add(file.path);
+    for (const file of diff?.files ?? []) paths.add(file.path);
+    return paths;
+  }, [diff?.files, projectFiles]);
+
+  useEffect(() => {
+    if (!sessionHydrated || listedPaths.size === 0) return;
+    const valid = openFileTabs.filter((path) => listedPaths.has(path));
+    if (valid.length !== openFileTabs.length) setOpenFileTabs(valid);
+    if (activeFilePath && !listedPaths.has(activeFilePath)) {
+      setActiveFilePath(valid[valid.length - 1] ?? null);
+    }
+  }, [activeFilePath, listedPaths, openFileTabs, sessionHydrated]);
+
+  // A hunk position is restored only after the diff actually carries the file.
+  // The workspace mounts a frame behind the shell, so retry like a diff
+  // navigation; bounded, so a hunk the diff no longer has cannot spin.
+  useEffect(() => {
+    if (!restoreHunk) return;
+    let frame = 0;
+    let attempts = 0;
+    const scroll = () => {
+      const workspace = diffWorkspaceRef.current;
+      if (workspace?.scrollToHunk(restoreHunk.path, restoreHunk.hunkKey)) {
+        setRestoreHunk(null);
+        return;
+      }
+      if (attempts >= 120) {
+        setRestoreHunk(null);
+        return;
+      }
+      attempts += 1;
+      frame = requestAnimationFrame(scroll);
+    };
+    frame = requestAnimationFrame(scroll);
+    return () => cancelAnimationFrame(frame);
+  }, [restoreHunk]);
+
+  // Records for files the diff no longer carries are dropped, so a deleted or
+  // renamed file never keeps its fold or hunk position for 90 days.
+  useEffect(() => {
+    if (!diff) return;
+    pruneTaskDiff(task.id, new Set(diff.files.map((file) => file.path)));
+  }, [diff, task.id]);
+
   // Children of *this* task, for an orchestrator that delegates over MCP and
   // therefore has no `orchestrationGraph` — the pipeline is those tasks.
   const childTrees = useMemo(
@@ -317,57 +424,6 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
         })
     );
   }, [diff, pipelineCount, portforwards.length, services.length, terminals.length]);
-
-  const aimFold = useCallback((next: "chat" | "workspace" | null) => {
-    if (foldTargetRef.current === next) return;
-    foldTargetRef.current = next;
-    setFoldTarget(next);
-  }, []);
-
-  // The library holds a dragged pane at its minimum and only folds it once the
-  // pointer is half a minimum past that, which leaves a stretch of drag where
-  // nothing moves. Tracking the pointer instead lets the hint and the fold
-  // share one threshold, so what the hint promises is what releasing does.
-  useEffect(() => {
-    if (!resizing) return;
-    const track = (event: PointerEvent) => {
-      const rect = splitRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const chatWidth = chatOnRight ? rect.right - event.clientX : event.clientX - rect.left;
-      if (chatWidth < CHAT_MIN_WIDTH) aimFold("chat");
-      else if (rect.width - chatWidth < WORKSPACE_MIN_WIDTH) aimFold("workspace");
-      else aimFold(null);
-    };
-    const cancel = () => {
-      aimFold(null);
-      setResizing(false);
-    };
-    const release = () => {
-      if (foldTargetRef.current === "chat") setShowChat(false);
-      if (foldTargetRef.current === "workspace") setShowDiff(false);
-      setFoldTarget(null);
-      setResizing(false);
-      // The library reports the dragged size from its own listener on the same
-      // event; clearing a frame later means `handleChatResize` still sees the
-      // fold and does not persist the width the drag ended on.
-      requestAnimationFrame(() => {
-        foldTargetRef.current = null;
-      });
-    };
-    window.addEventListener("pointermove", track);
-    window.addEventListener("pointerup", release);
-    window.addEventListener("pointercancel", cancel);
-    return () => {
-      window.removeEventListener("pointermove", track);
-      window.removeEventListener("pointerup", release);
-      window.removeEventListener("pointercancel", cancel);
-    };
-  }, [aimFold, chatOnRight, resizing, setShowChat, setShowDiff]);
-
-  const handleWorkspaceResize = useCallback((size: `${number}%`) => {
-    if (foldTargetRef.current) return;
-    setWorkspaceSize(size);
-  }, []);
 
   return {
     activeFilePath,
@@ -425,6 +481,8 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     splitRef,
     surfaceTabs,
     taskGroup,
+    taskSession,
+    taskSessionReady,
     terminals,
     toggleChat,
     toggleChatOnRight,

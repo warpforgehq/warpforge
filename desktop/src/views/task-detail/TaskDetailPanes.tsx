@@ -1,8 +1,10 @@
 import { Folder, Loader2 } from "lucide-react";
+import { useMemo } from "react";
 
 import { Card } from "@/components/ui/card";
 import { Panel, PanelCollapseHint, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { FlipButton, FocusButton } from "@/components/workspace";
+import { setTaskDiff, setTaskEditorView, setTaskFiles } from "@/lib/sessionStore";
 import { cn } from "@/lib/utils";
 
 import { AgentLimitsExhaustedBanner } from "../../components/AgentLimitsExhaustedBanner";
@@ -86,7 +88,51 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
     sendSelectionToChat,
     resolveSessionFilePath,
     handleWorkspaceResize,
+    taskSession,
   } = detail;
+
+  const treeState = useMemo(
+    () => ({
+      expandedDirs: taskSession.files.expandedDirs,
+      onChange: (next: { expandedDirs: string[]; scrollTop: number; scrollLeft: number }) =>
+        setTaskFiles(
+          task.id,
+          task.project,
+          {
+            expandedDirs: next.expandedDirs,
+            treeScrollLeft: next.scrollLeft,
+            treeScrollTop: next.scrollTop,
+          },
+          task.worktree ?? undefined,
+        ),
+      scrollLeft: taskSession.files.treeScrollLeft,
+      scrollTop: taskSession.files.treeScrollTop,
+    }),
+    [
+      task.id,
+      task.project,
+      task.worktree,
+      taskSession.files.expandedDirs,
+      taskSession.files.treeScrollLeft,
+      taskSession.files.treeScrollTop,
+    ],
+  );
+
+  const collapsedDiffFiles = useMemo(
+    () => new Set(taskSession.diff.collapsedFiles),
+    [taskSession.diff.collapsedFiles],
+  );
+  const toggleDiffFileCollapsed = (path: string) => {
+    const next = new Set(taskSession.diff.collapsedFiles);
+    if (next.has(path)) next.delete(path);
+    else next.add(path);
+    setTaskDiff(
+      task.id,
+      task.project,
+      { collapsedFiles: [...next] },
+      task.worktree ?? undefined,
+    );
+  };
 
   // The conversation fills and the workspace is sized, not the other way
   // round, because only a sized panel can fold: folding keeps the pane's
@@ -188,6 +234,22 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
               gotoLocation={gotoLocation}
               onGotoLocationHandled={clearGotoLocation}
               onAskFile={sendSelectionToChat}
+              restoreView={
+                activeFilePath ? (taskSession.files.views[activeFilePath] ?? null) : null
+              }
+              onViewChange={(position) => {
+                if (activeFilePath) {
+                  setTaskEditorView(
+                    task.id,
+                    task.project,
+                    activeFilePath,
+                    position,
+                    task.worktree ?? undefined,
+                  );
+                }
+              }}
+              treeState={treeState}
+              treeResetKey={task.id}
             />
           )}
           {activeSurface === "diff" && (
@@ -217,6 +279,17 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
                 void queryClient.invalidateQueries({ queryKey: ["fileList", task.id] });
               }}
               diffWorkspaceRef={diffWorkspaceRef}
+              initialScrollTop={taskSession.diff.scrollTop}
+              onScrollTopChange={(scrollTop) =>
+                setTaskDiff(
+                  task.id,
+                  task.project,
+                  { scrollTop },
+                  task.worktree ?? undefined,
+                )
+              }
+              collapsedFiles={collapsedDiffFiles}
+              onToggleCollapsed={toggleDiffFileCollapsed}
             />
           )}
           {activeSurface === "runtime" && (

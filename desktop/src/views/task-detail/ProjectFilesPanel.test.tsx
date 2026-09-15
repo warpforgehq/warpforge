@@ -50,3 +50,30 @@ describe("projectFileParentFolders", () => {
     expect(screen.queryByRole("button", { name: "TaskDetail.tsx" })).not.toBeInTheDocument();
   });
 });
+
+describe("ProjectFilesPanel persisted tree state", () => {
+  it("restores a stored expansion and prunes one the tree no longer has", async () => {
+    const onChange = vi.fn<(next: { expandedDirs: string[] }) => void>();
+    render(
+      <ProjectFilesPanel
+        files={[{ path: "desktop/src/TaskDetail.tsx", changed: false }]}
+        error={null}
+        selected={null}
+        onSelect={vi.fn<(path: string) => void>()}
+        treeState={{
+          expandedDirs: ["desktop", "desktop/src", "gone-dir"],
+          onChange,
+          scrollLeft: 0,
+          scrollTop: 0,
+        }}
+      />,
+    );
+
+    // The stored expansion survives, so the nested file is visible without a
+    // click; the stale "gone-dir" entry is written back out pruned.
+    expect(await screen.findByRole("button", { name: "TaskDetail.tsx" })).toBeInTheDocument();
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ expandedDirs: ["desktop", "desktop/src"] }),
+    );
+  });
+});

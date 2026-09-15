@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useThemeMode } from "@/hooks/useTheme";
 import { codemirrorLanguageForPath } from "@/lib/codemirrorLanguages";
+import type { EditorViewState } from "@/lib/sessionStore";
 import { cn } from "@/lib/utils";
 
 import type { FileDoc, FileRange, SymbolMatch } from "../../protocol";
@@ -19,6 +20,7 @@ import {
 import { EditorToolbar } from "./EditorToolbar";
 import { buildEditorExtensions } from "./extensions";
 import { GotoPopup } from "./GotoPopup";
+import { installEditorSession, applyEditorPosition, type EditorPosition } from "./session";
 import { useChangeGutter } from "./useChangeGutter";
 import { useEditorSave } from "./useEditorSave";
 import { useGoto } from "./useGoto";
@@ -36,6 +38,8 @@ export function CodeEditor({
   gotoLocation,
   onGotoLocationHandled,
   onAskFile,
+  restoreView,
+  onViewChange,
 }: {
   doc: FileDoc;
   editable: boolean;
@@ -54,12 +58,19 @@ export function CodeEditor({
    * selections that sends the highlighted line range to the task chat as a
    * file reference. */
   onAskFile?: (path: string, range: FileRange) => void;
+  /** Saved cursor/scroll for this file, applied once the view is created. */
+  restoreView?: EditorViewState | null;
+  /** Reports cursor/scroll movement so the caller can persist it. */
+  onViewChange?: (position: EditorPosition) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const lspCompartment = useRef(new Compartment());
   const changeGutterCompartment = useRef(new Compartment());
   const gotoLocationKey = useRef<string | null>(null);
+  const onViewChangeRef = useRef(onViewChange);
+  onViewChangeRef.current = onViewChange;
+  const restoredRef = useRef(false);
   const [preview, setPreview] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
   const markdown = isMarkdownPath(doc.path);
@@ -118,6 +129,7 @@ export function CodeEditor({
     }
     let disposed = false;
     let view: EditorView | null = null;
+    let cleanupSession: (() => void) | null = null;
 
     void codemirrorLanguageForPath(doc.path).then((language) => {
       if (disposed) return;
@@ -155,12 +167,17 @@ export function CodeEditor({
         }),
       });
       viewRef.current = view;
+      restoredRef.current = false;
+      cleanupSession = installEditorSession(view, (position) =>
+        onViewChangeRef.current?.(position),
+      );
       setEditorReady(true);
     });
 
     return () => {
       disposed = true;
       setEditorReady(false);
+      cleanupSession?.();
       view?.destroy();
       if (viewRef.current === view) {
         viewRef.current = null;
@@ -168,6 +185,13 @@ export function CodeEditor({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc.path, editable, binaryImage, isReadOnly, themeMode]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !editorReady || restoredRef.current || !restoreView) return;
+    restoredRef.current = true;
+    applyEditorPosition(view, restoreView);
+  }, [editorReady, restoreView]);
 
   useEffect(() => {
     const view = viewRef.current;

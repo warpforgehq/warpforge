@@ -81,4 +81,36 @@ describe("FindInFiles", () => {
       expect(loadFile).toHaveBeenCalledWith("crates/warpforge-protocol/src/lib.rs"),
     );
   });
+
+  it("seeds the query from the stored workspace session", async () => {
+    const onSessionChange =
+      vi.fn<(session: { query: string; activeIndex: number }) => void>();
+    const { onSearch } = setup({ initialQuery: "retry", onSessionChange });
+
+    expect(screen.getByPlaceholderText("Find in files…")).toHaveValue("retry");
+    await waitFor(() => expect(onSearch).toHaveBeenCalledWith("retry"));
+    expect(onSessionChange).toHaveBeenCalledWith(
+      expect.objectContaining({ query: "retry" }),
+    );
+  });
+
+  it("reports the active match index as the user navigates", async () => {
+    const onSessionChange =
+      vi.fn<(session: { query: string; activeIndex: number }) => void>();
+    setup({ onSessionChange });
+    await search();
+
+    fireEvent.keyDown(screen.getByPlaceholderText("Find in files…"), { key: "ArrowDown" });
+
+    await waitFor(() =>
+      expect(onSessionChange).toHaveBeenCalledWith(expect.objectContaining({ activeIndex: 1 })),
+    );
+  });
+
+  it("keeps the restored match index once results arrive", async () => {
+    setup({ initialQuery: "default_true", initialActiveIndex: 2 });
+    await waitFor(() => expect(screen.getByText("187")).toBeInTheDocument());
+
+    expect(document.querySelector("[data-active='true']")).toHaveTextContent("use default_true;");
+  });
 });

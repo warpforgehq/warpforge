@@ -21,77 +21,21 @@ import {
 import { FILE_REF_MIME } from "../../lib/composerMentions";
 import type { ProjectFile } from "../../protocol";
 import { FileSystemActionDialog, type FileSystemAction } from "./FileSystemActionDialog";
-import { projectFileParentFolders } from "./projectFileTree";
+import {
+  buildProjectTree,
+  collectFolderKeys,
+  flattenProjectTree,
+  projectFileParentFolders,
+  PROJECT_ROW_HEIGHT,
+  type ProjectFlatRow,
+} from "./projectFileTree";
 
-export interface ProjectTreeNode {
-  name: string;
-  path?: string;
-  changed?: boolean;
-  children: Map<string, ProjectTreeNode>;
+export interface ProjectTreeState {
+  expandedDirs: string[];
+  scrollTop: number;
+  scrollLeft: number;
+  onChange: (next: { expandedDirs: string[]; scrollTop: number; scrollLeft: number }) => void;
 }
-
-export function buildProjectTree(files: ProjectFile[]): ProjectTreeNode {
-  const root: ProjectTreeNode = { children: new Map(), name: "" };
-  for (const f of files) {
-    // `git ls-files --others` collapses untracked directories (including
-    // nested git repos it won't descend into) to a single "dir/" entry. Strip
-    // the trailing slash and keep the node path-less so it renders as a folder.
-    const isDir = f.path.endsWith("/");
-    const parts = f.path.replace(/\/+$/, "").split("/").filter(Boolean);
-    let node = root;
-    parts.forEach((part, i) => {
-      let child = node.children.get(part);
-      if (!child) {
-        child = { children: new Map(), name: part };
-        node.children.set(part, child);
-      }
-      if (i === parts.length - 1 && !isDir) {
-        child.path = f.path;
-        child.changed = f.changed;
-      }
-      node = child;
-    });
-  }
-  return root;
-}
-
-function projectFolderKey(parentPath: string, name: string): string {
-  return parentPath ? `${parentPath}/${name}` : name;
-}
-
-export interface ProjectFlatRow {
-  key: string;
-  node: ProjectTreeNode;
-  depth: number;
-  fKey?: string;
-}
-
-function flattenProjectTree(
-  node: ProjectTreeNode,
-  depth: number,
-  parentPath: string,
-  openFolders: Set<string>,
-  out: ProjectFlatRow[],
-): void {
-  const kids = [...node.children.values()].sort((a, b) => {
-    const af = a.path ? 1 : 0;
-    const bf = b.path ? 1 : 0;
-    return af - bf || a.name.localeCompare(b.name);
-  });
-  for (const child of kids) {
-    if (child.path) {
-      out.push({ key: child.path, node: child, depth });
-    } else {
-      const fk = projectFolderKey(parentPath, child.name);
-      out.push({ key: `f:${fk}`, node: child, depth, fKey: fk });
-      if (openFolders.has(fk)) {
-        flattenProjectTree(child, depth + 1, fk, openFolders, out);
-      }
-    }
-  }
-}
-
-export const PROJECT_ROW_HEIGHT = 28;
 
 export function ProjectFilesPanel({
   files,
@@ -101,6 +45,8 @@ export function ProjectFilesPanel({
   taskId,
   rootPath,
   onRefresh,
+  treeState,
+  resetKey,
 }: {
   files: ProjectFile[];
   error: string | null;
@@ -109,11 +55,50 @@ export function ProjectFilesPanel({
   taskId?: string;
   rootPath?: string;
   onRefresh?: () => void;
+  /** When provided, expansion and scroll are persisted through the caller's
+   *  workspace session instead of living only in component state. */
+  treeState?: ProjectTreeState;
+  /** Identity of the subject owning the tree; a change re-arms scroll restore. */
+  resetKey?: string;
 }) {
   const root = useMemo(() => buildProjectTree(files), [files]);
-  const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
+  const [localOpenFolders, setLocalOpenFolders] = useState<Set<string>>(() => new Set());
+  const openFolders = useMemo(
+    () => (treeState ? new Set(treeState.expandedDirs) : localOpenFolders),
+    [localOpenFolders, treeState],
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastRevealedFileRef = useRef<string | null>(null);
+  const restoredScrollRef = useRef(false);
+  // Keep the latest session-driven state in a ref so the callbacks below stay
+  // referentially stable. An unstable callback in the reveal effect's deps
+  // re-ran the effect every render and wrote the tree back on a loop.
+  const treeStateRef = useRef(treeState);
+  treeStateRef.current = treeState;
+
+  const setOpenFolders = useCallback(
+    (updater: (previous: Set<string>) => Set<string>) => {
+      const state = treeStateRef.current;
+      if (!state) {
+        setLocalOpenFolders(updater);
+        return;
+      }
+      const next = updater(new Set(state.expandedDirs));
+      const nextDirs = [...next];
+      if (
+        nextDirs.length === state.expandedDirs.length &&
+        nextDirs.every((dir) => state.expandedDirs.includes(dir))
+      ) {
+        return;
+      }
+      state.onChange({
+        expandedDirs: nextDirs,
+        scrollLeft: state.scrollLeft,
+        scrollTop: state.scrollTop,
+      });
+    },
+    [],
+  );
 
   const rows = useMemo(() => {
     const out: ProjectFlatRow[] = [];
@@ -151,7 +136,7 @@ export function ProjectFilesPanel({
       }
       return changed ? next : previous;
     });
-  }, [selected]);
+  }, [selected, setOpenFolders]);
 
   useEffect(() => {
     if (!selected || lastRevealedFileRef.current === selected) {
@@ -168,6 +153,48 @@ export function ProjectFilesPanel({
     return () => cancelAnimationFrame(frame);
   }, [rows, selected, virtualizer]);
 
+  // Restore the tree's scroll once per subject, then keep the session current
+  // from the scroll handler. The panel stays mounted across a project switch,
+  // so `resetKey` re-arms the one-shot restore.
+  useEffect(() => {
+    restoredScrollRef.current = false;
+  }, [resetKey]);
+
+  // Expanded folders the current tree no longer has are dropped, so a renamed
+  // or deleted directory cannot keep its entry in the session.
+  useEffect(() => {
+    const state = treeStateRef.current;
+    if (!state || state.expandedDirs.length === 0) return;
+    const keys = new Set<string>();
+    collectFolderKeys(root, "", keys);
+    const valid = state.expandedDirs.filter((dir) => keys.has(dir));
+    if (valid.length === state.expandedDirs.length) return;
+    state.onChange({
+      expandedDirs: valid,
+      scrollLeft: state.scrollLeft,
+      scrollTop: state.scrollTop,
+    });
+  }, [root]);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element || !treeState || restoredScrollRef.current) return;
+    restoredScrollRef.current = true;
+    element.scrollTop = treeState.scrollTop;
+    element.scrollLeft = treeState.scrollLeft;
+  }, [treeState]);
+
+  const onTreeScroll = useCallback(() => {
+    const element = scrollRef.current;
+    const state = treeStateRef.current;
+    if (!element || !state) return;
+    state.onChange({
+      expandedDirs: state.expandedDirs,
+      scrollLeft: element.scrollLeft,
+      scrollTop: element.scrollTop,
+    });
+  }, []);
+
   const toggleFolder = useCallback((fk: string) => {
     setOpenFolders((prev) => {
       const next = new Set(prev);
@@ -178,7 +205,7 @@ export function ProjectFilesPanel({
       }
       return next;
     });
-  }, []);
+  }, [setOpenFolders]);
 
   const requestId = useRef(`project-files`).current;
   const targetRef = useRef<{ path?: string; fKey?: string }>({});
@@ -360,7 +387,11 @@ export function ProjectFilesPanel({
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex h-9 items-center border-b px-3 text-sm font-semibold">Files</div>
       {error && <p className="border-b px-3 py-2 text-xs text-destructive">{error}</p>}
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto overflow-x-auto py-1.5">
+      <div
+        ref={scrollRef}
+        onScroll={onTreeScroll}
+        className="min-h-0 flex-1 overflow-auto overflow-x-auto py-1.5"
+      >
         {rows.length === 0 && !error ? (
           <p className="px-3 py-2 text-xs text-muted-foreground">No files found.</p>
         ) : (

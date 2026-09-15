@@ -2,7 +2,7 @@ import { getOriginalDoc, unifiedMergeView, updateOriginalDoc } from "@codemirror
 import type { Extension } from "@codemirror/state";
 import { ChangeSet, EditorState, Text } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
-import { Check, Send, Undo2 } from "lucide-react";
+import { Check, ChevronDown, Send, Undo2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ export function UnifiedDiff({
   doc,
   file,
   editable,
+  collapsed,
+  onToggleCollapsed,
   highlightedHunks,
   onScrolledToHunk,
   onSave,
@@ -27,6 +29,9 @@ export function UnifiedDiff({
   doc: FileDoc;
   file: FileDiff;
   editable?: boolean;
+  /** The file's diff body is folded to its header. */
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
   /** Indexes of hunks to bring into view / highlight (chat "changed lines"). */
   highlightedHunks?: ReadonlySet<number>;
   /** Fired once the editor has actually brought a highlighted hunk into view.
@@ -73,7 +78,7 @@ export function UnifiedDiff({
 
   useEffect(() => {
     const parent = host.current;
-    if (!parent) return;
+    if (!parent || collapsed) return;
     let disposed = false;
     let view: EditorView | null = null;
 
@@ -118,9 +123,9 @@ export function UnifiedDiff({
       view?.destroy();
       if (viewRef.current === view) viewRef.current = null;
     };
-    // recreate only when path / editable / theme changes; content sync via effects below
+    // recreate only when path / editable / theme / fold changes; content sync via effects below
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc.path, editable, themeMode]);
+  }, [doc.path, editable, themeMode, collapsed]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -178,6 +183,19 @@ export function UnifiedDiff({
   return (
     <div className="flex flex-col">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b bg-secondary/30 px-3 text-xs">
+        {onToggleCollapsed && (
+          <button
+            type="button"
+            aria-label={collapsed ? `Expand ${doc.path}` : `Collapse ${doc.path}`}
+            title={collapsed ? "Expand this file's diff" : "Collapse this file's diff"}
+            onClick={onToggleCollapsed}
+            className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <ChevronDown
+              className={cn("size-3.5 transition-transform", collapsed && "-rotate-90")}
+            />
+          </button>
+        )}
         <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">{doc.path}</span>
         <span className="ml-auto flex shrink-0 items-center gap-2">
           <span
@@ -220,7 +238,7 @@ export function UnifiedDiff({
           )}
         </span>
       </div>
-      <div ref={host} className="warpforge-unified-diff overflow-auto bg-card" />
+      {!collapsed && <div ref={host} className="warpforge-unified-diff overflow-auto bg-card" />}
     </div>
   );
 }

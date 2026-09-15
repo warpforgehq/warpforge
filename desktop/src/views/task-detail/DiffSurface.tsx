@@ -60,6 +60,10 @@ export function DiffSurface({
   onCommitted,
   onRefresh,
   diffWorkspaceRef,
+  initialScrollTop,
+  onScrollTopChange,
+  collapsedFiles,
+  onToggleCollapsed,
 }: {
   diff: TaskDiff | null;
   diffError: string | null;
@@ -81,6 +85,12 @@ export function DiffSurface({
   onCommitted: () => void;
   onRefresh: () => void;
   diffWorkspaceRef: RefObject<DiffWorkspaceHandle | null>;
+  /** Saved diff scroll offset, restored once by the workspace. */
+  initialScrollTop?: number;
+  onScrollTopChange?: (scrollTop: number) => void;
+  /** Files folded to their header in this session. */
+  collapsedFiles?: ReadonlySet<string>;
+  onToggleCollapsed?: (path: string) => void;
 }) {
   const collapsed = useUi((s) => s.diffPanelCollapsed);
   const setCollapsed = useUi((s) => s.setDiffPanelCollapsed);
@@ -152,6 +162,10 @@ export function DiffSurface({
               onResolve={onResolve}
               onSendToChat={onSendToChat}
               taskId={taskId}
+              initialScrollTop={initialScrollTop}
+              onScrollTopChange={onScrollTopChange}
+              collapsedFiles={collapsedFiles}
+              onToggleCollapsed={onToggleCollapsed}
             />
           ) : (
             <DiffSkeleton files={diff?.files ?? []} />
