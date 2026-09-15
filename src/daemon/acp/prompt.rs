@@ -10,7 +10,8 @@ use super::AcpUpdate;
 use crate::daemon::prompt::PreparedPrompt;
 
 /// Send a `session/prompt` in the background and emit a TurnEnded when it
-/// resolves — prompts don't block the command loop.
+/// resolves. Returns the task's join handle; the turn loop awaits it so only
+/// one `session/prompt` is ever outstanding per session (see `turn::run`).
 #[allow(clippy::too_many_arguments)]
 pub(super) fn send_prompt(
     out_tx: &mpsc::UnboundedSender<String>,
@@ -25,7 +26,7 @@ pub(super) fn send_prompt(
     reporter: FailureReporter,
     kill_tx: mpsc::UnboundedSender<()>,
     agent_name: &str,
-) {
+) -> tokio::task::JoinHandle<()> {
     let out_tx = out_tx.clone();
     let pending = Arc::clone(pending);
     let next_id = Arc::clone(next_id);
@@ -76,5 +77,5 @@ pub(super) fn send_prompt(
             })
             .unwrap_or_else(|| "end_turn".into());
         let _ = updates.send((task_id, AcpUpdate::TurnEnded { stop_reason: stop }));
-    });
+    })
 }
