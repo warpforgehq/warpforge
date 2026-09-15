@@ -48,7 +48,7 @@ export function ChangePopup({
         >
           <ArrowDown className="size-3.5" />
         </button>
-        <div className="mx-1 h-4 w-px bg-border" />
+        <div className="mx-1 h-4 w-px bg-rule" />
         <button
           type="button"
           onClick={revertActive}

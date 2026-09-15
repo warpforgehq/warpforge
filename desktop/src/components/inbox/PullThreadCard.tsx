@@ -116,7 +116,7 @@ export function PullThreadCard({
       <div className="flex flex-col gap-3 px-3 py-2.5">
         {all.map((comment, index) => (
           <div key={comment.id} className={cn("flex min-w-0 gap-2.5", index > 0 && "pl-4")}>
-            {index > 0 && <span aria-hidden className="mt-5 w-px shrink-0 bg-border/70" />}
+            {index > 0 && <span aria-hidden className="mt-5 w-px shrink-0 bg-rule" />}
             <AuthorBadge login={comment.author?.login ?? ""} />
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2 text-[13px]">

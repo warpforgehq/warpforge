@@ -28,7 +28,7 @@ export function Section({
   return (
     <section className="space-y-3">
       <h2 className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground/50">
-        <span className="mr-2 inline-block h-px w-3 bg-border" aria-hidden />
+        <span className="mr-2 inline-block h-px w-3 bg-rule" aria-hidden />
         {title}
       </h2>
       <div className="overflow-hidden rounded-xl border border-border bg-card">

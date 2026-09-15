@@ -1,5 +1,5 @@
 import { PanelLeftClose, Plus, Settings } from "lucide-react";
-import { memo, useCallback } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 
 import { AgentUpdateBanner } from "@/components/AgentUpdateBanner";
 import { InboxListPane } from "@/components/inbox/InboxListPane";
@@ -44,6 +44,24 @@ interface SidebarProps {
   onSettleFinishedTurns?: (ids: string[]) => void;
   /** Bulk-delete every settled task on a project's "N done" shelf. */
   onDeleteSettledShelf?: (project: string) => Promise<void>;
+}
+
+/** How long the two sidebar trees overlap before the outgoing one unmounts. */
+const SIDEBAR_CROSS_FADE_MS = 120;
+
+/**
+ * Trails `value` by `delayMs` so a tree can stay mounted through the cross-fade
+ * instead of swapping at frame zero. The panel width animates on its own; this
+ * only holds the outgoing tree in the DOM long enough to fade out.
+ */
+function useTrailingFlag(value: boolean, delayMs: number): boolean {
+  const [trailing, setTrailing] = useState(value);
+  useEffect(() => {
+    if (value === trailing) return;
+    const timer = window.setTimeout(() => setTrailing(value), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [value, trailing, delayMs]);
+  return trailing;
 }
 
 function Sidebar({
@@ -97,228 +115,266 @@ function Sidebar({
     [onSelectTasksSegment, onSelectView, segment],
   );
 
-  if (collapsed) {
-    return (
-      <CollapsedRail
-        view={view}
-        openTaskId={openTaskId}
-        connection={connection}
-        connectionError={connectionError}
-        agentUpdates={agentUpdates}
-        liveLane={liveLane}
-        navCount={navCount}
-        segment={segment}
-        onToggleCollapsed={onToggleCollapsed}
-        onSelectView={onSelectView}
-        onSelectSegment={handleSelectSegment}
-        onNewTask={onNewTask}
-        onOpenTask={onOpenTask}
-        onOpenSettings={onOpenSettings}
-      />
-    );
-  }
+  // The two trees cross-fade: the panel width owns the 180ms fold, and each
+  // tree owns a 120ms opacity pass. The outgoing tree stays mounted until the
+  // trailing flag catches up so it can fade instead of cutting at frame zero.
+  const trailingCollapsed = useTrailingFlag(collapsed, SIDEBAR_CROSS_FADE_MS);
+  const transitioning = trailingCollapsed !== collapsed;
+  const railMounted = collapsed || trailingCollapsed;
+  const expandedMounted = !collapsed || !trailingCollapsed;
+
+  const rail = (
+    <CollapsedRail
+      view={view}
+      openTaskId={openTaskId}
+      connection={connection}
+      connectionError={connectionError}
+      agentUpdates={agentUpdates}
+      liveLane={liveLane}
+      navCount={navCount}
+      segment={segment}
+      onToggleCollapsed={onToggleCollapsed}
+      onSelectView={onSelectView}
+      onSelectSegment={handleSelectSegment}
+      onNewTask={onNewTask}
+      onOpenTask={onOpenTask}
+      onOpenSettings={onOpenSettings}
+    />
+  );
 
   return (
-    <>
-      <aside
-        data-testid="sidebar"
-        className="flex h-full min-h-0 min-w-0 flex-col border-r border-border bg-card"
-      >
+    <div className="relative h-full min-h-0 min-w-0">
+      {expandedMounted && (
         <div
-          data-tauri-drag-region="deep"
-          className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3.5"
+          aria-hidden={collapsed || undefined}
+          className={cn(
+            "absolute inset-0 flex min-h-0 min-w-0 flex-col transition-opacity duration-[120ms] ease-[var(--ease-out)]",
+            collapsed ? "pointer-events-none opacity-0" : "opacity-100",
+            transitioning && !collapsed && "animate-[fade-in_120ms_var(--ease-out)]",
+          )}
         >
-          <div className="flex items-center gap-1.5">
-            <strong className="select-none text-[11px] font-bold uppercase tracking-[0.2em] text-foreground">
-              WARP<span>FORGE</span>
-            </strong>
-            <ConnectionDot connection={connection} connectionError={connectionError} />
-          </div>
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            aria-label="Collapse sidebar"
-            title="Collapse sidebar"
-            aria-expanded
-            className="grid size-6 place-items-center rounded text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+          <aside
+            data-testid="sidebar"
+            className="flex h-full min-h-0 min-w-0 flex-col border-r border-border bg-card"
           >
-            <PanelLeftClose className="size-4" />
-          </button>
-        </div>
-
-        <div className="shrink-0 px-2 pt-2.5">
-          <BodyPicker
-            segment={segment}
-            inboxCount={navCount("inbox")}
-            onSelect={handleSelectSegment}
-          />
-        </div>
-
-        <div className="shrink-0 px-2 pb-2 pt-2">
-          <button
-            type="button"
-            onClick={onNewTask}
-            className="flex h-8 w-full items-center gap-2 rounded-md bg-primary/15 px-2.5 text-left text-[13px] font-semibold text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
-          >
-            <Plus className="size-4 shrink-0" />
-            <span className="min-w-0 flex-1 truncate">New task</span>
-            <kbd className="tnum shrink-0 font-sans text-[11px] font-medium text-primary/60">
-              ⌘N
-            </kbd>
-          </button>
-        </div>
-
-        <nav className="flex shrink-0 flex-col gap-px border-b border-border px-2 pb-2.5">
-          {NAV.map((item) => {
-            const active = view === item.id && !openTaskId;
-            const count = navCount(item.id);
-            return (
+            <div
+              data-tauri-drag-region="deep"
+              className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3.5"
+            >
+              <div className="flex items-center gap-1.5">
+                <strong className="select-none text-[11px] font-bold uppercase tracking-[0.2em] text-foreground">
+                  WARP<span>FORGE</span>
+                </strong>
+                <ConnectionDot connection={connection} connectionError={connectionError} />
+              </div>
               <button
-                key={item.id}
                 type="button"
-                onClick={() => onSelectView(item.id)}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
-                  active
-                    ? "bg-accent font-medium text-foreground"
-                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-                )}
+                onClick={onToggleCollapsed}
+                aria-label="Collapse sidebar"
+                title="Collapse sidebar"
+                aria-expanded
+                className="grid size-6 place-items-center rounded text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
-                <item.icon
-                  className={cn(
-                    "size-4 shrink-0",
-                    active ? "text-foreground" : "text-muted-foreground/60",
-                  )}
-                />
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                {count > 0 && (
-                  <span
+                <PanelLeftClose className="size-4" />
+              </button>
+            </div>
+
+            <div className="shrink-0 px-2 pt-2.5">
+              <BodyPicker
+                segment={segment}
+                inboxCount={navCount("inbox")}
+                onSelect={handleSelectSegment}
+              />
+            </div>
+
+            <div className="shrink-0 px-2 pb-2 pt-2">
+              <button
+                type="button"
+                onClick={onNewTask}
+                className="flex h-8 w-full items-center gap-2 rounded-md bg-primary/15 px-2.5 text-left text-[13px] font-semibold text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+              >
+                <Plus className="size-4 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">New task</span>
+                <kbd className="tnum shrink-0 font-sans text-[11px] font-medium text-primary/60">
+                  ⌘N
+                </kbd>
+              </button>
+            </div>
+
+            <nav className="flex shrink-0 flex-col gap-px border-b border-border px-2 pb-2.5">
+              {NAV.map((item) => {
+                const active = view === item.id && !openTaskId;
+                const count = navCount(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => onSelectView(item.id)}
+                    aria-current={active ? "page" : undefined}
                     className={cn(
-                      "tnum shrink-0 text-[11px]",
-                      item.attention ? "font-semibold text-warn" : "text-muted-foreground/50",
+                      "relative flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
+                      active
+                        ? "font-medium text-foreground hover:bg-accent/60"
+                        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                     )}
                   >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Reviewing is "pick one of many, then read it deeply", and the list
-            it needs belongs at the window's left edge rather than beside a
-            tree of tasks nobody is asking about mid-review. */}
-        {segment === "inbox" ? (
-          <div
-            id={SIDEBAR_BODY_ID}
-            role="tabpanel"
-            aria-labelledby={segmentTabId("inbox")}
-            className="min-h-0 flex-1"
-          >
-            <InboxListPane
-              projects={projectNames}
-              emptyHint={
-                projectNames.length === 0 ? undefined : "No open pull requests in your projects."
-              }
-              onAddProject={onAddProject}
-            />
-          </div>
-        ) : (
-          <div
-            ref={scrollRef}
-            id={SIDEBAR_BODY_ID}
-            role="tabpanel"
-            aria-labelledby={segmentTabId("tasks")}
-            className="min-h-0 flex-1 overflow-y-auto px-2 py-3 [scrollbar-gutter:stable]"
-          >
-            <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-              {virtualizer.getVirtualItems().map((virtualRow) => {
-                const row = rows[virtualRow.index];
-                if (!row) return null;
-                return (
-                  <div
-                    key={row.key}
-                    data-index={virtualRow.index}
-                    className="absolute left-0 top-0 w-full [content-visibility:auto]"
-                    style={{
-                      containIntrinsicSize: `auto ${virtualRow.size}px`,
-                      height: virtualRow.size,
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                  >
-                    {row.kind === "empty" ? (
-                      <EmptyRow
-                        row={row}
-                        onAddProject={row.key === "empty:workspace" ? onAddProject : undefined}
+                    {active && (
+                      <span
+                        aria-hidden
+                        className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary"
                       />
-                    ) : row.kind === "project" ? (
-                      <ProjectRow
-                        row={row}
-                        onToggle={toggleProject}
-                        onOpenProject={handleOpenProjects}
-                        onSettle={onSettleFinishedTurns ?? (() => {})}
-                        onSettleHover={
-                          onSettleFinishedTurns
-                            ? (hovering) => setSettlingProject(hovering ? row.name : null)
-                            : undefined
-                        }
-                      />
-                    ) : row.kind === "shelf" ? (
-                      <ShelfRow row={row} onToggle={toggleShelf} onDelete={setDeletingShelf} />
-                    ) : (
-                      <div
+                    )}
+                    <item.icon
+                      className={cn(
+                        "size-4 shrink-0",
+                        active ? "text-foreground" : "text-muted-foreground/60",
+                      )}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                    {count > 0 && (
+                      <span
                         className={cn(
-                          "transition-opacity",
-                          settleMarkedIds?.has(row.task.id) && "opacity-40",
+                          "tnum shrink-0 text-[11px]",
+                          item.attention ? "font-semibold text-warn" : "text-muted-foreground/50",
                         )}
                       >
-                        <SidebarTaskRow
-                          task={row.task}
-                          state={row.state}
-                          depth={row.depth}
-                          ancestorLines={row.ancestorLines}
-                          isLast={row.isLast}
-                          onActivePath={row.onActivePath}
-                          active={openTaskId === row.task.id}
-                          childCount={row.childCount}
-                          expanded={row.expanded}
-                          pinned={isTaskGroupPinned(taskGroupIndex, pinned, row.task.id)}
-                          nowSec={nowSec}
-                          onOpen={onOpenTask}
-                          onToggle={toggleTask}
-                          onPin={handlePin}
-                        />
-                      </div>
+                        {count}
+                      </span>
                     )}
-                  </div>
+                  </button>
                 );
               })}
-            </div>
-          </div>
-        )}
+            </nav>
 
-        <footer className="flex shrink-0 flex-col gap-1.5 border-t border-border px-2 py-2">
-          <UpdateBanner />
-          <AgentUpdateBanner onOpenSettings={onOpenSettings} />
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              className="flex h-8 flex-1 items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
-            >
-              <Settings className="size-4 shrink-0 text-muted-foreground/60" />
-              Settings
-            </button>
-            {/* Update lives beside Settings, not buried inside it — the "new
+            {/* Reviewing is "pick one of many, then read it deeply", and the list
+            it needs belongs at the window's left edge rather than beside a
+            tree of tasks nobody is asking about mid-review. */}
+            {segment === "inbox" ? (
+              <div
+                id={SIDEBAR_BODY_ID}
+                role="tabpanel"
+                aria-labelledby={segmentTabId("inbox")}
+                className="min-h-0 flex-1"
+              >
+                <InboxListPane
+                  projects={projectNames}
+                  emptyHint={
+                    projectNames.length === 0
+                      ? undefined
+                      : "No open pull requests in your projects."
+                  }
+                  onAddProject={onAddProject}
+                />
+              </div>
+            ) : (
+              <div
+                ref={scrollRef}
+                id={SIDEBAR_BODY_ID}
+                role="tabpanel"
+                aria-labelledby={segmentTabId("tasks")}
+                className="min-h-0 flex-1 overflow-y-auto px-2 py-3 [scrollbar-gutter:stable]"
+              >
+                <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+                  {virtualizer.getVirtualItems().map((virtualRow) => {
+                    const row = rows[virtualRow.index];
+                    if (!row) return null;
+                    return (
+                      <div
+                        key={row.key}
+                        data-index={virtualRow.index}
+                        className="absolute left-0 top-0 w-full [content-visibility:auto]"
+                        style={{
+                          containIntrinsicSize: `auto ${virtualRow.size}px`,
+                          height: virtualRow.size,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                      >
+                        {row.kind === "empty" ? (
+                          <EmptyRow
+                            row={row}
+                            onAddProject={row.key === "empty:workspace" ? onAddProject : undefined}
+                          />
+                        ) : row.kind === "project" ? (
+                          <ProjectRow
+                            row={row}
+                            onToggle={toggleProject}
+                            onOpenProject={handleOpenProjects}
+                            onSettle={onSettleFinishedTurns ?? (() => {})}
+                            onSettleHover={
+                              onSettleFinishedTurns
+                                ? (hovering) => setSettlingProject(hovering ? row.name : null)
+                                : undefined
+                            }
+                          />
+                        ) : row.kind === "shelf" ? (
+                          <ShelfRow row={row} onToggle={toggleShelf} onDelete={setDeletingShelf} />
+                        ) : (
+                          <div
+                            className={cn(
+                              "transition-opacity",
+                              settleMarkedIds?.has(row.task.id) && "opacity-40",
+                            )}
+                          >
+                            <SidebarTaskRow
+                              task={row.task}
+                              state={row.state}
+                              depth={row.depth}
+                              ancestorLines={row.ancestorLines}
+                              isLast={row.isLast}
+                              onActivePath={row.onActivePath}
+                              active={openTaskId === row.task.id}
+                              childCount={row.childCount}
+                              expanded={row.expanded}
+                              pinned={isTaskGroupPinned(taskGroupIndex, pinned, row.task.id)}
+                              nowSec={nowSec}
+                              onOpen={onOpenTask}
+                              onToggle={toggleTask}
+                              onPin={handlePin}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <footer className="flex shrink-0 flex-col gap-1.5 border-t border-border px-2 py-2">
+              <UpdateBanner />
+              <AgentUpdateBanner onOpenSettings={onOpenSettings} />
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  className="flex h-8 flex-1 items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+                >
+                  <Settings className="size-4 shrink-0 text-muted-foreground/60" />
+                  Settings
+                </button>
+                {/* Update lives beside Settings, not buried inside it — the "new
                 version" dot needs to stay visible the way it did in the topbar,
                 just relocated rather than lost. */}
-            <span aria-hidden className="h-5 w-px shrink-0 bg-border" />
-            <UpdateControl daemonConnected={connection === "connected"} />
-          </div>
-        </footer>
-      </aside>
+                <span aria-hidden className="h-5 w-px shrink-0 bg-rule" />
+                <UpdateControl daemonConnected={connection === "connected"} />
+              </div>
+            </footer>
+          </aside>
+        </div>
+      )}
+
+      {railMounted && (
+        <div
+          aria-hidden={!collapsed || undefined}
+          className={cn(
+            "absolute inset-0 transition-opacity duration-[120ms] ease-[var(--ease-out)]",
+            collapsed ? "opacity-100" : "pointer-events-none opacity-0",
+            transitioning && collapsed && "animate-[fade-in_120ms_var(--ease-out)]",
+          )}
+        >
+          {rail}
+        </div>
+      )}
 
       <DeleteShelfDialog
         row={deletingShelf}
@@ -328,7 +384,7 @@ function Sidebar({
           setDeletingShelf(null);
         }}
       />
-    </>
+    </div>
   );
 }
 

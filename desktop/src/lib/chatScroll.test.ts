@@ -50,8 +50,9 @@ describe("transcript restore mode", () => {
   });
 
   it("anchors to the toggled row while a disclosure settles, even when following", () => {
-    expect(transcriptRestoreMode(true, true, "work-toggle:work:i4")).toBe("anchor");
-    expect(transcriptRestoreMode(false, true, "work-toggle:work:i4")).toBe("anchor");
+    // The same row id serves a manual toggle and an automatic fold on settle.
+    expect(transcriptRestoreMode(true, true, "activity:work:tool:r1")).toBe("anchor");
+    expect(transcriptRestoreMode(false, true, "activity:work:tool:r1")).toBe("anchor");
   });
 
   it("cannot anchor without an anchor key", () => {
@@ -63,6 +64,6 @@ describe("transcript restore mode", () => {
     // run before the detach handlers were fixed, so the damage only surfaced
     // once scrolling up actually stopped the follow.
     expect(transcriptRestoreMode(false, false, null)).toBe("none");
-    expect(transcriptRestoreMode(false, false, "work-toggle:work:i4")).toBe("none");
+    expect(transcriptRestoreMode(false, false, "activity:work:tool:r1")).toBe("none");
   });
 });

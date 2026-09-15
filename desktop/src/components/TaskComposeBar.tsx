@@ -223,7 +223,7 @@ export function TaskComposeBar({
 }
 
 function Divider() {
-  return <span aria-hidden className="h-5 w-px shrink-0 bg-border" />;
+  return <span aria-hidden className="h-5 w-px shrink-0 bg-rule" />;
 }
 
 function ModeButton({

@@ -168,10 +168,18 @@ export default function App() {
                 <Panel
                   key="sidebar"
                   size={sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : sidebarWidth}
-                  minSize={SIDEBAR_WIDTH_MIN}
+                  // The minimum follows the state: collapsed sits at the rail
+                  // width, expanded enforces the normal floor. Keeping 260 while
+                  // collapsed would put the rail below its own panel's minimum.
+                  minSize={sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH_MIN}
                   maxSize={SIDEBAR_WIDTH_MAX}
                   defaultSize={SIDEBAR_WIDTH_DEFAULT}
-                  onSizeChange={setSidebarWidth}
+                  // The collapse animation drives the size to the rail width; a
+                  // clamped store update from that would overwrite the width the
+                  // user chose for the expanded state, so only a user drag counts.
+                  onSizeChange={(size: number) => {
+                    if (!sidebarCollapsed) setSidebarWidth(size);
+                  }}
                   className="min-w-0"
                 >
                   <aside

@@ -1,6 +1,6 @@
 import { LegendList } from "@legendapp/list/react";
 import { ArrowDown } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { ContinueSessionDialog } from "@/components/ContinueSessionDialog";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useSessionHistory } from "@/hooks/useSessionHistory";
 import type { SessionActivity } from "@/lib/sessionActivity";
 import {
+  activityOpenState,
+  automaticFoldAnchor,
   deriveTranscriptRows,
   hasReconnectingTransient,
   type TranscriptListRow,
@@ -167,6 +169,32 @@ export function SessionChat({
     () => deriveTranscriptRows(merged, workGroupOverrides, thinkingIndex, streamingTextIndex),
     [merged, streamingTextIndex, thinkingIndex, workGroupOverrides],
   );
+  // A live group folds itself once its turn settles. That is a disclosure the
+  // user never triggered, so it misses the anchor a manual toggle sets and the
+  // list yanks the scroll. Detect it before the list sees the new rows, hold
+  // `settling` for that commit, then clear the anchor after the fold measures.
+  const previousOpenRef = useRef<Map<string, boolean>>(new Map());
+  const [, settleTick] = useReducer((n: number) => n + 1, 0);
+  const autoFoldAnchor = automaticFoldAnchor(
+    previousOpenRef.current,
+    transcriptRows,
+    workGroupOverrides,
+  );
+  if (autoFoldAnchor) disclosureAnchorKey.current = autoFoldAnchor;
+  const settling = disclosureSettling || autoFoldAnchor !== null;
+  useEffect(() => {
+    previousOpenRef.current = activityOpenState(transcriptRows);
+    if (autoFoldAnchor === null) return;
+    const frames = [
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          disclosureAnchorKey.current = null;
+          settleTick();
+        });
+      }),
+    ];
+    return () => frames.forEach(cancelAnimationFrame);
+  }, [autoFoldAnchor, settleTick, transcriptRows]);
   const rowContext = useMemo<TranscriptRowContextValue>(
     () => ({
       agents,
@@ -206,7 +234,7 @@ export function SessionChat({
   } = useTranscriptFollow({
     active,
     taskId: task.id,
-    disclosureSettling,
+    disclosureSettling: settling,
     disclosureAnchorKey,
   });
 
@@ -256,9 +284,7 @@ export function SessionChat({
               drawDistance={CHAT_DRAW_DISTANCE_PX}
               estimatedItemSize={CHAT_ESTIMATED_ROW_PX}
               initialScrollAtEnd
-              maintainScrollAtEnd={
-                following && !disclosureSettling ? CHAT_MAINTAIN_SCROLL_AT_END : false
-              }
+              maintainScrollAtEnd={following && !settling ? CHAT_MAINTAIN_SCROLL_AT_END : false}
               maintainScrollAtEndThreshold={CHAT_MAINTAIN_SCROLL_AT_END_THRESHOLD}
               maintainVisibleContentPosition={maintainVisibleContentPosition}
               onScroll={onTranscriptScroll}

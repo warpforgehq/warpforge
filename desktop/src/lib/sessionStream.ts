@@ -159,9 +159,7 @@ export function deriveTranscriptRows(
       live,
       hasFailure,
       hasPendingApproval,
-      open: forcedOpen
-        ? true
-        : (workGroupOverrides.get(groupId) ?? (hasFailure || live)),
+      open: forcedOpen ? true : (workGroupOverrides.get(groupId) ?? (hasFailure || live)),
     });
     group = [];
   };
@@ -307,6 +305,39 @@ function activityRowsAreEqual(
         sessionUpdatesSemanticallyEqual(item.entry.update, other.entry.update))
     );
   });
+}
+
+/** The open/closed state of every activity group in a derived row list. */
+export function activityOpenState(rows: TranscriptListRow[]): Map<string, boolean> {
+  const open = new Map<string, boolean>();
+  for (const row of rows) {
+    if (row.kind === "activity") open.set(row.groupId, row.open);
+  }
+  return open;
+}
+
+/**
+ * The row a group folded onto itself. A live group closes when its turn settles
+ * without a click, so it never went through the disclosure path the manual
+ * toggle owns and the list yanks the scroll instead of holding the row. The
+ * caller feeds this anchor back through `suspendForDisclosure`.
+ *
+ * Only expandable groups count — a lone step does not change height when it
+ * closes — and a user override is skipped, because the toggle already anchored
+ * that fold explicitly.
+ */
+export function automaticFoldAnchor(
+  previouslyOpen: ReadonlyMap<string, boolean>,
+  rows: TranscriptListRow[],
+  overrides: ReadonlyMap<string, boolean>,
+): string | null {
+  for (const row of rows) {
+    if (row.kind !== "activity" || !row.expandable) continue;
+    if (previouslyOpen.get(row.groupId) === true && !row.open && !overrides.has(row.groupId)) {
+      return row.id;
+    }
+  }
+  return null;
 }
 
 /** Fold one raw update into an in-progress coalesced stream. */

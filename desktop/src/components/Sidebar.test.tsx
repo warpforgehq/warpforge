@@ -269,6 +269,19 @@ describe("Sidebar shell", () => {
     );
   });
 
+  it("marks the active nav view with a primary edge-bar, not a fill", () => {
+    renderSidebar(makeState([]), { view: "automations" });
+
+    const row = screen.getByRole("button", { name: /^Automations/ });
+    expect(row).toHaveAttribute("aria-current", "page");
+    // The active marker is "where you are", so it is the edge bar. A fill is
+    // only ever the hover state (which the class list still carries).
+    expect(row.className.split(" ")).not.toContain("bg-accent");
+    const bar = row.querySelector("span[aria-hidden]");
+    expect(bar?.className).toContain("bg-primary");
+    expect(bar?.className).toContain("left-0");
+  });
+
   it("offers to register the first project from the empty tree", () => {
     // With no Projects nav item, an empty registry would otherwise have no
     // path at all to the Add project dialog.
@@ -297,6 +310,38 @@ describe("Sidebar shell", () => {
 
     fireEvent.click(toggle);
     expect(handlers.onToggleCollapsed).toHaveBeenCalled();
+  });
+
+  it("cross-fades the tree and the rail instead of swapping at frame zero", () => {
+    vi.useFakeTimers();
+    try {
+      const shell = (collapsed: boolean) => (
+        <QueryClientProvider client={new QueryClient()}>
+          <TooltipProvider delayDuration={300} skipDelayDuration={0}>
+            <Sidebar
+              state={makeState([])}
+              view="control"
+              openTaskId={null}
+              collapsed={collapsed}
+              {...handlers}
+            />
+          </TooltipProvider>
+        </QueryClientProvider>
+      );
+      const { rerender } = render(shell(false));
+      expect(screen.queryByRole("button", { name: "Expand sidebar" })).not.toBeInTheDocument();
+
+      rerender(shell(true));
+      // Both trees are mounted through the 120ms pass: the rail fades in while
+      // the tree fades out, instead of the tree cutting away at frame zero.
+      expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+      expect(screen.getByText("WARP")).toBeInTheDocument();
+
+      act(() => vi.advanceTimersByTime(120));
+      expect(screen.queryByText("WARP")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("is one vertical toolbar tab stop with roving arrow navigation", () => {

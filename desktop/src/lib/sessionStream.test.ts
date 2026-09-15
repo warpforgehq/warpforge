@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import type { SessionUpdate } from "../protocol";
 import {
+  activityOpenState,
   appendCoalescedUpdate,
+  automaticFoldAnchor,
   coalesceUpdates,
   deriveTranscriptRows,
   mergeSessionHistory,
@@ -130,7 +132,8 @@ describe("session stream coalescing", () => {
     expect(foldedGroup.open).toBe(true);
   });
 
-  it("keeps an active thinking group live and open by default", () => {    const updates: SessionUpdate[] = [
+  it("keeps an active thinking group live and open by default", () => {
+    const updates: SessionUpdate[] = [
       { kind: "agent_thought", text: "Looking" },
       {
         kind: "tool_call",
@@ -149,6 +152,82 @@ describe("session stream coalescing", () => {
     expect(group.live).toBe(true);
     expect(group.open).toBe(true);
     expect(transcriptRowsAreEqual(first[0], repeated[0])).toBe(true);
+  });
+
+  it("anchors a group that folds itself when a live turn settles", () => {
+    const live: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        tool_call_id: "r1",
+        title: "Read file 'src/a.ts'",
+        status: "completed",
+        tool_kind: "read",
+      },
+      {
+        kind: "tool_call",
+        tool_call_id: "x1",
+        title: "npm test",
+        status: "in_progress",
+        tool_kind: "execute",
+      },
+    ];
+    const liveRows = deriveTranscriptRows(live, new Map(), null, null);
+    const liveRow = liveRows[0];
+    if (liveRow.kind !== "activity") throw new Error("expected an activity group");
+    expect(liveRow.expandable).toBe(true);
+    expect(liveRow.open).toBe(true);
+
+    const settled: SessionUpdate[] = [
+      { ...live[0] },
+      {
+        kind: "tool_call",
+        tool_call_id: "x1",
+        title: "npm test",
+        status: "completed",
+        tool_kind: "execute",
+      },
+    ];
+    const settledRows = deriveTranscriptRows(settled, new Map(), null, null);
+    const settledRow = settledRows[0];
+    if (settledRow.kind !== "activity") throw new Error("expected an activity group");
+    expect(settledRow.open).toBe(false);
+
+    // Same shape the manual toggle uses: `activity:${groupId}` = row.id.
+    expect(automaticFoldAnchor(activityOpenState(liveRows), settledRows, new Map())).toBe(
+      settledRow.id,
+    );
+    expect(settledRow.id).toBe(`activity:${liveRow.groupId}`);
+  });
+
+  it("leaves a user-folded group's anchor to the manual toggle", () => {
+    const live: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        tool_call_id: "r1",
+        title: "Read file 'src/a.ts'",
+        status: "completed",
+        tool_kind: "read",
+      },
+      {
+        kind: "tool_call",
+        tool_call_id: "x1",
+        title: "npm test",
+        status: "in_progress",
+        tool_kind: "execute",
+      },
+    ];
+    const liveRows = deriveTranscriptRows(live, new Map(), null, null);
+    const liveRow = liveRows[0];
+    if (liveRow.kind !== "activity") throw new Error("expected an activity group");
+    const foldedRows = deriveTranscriptRows(live, new Map([[liveRow.groupId, false]]), null, null);
+
+    expect(
+      automaticFoldAnchor(
+        activityOpenState(liveRows),
+        foldedRows,
+        new Map([[liveRow.groupId, false]]),
+      ),
+    ).toBeNull();
   });
 
   it("folds a re-emitted permission request onto the first so row keys stay unique", () => {
