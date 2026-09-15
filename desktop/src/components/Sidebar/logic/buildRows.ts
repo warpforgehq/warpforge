@@ -21,7 +21,8 @@ export interface SidebarRowsInput {
    * the caller scrolling to a row that was never built.
    */
   forceVisibleTaskIds: ReadonlySet<string>;
-  openProject: string | null;
+  /** The project subject the app is on — what a row's `selected` reports. */
+  selectedProject: string | null;
   nowSec: number;
 }
 
@@ -42,8 +43,8 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
     forceVisibleTaskIds,
     forest,
     nowSec,
-    openProject,
     queue,
+    selectedProject,
     tasks,
   } = input;
   const attentionIds = new Set(queue.map((item) => item.task.id));
@@ -53,7 +54,7 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
 
   if (input.projectOrder.length === 0) {
     rows.push({
-      hint: "Add one from the Projects view",
+      hint: "Add one to get started",
       key: "empty:workspace",
       kind: "empty",
       label: "No projects yet",
@@ -101,7 +102,7 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
       key: `project:${name}`,
       kind: "project",
       name,
-      selected: openProject === name,
+      selected: selectedProject === name,
       settleIds: settleCandidates.map((task) => task.id),
       settlePreview: settleCandidates.slice(0, 3).map((task) => task.title),
     });

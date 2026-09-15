@@ -82,9 +82,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { daemon } from "../daemon";
 import type { DaemonState } from "../daemon";
-import type { ProjectInfo, TaskInfo } from "../protocol";
+import type { ProjectInfo, PullRequestSummary, TaskInfo } from "../protocol";
 import { useUi } from "../store/ui";
-import type { View } from "../store/ui";
+import type { GlobalView } from "../store/ui";
 import Sidebar from "./Sidebar";
 import { SidebarTaskTooltipBody } from "./SidebarTaskRow";
 import { TooltipProvider } from "./ui/tooltip";
@@ -141,11 +141,12 @@ function makeState(
 const mockRequest = vi.fn<(method: string, params?: unknown) => Promise<unknown>>();
 
 const handlers = {
+  onAddProject: vi.fn<() => void>(),
   onNewTask: vi.fn<() => void>(),
   onOpenSettings: vi.fn<() => void>(),
   onOpenTask: vi.fn<(id: string) => void>(),
   onOpenProject: vi.fn<(name: string) => void>(),
-  onSelectView: vi.fn<(view: View) => void>(),
+  onSelectView: vi.fn<(view: GlobalView) => void>(),
   onToggleCollapsed: vi.fn<() => void>(),
 };
 
@@ -214,8 +215,16 @@ describe("Sidebar shell", () => {
     expect(screen.getByRole("button", { name: /New task/ })).toBeInTheDocument();
     expect(screen.getByText("⌘N")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Mission Control/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Projects/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+  });
+
+  it("navigates to global destinations only — the tree is the projects section", () => {
+    renderSidebar(makeState([]));
+
+    for (const label of [/^Mission Control/, /^Inbox/, /^Automations/]) {
+      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("button", { name: /^Projects/ })).not.toBeInTheDocument();
   });
 
   it("routes New task, nav and Settings through the App callbacks", () => {
@@ -224,16 +233,16 @@ describe("Sidebar shell", () => {
     fireEvent.click(screen.getByRole("button", { name: /New task/ }));
     expect(handlers.onNewTask).toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: /^Projects/ }));
-    expect(handlers.onSelectView).toHaveBeenCalledWith("projects");
+    fireEvent.click(screen.getByRole("button", { name: /^Inbox/ }));
+    expect(handlers.onSelectView).toHaveBeenCalledWith("inbox");
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(handlers.onOpenSettings).toHaveBeenCalled();
   });
 
   it("marks the active view and drops it while a task is open", () => {
-    const { rerender } = renderSidebar(makeState([]), { view: "projects" });
-    expect(screen.getByRole("button", { name: /^Projects/ })).toHaveAttribute(
+    const { rerender } = renderSidebar(makeState([]), { view: "automations" });
+    expect(screen.getByRole("button", { name: /^Automations/ })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -243,7 +252,7 @@ describe("Sidebar shell", () => {
         <TooltipProvider delayDuration={300} skipDelayDuration={0}>
           <Sidebar
             state={makeState([task("t1")])}
-            view="projects"
+            view="automations"
             openTaskId="t1"
             collapsed={false}
             {...handlers}
@@ -251,7 +260,18 @@ describe("Sidebar shell", () => {
         </TooltipProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByRole("button", { name: /^Projects/ })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("button", { name: /^Automations/ })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("offers to register the first project from the empty tree", () => {
+    // With no Projects nav item, an empty registry would otherwise have no
+    // path at all to the Add project dialog.
+    renderSidebar(makeState([], []));
+
+    fireEvent.click(screen.getByRole("button", { name: "Add project" }));
+    expect(handlers.onAddProject).toHaveBeenCalled();
   });
 
   it("collapses to an icon rail that keeps nav and Settings reachable", () => {
@@ -265,7 +285,7 @@ describe("Sidebar shell", () => {
     expect(screen.queryByText("Workspace")).not.toBeInTheDocument();
     expect(screen.queryByText("Hidden when collapsed")).not.toBeInTheDocument();
     // Every rail control keeps an accessible name even without a visible label.
-    for (const label of ["New task", "Mission Control", "Projects", "Settings"]) {
+    for (const label of ["New task", "Mission Control", "Inbox", "Settings"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
 
@@ -546,31 +566,31 @@ describe("Sidebar workspace tree", () => {
     ).toBeTruthy();
   });
 
-  it("collapses a project group and restores it", () => {
+  it("collapses a project group from the chevron and restores it", () => {
     const { container } = renderSidebar(makeState([task("a", { prompt: "Task A" })]));
 
-    const header = container.querySelector<HTMLElement>('[data-project="warpforge"]')!;
-    expect(header).toHaveAttribute("aria-expanded", "true");
-    fireEvent.click(header);
+    const chevron = () =>
+      container.querySelector<HTMLElement>('[data-project-disclosure="warpforge"]')!;
+    expect(chevron()).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(chevron());
 
     expect(screen.queryByText("Task A")).not.toBeInTheDocument();
-    expect(container.querySelector('[data-project="warpforge"]')).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
+    expect(chevron()).toHaveAttribute("aria-expanded", "false");
 
-    fireEvent.click(container.querySelector<HTMLElement>('[data-project="warpforge"]')!);
+    fireEvent.click(chevron());
     expect(screen.getByText("Task A")).toBeInTheDocument();
   });
 
-  it("offers the Projects view from the project row without stealing its click", () => {
-    renderSidebar(makeState([task("a")]));
+  it("opens the project from the row itself, leaving disclosure to the chevron", () => {
+    const { container } = renderSidebar(makeState([task("a", { prompt: "Task A" })]));
 
     // One call carries both halves: the store's `openProject` selects the
     // project *and* switches the view, so the row does not also fire
     // `onSelectView` — that would be a second, redundant navigation.
-    fireEvent.click(screen.getByRole("button", { name: "Open warpforge in Projects" }));
+    fireEvent.click(container.querySelector<HTMLElement>('[data-project="warpforge"]')!);
     expect(handlers.onOpenProject).toHaveBeenCalledWith("warpforge");
+    expect(handlers.onSelectView).not.toHaveBeenCalled();
+    expect(screen.getByText("Task A")).toBeInTheDocument();
   });
 
   it("does not resurrect a removed project from a task that still names it", () => {
@@ -671,7 +691,7 @@ describe("Sidebar attention target", () => {
   it("re-opens a collapsed project when a task inside it is targeted", () => {
     const { container } = renderSidebar(makeState([task("a", { prompt: "Task A" })]));
 
-    fireEvent.click(container.querySelector<HTMLElement>('[data-project="warpforge"]')!);
+    fireEvent.click(container.querySelector<HTMLElement>('[data-project-disclosure="warpforge"]')!);
     expect(screen.queryByText("Task A")).not.toBeInTheDocument();
 
     act(() => useUi.setState({ attentionTargetId: "a", attentionTargetNonce: 2 }));
@@ -750,6 +770,46 @@ describe("Sidebar row actions", () => {
     await vi.waitFor(() =>
       expect(screen.getAllByRole("button", { name: "Mark handled: Settle me" })[0]).toBeEnabled(),
     );
+  });
+});
+
+describe("Sidebar inbox mode", () => {
+  const pull: PullRequestSummary = {
+    assignees: [],
+    baseRefName: "main",
+    createdAt: 0,
+    draft: false,
+    headRefName: "widget",
+    labels: [],
+    number: 7,
+    project: "warpforge",
+    repo: "acme/widgets",
+    state: "open",
+    title: "Add widget",
+    updatedAt: 0,
+    url: "https://github.test/pull/7",
+  };
+
+  it("swaps the tree for the pull-request list, keeping everything global", async () => {
+    vi.spyOn(daemon, "listPulls").mockResolvedValue([pull]);
+    renderSidebar(makeState([task("a", { prompt: "Task A" })]), { view: "inbox" });
+
+    expect(await screen.findByText("Add widget")).toBeInTheDocument();
+    expect(screen.queryByText("Task A")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Inbox/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /New task/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+  });
+
+  it("restores the tree once a task is open, so the new task is never invisible", () => {
+    vi.spyOn(daemon, "listPulls").mockResolvedValue([pull]);
+    renderSidebar(makeState([task("a", { prompt: "Task A" })]), {
+      openTaskId: "a",
+      view: "inbox",
+    });
+
+    expect(screen.getByText("Task A")).toBeInTheDocument();
+    expect(screen.queryByText("Add widget")).not.toBeInTheDocument();
   });
 });
 

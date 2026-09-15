@@ -21,7 +21,7 @@ import type {
   PullRequestSummary,
   PullThread,
 } from "@/protocol";
-import { PANEL_BOUNDS, usePanelSize } from "@/store/panelLayout";
+import { PANEL_BOUNDS, useAutoHiddenRail, usePanelSize } from "@/store/panelLayout";
 import { useUi } from "@/store/ui";
 
 import { PullDiffFile } from "./PullDiffFile";
@@ -84,6 +84,10 @@ export function PullDiffView({
   const toggleRail = useUi((s) => s.togglePullFilesPanelCollapsed);
   const [railSize, setRailSize] = usePanelSize("pullFiles");
   const railBounds = PANEL_BOUNDS.pullFiles;
+  // Derived from the room the review actually has, not from the window width
+  // at boot: the list rail moved to the sidebar, so the same window now leaves
+  // the diff twice the space it used to.
+  const surfaceRef = useAutoHiddenRail(railSize, setRailCollapsed);
 
   const blocks = React.useMemo(() => (diff ? parseUnifiedPatch(diff.patch) : []), [diff]);
 
@@ -194,22 +198,43 @@ export function PullDiffView({
   }, [focusPath, jumpTo]);
 
   // `[` / `]` step through the files, the same bracket pair the TUI uses to
-  // walk service logs.
+  // walk service logs; `{` / `}` skip the ones already ticked off, which is
+  // the motion a forty-file review is actually made of. `v` ticks the file
+  // being read.
   React.useEffect(() => {
     if (blocks.length === 0) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (isTypingTarget(event.target)) return;
-      const step = event.key === "]" ? 1 : event.key === "[" ? -1 : 0;
+      if (event.key === "v") {
+        if (!activePath) return;
+        event.preventDefault();
+        toggleViewed(activePath);
+        return;
+      }
+      const unviewedOnly = event.key === "}" || event.key === "{";
+      const step =
+        event.key === "]" || event.key === "}"
+          ? 1
+          : event.key === "[" || event.key === "{"
+            ? -1
+            : 0;
       if (step === 0) return;
       event.preventDefault();
       const current = blocks.findIndex((block) => block.path === activePath);
+      if (unviewedOnly) {
+        const candidates =
+          step === 1 ? blocks.slice(current + 1) : blocks.slice(0, Math.max(0, current)).reverse();
+        const next = candidates.find((block) => !viewed.has(block.path));
+        if (next) jumpTo(next.path);
+        return;
+      }
       const next = blocks[Math.min(blocks.length - 1, Math.max(0, current + step))];
       if (next) jumpTo(next.path);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activePath, blocks, jumpTo]);
+  }, [activePath, blocks, jumpTo, toggleViewed, viewed]);
 
   /**
    * Inline review threads, per file and then per post-image line. GitHub's
@@ -241,103 +266,105 @@ export function PullDiffView({
   }, [onThreadChanged, setDraft]);
 
   return (
-    <PanelGroup orientation="horizontal" className="h-full min-h-0 min-w-0">
-      <Panel pin className="min-h-0 min-w-0">
-        <div className="flex h-full min-h-0 min-w-0 flex-col">
-          <PullDiffToolbar
-            files={blocks.length}
-            viewed={viewed.size}
-            truncated={diff?.truncated ?? false}
-            railOpen={!railCollapsed}
-            onToggleRail={toggleRail}
-            mode={mode}
-            onModeChange={changeMode}
-            commits={commits}
-            commitsLoading={commitsLoading}
-            range={range}
-            onRangeChange={onRangeChange}
-          />
+    <div ref={surfaceRef} className="flex min-h-0 flex-1 flex-col">
+      <PanelGroup orientation="horizontal" className="h-full min-h-0 min-w-0">
+        <Panel pin className="min-h-0 min-w-0">
+          <div className="flex h-full min-h-0 min-w-0 flex-col">
+            <PullDiffToolbar
+              files={blocks.length}
+              viewed={viewed.size}
+              truncated={diff?.truncated ?? false}
+              railOpen={!railCollapsed}
+              onToggleRail={toggleRail}
+              mode={mode}
+              onModeChange={changeMode}
+              commits={commits}
+              commitsLoading={commitsLoading}
+              range={range}
+              onRangeChange={onRangeChange}
+            />
 
-          {/* The padding lives on the inner column, not the scroller: a sticky
+            {/* The padding lives on the inner column, not the scroller: a sticky
             header stops at its scroll container's padding edge, which left
             each file's header floating below the top while it was pinned. */}
-          <div
-            className="min-h-0 flex-1 overflow-y-auto"
-            aria-busy={loading || swapping || undefined}
-            data-testid="pull-diff-body"
-          >
-            {error ? (
-              <p className="px-4 py-3 text-sm text-destructive">
-                Could not load the diff: {error.message}
-              </p>
-            ) : blocks.length === 0 ? (
-              loading ? (
-                <Spinner label="Loading changes…" />
+            <div
+              className="min-h-0 flex-1 overflow-y-auto"
+              aria-busy={loading || swapping || undefined}
+              data-testid="pull-diff-body"
+            >
+              {error ? (
+                <p className="px-4 py-3 text-sm text-destructive">
+                  Could not load the diff: {error.message}
+                </p>
+              ) : blocks.length === 0 ? (
+                loading ? (
+                  <Spinner label="Loading changes…" />
+                ) : (
+                  <p className="px-4 py-6 text-sm text-muted-foreground/60">No file changes.</p>
+                )
               ) : (
-                <p className="px-4 py-6 text-sm text-muted-foreground/60">No file changes.</p>
-              )
-            ) : (
-              <div
-                className={cn(
-                  "flex flex-col gap-3 p-3 transition-opacity",
-                  // The previous patch stays legible while the next one arrives:
-                  // a spinner in its place is what made picking a commit feel
-                  // like leaving the page.
-                  (loading || swapping) && "opacity-50",
-                )}
-              >
-                {/* Every prop here is stable or `undefined` for the files a
+                <div
+                  className={cn(
+                    "flex flex-col gap-3 p-3 transition-opacity",
+                    // The previous patch stays legible while the next one arrives:
+                    // a spinner in its place is what made picking a commit feel
+                    // like leaving the page.
+                    (loading || swapping) && "opacity-50",
+                  )}
+                >
+                  {/* Every prop here is stable or `undefined` for the files a
                   change does not touch: ticking one file off, folding one, or
                   dragging a comment span re-renders that file alone. */}
-                {blocks.map((block) => (
-                  <PullDiffFile
-                    key={block.path || block.hunks[0]?.id}
-                    block={block}
-                    mode={mode}
-                    expanded={isExpanded(block.path)}
-                    viewed={viewed.has(block.path)}
-                    project={pr.project}
-                    number={pr.number}
-                    threads={threadsByPath.get(block.path)}
-                    draft={draft?.path === block.path ? draft : undefined}
-                    registerAnchor={registerAnchor}
-                    onToggleExpanded={toggleExpanded}
-                    onToggleViewed={toggleViewed}
-                    onComment={onComment}
-                    onCompose={compose}
-                    onCancelDraft={cancelDraft}
-                    onPosted={onPosted}
-                  />
-                ))}
-              </div>
-            )}
+                  {blocks.map((block) => (
+                    <PullDiffFile
+                      key={block.path || block.hunks[0]?.id}
+                      block={block}
+                      mode={mode}
+                      expanded={isExpanded(block.path)}
+                      viewed={viewed.has(block.path)}
+                      project={pr.project}
+                      number={pr.number}
+                      threads={threadsByPath.get(block.path)}
+                      draft={draft?.path === block.path ? draft : undefined}
+                      registerAnchor={registerAnchor}
+                      onToggleExpanded={toggleExpanded}
+                      onToggleViewed={toggleViewed}
+                      onComment={onComment}
+                      onCompose={compose}
+                      onCancelDraft={cancelDraft}
+                      onPosted={onPosted}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </Panel>
-      {/* The changed-file rail sits on the right edge: with the app sidebar
-          and the inbox list both on the left, a third left rail made three
-          stacked columns of navigation before any content. */}
-      <PanelSeparator aria-label="Resize changed-files panel" />
-      <Panel
-        size={railSize}
-        minSize={railBounds.min}
-        maxSize={railBounds.max}
-        defaultSize={railBounds.default}
-        collapsed={railCollapsed || blocks.length === 0}
-        keepMounted={false}
-        onCollapsedChange={setRailCollapsed}
-        onSizeChange={setRailSize}
-        className="min-w-0"
-      >
-        <PullFilesRail
-          blocks={blocks}
-          viewed={viewed}
-          activePath={activePath}
-          onSelect={jumpTo}
-          onToggleViewed={toggleViewed}
-        />
-      </Panel>
-    </PanelGroup>
+        </Panel>
+        {/* The changed-file rail sits on the right edge: with the app sidebar
+            and the inbox list both on the left, a third left rail made three
+            stacked columns of navigation before any content. */}
+        <PanelSeparator aria-label="Resize changed-files panel" />
+        <Panel
+          size={railSize}
+          minSize={railBounds.min}
+          maxSize={railBounds.max}
+          defaultSize={railBounds.default}
+          collapsed={railCollapsed || blocks.length === 0}
+          keepMounted={false}
+          onCollapsedChange={setRailCollapsed}
+          onSizeChange={setRailSize}
+          className="min-w-0"
+        >
+          <PullFilesRail
+            blocks={blocks}
+            viewed={viewed}
+            activePath={activePath}
+            onSelect={jumpTo}
+            onToggleViewed={toggleViewed}
+          />
+        </Panel>
+      </PanelGroup>
+    </div>
   );
 }
 

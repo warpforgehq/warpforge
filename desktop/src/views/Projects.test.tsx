@@ -233,6 +233,36 @@ describe("Projects", () => {
     expect(screen.queryByText("Daemon task")).not.toBeInTheDocument();
   });
 
+  async function removeSelectedProject() {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    await user.click(screen.getByRole("button", { name: "Project menu" }));
+    await user.click(await screen.findByRole("menuitem", { name: /Remove project/ }));
+    await user.click(await screen.findByRole("button", { name: "Remove project" }));
+  }
+
+  it("moves to the next project when the one on screen is removed", async () => {
+    const other: ProjectInfo = { ...warpforgeProject, name: "other", path: "/workspace/other" };
+    currentSnapshot = { ...snapshot, projects: [warpforgeProject, other] };
+    useUi.setState({ selectedProjectId: "warpforge", view: "project" });
+
+    renderProjects();
+    await removeSelectedProject();
+
+    await waitFor(() => expect(useUi.getState().selectedProjectId).toBe("other"));
+    expect(useUi.getState().view).toBe("project");
+  });
+
+  it("leaves the project page entirely when the last project is removed", async () => {
+    // Nothing is left to be the subject and there is no Projects nav item to
+    // fall back to, so staying would render an arbitrary project or nothing.
+    useUi.setState({ selectedProjectId: "warpforge", view: "project" });
+
+    renderProjects();
+    await removeSelectedProject();
+
+    await waitFor(() => expect(useUi.getState().view).toBe("control"));
+  });
+
   it("opens the new work item drawer for the selected project", () => {
     const otherProject: ProjectInfo = {
       ...warpforgeProject,

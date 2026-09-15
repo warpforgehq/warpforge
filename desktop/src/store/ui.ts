@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { type BacklogParams, DEFAULT_BACKLOG_PARAMS } from "@/components/backlog/types";
+import { DEFAULT_INBOX_FILTERS, type InboxFilters } from "@/lib/inboxFilters";
 import { DEFAULT_THEME } from "@/lib/themes";
 
 import type { EditHunk } from "../protocol";
@@ -11,7 +12,11 @@ import type { EditHunk } from "../protocol";
  * The server-data store is `daemon/` (useSyncExternalStore); this owns UI only.
  */
 
-export type View = "control" | "projects" | "automations" | "inbox";
+/** A destination the nav can address. */
+export type GlobalView = "control" | "inbox" | "automations";
+/** "project" is a subject, not a nav destination: it is reached by selecting a
+ *  project in the sidebar tree, never from NAV. */
+export type View = GlobalView | "project";
 /** Page shown in the Settings overlay's left rail. */
 export type SettingsPage =
   | "appearance"
@@ -65,19 +70,6 @@ export const BLUR_RADIUS_DEFAULT = 24;
 export const SIDEBAR_WIDTH_DEFAULT = 340;
 export const SIDEBAR_WIDTH_MIN = 260;
 export const SIDEBAR_WIDTH_MAX = 480;
-
-/**
- * Below this the inbox cannot show its list rail, a file rail and a readable
- * diff at once — the window's own minimum is 900px, so that case is reachable.
- * Read once, when the store is created: the rails are user-toggled panels like
- * every other one here, and a layout that re-collapses itself on every resize
- * fights the person dragging the window.
- */
-const NARROW_WINDOW_PX = 1200;
-
-function narrowWindow(): boolean {
-  return typeof window !== "undefined" && window.innerWidth < NARROW_WINDOW_PX;
-}
 
 export function clampSidebarWidth(v: unknown): number {
   if (typeof v !== "number" || !Number.isFinite(v)) return SIDEBAR_WIDTH_DEFAULT;
@@ -156,7 +148,7 @@ interface UiState extends SettingsState {
   // Navigation
   view: View;
   openTaskId: string | null; // Transient — not persisted
-  /** Project whose detail the Projects view shows. Persisted; cleared when removed. */
+  /** The project subject the app is on. The only current-project truth. */
   selectedProjectId: string | null;
   /** Transient intent to open a task at a specific file/diff. Not persisted. */
   openTaskNav: TaskOpenNav | null;
@@ -197,19 +189,21 @@ interface UiState extends SettingsState {
   runtimeSidebarCollapsed: boolean;
   /** Changes rail inside the Diff surface collapsed. */
   diffPanelCollapsed: boolean;
-  /** The inbox's pull-request list rail collapsed, leaving review full width. */
-  inboxListCollapsed: boolean;
   /** File rail inside a pull request's Code tab collapsed. */
   pullFilesPanelCollapsed: boolean;
+  /** Which pull request the review column is showing: `inboxItemKey(pr)`. */
+  inboxSelectedKey: string | null;
+  /** The inbox list's own filters. Search is dropped on the way to storage. */
+  inboxFilters: InboxFilters;
   // Editor: language-server (LSP) features — persisted, user-toggled.
   lspEnabled: boolean;
 
-  setView: (v: View) => void;
+  setView: (v: GlobalView) => void;
   openTask: (id: string | null) => void;
   /** Open a task and immediately surface a specific file/diff in its workspace. */
   openTaskWithNav: (id: string, nav: TaskOpenNav) => void;
   clearOpenTaskNav: () => void;
-  /** Switch to the Projects view focused on a specific project. */
+  /** Make a project the subject the content column is showing. */
   openProject: (id: string) => void;
   focusAttentionTask: (id: string) => void;
   setRepositoryOperation: (operation: RepositoryOperation | null) => void;
@@ -236,13 +230,13 @@ interface UiState extends SettingsState {
   toggleFilesPanelCollapsed: () => void;
   toggleRuntimeSidebarCollapsed: () => void;
   toggleDiffPanelCollapsed: () => void;
-  toggleInboxListCollapsed: () => void;
   togglePullFilesPanelCollapsed: () => void;
   setFilesPanelCollapsed: (collapsed: boolean) => void;
   setRuntimeSidebarCollapsed: (collapsed: boolean) => void;
   setDiffPanelCollapsed: (collapsed: boolean) => void;
-  setInboxListCollapsed: (collapsed: boolean) => void;
   setPullFilesPanelCollapsed: (collapsed: boolean) => void;
+  setInboxSelectedKey: (key: string | null) => void;
+  setInboxFilters: (filters: InboxFilters) => void;
   toggleLsp: () => void;
 }
 
@@ -279,8 +273,9 @@ export const useUi = create<UiState>()(
       filesPanelCollapsed: false,
       runtimeSidebarCollapsed: false,
       diffPanelCollapsed: false,
-      inboxListCollapsed: narrowWindow(),
-      pullFilesPanelCollapsed: narrowWindow(),
+      pullFilesPanelCollapsed: false,
+      inboxSelectedKey: null,
+      inboxFilters: DEFAULT_INBOX_FILTERS,
       fontSize: DEFAULT_FONT_SIZE,
       monoFontSize: DEFAULT_MONO_FONT_SIZE,
       theme: DEFAULT_THEME,
@@ -302,7 +297,7 @@ export const useUi = create<UiState>()(
 
       setView: (view) => set({ openTaskId: null, openTaskNav: null, view }),
       openProject: (selectedProjectId) =>
-        set({ openTaskId: null, openTaskNav: null, view: "projects", selectedProjectId }),
+        set({ openTaskId: null, openTaskNav: null, view: "project", selectedProjectId }),
       // Contextual task tools must not leak from one task into the next.
       // Project-scoped layout preferences remain persisted.
       openTask: (openTaskId) =>
@@ -393,14 +388,14 @@ export const useUi = create<UiState>()(
       toggleRuntimeSidebarCollapsed: () =>
         set((s) => ({ runtimeSidebarCollapsed: !s.runtimeSidebarCollapsed })),
       toggleDiffPanelCollapsed: () => set((s) => ({ diffPanelCollapsed: !s.diffPanelCollapsed })),
-      toggleInboxListCollapsed: () => set((s) => ({ inboxListCollapsed: !s.inboxListCollapsed })),
       togglePullFilesPanelCollapsed: () =>
         set((s) => ({ pullFilesPanelCollapsed: !s.pullFilesPanelCollapsed })),
       setFilesPanelCollapsed: (filesPanelCollapsed) => set({ filesPanelCollapsed }),
       setRuntimeSidebarCollapsed: (runtimeSidebarCollapsed) => set({ runtimeSidebarCollapsed }),
       setDiffPanelCollapsed: (diffPanelCollapsed) => set({ diffPanelCollapsed }),
-      setInboxListCollapsed: (inboxListCollapsed) => set({ inboxListCollapsed }),
       setPullFilesPanelCollapsed: (pullFilesPanelCollapsed) => set({ pullFilesPanelCollapsed }),
+      setInboxSelectedKey: (inboxSelectedKey) => set({ inboxSelectedKey }),
+      setInboxFilters: (inboxFilters) => set({ inboxFilters }),
 
       // ── Font size settings ──
       setFontSize: (fontSize) => set({ fontSize: clampFontSize(fontSize) }),
@@ -442,8 +437,8 @@ export const useUi = create<UiState>()(
     }),
     {
       name: "wf-ui",
-      // Next persisted-shape change must bump this to 5.
-      version: 4,
+      // Next persisted-shape change must bump this to 6.
+      version: 5,
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
         if (version === 0 && state && "sidebarWidth" in state) {
@@ -476,13 +471,19 @@ export const useUi = create<UiState>()(
             state = { ...state, sidebarOpacity: SIDEBAR_OPACITY_MIN };
           }
         }
+        // The Projects route became a subject. Without a selection there is no
+        // project to show, and falling through to the first registered one
+        // lands the user on a project they never picked.
+        if (version < 5 && state && state.view === "projects") {
+          state = { ...state, view: state.selectedProjectId ? "project" : "control" };
+        }
         return state;
       },
       // OpenTaskId is session-only — a reload shouldn't force-open a stale task.
+      // inboxSelectedKey follows it: a reload shouldn't force-open a stale review.
       // activeSurface follows rightPanel: task-scoped, reset by openTask, not persisted.
-      // inboxListCollapsed/pullFilesPanelCollapsed default from window width at
-      // boot — persisting them freezes that one-time read instead of letting it
-      // re-evaluate on the next launch.
+      // pullFilesPanelCollapsed is re-derived from the room the rail actually
+      // has (`useAutoHiddenRail`), so a stored value would only fight it.
       partialize: ({
         openTaskId: _openTaskId,
         openTaskNav: _openTaskNav,
@@ -491,12 +492,16 @@ export const useUi = create<UiState>()(
         repositoryOperation: _repositoryOperation,
         rightPanel: _rightPanel,
         activeSurface: _activeSurface,
-        inboxListCollapsed: _inboxListCollapsed,
         pullFilesPanelCollapsed: _pullFilesPanelCollapsed,
+        inboxSelectedKey: _inboxSelectedKey,
+        inboxFilters,
         backlogParamsByProject,
         ...rest
       }) => ({
         ...rest,
+        // Same rule as the backlog below: the stance survives a restart, the
+        // search term does not.
+        inboxFilters: { ...inboxFilters, search: "" },
         // Filters and sort are kept; the search box is not. A term typed days
         // ago would reopen the app on a narrowed list with no visible reason,
         // which reads as "the backlog lost my items".

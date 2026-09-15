@@ -2,13 +2,14 @@ import { PanelLeftClose, Plus, Settings } from "lucide-react";
 import { memo, useCallback } from "react";
 
 import { AgentUpdateBanner } from "@/components/AgentUpdateBanner";
+import { InboxListPane } from "@/components/inbox/InboxListPane";
 import { SidebarTaskRow } from "@/components/SidebarTaskRow";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import UpdateControl from "@/components/UpdateControl";
 import type { ConnectionState, DaemonState } from "@/daemon";
 import { isTaskGroupPinned } from "@/lib/taskGroups";
 import { cn } from "@/lib/utils";
-import type { View } from "@/store/ui";
+import type { GlobalView, View } from "@/store/ui";
 
 import { CollapsedRail } from "./CollapsedRail";
 import { ConnectionDot } from "./ConnectionDot";
@@ -27,10 +28,11 @@ interface SidebarProps {
   connection?: ConnectionState;
   connectionError?: string | null;
   onToggleCollapsed: () => void;
-  onSelectView: (view: View) => void;
+  onSelectView: (view: GlobalView) => void;
   onOpenTask: (id: string) => void;
   onNewTask: () => void;
   onOpenProject: (name: string) => void;
+  onAddProject: () => void;
   onOpenSettings: () => void;
   /** Bulk-settle every diff-less finished turn (the same reversible settle
    *  as the per-row check button). */
@@ -51,6 +53,7 @@ function Sidebar({
   onOpenTask,
   onNewTask,
   onOpenProject,
+  onAddProject,
   onOpenSettings,
   onSettleFinishedTurns,
   onDeleteSettledShelf,
@@ -62,6 +65,7 @@ function Sidebar({
     navCount,
     nowSec,
     pinned,
+    projectNames,
     rows,
     scrollRef,
     setDeletingShelf,
@@ -174,68 +178,85 @@ function Sidebar({
           })}
         </nav>
 
-        <div
-          ref={scrollRef}
-          className="min-h-0 flex-1 overflow-y-auto px-2 py-3 [scrollbar-gutter:stable]"
-        >
-          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const row = rows[virtualRow.index];
-              if (!row) return null;
-              return (
-                <div
-                  key={row.key}
-                  data-index={virtualRow.index}
-                  className="absolute left-0 top-0 w-full [content-visibility:auto]"
-                  style={{
-                    containIntrinsicSize: `auto ${virtualRow.size}px`,
-                    height: virtualRow.size,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  {row.kind === "empty" ? (
-                    <EmptyRow row={row} />
-                  ) : row.kind === "project" ? (
-                    <ProjectRow
-                      row={row}
-                      onToggle={toggleProject}
-                      onOpenProject={handleOpenProjects}
-                      onSettle={onSettleFinishedTurns ?? (() => {})}
-                      onSettleHover={
-                        onSettleFinishedTurns
-                          ? (hovering) => setSettlingProject(hovering ? row.name : null)
-                          : undefined
-                      }
-                    />
-                  ) : row.kind === "shelf" ? (
-                    <ShelfRow row={row} onToggle={toggleShelf} onDelete={setDeletingShelf} />
-                  ) : (
-                    <div
-                      className={cn(
-                        "transition-opacity",
-                        settleMarkedIds?.has(row.task.id) && "opacity-40",
-                      )}
-                    >
-                      <SidebarTaskRow
-                        task={row.task}
-                        state={row.state}
-                        depth={row.depth}
-                        active={openTaskId === row.task.id}
-                        childCount={row.childCount}
-                        expanded={row.expanded}
-                        pinned={isTaskGroupPinned(taskGroupIndex, pinned, row.task.id)}
-                        nowSec={nowSec}
-                        onOpen={onOpenTask}
-                        onToggle={toggleTask}
-                        onPin={handlePin}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        {/* Reviewing is "pick one of many, then read it deeply", and the list
+            it needs belongs at the window's left edge rather than beside a
+            tree of tasks nobody is asking about mid-review. */}
+        {view === "inbox" && !openTaskId ? (
+          <div className="min-h-0 flex-1">
+            <InboxListPane
+              projects={projectNames}
+              emptyHint={
+                projectNames.length === 0 ? undefined : "No open pull requests in your projects."
+              }
+            />
           </div>
-        </div>
+        ) : (
+          <div
+            ref={scrollRef}
+            className="min-h-0 flex-1 overflow-y-auto px-2 py-3 [scrollbar-gutter:stable]"
+          >
+            <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const row = rows[virtualRow.index];
+                if (!row) return null;
+                return (
+                  <div
+                    key={row.key}
+                    data-index={virtualRow.index}
+                    className="absolute left-0 top-0 w-full [content-visibility:auto]"
+                    style={{
+                      containIntrinsicSize: `auto ${virtualRow.size}px`,
+                      height: virtualRow.size,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    {row.kind === "empty" ? (
+                      <EmptyRow
+                        row={row}
+                        onAddProject={row.key === "empty:workspace" ? onAddProject : undefined}
+                      />
+                    ) : row.kind === "project" ? (
+                      <ProjectRow
+                        row={row}
+                        onToggle={toggleProject}
+                        onOpenProject={handleOpenProjects}
+                        onSettle={onSettleFinishedTurns ?? (() => {})}
+                        onSettleHover={
+                          onSettleFinishedTurns
+                            ? (hovering) => setSettlingProject(hovering ? row.name : null)
+                            : undefined
+                        }
+                      />
+                    ) : row.kind === "shelf" ? (
+                      <ShelfRow row={row} onToggle={toggleShelf} onDelete={setDeletingShelf} />
+                    ) : (
+                      <div
+                        className={cn(
+                          "transition-opacity",
+                          settleMarkedIds?.has(row.task.id) && "opacity-40",
+                        )}
+                      >
+                        <SidebarTaskRow
+                          task={row.task}
+                          state={row.state}
+                          depth={row.depth}
+                          active={openTaskId === row.task.id}
+                          childCount={row.childCount}
+                          expanded={row.expanded}
+                          pinned={isTaskGroupPinned(taskGroupIndex, pinned, row.task.id)}
+                          nowSec={nowSec}
+                          onOpen={onOpenTask}
+                          onToggle={toggleTask}
+                          onPin={handlePin}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <footer className="flex shrink-0 flex-col gap-1.5 border-t border-border px-2 py-2">
           <UpdateBanner />

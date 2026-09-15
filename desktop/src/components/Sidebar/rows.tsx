@@ -1,4 +1,4 @@
-import { ArrowUpRight, CheckCheck, ChevronRight, Inbox, Trash2 } from "lucide-react";
+import { CheckCheck, ChevronRight, Inbox, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -63,7 +63,15 @@ export function ShelfRow({
   );
 }
 
-export function EmptyRow({ row }: { row: Extract<SidebarRow, { kind: "empty" }> }) {
+export function EmptyRow({
+  row,
+  onAddProject,
+}: {
+  row: Extract<SidebarRow, { kind: "empty" }>;
+  /** Offered on the workspace-level row only: with no project registered the
+   *  tree is the only place left that can start one. */
+  onAddProject?: () => void;
+}) {
   return (
     <div className="flex items-start gap-2 px-2.5 py-1.5 text-[11px] text-muted-foreground/50">
       <Inbox aria-hidden className="mt-px size-3.5 shrink-0 opacity-60" />
@@ -71,6 +79,15 @@ export function EmptyRow({ row }: { row: Extract<SidebarRow, { kind: "empty" }> 
         {row.label}
         {row.hint && <span className="mt-0.5 block text-muted-foreground/40">{row.hint}</span>}
       </span>
+      {onAddProject && (
+        <button
+          type="button"
+          onClick={onAddProject}
+          className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          Add project
+        </button>
+      )}
     </div>
   );
 }
@@ -96,22 +113,27 @@ export function ProjectRow({
     row.settleIds.length === 1 ? "" : "s"
   } with no changes (reversible per task)${preview}`;
   return (
-    <div className="group/proj relative mt-1">
+    <div className="group/proj relative mt-1 flex items-center">
       <button
         type="button"
-        data-project={row.name}
+        data-project-disclosure={row.name}
         aria-expanded={row.expanded}
         aria-label={`${row.expanded ? "Collapse" : "Expand"} project ${row.name}`}
         onClick={() => onToggle(row.name)}
-        className="flex h-7 w-full items-center gap-2 rounded-md pl-1 pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="grid size-5 shrink-0 place-items-center rounded text-muted-foreground/40 transition-colors hover:bg-secondary/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <ChevronRight
           aria-hidden
-          className={cn(
-            "size-3 shrink-0 text-muted-foreground/40 transition-transform",
-            row.expanded && "rotate-90",
-          )}
+          className={cn("size-3 shrink-0 transition-transform", row.expanded && "rotate-90")}
         />
+      </button>
+      <button
+        type="button"
+        data-project={row.name}
+        aria-label={`Open project ${row.name}`}
+        onClick={() => onOpenProject(row.name)}
+        className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md pl-1 pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
         <span
           aria-hidden
           className="grid size-[18px] shrink-0 place-items-center rounded-[5px] bg-primary/15 text-[10px] font-bold uppercase leading-none text-primary"
@@ -139,15 +161,6 @@ export function ProjectRow({
           {row.count}
         </span>
       </button>
-      <button
-        type="button"
-        aria-label={`Open ${row.name} in Projects`}
-        title="Open in Projects"
-        onClick={() => onOpenProject(row.name)}
-        className="pointer-events-none absolute right-1 top-1/2 grid size-[22px] -translate-y-1/2 place-items-center rounded text-muted-foreground/70 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/proj:pointer-events-auto group-hover/proj:opacity-100"
-      >
-        <ArrowUpRight className="size-3.5" />
-      </button>
       {settle && (
         <button
           type="button"
@@ -158,7 +171,7 @@ export function ProjectRow({
           onMouseLeave={() => onSettleHover?.(false)}
           onFocus={() => onSettleHover?.(true)}
           onBlur={() => onSettleHover?.(false)}
-          className="pointer-events-none absolute right-[30px] top-1/2 grid size-[22px] -translate-y-1/2 place-items-center rounded text-muted-foreground/70 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/proj:pointer-events-auto group-hover/proj:opacity-100"
+          className="pointer-events-none absolute right-1 top-1/2 grid size-[22px] -translate-y-1/2 place-items-center rounded text-muted-foreground/70 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/proj:pointer-events-auto group-hover/proj:opacity-100"
         >
           <CheckCheck className="size-3.5" />
         </button>

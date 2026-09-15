@@ -3,7 +3,7 @@ import { Bot, PanelLeft, Plus, Settings } from "lucide-react";
 import UpdateControl from "@/components/UpdateControl";
 import type { ConnectionState } from "@/daemon";
 import { useUi } from "@/store/ui";
-import type { View } from "@/store/ui";
+import type { GlobalView, View } from "@/store/ui";
 
 import { ConnectionDot } from "./ConnectionDot";
 import { NAV } from "./nav";
@@ -26,9 +26,9 @@ export function CollapsedRail({
   connection: ConnectionState;
   connectionError: string | null;
   agentUpdates: number;
-  navCount: (id: View) => number;
+  navCount: (id: GlobalView) => number;
   onToggleCollapsed: () => void;
-  onSelectView: (view: View) => void;
+  onSelectView: (view: GlobalView) => void;
   onNewTask: () => void;
   onOpenSettings: () => void;
 }) {

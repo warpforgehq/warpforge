@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { DEFAULT_BACKLOG_PARAMS } from "@/components/backlog/types";
+import { DEFAULT_INBOX_FILTERS } from "@/lib/inboxFilters";
 
 import {
   clampSidebarWidth,
@@ -246,11 +247,36 @@ describe("task workspace surface state", () => {
   });
 
   it("leaves a persisted view alone when it is still reachable", async () => {
-    localStorage.setItem("wf-ui", JSON.stringify({ state: { view: "projects" }, version: 2 }));
+    localStorage.setItem("wf-ui", JSON.stringify({ state: { view: "inbox" }, version: 2 }));
 
     await useUi.persist.rehydrate();
 
-    expect(useUi.getState().view).toBe("projects");
+    expect(useUi.getState().view).toBe("inbox");
+  });
+
+  it("turns the removed Projects route into the project subject it was showing", async () => {
+    localStorage.setItem(
+      "wf-ui",
+      JSON.stringify({ state: { selectedProjectId: "warpforge", view: "projects" }, version: 4 }),
+    );
+
+    await useUi.persist.rehydrate();
+
+    expect(useUi.getState().view).toBe("project");
+    expect(useUi.getState().selectedProjectId).toBe("warpforge");
+  });
+
+  it("lands on Mission Control when the removed Projects route had no selection", async () => {
+    // With no nav item left to re-enter, `view: "project"` with a null
+    // selection would show whichever project happens to be first.
+    localStorage.setItem(
+      "wf-ui",
+      JSON.stringify({ state: { selectedProjectId: null, view: "projects" }, version: 4 }),
+    );
+
+    await useUi.persist.rehydrate();
+
+    expect(useUi.getState().view).toBe("control");
   });
 
   it("migrates version 3 glass settings onto the new defaults", async () => {
@@ -259,7 +285,6 @@ describe("task workspace surface state", () => {
       JSON.stringify({
         state: {
           bodyGlass: true,
-          inboxListCollapsed: true,
           pullFilesPanelCollapsed: true,
           sidebarOpacity: 0.3,
         },
@@ -274,10 +299,7 @@ describe("task workspace surface state", () => {
   });
 
   it("leaves a persisted sidebarOpacity alone once it already clears the new floor", async () => {
-    localStorage.setItem(
-      "wf-ui",
-      JSON.stringify({ state: { sidebarOpacity: 0.75 }, version: 3 }),
-    );
+    localStorage.setItem("wf-ui", JSON.stringify({ state: { sidebarOpacity: 0.75 }, version: 3 }));
 
     await useUi.persist.rehydrate();
 
@@ -285,36 +307,59 @@ describe("task workspace surface state", () => {
   });
 });
 
-describe("narrow-window layout defaults", () => {
-  it("does not persist inboxListCollapsed or pullFilesPanelCollapsed across reload", () => {
-    localStorage.clear();
-    useUi.setState({ inboxListCollapsed: true, pullFilesPanelCollapsed: true });
-
-    const persisted = JSON.parse(localStorage.getItem("wf-ui") ?? "{}") as {
-      state?: { inboxListCollapsed?: unknown; pullFilesPanelCollapsed?: unknown };
-    };
-
-    expect(persisted.state?.inboxListCollapsed).toBeUndefined();
-    expect(persisted.state?.pullFilesPanelCollapsed).toBeUndefined();
+describe("rail layout defaults", () => {
+  // Runs before anything in this file touches the flag: the point is the value
+  // the store is created with, which used to be a one-time window-width read.
+  it("opens the changed-files rail instead of guessing from the window width", () => {
+    expect(useUi.getState().pullFilesPanelCollapsed).toBe(false);
   });
 
-  it("drops stale inboxListCollapsed/pullFilesPanelCollapsed from a pre-v4 migration", async () => {
-    localStorage.setItem(
-      "wf-ui",
-      JSON.stringify({
-        state: { inboxListCollapsed: true, pullFilesPanelCollapsed: true },
-        version: 3,
-      }),
-    );
+  it("does not persist pullFilesPanelCollapsed across reload", () => {
+    localStorage.clear();
+    useUi.setState({ pullFilesPanelCollapsed: true });
 
+    const persisted = JSON.parse(localStorage.getItem("wf-ui") ?? "{}") as {
+      state?: { pullFilesPanelCollapsed?: unknown };
+    };
+
+    // Re-derived from the room the rail actually has, so a stored value would
+    // only fight the measurement.
+    expect(persisted.state?.pullFilesPanelCollapsed).toBeUndefined();
+  });
+});
+
+describe("inbox selection and filters", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useUi.setState({ inboxFilters: DEFAULT_INBOX_FILTERS, inboxSelectedKey: null });
+  });
+
+  it("holds the reviewed pull request outside the components that show it", () => {
+    useUi.getState().setInboxSelectedKey("owner/repo#482");
+    expect(useUi.getState().inboxSelectedKey).toBe("owner/repo#482");
+  });
+
+  it("does not persist the selected pull request across reload", () => {
+    useUi.getState().setInboxSelectedKey("owner/repo#482");
+
+    const persisted = JSON.parse(localStorage.getItem("wf-ui") ?? "{}") as {
+      state?: { inboxSelectedKey?: unknown };
+    };
+    expect(persisted.state?.inboxSelectedKey).toBeUndefined();
+  });
+
+  it("remembers the inbox filters, but not the search term", async () => {
+    useUi.getState().setInboxFilters({ assignedToMe: true, search: "races", state: "all" });
+
+    const stored = localStorage.getItem("wf-ui");
+    useUi.setState({ inboxFilters: DEFAULT_INBOX_FILTERS });
+    if (stored) localStorage.setItem("wf-ui", stored);
     await useUi.persist.rehydrate();
 
-    // Re-derived from the current window width at store creation, not the
-    // stale persisted value from a previous, possibly wider, session.
-    const persisted = JSON.parse(localStorage.getItem("wf-ui") ?? "{}") as {
-      state?: { inboxListCollapsed?: unknown; pullFilesPanelCollapsed?: unknown };
-    };
-    expect(persisted.state?.inboxListCollapsed).toBeUndefined();
-    expect(persisted.state?.pullFilesPanelCollapsed).toBeUndefined();
+    expect(useUi.getState().inboxFilters).toEqual({
+      assignedToMe: true,
+      search: "",
+      state: "all",
+    });
   });
 });

@@ -40,6 +40,7 @@ interface Props {
 export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject }: Props) {
   const selectedProjectId = useUi((state) => state.selectedProjectId);
   const openProject = useUi((state) => state.openProject);
+  const setView = useUi((state) => state.setView);
   const [removeProject, setRemoveProject] = useState<string | null>(null);
   const [backlogOpen, setBacklogOpen] = useState(false);
   const [openItem, setOpenItem] = useState<WorkItem | null>(null);
@@ -174,10 +175,20 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
     disposeTerminalWorkspace(removeProject);
     clearProjectState(removeProject);
     setRemoveProject(null);
-    if (selectedProjectId === removeProject) {
-      openProject(remainingProjects[0]?.name ?? "");
-    }
-  }, [clearProjectState, openProject, removeProject, selectedProjectId, snapshot.projects]);
+    if (selectedProjectId !== removeProject) return;
+    const next = remainingProjects[0]?.name;
+    // Nothing left to be the subject of this view, and no nav item to fall
+    // back to: the app has to leave the project page entirely.
+    if (next) openProject(next);
+    else setView("control");
+  }, [
+    clearProjectState,
+    openProject,
+    removeProject,
+    selectedProjectId,
+    setView,
+    snapshot.projects,
+  ]);
 
   if (!project) {
     return (

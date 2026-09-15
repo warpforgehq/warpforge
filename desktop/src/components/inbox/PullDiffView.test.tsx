@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -334,5 +334,56 @@ describe("PullDiffView", () => {
     const rail = screen.getByTitle("src/a.ts");
     await user.click(rail);
     expect(screen.getByText("@@ -1,2 +1,2 @@")).toBeInTheDocument();
+  });
+
+  it("ticks the file being read off with `v`", () => {
+    renderView();
+    fireEvent.keyDown(window, { key: "v" });
+    expect(screen.getByText("1/1 viewed")).toBeInTheDocument();
+  });
+
+  it("steps past the files already ticked off with `}`", () => {
+    // The forty-file motion: `]` walks every file, `}` only the ones left.
+    const twoFiles: PullRequestDiff = {
+      additions: 2,
+      deletions: 2,
+      files: [
+        { path: "src/a.ts", additions: 1, deletions: 1 },
+        { path: "src/b.ts", additions: 1, deletions: 1 },
+        { path: "src/c.ts", additions: 1, deletions: 1 },
+      ],
+      patch: [
+        "diff --git a/src/a.ts b/src/a.ts",
+        "--- a/src/a.ts",
+        "+++ b/src/a.ts",
+        "@@ -1,2 +1,2 @@",
+        " kept",
+        "-old a",
+        "+new a",
+        "diff --git a/src/b.ts b/src/b.ts",
+        "--- a/src/b.ts",
+        "+++ b/src/b.ts",
+        "@@ -1,2 +1,2 @@",
+        " kept",
+        "-old b",
+        "+new b",
+        "diff --git a/src/c.ts b/src/c.ts",
+        "--- a/src/c.ts",
+        "+++ b/src/c.ts",
+        "@@ -1,2 +1,2 @@",
+        " kept",
+        "-old c",
+        "+new c",
+      ].join("\n"),
+      truncated: false,
+    };
+    const blocks = parseUnifiedPatch(twoFiles.patch);
+    setPullFileViewed(pullViewedKey(pr), "src/b.ts", fingerprintPatchFile(blocks[1]), true);
+    renderView({ diff: twoFiles });
+
+    fireEvent.keyDown(window, { key: "}" });
+
+    expect(screen.getByTitle("src/c.ts")).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTitle("src/a.ts")).not.toHaveAttribute("aria-current");
   });
 });

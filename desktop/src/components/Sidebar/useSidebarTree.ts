@@ -8,7 +8,7 @@ import { buildAttentionQueue } from "@/lib/attentionRail";
 import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
 import { boardTasks } from "@/lib/taskOrigin";
 import { useUi } from "@/store/ui";
-import type { View } from "@/store/ui";
+import type { GlobalView } from "@/store/ui";
 
 import {
   ancestorIds,
@@ -27,6 +27,7 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   const setPinnedTaskIds = useUi((store) => store.setPinnedTaskIds);
   const attentionTargetId = useUi((store) => store.attentionTargetId);
   const attentionTargetNonce = useUi((store) => store.attentionTargetNonce);
+  const selectedProject = useUi((store) => store.selectedProjectId);
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(() => new Set());
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(() => new Set());
   const [expandedShelves, setExpandedShelves] = useState<Set<string>>(() => new Set());
@@ -63,7 +64,6 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   // Only the collapsed rail needs this count; expanded renders AgentUpdateBanner,
   // which reads the same cached query.
   const agentUpdates = useAgentUpdatesCount();
-  const openProject = openTaskId ? (taskById.get(openTaskId)?.project ?? null) : null;
 
   const forceVisibleTaskIds = useMemo(
     () => new Set([openTaskId, attentionTargetId].filter((id): id is string => id !== null)),
@@ -119,9 +119,9 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
         forceVisibleTaskIds,
         forest: taskGroupIndex.forest,
         nowSec,
-        openProject,
         projectOrder: names,
         queue,
+        selectedProject,
         tasks,
       }),
     [
@@ -131,8 +131,8 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
       forceVisibleTaskIds,
       names,
       nowSec,
-      openProject,
       queue,
+      selectedProject,
       taskGroupIndex.forest,
       tasks,
     ],
@@ -215,15 +215,8 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   );
 
   const navCount = useCallback(
-    (id: View) =>
-      id === "control"
-        ? blockingCount
-        : id === "projects"
-          ? names.length
-          : id === "inbox"
-            ? inboxUnseen
-            : 0,
-    [blockingCount, inboxUnseen, names.length],
+    (id: GlobalView) => (id === "control" ? blockingCount : id === "inbox" ? inboxUnseen : 0),
+    [blockingCount, inboxUnseen],
   );
 
   return {
@@ -233,6 +226,7 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     navCount,
     nowSec,
     pinned,
+    projectNames: names,
     rows,
     scrollRef,
     setDeletingShelf,

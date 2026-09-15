@@ -54,9 +54,9 @@ function build(tasks: TaskInfo[], overrides: Partial<Parameters<typeof buildSide
     forceVisibleTaskIds: new Set(),
     forest: buildTaskForest(tasks),
     nowSec: NOW,
-    openProject: null,
     projectOrder: ["warpforge"],
     queue: [],
+    selectedProject: null,
     tasks,
     ...overrides,
   });
@@ -339,6 +339,18 @@ describe("buildSidebarRows", () => {
     expect(noProjects[noProjects.length - 1]).toMatchObject({ label: "No projects yet" });
     const emptyProject = build([]).filter((row) => row.kind === "empty");
     expect(emptyProject[emptyProject.length - 1]).toMatchObject({ label: "No tasks yet" });
+  });
+
+  it("marks the project the app is on, not the one the open task belongs to", () => {
+    const rows = build([task("a")], {
+      projectOrder: ["warpforge", "website"],
+      selectedProject: "website",
+    });
+    const projects = rows.filter((row) => row.kind === "project");
+    expect(projects.map((row) => [row.name, row.selected])).toEqual([
+      ["warpforge", false],
+      ["website", true],
+    ]);
   });
 
   it("counts live tasks only, so archive cannot inflate a project", () => {

@@ -96,7 +96,7 @@ describe("InboxPane: viewed end to end", () => {
   it("the user's path: open PR, Code tab, tick Viewed, file folds, counter moves", async () => {
     const user = userEvent.setup();
     renderPane();
-    await screen.findByText("Add widget");
+    await screen.findAllByText("Add widget");
     await user.click(screen.getByRole("tab", { name: "Diff" }));
     await screen.findByText("0/2 viewed");
     expect(screen.getByText("new a")).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe("InboxPane: viewed end to end", () => {
   it("ticking from the rail folds the file and moves the counter", async () => {
     const user = userEvent.setup();
     renderPane();
-    await screen.findByText("Add widget");
+    await screen.findAllByText("Add widget");
     await user.click(screen.getByRole("tab", { name: "Diff" }));
     await screen.findByText("0/2 viewed");
 

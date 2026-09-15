@@ -25,7 +25,13 @@ import { daemon } from "@/daemon";
 import { useAgentUpdates } from "@/hooks/useAgentUpdates";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { HAS_NATIVE_GLASS, IS_MAC } from "@/lib/platform";
-import { SIDEBAR_WIDTH_DEFAULT, SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN, useUi } from "@/store/ui";
+import {
+  type GlobalView,
+  SIDEBAR_WIDTH_DEFAULT,
+  SIDEBAR_WIDTH_MAX,
+  SIDEBAR_WIDTH_MIN,
+  useUi,
+} from "@/store/ui";
 
 import { useDaemonEvents } from "./hooks/useDaemonEvents";
 import { useFindInFilesShortcut } from "./hooks/useFindInFilesShortcut";
@@ -200,7 +206,7 @@ export default function App() {
     setOpenTaskId(id);
   };
 
-  const handleSelectView = (nextView: typeof view) => {
+  const handleSelectView = (nextView: GlobalView) => {
     setNewTaskOpen(false);
     setView(nextView);
   };
@@ -294,6 +300,7 @@ export default function App() {
     onOpenTask: handleOpenTask,
     onSelectView: handleSelectView,
     onOpenProject: handleOpenProject,
+    onAddProject: () => setAddProjectOpen(true),
     onToggleCollapsed: toggleSidebarCollapsed,
     openTaskId,
     view,
@@ -348,22 +355,23 @@ export default function App() {
                 onOpenTask={setOpenTaskId}
                 onOpenPush={() => setPushOpen(true)}
               />
-            ) : view === "control" ? (
-              <LiveMissionControl onOpenTask={setOpenTaskId} onNewTask={startNewTask} />
-            ) : view === "inbox" ? (
-              <InboxView
-                projects={projectNames}
-                onSendToAgent={(project, prompt) => startNewTask(project, prompt)}
-              />
-            ) : view === "automations" ? (
-              <Automations snapshot={snapshot} onOpenTask={setOpenTaskId} />
-            ) : (
+            ) : view === "project" ? (
               <Projects
                 snapshot={snapshot}
                 onOpenTask={setOpenTaskId}
                 onNewTask={startNewTask}
                 onAddProject={() => setAddProjectOpen(true)}
               />
+            ) : view === "inbox" ? (
+              <InboxView
+                projects={projectNames}
+                onSendToAgent={(project, prompt) => startNewTask(project, prompt)}
+                listInSidebar={showPersistent}
+              />
+            ) : view === "automations" ? (
+              <Automations snapshot={snapshot} onOpenTask={setOpenTaskId} />
+            ) : (
+              <LiveMissionControl onOpenTask={setOpenTaskId} onNewTask={startNewTask} />
             )}
           </Suspense>
         </ErrorBoundary>

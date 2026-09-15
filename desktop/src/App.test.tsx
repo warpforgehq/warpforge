@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
@@ -50,6 +50,12 @@ vi.mock("./views/MissionControl", () => ({
 }));
 vi.mock("./views/Projects", () => ({
   default: vi.fn<() => React.ReactNode>(() => <div data-testid="projects" />),
+}));
+vi.mock("./views/InboxView", () => ({
+  default: vi.fn<() => React.ReactNode>(() => <div data-testid="inbox" />),
+}));
+vi.mock("./views/Automations", () => ({
+  default: vi.fn<() => React.ReactNode>(() => <div data-testid="automations" />),
 }));
 vi.mock("./views/TaskDetail", () => ({
   default: vi.fn<() => React.ReactNode>(() => <div data-testid="task-detail" />),
@@ -107,6 +113,7 @@ beforeEach(() => {
     sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
     view: "control",
     openTaskId: null,
+    selectedProjectId: null,
   });
   vi.clearAllMocks();
   setWide(true);
@@ -233,6 +240,36 @@ describe("Responsive behavior", () => {
     rerender(<App />);
 
     expect(screen.queryByRole("button", { name: "Close sessions rail" })).not.toBeInTheDocument();
+  });
+});
+
+describe("App view branches", () => {
+  it("renders the project page for the project subject", async () => {
+    useUi.setState({ selectedProjectId: "warpforge", view: "project" });
+
+    render(<App />);
+
+    expect(
+      await screen.findByTestId("projects", undefined, { timeout: 5_000 }),
+    ).toBeInTheDocument();
+  });
+
+  it("gives every global view its own branch", async () => {
+    useUi.setState({ view: "inbox" });
+    const { rerender } = render(<App />);
+    expect(await screen.findByTestId("inbox", undefined, { timeout: 5_000 })).toBeInTheDocument();
+
+    act(() => useUi.setState({ view: "automations" }));
+    rerender(<App />);
+    expect(
+      await screen.findByTestId("automations", undefined, { timeout: 5_000 }),
+    ).toBeInTheDocument();
+
+    act(() => useUi.setState({ view: "control" }));
+    rerender(<App />);
+    expect(
+      await screen.findByTestId("mission-control", undefined, { timeout: 5_000 }),
+    ).toBeInTheDocument();
   });
 });
 

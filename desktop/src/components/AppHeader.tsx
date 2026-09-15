@@ -15,13 +15,12 @@ import {
 import { daemon } from "@/daemon";
 import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
 import type { TaskInfo } from "@/protocol";
-import { useUi, type View } from "@/store/ui";
+import { useUi, type GlobalView, type View } from "@/store/ui";
 
-const VIEW_LABEL: Record<View, string> = {
+const VIEW_LABEL: Record<GlobalView, string> = {
   automations: "Automations",
   control: "Mission Control",
   inbox: "Inbox",
-  projects: "Projects",
 };
 
 interface AppHeaderProps {
@@ -54,9 +53,9 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
   const openProject = useUi((s) => s.openProject);
   const pinnedTaskIds = useUi((s) => s.pinnedTaskIds);
   const setPinnedTaskIds = useUi((s) => s.setPinnedTaskIds);
-  const isProjects = view === "projects" && !openTask;
+  const isProject = view === "project" && !openTask;
   const crumbProject =
-    isProjects && snapshot.projects.length > 0
+    isProject && snapshot.projects.length > 0
       ? (snapshot.projects.find((p) => p.name === selectedProjectId) ?? snapshot.projects[0])
       : null;
   const taskGroupIndex = useMemo(() => buildTaskGroupIndex(snapshot.tasks), [snapshot.tasks]);
@@ -83,12 +82,8 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
         </span>
         {openTask ? (
           <TaskTitleEditor task={openTask} />
-        ) : isProjects ? (
+        ) : view === "project" ? (
           <>
-            <span className="text-xs">Projects</span>
-            <span aria-hidden className="text-xs text-muted-foreground/60">
-              /
-            </span>
             {crumbProject && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
