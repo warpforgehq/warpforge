@@ -51,4 +51,12 @@ describe("EditorSkeleton", () => {
     const rows = container.querySelectorAll('[data-testid="editor-skeleton"] > div');
     expect(rows.length).toBeLessThanOrEqual(8);
   });
+
+  it("stops at its last capped line instead of stretching over dead space", () => {
+    render(<EditorSkeleton maxLines={8} />);
+
+    const block = screen.getByTestId("editor-skeleton");
+    expect(block).not.toHaveClass("h-full");
+    expect(block).toHaveClass("h-fit");
+  });
 });

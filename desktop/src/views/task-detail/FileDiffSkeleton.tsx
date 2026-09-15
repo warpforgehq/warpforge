@@ -1,3 +1,4 @@
+import { SkeletonBar, SKELETON_LINE_BAR_PX } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import type { FileDiff } from "../../protocol";
@@ -7,9 +8,12 @@ import type { FileDiff } from "../../protocol";
  * `MergeDiff` / `UnifiedDiff` header (36px, same borders and fill) and the
  * measured 20px diff rows, so the swap is a fill rather than a layout change.
  *
- * Every width comes from the file's index and the row's index — never
- * `Math.random()` — so screenshots and tests are stable. One opacity pulse per
- * block, and the block is only mounted when its row is virtualized in.
+ * A row is the diff's own three columns — a 40px number gutter, the 12px sign
+ * lane, then the text — so every content bar starts on one x and the tinted
+ * ones are that same column, tinted. Every width comes from the file's index
+ * and the row's index, never `Math.random()`, so screenshots and tests are
+ * stable. One opacity pulse per block, and the block is only mounted when its
+ * row is virtualized in.
  */
 
 /** Path-bar width, percent. Deterministic per file index, 45–65%. */
@@ -21,12 +25,18 @@ const LINE_KINDS = ["ctx", "add", "ctx", "ctx", "del", "ctx", "add", "ctx", "add
 
 const ROW_PX = 20;
 const HEADER_PX = 36;
-const MAX_LINES = 10;
-const MIN_LINES = 6;
+/** Roughly a viewport of rows. A 10k-line file reserves 200k pixels, and the
+ *  height past this is drawn by one striped element instead of 10k nodes. */
+const MAX_ROWS = 24;
 
 function lineWidth(index: number, row: number): number {
   return 38 + ((index * 13 + row * 17) % 44);
 }
+
+/** Text lines at the diff's own pitch, fading out — what the rows past
+ *  `MAX_ROWS` would have looked like, for the cost of one element. */
+const TAIL_STRIPES = `repeating-linear-gradient(to bottom, hsl(var(--muted-foreground) / 0.1) 6px, hsl(var(--muted-foreground) / 0.1) ${SKELETON_LINE_BAR_PX + 6}px, transparent ${SKELETON_LINE_BAR_PX + 6}px, transparent ${ROW_PX}px)`;
+const TAIL_FADE = "linear-gradient(to bottom, black, transparent)";
 
 export function FileDiffSkeleton({
   file,
@@ -39,12 +49,11 @@ export function FileDiffSkeleton({
   height: number;
   index: number;
 }) {
-  // Match the estimator's line count (its floor is eight lines), capped so a
-  // 10k-line file does not draw a 10k-row skeleton. The remainder is a faint
-  // tail, which keeps the measured height equal to the estimate.
-  const estimatedLines = Math.ceil((height - HEADER_PX) / ROW_PX);
-  const lines = Math.min(MAX_LINES, Math.max(MIN_LINES, estimatedLines));
-  const tail = Math.max(0, height - HEADER_PX - lines * ROW_PX);
+  // Rows fill the slot the estimate reserved: drawing fewer left a dead gap
+  // under every file block, which is what made a loading diff read as broken.
+  const fits = Math.max(1, Math.floor((height - HEADER_PX) / ROW_PX));
+  const rows = Math.min(MAX_ROWS, fits);
+  const tail = Math.max(0, height - HEADER_PX - rows * ROW_PX);
   const pathWidth = PATH_WIDTHS[index % PATH_WIDTHS.length];
 
   return (
@@ -68,26 +77,55 @@ export function FileDiffSkeleton({
           <span className="h-5 w-12 rounded bg-muted-foreground/10" />
         </span>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col py-2">
-        {Array.from({ length: lines }, (_, row) => {
+      <div className="flex min-h-0 flex-1 flex-col">
+        {Array.from({ length: rows }, (_, row) => {
           const kind = LINE_KINDS[row % LINE_KINDS.length];
           return (
-            <div key={row} className="flex h-5 shrink-0 items-center gap-2 px-3">
-              <span className="ml-auto h-2.5 w-4 shrink-0 rounded-sm bg-muted-foreground/10" />
-              <span
-                className={cn(
-                  "h-2.5 rounded-sm",
-                  kind === "add" && "bg-ok/15",
-                  kind === "del" && "bg-destructive/15",
-                  kind === "ctx" && "bg-muted-foreground/10",
+            <div
+              key={row}
+              data-testid="file-skeleton-row"
+              data-kind={kind}
+              className={cn(
+                "flex h-5 shrink-0 items-center",
+                kind === "add" && "bg-ok/5",
+                kind === "del" && "bg-destructive/5",
+              )}
+            >
+              <span className="flex w-10 shrink-0 justify-end pr-1.5">
+                <SkeletonBar h={SKELETON_LINE_BAR_PX} className="w-3.5" />
+              </span>
+              <span className="flex w-3 shrink-0 justify-center">
+                {kind !== "ctx" && (
+                  <SkeletonBar
+                    h={SKELETON_LINE_BAR_PX}
+                    className={cn("w-1.5", kind === "add" ? "bg-ok/25" : "bg-destructive/25")}
+                  />
                 )}
-                style={{ width: `${lineWidth(index, row)}%` }}
-              />
+              </span>
+              <span data-lane="text" className="flex min-w-0 flex-1 items-center pr-3">
+                <SkeletonBar
+                  h={SKELETON_LINE_BAR_PX}
+                  w={lineWidth(index, row)}
+                  className={cn(
+                    kind === "add" && "bg-ok/15",
+                    kind === "del" && "bg-destructive/15",
+                  )}
+                />
+              </span>
             </div>
           );
         })}
         {tail > 0 && (
-          <div className="min-h-0 flex-1 bg-gradient-to-b from-secondary/20 to-transparent" />
+          <div
+            aria-hidden
+            data-testid="file-skeleton-tail"
+            className="ml-[52px] mr-3 min-h-0 flex-1"
+            style={{
+              backgroundImage: TAIL_STRIPES,
+              maskImage: TAIL_FADE,
+              WebkitMaskImage: TAIL_FADE,
+            }}
+          />
         )}
       </div>
     </div>

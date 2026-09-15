@@ -29,7 +29,54 @@ describe("TranscriptSkeleton", () => {
     expect(block.className).toContain("justify-end");
     expect(block.className).toContain("px-2");
     expect(block.className).toContain("text-sm");
-    expect(screen.getAllByTestId("transcript-skeleton-block")).toHaveLength(4);
+    // The list's own footer height, so the last block sits where the last
+    // message will.
+    expect(block.className).toContain("pb-14");
+    expect(screen.getAllByTestId("transcript-skeleton-block")).toHaveLength(5);
+  });
+
+  it("reads as a conversation: own messages inset right, agent prose full measure", () => {
+    render(<TranscriptSkeleton />);
+    const blocks = screen.getAllByTestId("transcript-skeleton-block");
+    const own = blocks.filter((block) => block.dataset.kind === "user");
+    const agent = blocks.filter((block) => block.dataset.kind === "agent");
+    const work = blocks.filter((block) => block.dataset.kind === "work");
+
+    expect(own).toHaveLength(2);
+    expect(agent).toHaveLength(2);
+    expect(work).toHaveLength(1);
+
+    for (const block of own) {
+      expect(block.className).toContain("ml-auto");
+      expect(block.className).toContain("max-w-[90%]");
+      // `StreamLine`'s own-message card, so the real one lands on this shape.
+      expect(block.firstElementChild!.className).toContain("bg-primary/10");
+      expect(block.firstElementChild!.className).toContain("rounded-md");
+    }
+    for (const block of agent) {
+      expect(block.className).toContain("w-full");
+      expect(block.className).not.toContain("ml-auto");
+    }
+  });
+
+  it("gives every prose line the chat's 24px line box and 2–4 line paragraphs", () => {
+    render(<TranscriptSkeleton />);
+    const blocks = screen.getAllByTestId("transcript-skeleton-block");
+
+    const lines = blocks.flatMap((block) =>
+      [...block.querySelectorAll("span")].filter((node) => node.style.height === "24px"),
+    );
+    expect(lines.length).toBeGreaterThan(0);
+
+    const paragraphs = blocks
+      .filter((block) => block.dataset.kind === "agent")
+      .flatMap((block) => [...block.children]);
+    for (const paragraph of paragraphs) {
+      expect(paragraph.children.length).toBeGreaterThanOrEqual(2);
+      expect(paragraph.children.length).toBeLessThanOrEqual(4);
+    }
+    // Paragraphs after the first carry the typeset flow gap.
+    expect(paragraphs.filter((p) => p.className.includes("mt-3"))).toHaveLength(1);
   });
 
   it("is identical on every render, so the swap does not repaint a different shape", () => {

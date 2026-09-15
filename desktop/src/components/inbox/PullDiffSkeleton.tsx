@@ -14,7 +14,9 @@ import { ROW_HEIGHT_PX } from "./PullDiffHunk";
 const FILE_COUNT = 3;
 const HEADER_PX = 36;
 const MIN_LINES = 6;
-const MAX_LINES = 10;
+/** `FileDiffSkeleton`'s own row cap: past this it draws a fading tail instead
+ *  of rows, so asking for more here buys nodes and no shape. */
+const MAX_LINES = 24;
 
 export function PullDiffSkeleton({
   files,

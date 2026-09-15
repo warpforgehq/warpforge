@@ -16,12 +16,7 @@ export function SettingsListSkeleton({
   "data-testid"?: string;
 }) {
   return (
-    <SkeletonBlock
-      role="status"
-      aria-label={label}
-      data-testid={testId}
-      className="flex flex-col"
-    >
+    <SkeletonBlock role="status" aria-label={label} data-testid={testId} className="flex flex-col">
       {Array.from({ length: rows }, (_, row) => (
         <div
           key={row}
@@ -31,9 +26,10 @@ export function SettingsListSkeleton({
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <SkeletonBar className="size-4 shrink-0" />
             <SkeletonBar h={12} className="w-28 shrink-0" tone="primary" />
-            <SkeletonBar h={10} className="w-16 shrink-0" />
+            {/* The version badge is a pill in both panels, so it reads as one. */}
+            <SkeletonBar className="h-[18px] w-16 shrink-0 rounded-full" />
           </div>
-          <SkeletonBar className="h-7 w-16 shrink-0" />
+          <SkeletonBar className="h-7 w-16 shrink-0 rounded" />
         </div>
       ))}
     </SkeletonBlock>

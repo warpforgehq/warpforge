@@ -11,11 +11,28 @@ export const SKELETON_PULSE =
   "animate-pulse [--animate-pulse:pulse_1.4s_ease-in-out_infinite] motion-reduce:animate-none";
 
 /**
- * Deterministic 38–82 percent width. Never `Math.random()`, so screenshots and
- * snapshots are stable across renders.
+ * Height of a bar standing in for one line of text. A 20px code row and a 24px
+ * prose row both leave it air, so a column of them reads as text rather than as
+ * stacked blocks.
  */
-export function skeletonWidth(seed: number, index: number): number {
-  return 38 + ((seed * 13 + index * 17) % 44);
+export const SKELETON_LINE_BAR_PX = 8;
+
+/**
+ * Deterministic percent width. Never `Math.random()`, so screenshots and
+ * snapshots are stable across renders.
+ *
+ * Narrow lanes pass their own band rather than clamping the default one:
+ * `Math.min(40, skeletonWidth(i, 0))` collapses most rows onto the cap, which
+ * is how a list of bars ends up looking machine-cut.
+ *
+ * @param seed Row, block or file index — what makes one lane differ from the next.
+ * @param index Position within that row, so bars in one row are not all equal.
+ * @param min Lower bound of the band, percent.
+ * @param max Upper bound of the band, percent, exclusive.
+ * @returns A width in percent, inside `[min, max)`.
+ */
+export function skeletonWidth(seed: number, index: number, min = 38, max = 82): number {
+  return min + ((seed * 13 + index * 17) % (max - min));
 }
 
 /** The pulse owner. Emits `aria-busy`; never nest two of these. */

@@ -36,4 +36,25 @@ describe("ChangesRailSkeleton", () => {
     const rows = block.querySelectorAll('[style*="height: 28px"]');
     expect(rows).toHaveLength(8);
   });
+
+  it("reserves the tab strip and the staged-count bar the rail mounts with", () => {
+    const { container } = render(<ChangesRailSkeleton />);
+
+    const block = container.querySelector('[data-testid="changes-rail-skeleton"]')!;
+    // Tab strip, pane header, staged-count bar, tree.
+    expect(block.children).toHaveLength(4);
+    expect(block.children[0].className).toContain("pt-1");
+    expect(block.children[0].children).toHaveLength(3);
+    expect(block.children[2].className).toContain("h-8");
+    expect(block.children[2].className).toContain("bg-secondary/55");
+  });
+
+  it("indents the tree the way FileTreeRow does, so paths do not all start at one x", () => {
+    render(<ChangesRailSkeleton />);
+
+    const rows = screen.getAllByTestId("changes-rail-skeleton-row") as HTMLElement[];
+    const indents = rows.map((row) => row.style.paddingLeft);
+    expect(indents[0]).toBe("8px");
+    expect(new Set(indents).size).toBeGreaterThan(1);
+  });
 });

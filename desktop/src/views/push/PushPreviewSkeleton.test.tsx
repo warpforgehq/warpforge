@@ -16,15 +16,20 @@ describe("PushPreviewSkeleton", () => {
     expect(block.className).toContain("motion-reduce:animate-none");
   });
 
-  it("fills the spinner's min-h-40 slot with three commit rows at 28px", () => {
+  it("fills the spinner's min-h-40 slot with CommitRow's own two-line shape", () => {
     render(<PushPreviewSkeleton />);
     const block = screen.getByTestId("push-preview-skeleton");
     const rows = screen.getAllByTestId("push-preview-skeleton-row");
 
     expect(block.className).toContain("min-h-40");
+    // The scroller around this already pads; a second p-2 double-indented it.
+    expect(block.className).not.toContain("p-2");
     expect(rows).toHaveLength(3);
     for (const row of rows) {
-      expect(row.className).toContain("h-7");
+      expect(row.className).toContain("px-3");
+      expect(row.className).toContain("py-2");
+      // Subject line and meta line, as the real row carries.
+      expect(row.lastElementChild!.children).toHaveLength(2);
     }
   });
 

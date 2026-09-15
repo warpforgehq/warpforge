@@ -21,7 +21,8 @@ export function PullOverviewSkeleton({ variant }: { variant: "description" | "ac
         className="flex flex-col"
       >
         {Array.from({ length: DESCRIPTION_LINES }, (_, line) => (
-          <div key={line} className="flex h-5 items-center">
+          // `leading-7`: the description renders at the comfortable density.
+          <div key={line} className="flex h-7 items-center">
             <SkeletonBar h={10} w={line === DESCRIPTION_LINES - 1 ? 35 : skeletonWidth(0, line)} />
           </div>
         ))}
@@ -56,10 +57,10 @@ export function PullOverviewSkeleton({ variant }: { variant: "description" | "ac
                 <SkeletonBar h={10} className="ml-auto w-10" />
               </div>
               <div className="flex flex-col">
-                <div className="flex h-5 items-center">
+                <div className="flex h-6 items-center">
                   <SkeletonBar h={10} w={skeletonWidth(card, 0)} />
                 </div>
-                <div className="flex h-5 items-center">
+                <div className="flex h-6 items-center">
                   <SkeletonBar h={10} w={skeletonWidth(card, 1)} />
                 </div>
               </div>

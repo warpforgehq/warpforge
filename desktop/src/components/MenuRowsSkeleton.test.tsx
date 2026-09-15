@@ -26,6 +26,18 @@ describe("MenuRowsSkeleton", () => {
     }
   });
 
+  it("keeps the name lane inside its band without cutting rows to one width", () => {
+    render(<MenuRowsSkeleton rows={8} />);
+    const widths = screen
+      .getAllByTestId("menu-rows-skeleton-row")
+      .map((row) => (row.children[1] as HTMLElement).style.width);
+
+    expect(new Set(widths).size).toBeGreaterThan(4);
+    for (const width of widths) {
+      expect(Number.parseInt(width, 10)).toBeLessThan(55);
+    }
+  });
+
   it("is identical on every render, so screenshots and tests are stable", () => {
     const { container, rerender } = render(<MenuRowsSkeleton />);
     const first = container.innerHTML;

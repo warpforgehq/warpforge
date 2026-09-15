@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 
-import { SkeletonBar, SkeletonBlock, skeletonWidth } from "@/components/ui/skeleton";
+import {
+  SkeletonBar,
+  SkeletonBlock,
+  SKELETON_LINE_BAR_PX,
+  skeletonWidth,
+} from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import { ROW_HEIGHT_PX } from "../../components/inbox/PullDiffHunk";
@@ -15,8 +20,6 @@ import { ROW_HEIGHT_PX } from "../../components/inbox/PullDiffHunk";
 
 const INDENT_STEPS = [0, 0, 2, 4, 4, 2, 0, 2, 4, 0] as const;
 const FALLBACK_LINES = 12;
-/** Bar height: a text line, not a block. The 20px row leaves it air. */
-const BAR_PX = 6;
 
 export function EditorSkeleton({
   height,
@@ -48,21 +51,27 @@ export function EditorSkeleton({
     return () => observer.disconnect();
   }, [height]);
 
-  const lines = Math.min(
-    maxLines,
-    height === undefined ? measuredLines : Math.max(1, Math.floor(height / ROW_HEIGHT_PX)),
-  );
+  const wanted =
+    height === undefined ? measuredLines : Math.max(1, Math.floor(height / ROW_HEIGHT_PX));
+  const lines = Math.min(maxLines, wanted);
+  // A capped block stops at its last line instead of stretching: the preview
+  // panes are taller than eight lines, and the leftover read as dead space
+  // inside the skeleton rather than as room the file has not filled.
+  const capped = lines < wanted;
 
   return (
     <div
       ref={ref}
-      className={cn("h-full min-h-0", className)}
+      className={cn(capped ? "min-h-0" : "h-full min-h-0", className)}
       style={height === undefined ? undefined : { height }}
     >
       <SkeletonBlock
         aria-label={ariaLabel}
         data-testid="editor-skeleton"
-        className="flex h-full min-h-0 flex-col overflow-hidden font-mono"
+        className={cn(
+          "flex min-h-0 flex-col overflow-hidden font-mono",
+          capped ? "h-fit" : "h-full",
+        )}
       >
         {Array.from({ length: lines }, (_, line) => {
           const indent = INDENT_STEPS[line % INDENT_STEPS.length];
@@ -73,13 +82,13 @@ export function EditorSkeleton({
               style={{ height: ROW_HEIGHT_PX }}
             >
               <span className="flex w-10 shrink-0 justify-end">
-                <SkeletonBar h={BAR_PX} className="w-3" />
+                <SkeletonBar h={SKELETON_LINE_BAR_PX} className="w-3" />
               </span>
               <span
                 className="flex h-full min-w-0 flex-1 items-center"
                 style={{ paddingLeft: indent * 8 }}
               >
-                <SkeletonBar h={BAR_PX} w={skeletonWidth(line, indent)} />
+                <SkeletonBar h={SKELETON_LINE_BAR_PX} w={skeletonWidth(line, indent)} />
               </span>
             </div>
           );

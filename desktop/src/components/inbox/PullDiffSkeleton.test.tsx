@@ -29,13 +29,22 @@ describe("PullDiffSkeleton", () => {
     expect(screen.getAllByTestId("file-skeleton")[0].style.height).toBe("156px");
   });
 
-  it("sizes a known file from its changed-line count, capped at ten rows", () => {
+  it("sizes a known file from its changed-line count, capped at the row cap", () => {
     render(<PullDiffSkeleton files={files} mode="unified" />);
     const blocks = screen.getAllByTestId("file-skeleton");
     // A one-line file stays on the six-line floor.
     expect(blocks[0].style.height).toBe("156px");
-    // A forty-two-line file is capped at ten rows.
-    expect(blocks[1].style.height).toBe("236px");
+    // A forty-two-line file is capped at twenty-four rows.
+    expect(blocks[1].style.height).toBe("516px");
+  });
+
+  it("fills each block it reserved, so no gap opens between two files", () => {
+    render(<PullDiffSkeleton files={files} mode="unified" />);
+    const blocks = screen.getAllByTestId("file-skeleton");
+
+    expect(blocks[0].querySelectorAll('[data-testid="file-skeleton-row"]')).toHaveLength(6);
+    expect(blocks[1].querySelectorAll('[data-testid="file-skeleton-row"]')).toHaveLength(24);
+    expect(screen.queryAllByTestId("file-skeleton-tail")).toHaveLength(0);
   });
 
   it("is identical on every render, so screenshots and tests are stable", () => {

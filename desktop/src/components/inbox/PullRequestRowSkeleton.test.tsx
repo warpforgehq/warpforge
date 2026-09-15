@@ -47,10 +47,29 @@ describe("PullRequestRowSkeleton", () => {
     expect(meta.querySelector('[data-lane="status"]')).not.toBeNull();
   });
 
+  it("varies the repo lane instead of collapsing every row onto one width", () => {
+    render(<PullRequestRowSkeleton />);
+    const widths = screen
+      .getAllByTestId("pull-request-skeleton-row")
+      .map((row) => (row.firstElementChild!.children[1] as HTMLElement).style.width);
+
+    expect(new Set(widths).size).toBeGreaterThan(4);
+  });
+
+  it("gives the title line the real row's 16px box", () => {
+    render(<PullRequestRowSkeleton />);
+    const title = screen.getAllByTestId("pull-request-skeleton-row")[0].lastElementChild!;
+
+    expect(title.className).toContain("h-4");
+    expect(title.className).toContain("leading-4");
+  });
+
   it("is identical on every render, so screenshots and tests are stable", () => {
     const { container, rerender } = render(<PullRequestRowSkeleton />);
     const first = container.querySelector('[data-testid="pull-request-skeleton"]')!.outerHTML;
-    const firstRows = container.querySelectorAll('[data-testid="pull-request-skeleton-row"]').length;
+    const firstRows = container.querySelectorAll(
+      '[data-testid="pull-request-skeleton-row"]',
+    ).length;
 
     rerender(<PullRequestRowSkeleton />);
     const second = container.querySelector('[data-testid="pull-request-skeleton"]')!.outerHTML;

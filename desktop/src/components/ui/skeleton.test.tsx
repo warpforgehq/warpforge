@@ -18,6 +18,17 @@ describe("skeletonWidth", () => {
   it("changes with the index, so a list of bars does not read as one block", () => {
     expect(skeletonWidth(0, 0)).not.toBe(skeletonWidth(0, 1));
   });
+
+  it("stays inside a narrow band without collapsing rows onto its cap", () => {
+    const widths = [0, 1, 2, 3, 4, 5, 6, 7].map((row) => skeletonWidth(row, 0, 18, 40));
+
+    for (const width of widths) {
+      expect(width).toBeGreaterThanOrEqual(18);
+      expect(width).toBeLessThan(40);
+    }
+    // What `Math.min(40, skeletonWidth(...))` used to produce was one width.
+    expect(new Set(widths).size).toBeGreaterThan(4);
+  });
 });
 
 describe("SkeletonBlock", () => {

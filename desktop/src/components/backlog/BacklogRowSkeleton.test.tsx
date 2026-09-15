@@ -11,7 +11,9 @@ describe("BacklogRowSkeleton", () => {
     expect(screen.getAllByTestId("backlog-skeleton-row")).toHaveLength(10);
     expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
     expect(container.querySelectorAll(".animate-pulse")).toHaveLength(1);
-    expect(screen.getByTestId("backlog-skeleton").className).toContain("motion-reduce:animate-none");
+    expect(screen.getByTestId("backlog-skeleton").className).toContain(
+      "motion-reduce:animate-none",
+    );
   });
 
   it("stands in for the next page with a single row", () => {
@@ -32,6 +34,21 @@ describe("BacklogRowSkeleton", () => {
     expect(body.className).toContain("h-full");
     expect(body.className).toContain("pl-3");
     expect(body.className).toContain("gap-3");
+  });
+
+  it("reserves every column BacklogRow shows, at its width and breakpoint", () => {
+    render(<BacklogRowSkeleton />);
+    const body = screen.getAllByTestId("backlog-skeleton-row")[0].firstElementChild!;
+    const lanes = [...body.children].map((lane) => lane.className);
+
+    expect(lanes.some((c) => c.includes("w-[7.5rem]") && c.includes("sm:block"))).toBe(true);
+    expect(lanes.some((c) => c.includes("w-16") && c.includes("lg:block"))).toBe(true);
+    expect(lanes.some((c) => c.includes("w-32") && c.includes("xl:block"))).toBe(true);
+    expect(lanes.some((c) => c.includes("w-28") && c.includes("md:block"))).toBe(true);
+    // The hover-action zone the real row keeps reserved.
+    expect(screen.getAllByTestId("backlog-skeleton-row")[0].lastElementChild!.className).toContain(
+      "w-[4.5rem]",
+    );
   });
 
   it("is identical on every render, so screenshots and tests are stable", () => {
