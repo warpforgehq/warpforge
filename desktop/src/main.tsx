@@ -60,7 +60,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         toastOptions={{
           classNames: {
             toast:
-              "!rounded-xl !border-border !bg-popover !p-4 !text-xs !text-popover-foreground !shadow-2xl data-[styled=false]:!border-0 data-[styled=false]:!bg-transparent data-[styled=false]:!p-0 data-[styled=false]:!shadow-none",
+              "!rounded-xl !border-border !bg-popover !p-4 !text-[13px] !text-popover-foreground !shadow-2xl data-[styled=false]:!border-0 data-[styled=false]:!bg-transparent data-[styled=false]:!p-0 data-[styled=false]:!shadow-none",
             description: "!text-muted-foreground",
             closeButton:
               "!border-border !bg-secondary !text-secondary-foreground hover:!bg-accent hover:!text-accent-foreground",

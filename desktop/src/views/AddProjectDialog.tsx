@@ -78,7 +78,11 @@ export default function AddProjectDialog({ open, onOpenChange, onAdded }: Props)
       // The range rides along with the add request as this machine's starting
       // ("sticky") assignment. It is not a local override: a `ports.range`
       // the team later declares in the project's config outranks it normally.
-      const added = (await daemon.addProject(path.trim(), name.trim() || undefined, portRange.trim() || undefined)) as {
+      const added = (await daemon.addProject(
+        path.trim(),
+        name.trim() || undefined,
+        portRange.trim() || undefined,
+      )) as {
         name?: string;
       };
       const projectName = added?.name ?? name.trim();
@@ -117,7 +121,7 @@ export default function AddProjectDialog({ open, onOpenChange, onAdded }: Props)
           <div>
             <label
               htmlFor="project-path"
-              className="mb-1 block text-xs font-medium text-muted-foreground"
+              className="mb-1 block text-[13px] font-medium text-muted-foreground"
             >
               Folder path
             </label>
@@ -145,7 +149,7 @@ export default function AddProjectDialog({ open, onOpenChange, onAdded }: Props)
           <div>
             <label
               htmlFor="project-name"
-              className="mb-1 block text-xs font-medium text-muted-foreground"
+              className="mb-1 block text-[13px] font-medium text-muted-foreground"
             >
               Name (optional)
             </label>
@@ -170,7 +174,7 @@ export default function AddProjectDialog({ open, onOpenChange, onAdded }: Props)
           <div>
             <label
               htmlFor="project-port-range"
-              className="mb-1 block text-xs font-medium text-muted-foreground"
+              className="mb-1 block text-[13px] font-medium text-muted-foreground"
             >
               Port range (optional)
             </label>
@@ -194,7 +198,7 @@ export default function AddProjectDialog({ open, onOpenChange, onAdded }: Props)
             </p>
           </div>
 
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-[13px] text-destructive">{error}</p>}
         </div>
 
         <DialogFooter>

@@ -149,7 +149,7 @@ function StateLine({ state, draft }: { state: string; draft: boolean }) {
   return (
     <span
       className={cn(
-        "flex items-center gap-1.5 text-sm",
+        "flex items-center gap-1.5 text-[13px]",
         closed ? "text-muted-foreground" : draft ? "text-muted-foreground" : "text-ok",
       )}
     >

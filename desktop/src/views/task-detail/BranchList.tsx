@@ -110,11 +110,11 @@ function BranchSection({
 }) {
   return (
     <div>
-      <div className="px-2 pb-1 pt-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+      <div className="px-2 pb-1 pt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
         {title}
       </div>
       {rows.length === 0 ? (
-        <p className="px-2 py-1 text-xs text-muted-foreground">None</p>
+        <p className="px-2 py-1 text-[13px] text-muted-foreground">None</p>
       ) : (
         <div className="relative">
           {rows.map((row) => {
@@ -125,7 +125,7 @@ function BranchSection({
                   type="button"
                   key={row.key}
                   onClick={() => onToggleFolder(row.fKey!)}
-                  className="flex w-full items-center gap-1 rounded px-1 py-1 text-left text-xs text-muted-foreground hover:bg-accent/50"
+                  className="flex w-full items-center gap-1 rounded px-1 py-1 text-left text-[13px] text-muted-foreground hover:bg-accent/50"
                   style={{ paddingLeft: `${row.depth * 12 + 6}px` }}
                 >
                   <ChevronRight
@@ -175,7 +175,7 @@ function BranchRowLine({
     <div className="relative">
       <div
         className={cn(
-          "group/row flex w-full items-center gap-1 rounded px-1 py-1 text-left text-xs",
+          "group/row flex w-full items-center gap-1 rounded px-1 py-1 text-left text-[13px]",
           isCurrent ? "bg-accent text-foreground" : "hover:bg-accent/50",
         )}
         style={{ paddingLeft: `${row.depth * 12 + 6}px` }}

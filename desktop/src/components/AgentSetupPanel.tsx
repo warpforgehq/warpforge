@@ -270,7 +270,7 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                 {on && <div className="size-2 rounded-sm bg-primary-foreground" />}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                <div className="flex min-w-0 items-center gap-2 text-[15px] font-medium">
                   <AgentLogo agentId={agent.id} displayName={agent.displayName} />
                   <span className="truncate">{agent.displayName}</span>
                   {agent.installed ? (

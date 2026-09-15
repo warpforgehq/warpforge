@@ -78,8 +78,8 @@ export function RemoveProjectDialog({ project, liveCounts, onCancel, onConfirm }
         <div className="min-h-10">
           {hasLiveResources && (
             <div className="rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2">
-              <p className="text-xs font-medium text-foreground">Live resources to stop</p>
-              <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
+              <p className="text-[13px] font-medium text-foreground">Live resources to stop</p>
+              <ul className="mt-1 list-inside list-disc text-[13px] text-muted-foreground">
                 {liveCounts.services > 0 && (
                   <li>{countLabel(liveCounts.services, "running or starting service")}</li>
                 )}
@@ -93,7 +93,7 @@ export function RemoveProjectDialog({ project, liveCounts, onCancel, onConfirm }
             </div>
           )}
           {error && (
-            <p role="alert" className="mt-2 text-xs text-destructive">
+            <p role="alert" className="mt-2 text-[13px] text-destructive">
               {actorRejectedRemoval
                 ? `Removal failed: ${error}. The project remains registered, though some resources may already have stopped. Its terminal workspace and Runtime visibility were kept. Retry or cancel.`
                 : `Removal status is uncertain: ${error}. The local terminal workspace and Runtime visibility were kept. Refresh daemon state before retrying.`}

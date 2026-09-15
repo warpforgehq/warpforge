@@ -340,7 +340,7 @@ export function NewWorkItemDrawer({ open, onOpenChange, project }: NewWorkItemDr
               <span aria-hidden className="shrink-0 text-muted-foreground/50">
                 ›
               </span>
-              <DialogTitle className="truncate text-sm font-medium text-foreground">
+              <DialogTitle className="truncate text-[15px] font-medium text-foreground">
                 New work item
               </DialogTitle>
             </div>

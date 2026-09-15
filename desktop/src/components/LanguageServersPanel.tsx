@@ -95,7 +95,7 @@ export default function LanguageServersPanel() {
             className="flex items-center justify-between gap-4 border-t border-rule px-4 py-2.5 first:border-t-0"
           >
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 text-sm font-medium">
+              <div className="flex items-center gap-2 text-[15px] font-medium">
                 {server.language}
                 {server.installed ? (
                   behind ? (

@@ -20,10 +20,8 @@ const SOURCE_LABELS: Record<NonNullable<ProjectInfo["portRangeSource"]>, string>
 const SOURCE_TITLES: Record<NonNullable<ProjectInfo["portRangeSource"]>, string> = {
   auto: "Chosen automatically from free ports on this machine.",
   sticky: "Kept from an earlier automatic assignment on this machine.",
-  declared:
-    "Declared in the project's shared config — every machine on the team uses this range.",
-  localOverride:
-    "Overridden on this machine only. The team's shared config is unchanged.",
+  declared: "Declared in the project's shared config — every machine on the team uses this range.",
+  localOverride: "Overridden on this machine only. The team's shared config is unchanged.",
 };
 
 export function PortRangeSourceChip({ project }: { project: ProjectInfo }) {
@@ -33,7 +31,7 @@ export function PortRangeSourceChip({ project }: { project: ProjectInfo }) {
   return (
     <span
       className={cn(
-        "rounded border px-1 py-px text-[10px] whitespace-nowrap",
+        "rounded border px-1 py-px text-[11px] whitespace-nowrap",
         isLocal
           ? "border-amber-500/40 text-amber-600 dark:text-amber-400"
           : "border-border text-muted-foreground",
@@ -98,9 +96,9 @@ export function PortRangeConflictCard({ project }: { project: ProjectInfo }) {
             Port range conflict with {project.portRangeConflict}
           </p>
           <p className="mt-0.5 text-muted-foreground">
-            Both projects use ports {project.portRange[0]}–{project.portRange[1]}, so this
-            project's services will not start. Set a different range below — this affects only
-            this machine and does not change the team's shared config.
+            Both projects use ports {project.portRange[0]}–{project.portRange[1]}, so this project's
+            services will not start. Set a different range below — this affects only this machine
+            and does not change the team's shared config.
           </p>
         </div>
       </div>
@@ -114,7 +112,7 @@ export function PortRangeConflictCard({ project }: { project: ProjectInfo }) {
           }}
           placeholder="e.g. 4300-4399"
           aria-label={`New local port range for ${project.name}`}
-          className="h-8 w-40 rounded-md border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-ring"
+          className="h-8 w-40 rounded-md border bg-background px-2 text-[13px] outline-none focus:ring-2 focus:ring-ring"
           onKeyDown={(e) => {
             if (e.key === "Enter") void apply();
           }}
@@ -136,12 +134,12 @@ export function PortRangeConflictCard({ project }: { project: ProjectInfo }) {
         )}
       </div>
       {validationError && (
-        <p className="text-xs text-destructive" role="status">
+        <p className="text-[13px] text-destructive" role="status">
           {validationError}
         </p>
       )}
       {daemonError && (
-        <p className="text-xs text-destructive" role="status">
+        <p className="text-[13px] text-destructive" role="status">
           The daemon rejected this range: {daemonError}
         </p>
       )}

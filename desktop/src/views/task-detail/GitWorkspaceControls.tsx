@@ -70,7 +70,7 @@ function GitMenuAction({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-accent/50 disabled:opacity-50"
+      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] hover:bg-accent/50 disabled:opacity-50"
     >
       <span className="text-muted-foreground">{icon}</span>
       <span className="flex-1">{label}</span>
@@ -389,7 +389,7 @@ export function GitWorkspaceControls({
                     if (event.key === "Escape") setOpen(false);
                   }}
                   placeholder="Search branches and actions"
-                  className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                  className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
                 />
               </label>
             </div>
@@ -448,7 +448,7 @@ export function GitWorkspaceControls({
               {(showNewBranch || showSync || showCommit || showPush) && (
                 <div className="mx-1 border-t" />
               )}
-              <div className="px-2 pb-1 pt-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+              <div className="px-2 pb-1 pt-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
                 Branches
               </div>
               {!branchesQuery.isLoading && (
@@ -464,7 +464,9 @@ export function GitWorkspaceControls({
                 />
               )}
               {!branchesQuery.isLoading && searching && searchRows.length === 0 && (
-                <p className="px-2 py-1.5 text-xs text-muted-foreground">No matching branches</p>
+                <p className="px-2 py-1.5 text-[13px] text-muted-foreground">
+                  No matching branches
+                </p>
               )}
             </div>
           </div>

@@ -82,7 +82,7 @@ export function TaskTitleEditor({ task }: { task: TaskInfo }) {
           <input
             ref={inputRef}
             aria-label="Task title"
-            className="w-full min-w-0 border-0 bg-transparent p-0 text-sm font-medium text-foreground outline-none ring-0 focus:outline-none focus:ring-0"
+            className="w-full min-w-0 border-0 bg-transparent p-0 text-[13px] font-medium text-foreground outline-none ring-0 focus:outline-none focus:ring-0"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onBlur={() => void save()}

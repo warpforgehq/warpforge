@@ -126,12 +126,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
     const next = new Set(taskSession.diff.collapsedFiles);
     if (next.has(path)) next.delete(path);
     else next.add(path);
-    setTaskDiff(
-      task.id,
-      task.project,
-      { collapsedFiles: [...next] },
-      task.worktree ?? undefined,
-    );
+    setTaskDiff(task.id, task.project, { collapsedFiles: [...next] }, task.worktree ?? undefined);
   };
 
   // The conversation fills and the workspace is sized, not the other way
@@ -289,12 +284,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
               diffWorkspaceRef={diffWorkspaceRef}
               initialScrollTop={taskSession.diff.scrollTop}
               onScrollTopChange={(scrollTop) =>
-                setTaskDiff(
-                  task.id,
-                  task.project,
-                  { scrollTop },
-                  task.worktree ?? undefined,
-                )
+                setTaskDiff(task.id, task.project, { scrollTop }, task.worktree ?? undefined)
               }
               collapsedFiles={collapsedDiffFiles}
               onToggleCollapsed={toggleDiffFileCollapsed}
@@ -339,7 +329,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
           {chatOnRight ? [surfacePane, separator, chatPane] : [chatPane, separator, surfacePane]}
         </PanelGroup>
       </div>
-      <div className="flex h-4 shrink-0 items-center px-1 text-[10px] text-muted-foreground">
+      <div className="flex h-4 shrink-0 items-center px-1 text-[11px] text-muted-foreground">
         <span
           className="flex min-w-0 items-center gap-1"
           title={task.worktree ?? "Runs in the local project workspace"}

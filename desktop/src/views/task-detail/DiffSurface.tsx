@@ -130,7 +130,7 @@ export function DiffSurface({
                   key={v}
                   onClick={() => onSetDiffView(v)}
                   className={cn(
-                    "rounded px-2 py-0.5 text-xs capitalize transition-colors",
+                    "rounded px-2 py-0.5 text-[13px] capitalize transition-colors",
                     diffView === v
                       ? "bg-secondary text-foreground"
                       : "text-muted-foreground hover:text-foreground",

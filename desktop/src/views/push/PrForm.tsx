@@ -38,14 +38,14 @@ export function PrForm({
         <span className="truncate">{prBase.trim() || "default branch"}</span>
       </div>
       {needsPush && (
-        <p className="-mt-2 text-xs text-muted-foreground">
+        <p className="-mt-2 text-[13px] text-muted-foreground">
           {info && info.commits.length > 0
             ? `${info.commits.length} ${info.commits.length === 1 ? "commit" : "commits"} will be pushed to ${info.upstream} first, then the PR is opened.`
             : "The branch will be pushed first, then the PR is opened."}
         </p>
       )}
       <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium text-muted-foreground">Title</span>
+        <span className="text-[13px] font-medium text-muted-foreground">Title</span>
         <input
           value={prTitle}
           onChange={(e) => setPrTitle(e.target.value)}
@@ -54,7 +54,7 @@ export function PrForm({
         />
       </label>
       <label className="flex min-h-0 flex-1 flex-col gap-1.5">
-        <span className="text-xs font-medium text-muted-foreground">Description</span>
+        <span className="text-[13px] font-medium text-muted-foreground">Description</span>
         <div className="relative flex min-h-0 flex-1">
           <textarea
             value={prBody}
@@ -83,7 +83,7 @@ export function PrForm({
         </div>
       </label>
       <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-[13px] font-medium text-muted-foreground">
           Base branch <span className="text-muted-foreground/60">(optional)</span>
         </span>
         <input

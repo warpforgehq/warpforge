@@ -45,7 +45,7 @@ export function WorkflowEventLine({
       <div className="flex min-w-0 items-center gap-2">
         <Icon className="size-4 shrink-0" />
         <span
-          className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground"
+          className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground"
           title={update.title}
         >
           {update.title}

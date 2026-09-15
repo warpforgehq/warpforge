@@ -60,7 +60,7 @@ function Choice({
     >
       <span className="flex items-baseline gap-2">
         <Check className={cn("size-3.5 shrink-0 text-primary", selected ? "" : "opacity-0")} />
-        <span className="flex-1 text-sm font-medium text-foreground">{title}</span>
+        <span className="flex-1 text-[15px] font-medium text-foreground">{title}</span>
         <span className="shrink-0 text-[11px] text-muted-foreground">{cost}</span>
       </span>
       <span className="mt-1 block pl-[1.375rem] text-[13px] text-muted-foreground">{children}</span>

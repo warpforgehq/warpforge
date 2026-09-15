@@ -72,7 +72,7 @@ export function PullCommitPicker({
       <DropdownMenuPortal>
         <DropdownMenuContent align="start" className="w-80">
           <DropdownMenuItem
-            className="gap-2 px-2 py-1.5 text-sm"
+            className="gap-2 px-2 py-1.5 text-[13px]"
             onSelect={() => onRangeChange(null)}
           >
             <span className="flex-1">All commits</span>

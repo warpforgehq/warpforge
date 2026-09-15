@@ -60,7 +60,7 @@ export const ContextUsageIndicator = memo(function ContextUsageIndicator({
         sideOffset={8}
         className="w-72 space-y-3 rounded-lg p-4"
       >
-        <div className="tnum flex items-center justify-between gap-4 text-sm">
+        <div className="tnum flex items-center justify-between gap-4 text-[15px]">
           <span className="font-semibold text-foreground">Context Window</span>
           <span className={cn("shrink-0", tone)}>
             {percentage}% · {compactTokenCount(used)}/{compactTokenCount(size)}

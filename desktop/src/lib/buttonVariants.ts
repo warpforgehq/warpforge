@@ -17,7 +17,7 @@ export const buttonVariants = cva(
         default: "h-8 px-3 py-1",
         icon: "h-8 w-8",
         lg: "h-10 rounded-md px-6",
-        sm: "h-7 rounded px-2 text-xs",
+        sm: "h-7 rounded px-2 text-[13px]",
       },
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",

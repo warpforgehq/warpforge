@@ -30,7 +30,7 @@ export function PushFooter({
 }: PushFooterProps) {
   return (
     <footer className="flex h-[72px] shrink-0 items-center border-t bg-card/50 px-5">
-      <div className="min-w-0 text-xs text-muted-foreground">
+      <div className="min-w-0 text-[13px] text-muted-foreground">
         {info && !info.hasUpstream && info.commits.length > 0 && (
           <span>
             First push will create upstream{" "}
@@ -90,11 +90,13 @@ export function PushFooter({
             <div className="absolute bottom-full right-0 z-20 mb-2 min-w-48 rounded-md border bg-popover p-1 shadow-xl">
               <button
                 type="button"
-                className="w-full rounded px-3 py-2 text-left text-sm hover:bg-accent"
+                className="w-full rounded px-3 py-2 text-left text-[13px] hover:bg-accent"
                 onClick={() => onPush(true)}
               >
                 <span className="block font-medium">Force Push</span>
-                <span className="block text-xs text-muted-foreground">Uses force-with-lease</span>
+                <span className="block text-[11px] text-muted-foreground">
+                  Uses force-with-lease
+                </span>
               </button>
             </div>
           )}

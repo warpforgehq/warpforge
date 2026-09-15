@@ -3,7 +3,6 @@ import { EllipsisVertical, FolderGit2, Pencil, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { SurfaceTab } from "@/components/workspace";
 import { useInboxPulls } from "@/hooks/useInboxUnseen";
 import { boardTasks } from "@/lib/taskOrigin";
@@ -217,7 +217,7 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
               {project.name}
             </h1>
           </div>
-          <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+          <p className="flex items-center gap-1.5 truncate text-[11px] text-muted-foreground">
             <span className="truncate" title={project.path}>
               {project.path}
             </span>

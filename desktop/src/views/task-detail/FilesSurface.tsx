@@ -1,8 +1,8 @@
 import { FileText, PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import { lazy, Suspense } from "react";
 
-import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { PaneHeader } from "@/components/workspace";
 import type { EditorViewState } from "@/lib/sessionStore";
 import { cn } from "@/lib/utils";
@@ -97,7 +97,7 @@ export function FilesSurface({
         leading={
           <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
             {openTabs.length === 0 ? (
-              <span className="px-1 text-xs text-muted-foreground">No file open</span>
+              <span className="px-1 text-[13px] text-muted-foreground">No file open</span>
             ) : (
               openTabs.map((f) => {
                 const name = f.path.split("/").pop() ?? f.path;
@@ -213,6 +213,7 @@ export function FilesSurface({
             rootPath={rootPath}
             onRefresh={onRefresh}
             taskId={taskId}
+            project={project}
             treeState={treeState}
             resetKey={treeResetKey}
           />

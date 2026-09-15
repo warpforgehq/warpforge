@@ -380,7 +380,7 @@ export function PullRequestDetail({
                     disabled={unresolved.length === 0}
                     onSelect={() => sendToAgent("comments")}
                   >
-                    <span className="text-sm">
+                    <span className="text-[13px]">
                       Address review comments
                       {unresolved.length > 0 && (
                         <span className="tnum ml-1.5 text-muted-foreground">
@@ -398,7 +398,7 @@ export function PullRequestDetail({
                     className="flex-col items-start gap-0.5 px-2 py-1.5"
                     onSelect={() => sendToAgent("branch")}
                   >
-                    <span className="text-sm">Work on this branch</span>
+                    <span className="text-[13px]">Work on this branch</span>
                     <span className="text-[11px] text-muted-foreground">
                       Starts a task that picks the change up where it left off
                     </span>

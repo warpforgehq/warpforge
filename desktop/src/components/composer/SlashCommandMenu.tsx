@@ -22,7 +22,7 @@ export function SlashCommandMenu({ commands, menuIndex, onPick, onHover }: Slash
           }}
           onMouseEnter={() => onHover(index)}
           className={cn(
-            "flex w-full flex-col items-start px-3 py-1.5 text-left text-sm",
+            "flex w-full flex-col items-start px-3 py-1.5 text-left text-[13px]",
             index === menuIndex ? "bg-accent" : "hover:bg-accent/50",
           )}
         >

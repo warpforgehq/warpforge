@@ -3,7 +3,7 @@ import type { VariantProps } from "class-variance-authority";
 import * as React from "react";
 
 export const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium transition-colors",
+  "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors",
   {
     defaultVariants: { variant: "default" },
     variants: {

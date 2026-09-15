@@ -54,7 +54,7 @@ export function ProjectList({
 }: ProjectListProps) {
   return (
     <Card className="flex min-h-0 flex-col rounded-md border-border bg-card shadow-none">
-      <div className="flex h-10 items-center gap-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="flex h-10 items-center gap-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         <span>Projects</span>
         <span className="tnum text-[11px] font-normal tracking-normal text-muted-foreground/70">
           {projects.length}
@@ -75,7 +75,7 @@ export function ProjectList({
                 onMouseLeave={onRowMouseLeave}
                 onFocus={() => onRowMouseEnter(p.name)}
                 className={cn(
-                  "group relative flex min-h-10 items-center rounded px-1.5 text-sm transition-colors",
+                  "group relative flex min-h-10 items-center rounded px-1.5 text-[13px] transition-colors",
                   active ? "bg-secondary text-foreground" : "hover:bg-secondary/60",
                 )}
               >
@@ -90,7 +90,7 @@ export function ProjectList({
                   <span className="flex-1 truncate">{p.name}</span>
                   {up > 0 && (
                     <span
-                      className="tnum flex items-center gap-1 text-xs text-ok"
+                      className="tnum flex items-center gap-1 text-[11px] text-ok"
                       aria-label={`${up} running service${up === 1 ? "" : "s"}`}
                     >
                       <Radio className="size-3" />
@@ -99,7 +99,7 @@ export function ProjectList({
                   )}
                   {terminalCount > 0 && (
                     <span
-                      className="tnum flex items-center gap-1 text-xs text-primary"
+                      className="tnum flex items-center gap-1 text-[11px] text-primary"
                       aria-label={`${terminalCount} active terminal${terminalCount === 1 ? "" : "s"}`}
                     >
                       <SquareTerminal className="size-3" />

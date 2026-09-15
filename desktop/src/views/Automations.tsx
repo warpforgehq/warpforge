@@ -140,7 +140,7 @@ export default function Automations({ onOpenTask, snapshot }: Props) {
           <h1 className="truncate text-xl font-semibold leading-none tracking-tight">
             Automations
           </h1>
-          <p className="truncate text-xs text-muted-foreground">
+          <p className="truncate text-[13px] text-muted-foreground">
             Prompts the daemon runs on a schedule. Each run becomes a real task.
           </p>
         </div>
@@ -180,7 +180,7 @@ export default function Automations({ onOpenTask, snapshot }: Props) {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search name or prompt"
-              className="h-8 pl-7 text-xs"
+              className="h-8 pl-7 text-[13px]"
             />
           </div>
           <FilterGroup
@@ -204,7 +204,7 @@ export default function Automations({ onOpenTask, snapshot }: Props) {
             ))}
           </div>
         ) : automationsQuery.error ? (
-          <p className="mt-10 text-center text-xs text-destructive">
+          <p className="mt-10 text-center text-[13px] text-destructive">
             {automationsQuery.error instanceof Error
               ? automationsQuery.error.message
               : "Could not load automations."}

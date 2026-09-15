@@ -83,7 +83,7 @@ function StepRow({
       aria-pressed={selected}
       onClick={() => onSelect(step)}
       className={cn(
-        "flex w-full items-center gap-2 rounded border-l-2 border-transparent bg-secondary/30 px-2 py-1.5 text-left text-xs transition-colors hover:bg-secondary/60",
+        "flex w-full items-center gap-2 rounded border-l-2 border-transparent bg-secondary/30 px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-secondary/60",
         selected && "border-primary bg-secondary/70 text-foreground",
       )}
     >
@@ -257,11 +257,11 @@ export function PipelineSurface({
           />
         ) : (
           <div className="overflow-auto p-4">
-            <div className="text-xs font-semibold text-foreground">
+            <div className="text-[13px] font-semibold text-foreground">
               {run ? run.workflowName : "Orchestration"}
             </div>
             {run && (
-              <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs">
+              <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[13px]">
                 <dt className="text-muted-foreground">Stage</dt>
                 <dd className="text-foreground">{workflowStageLabel(run.stage)}</dd>
                 {run.round > 0 && run.stage !== "done" && run.stage !== "failed" && (
@@ -282,7 +282,7 @@ export function PipelineSurface({
                 )}
               </dl>
             )}
-            <p className="mt-4 text-xs text-muted-foreground">
+            <p className="mt-4 text-[13px] text-muted-foreground">
               Select a stage to watch what its agent is doing.
             </p>
           </div>
