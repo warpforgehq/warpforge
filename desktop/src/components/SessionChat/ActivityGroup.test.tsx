@@ -221,4 +221,72 @@ describe("ActivityGroup", () => {
     expect(onOpenFile).toHaveBeenCalledWith("src/a.ts");
     expect(screen.queryByText("1 test passed")).not.toBeInTheDocument();
   });
+
+  it("keeps a lone step's icon inside the hover and hit area", () => {
+    const single: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        tool_call_id: "x1",
+        title: "npm test",
+        status: "completed",
+        tool_kind: "execute",
+        content: "1 test passed",
+      },
+    ];
+    renderGroup(activityRow(single));
+
+    const toggle = screen.getByRole("button", { name: /show output for npm test/i });
+    const row = toggle.parentElement;
+    expect(row?.className).toContain("hover:bg-accent/40");
+    expect(row?.querySelector("svg.lucide-terminal")).not.toBeNull();
+  });
+
+  it("renders thinking inside a step without a second accordion", async () => {
+    const source: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        tool_call_id: "r1",
+        title: "Read file 'src/a.ts'",
+        status: "completed",
+        tool_kind: "read",
+      },
+      { kind: "agent_thought", text: "Reasoning step\nwith more text" },
+    ];
+    const row = activityRow(source, new Map([["work:tool:r1", true]]));
+    renderGroup(row);
+
+    await userEvent.click(screen.getByText("Reasoning step"));
+
+    expect(screen.getByText(/with more text/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Agent thinking")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^thinking/i })).not.toBeInTheDocument();
+  });
+
+  it("windows a long live group to its newest steps", () => {
+    const source: SessionUpdate[] = Array.from({ length: 199 }, (_, index) =>
+      readStep(`r${index}`),
+    ).concat([
+      {
+        kind: "tool_call",
+        tool_call_id: "live",
+        title: "npm test",
+        status: "in_progress",
+        tool_kind: "execute",
+      },
+    ]);
+    renderGroup(activityRow(source));
+
+    expect(screen.getByText("50 earlier steps")).toBeInTheDocument();
+    expect(document.querySelectorAll(".activity-rail-step")).toHaveLength(151);
+  });
 });
+
+function readStep(id: string): SessionUpdate {
+  return {
+    kind: "tool_call",
+    tool_call_id: id,
+    title: `Read file 'src/${id}.ts'`,
+    status: "completed",
+    tool_kind: "read",
+  };
+}

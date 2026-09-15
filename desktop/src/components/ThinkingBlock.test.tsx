@@ -54,4 +54,12 @@ describe("ThinkingBlock", () => {
     rerender(<ThinkingBlock text="New live reasoning" streaming={false} />);
     await waitFor(() => expect(button).toHaveAttribute("aria-expanded", "false"));
   });
+
+  it("renders embedded as body-only with no second disclosure", () => {
+    render(<ThinkingBlock embedded text="Planning **carefully**" streaming={false} />);
+
+    expect(screen.getByText("carefully").tagName).toBe("STRONG");
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Agent thinking")).toBeInTheDocument();
+  });
 });

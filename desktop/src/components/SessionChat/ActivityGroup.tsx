@@ -3,11 +3,12 @@ import { memo, useContext, useLayoutEffect, useRef } from "react";
 
 import { SKELETON_PULSE } from "@/components/ui/skeleton";
 import type { TranscriptListRow } from "@/lib/sessionStream";
-import { dominantCategory } from "@/lib/transcriptGroups";
+import { dominantCategory, type ActivityItem } from "@/lib/transcriptGroups";
 import { cn } from "@/lib/utils";
 
 import { ActivityGroupRow } from "./ActivityGroupRow";
 import { CategoryIcon } from "./ActivityIcons";
+import { CHAT_LIVE_GROUP_MAX_STEPS } from "./constants";
 import { TranscriptRowContext, type TranscriptRowContextValue } from "./TranscriptRow";
 
 type ActivityRow = Extract<TranscriptListRow, { kind: "activity" }>;
@@ -17,6 +18,33 @@ function useTranscriptContext(): TranscriptRowContextValue {
   if (!shared) throw new Error("Activity group rendered outside its context");
   return shared;
 }
+
+/**
+ * The steps a live group has already finished. A streamed chunk rebuilds every
+ * `ActivityItem` wrapper, so without this the group's whole element list is
+ * reconciled on each token — nine hundred settled steps cost nine dropped
+ * frames. The prefix only re-renders when one of its updates actually changes.
+ */
+const SettledSteps = memo(
+  function SettledSteps({ items, live }: { items: ActivityItem[]; live: boolean }) {
+    return (
+      <>
+        {items.map((item) => (
+          <div key={item.key} className="activity-rail-step">
+            <ActivityGroupRow item={item} bare live={live} />
+          </div>
+        ))}
+      </>
+    );
+  },
+  (previous, next) =>
+    previous.live === next.live &&
+    previous.items.length === next.items.length &&
+    previous.items.every(
+      (item, index) =>
+        item.key === next.items[index].key && item.entry.update === next.items[index].entry.update,
+    ),
+);
 
 /**
  * Keep a live group's body on its newest step. Pin runs in layout before paint
@@ -99,18 +127,18 @@ export const ActivityGroup = memo(function ActivityGroup({ row }: { row: Activit
   );
 
   // A lone step the agent never introduced is not a group: a header repeating
-  // the single row under it says the same thing twice.
+  // the single row under it says the same thing twice. The category icon stays
+  // inside the row so the hover fill and hit area cover it too.
   if (!row.expandable) {
-    const only = row.items[0];
     return (
-      <div className="flex min-w-0 items-start gap-1.5">
-        <CategoryIcon category={dominantCategory(row.items)} className="mt-2" />
-        <div className="min-w-0 flex-1">
-          <ActivityGroupRow item={only} bare live={row.live} />
-        </div>
+      <div className="min-w-0">
+        <ActivityGroupRow item={row.items[0]} bare={false} live={row.live} />
       </div>
     );
   }
+
+  const hiddenSteps = row.live ? Math.max(0, row.items.length - CHAT_LIVE_GROUP_MAX_STEPS) : 0;
+  const visibleItems = hiddenSteps > 0 ? row.items.slice(hiddenSteps) : row.items;
 
   return (
     <div className="flex min-w-0 flex-col">
@@ -154,11 +182,15 @@ export const ActivityGroup = memo(function ActivityGroup({ row }: { row: Activit
           onScroll={onRailScroll}
           className={cn("activity-rail pb-1", row.live && "activity-rail-live")}
         >
-          {row.items.map((item) => (
-            <div key={item.key} className="activity-rail-step">
-              <ActivityGroupRow item={item} bare live={row.live} />
+          {hiddenSteps > 0 ? (
+            <div className="activity-rail-step py-1 text-[12px] text-muted-foreground">
+              {hiddenSteps} earlier {hiddenSteps === 1 ? "step" : "steps"}
             </div>
-          ))}
+          ) : null}
+          <SettledSteps items={visibleItems.slice(0, -1)} live={row.live} />
+          <div className="activity-rail-step">
+            <ActivityGroupRow item={visibleItems[visibleItems.length - 1]} bare live={row.live} />
+          </div>
         </div>
       ) : null}
     </div>

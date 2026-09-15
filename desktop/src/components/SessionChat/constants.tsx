@@ -25,6 +25,14 @@ export const CHAT_ESTIMATED_ROW_PX = 48;
 export const CHAT_ACTIVITY_ROW_PX = 24;
 /** An activity group's summary header. */
 export const CHAT_GROUP_HEADER_PX = 24;
+/**
+ * Steps rendered for a live group. The body is a short window on the newest
+ * work, and mounting thousands of step nodes is a hard stall (measured: a
+ * 3000-step open group took ~1s to mount in jsdom, and its first streamed
+ * chunk another ~100ms). Settled groups render in full when the reader opens
+ * them, because that is a deliberate action rather than the live edge.
+ */
+export const CHAT_LIVE_GROUP_MAX_STEPS = 150;
 export const CHAT_MAINTAIN_SCROLL_AT_END = {
   animated: false,
   on: { dataChange: true, itemLayout: true, layout: true },

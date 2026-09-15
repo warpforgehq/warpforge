@@ -11,6 +11,12 @@ interface ThinkingBlockProps {
   streaming: boolean;
   resolveFilePath?: FileLinkResolver;
   onOpenFile?: (path: string) => void;
+  /**
+   * Render only the reasoning body, with no card and no disclosure of its own.
+   * For callers where the surrounding row is already the accordion (an activity
+   * step), so reading the thought does not take two clicks.
+   */
+  embedded?: boolean;
 }
 
 const MemoizedMarkdown = memo(Markdown);
@@ -25,6 +31,7 @@ export const ThinkingBlock = memo(function ThinkingBlock({
   streaming,
   resolveFilePath,
   onOpenFile,
+  embedded = false,
 }: ThinkingBlockProps) {
   const contentId = useId();
   const [open, setOpen] = useState(streaming);
@@ -39,6 +46,20 @@ export const ThinkingBlock = memo(function ThinkingBlock({
     }
     wasStreaming.current = streaming;
   }, [streaming]);
+
+  if (embedded) {
+    return (
+      <div className="min-w-0" aria-label="Agent thinking">
+        <MemoizedMarkdown
+          className="text-muted-foreground [&_em]:text-foreground/80 [&_strong]:text-foreground/90"
+          resolveFilePath={resolveFilePath}
+          onOpenFile={onOpenFile}
+        >
+          {text}
+        </MemoizedMarkdown>
+      </div>
+    );
+  }
 
   return (
     <section
@@ -95,6 +116,7 @@ function areThinkingPropsEqual(previous: ThinkingBlockProps, next: ThinkingBlock
   return (
     previous.text === next.text &&
     previous.streaming === next.streaming &&
+    previous.embedded === next.embedded &&
     previous.resolveFilePath === next.resolveFilePath &&
     previous.onOpenFile === next.onOpenFile
   );

@@ -232,11 +232,12 @@ function ToolCallStep({
   );
 }
 
-function FileEditStep({ update }: { update: FileEdit }) {
+function FileEditStep({ update, bare }: { update: FileEdit; bare: boolean }) {
   const shared = useTranscriptContext();
   const hasCounts = update.additions !== undefined || update.deletions !== undefined;
   return (
     <div className={STEP}>
+      {!bare && <CategoryIcon category="edit" />}
       <PathChip raw={update.path} />
       {hasCounts ? (
         <Diffstat
@@ -250,7 +251,15 @@ function FileEditStep({ update }: { update: FileEdit }) {
   );
 }
 
-function ThoughtStep({ text, streaming }: { text: string; streaming: boolean }) {
+function ThoughtStep({
+  text,
+  streaming,
+  bare,
+}: {
+  text: string;
+  streaming: boolean;
+  bare: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const shared = useTranscriptContext();
   const firstLine =
@@ -266,12 +275,14 @@ function ThoughtStep({ text, streaming }: { text: string; streaming: boolean }) 
         label={open ? "Hide thinking" : "Show thinking"}
         onToggle={() => setOpen((value) => !value)}
       >
+        {!bare && <CategoryIcon category="think" />}
         <span className="min-w-0 flex-1 truncate text-muted-foreground">{firstLine}</span>
         <ChevronRight className={cn(CHEVRON, open && "rotate-90")} strokeWidth={1.75} />
       </StepRow>
       {open ? (
-        <div className="min-w-0 py-1">
+        <div className="min-w-0 py-1 pl-5">
           <ThinkingBlock
+            embedded
             text={text}
             streaming={streaming}
             resolveFilePath={shared.resolveFilePath}
@@ -283,24 +294,38 @@ function ThoughtStep({ text, streaming }: { text: string; streaming: boolean }) 
   );
 }
 
-export const ActivityGroupRow = memo(function ActivityGroupRow({
-  item,
-  bare = true,
-  live = false,
-}: {
-  item: ActivityItem;
-  bare?: boolean;
-  live?: boolean;
-}) {
-  const update = item.entry.update;
-  switch (update.kind) {
-    case "agent_thought":
-      return <ThoughtStep text={update.text} streaming={live} />;
-    case "file_edit":
-      return <FileEditStep update={update} />;
-    case "tool_call":
-      return <ToolCallStep update={update} bare={bare} category={item.category} />;
-    default:
-      return null;
-  }
-});
+export const ActivityGroupRow = memo(
+  function ActivityGroupRow({
+    item,
+    bare = true,
+    live = false,
+  }: {
+    item: ActivityItem;
+    bare?: boolean;
+    live?: boolean;
+  }) {
+    const update = item.entry.update;
+    switch (update.kind) {
+      case "agent_thought":
+        return <ThoughtStep text={update.text} streaming={live} bare={bare} />;
+      case "file_edit":
+        return <FileEditStep update={update} bare={bare} />;
+      case "tool_call":
+        return <ToolCallStep update={update} bare={bare} category={item.category} />;
+      default:
+        return null;
+    }
+  },
+  /**
+   * A streamed chunk rebuilds every `ActivityItem` wrapper, so a shallow
+   * compare re-renders every step in a long live group on each token. The
+   * coalesced `update` object is only replaced for the row that changed, so
+   * identity is the right equality: unchanged steps bail out of the commit.
+   */
+  (previous, next) =>
+    previous.bare === next.bare &&
+    previous.live === next.live &&
+    previous.item.key === next.item.key &&
+    previous.item.category === next.item.category &&
+    previous.item.entry.update === next.item.entry.update,
+);
