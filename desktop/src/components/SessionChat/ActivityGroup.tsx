@@ -85,15 +85,17 @@ function HeaderDiffstat({
 }) {
   const shared = useTranscriptContext();
   const path = clip.path ? shared.resolveFilePath(clip.path) : null;
+  const { additions, deletions } = clip;
+  if (additions === undefined && deletions === undefined) return null;
   const body = (
     <>
-      <span className="text-ok">+{clip.additions}</span>
-      <span className="text-destructive">−{clip.deletions}</span>
+      <span className="text-ok">+{additions ?? 0}</span>
+      <span className="text-destructive">−{deletions ?? 0}</span>
     </>
   );
   const className =
     "inline-flex shrink-0 items-center gap-1 rounded px-1 py-0.5 text-[12px] tabular-nums";
-  const label = `${clip.additions} lines added, ${clip.deletions} lines deleted`;
+  const label = `${additions ?? 0} lines added, ${deletions ?? 0} lines deleted`;
   if (!path) {
     return (
       <span className={cn(className, "relative z-10")} aria-label={label}>
@@ -153,17 +155,7 @@ export const ActivityGroup = memo(function ActivityGroup({ row }: { row: Activit
           className="absolute inset-0 cursor-pointer rounded focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
         />
         <span className="relative flex size-3.5 shrink-0 items-center justify-center">
-          <CategoryIcon
-            category={dominantCategory(row.items)}
-            className={cn("transition-opacity duration-200", row.open && "opacity-0")}
-          />
-          <ChevronRight
-            className={cn(
-              "absolute size-3.5 text-muted-foreground opacity-0 transition-[transform,opacity] duration-200 group-hover:opacity-100 group-focus-within:opacity-100",
-              row.open && "rotate-90 opacity-100",
-            )}
-            strokeWidth={1.75}
-          />
+          <CategoryIcon category={dominantCategory(row.items)} />
         </span>
         <span
           className={cn(
@@ -175,6 +167,16 @@ export const ActivityGroup = memo(function ActivityGroup({ row }: { row: Activit
           {row.summary.text}
         </span>
         {editClip ? <HeaderDiffstat clip={editClip} /> : null}
+        {/* The toggle lives on the right, where the row's affordances are: the
+            leading icon says what the work was and never swaps to an arrow. */}
+        <ChevronRight
+          aria-hidden
+          className={cn(
+            "pointer-events-none size-3.5 shrink-0 text-muted-foreground opacity-60 transition-transform duration-200 group-hover:opacity-100",
+            row.open && "rotate-90",
+          )}
+          strokeWidth={1.75}
+        />
       </div>
       {row.open ? (
         <div

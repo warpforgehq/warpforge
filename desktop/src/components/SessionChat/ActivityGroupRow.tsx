@@ -92,8 +92,11 @@ function PathChip({ raw }: { raw: string }) {
       <span className="min-w-0 truncate">{label}</span>
     </>
   );
+  // `-ml-1` cancels the chip's own horizontal padding so its icon starts on
+  // the same 8px gutter as a plain step's text: a file step and a command step
+  // must read as the same row, not as one indented behind the other.
   const className =
-    "inline-flex min-w-0 max-w-[60%] items-center gap-1 rounded px-1 py-0.5 font-mono text-[12px]";
+    "inline-flex min-w-0 max-w-[60%] items-center gap-1 -ml-1 rounded px-1 py-0.5 font-mono text-[12px]";
   if (!path) {
     return (
       <span className={cn(className, STEP_CHIP)} title={title}>
