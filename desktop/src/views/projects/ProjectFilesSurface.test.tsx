@@ -3,6 +3,11 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { daemon } from "@/daemon";
+import {
+  getProjectFileRequest,
+  requestProjectFile,
+  resetProjectFileNav,
+} from "@/lib/projectFileNav";
 import { resetPendingForTests, resetRegistryForTests } from "@/lib/sessionStore";
 import { useUi } from "@/store/ui";
 
@@ -10,9 +15,18 @@ import { ProjectFilesSurface } from "./ProjectFilesSurface";
 
 // The editor is CodeMirror; this surface's job is which file reaches it.
 vi.mock("@/components/CodeEditor", () => ({
-  CodeEditor: ({ doc, editable }: { doc: { path: string }; editable: boolean }) => (
+  CodeEditor: ({
+    doc,
+    editable,
+    gotoLocation,
+  }: {
+    doc: { path: string };
+    editable: boolean;
+    gotoLocation?: { line: number; column: number };
+  }) => (
     <div data-testid="editor">
       {doc.path} {editable ? "editable" : "read-only"}
+      {gotoLocation ? ` @${gotoLocation.line}:${gotoLocation.column}` : ""}
     </div>
   ),
 }));
@@ -37,6 +51,7 @@ function renderSurface() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  resetProjectFileNav();
   resetPendingForTests();
   resetRegistryForTests();
   useUi.setState({ filesPanelCollapsed: false });
@@ -118,6 +133,25 @@ describe("ProjectFilesSurface", () => {
     renderSurface();
 
     expect(await screen.findByRole("button", { name: "Close README.md" })).toBeInTheDocument();
+  });
+
+  it("opens a file queued before the surface mounted, at its line", async () => {
+    requestProjectFile({ project: "warpforge", path: "README.md", line: 7, column: 2 });
+
+    renderSurface();
+
+    expect(await screen.findByTestId("editor")).toHaveTextContent("README.md editable @7:2");
+    expect(getProjectFileRequest()).toBeNull();
+  });
+
+  it("leaves a request addressed to another project queued", async () => {
+    requestProjectFile({ project: "other", path: "README.md" });
+
+    renderSurface();
+    await screen.findByTitle("README.md");
+
+    expect(screen.getByText("No file open")).toBeInTheDocument();
+    expect(getProjectFileRequest()).toEqual({ project: "other", path: "README.md" });
   });
 
   it("does not share tabs between projects", async () => {

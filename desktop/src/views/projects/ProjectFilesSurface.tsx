@@ -1,8 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { daemon } from "@/daemon";
 import { useProjectSession } from "@/hooks/useWorkspaceSession";
+import {
+  getProjectFileRequest,
+  subscribeProjectFileNav,
+  takeProjectFileRequest,
+} from "@/lib/projectFileNav";
 import { setProjectEditorView, setProjectFiles } from "@/lib/sessionStore";
 import type { FileDoc } from "@/protocol";
 import { daemonQuery, useProjectFilesQuery } from "@/query";
@@ -70,9 +75,7 @@ export function ProjectFilesSurface({ project, rootPath }: ProjectFilesSurfacePr
         project,
         {
           activePath:
-            open.activePath === path
-              ? (remaining[remaining.length - 1] ?? null)
-              : open.activePath,
+            open.activePath === path ? (remaining[remaining.length - 1] ?? null) : open.activePath,
           tabs: remaining,
         },
         rootPath,
@@ -80,6 +83,17 @@ export function ProjectFilesSurface({ project, rootPath }: ProjectFilesSurfacePr
     },
     [open.activePath, open.tabs, project, rootPath],
   );
+
+  const pendingNav = useSyncExternalStore(subscribeProjectFileNav, getProjectFileRequest);
+  useEffect(() => {
+    if (pendingNav?.project !== project) return;
+    const claimed = takeProjectFileRequest(project);
+    if (!claimed) return;
+    openFile(
+      claimed.path,
+      claimed.line ? { column: claimed.column ?? 1, line: claimed.line } : undefined,
+    );
+  }, [openFile, pendingNav, project]);
 
   const openTabs = useMemo<OpenFileTab[]>(
     () =>
@@ -127,11 +141,7 @@ export function ProjectFilesSurface({ project, rootPath }: ProjectFilesSurfacePr
   const treeState = useMemo(
     () => ({
       expandedDirs: open.expandedDirs,
-      onChange: (next: {
-        expandedDirs: string[];
-        scrollTop: number;
-        scrollLeft: number;
-      }) =>
+      onChange: (next: { expandedDirs: string[]; scrollTop: number; scrollLeft: number }) =>
         setProjectFiles(
           project,
           {

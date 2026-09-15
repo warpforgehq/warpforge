@@ -38,6 +38,7 @@ export default function App() {
   const view = useUi((s) => s.view);
   const setView = useUi((s) => s.setView);
   const openProject = useUi((s) => s.openProject);
+  const selectedProjectId = useUi((s) => s.selectedProjectId);
   const openTaskId = useUi((s) => s.openTaskId);
   const setOpenTaskId = useUi((s) => s.openTask);
   const lastTaskId = useUi((s) => s.lastTaskId);
@@ -93,6 +94,15 @@ export default function App() {
   };
 
   const openTask = snapshot.tasks.find((t) => t.id === openTaskId) ?? null;
+
+  // Resolved the way `Projects` resolves it, fallback included: the palettes
+  // must act on the project actually on screen, not on the stored selection.
+  const projectSubject = useMemo(() => {
+    if (view !== "project") return null;
+    const found =
+      snapshot.projects.find((p) => p.name === selectedProjectId) ?? snapshot.projects[0] ?? null;
+    return found ? { name: found.name, path: found.path } : null;
+  }, [selectedProjectId, snapshot.projects, view]);
 
   const settleFinishedTurns = useCallback((ids: string[]) => {
     for (const id of ids) {
@@ -214,6 +224,7 @@ export default function App() {
               openTaskId={openTask ? openTask.id : null}
               hasOpenTask={!!openTask && !newTaskOpen}
               projects={projectNames}
+              projectSubject={projectSubject}
             />
           </div>
         </div>

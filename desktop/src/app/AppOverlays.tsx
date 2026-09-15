@@ -13,9 +13,9 @@ import {
   getPendingAgentSetup,
   AgentUpdatesHost,
   PrAssistantLifecycleHost,
-  QuickOpenHost,
   SettingsPrefetchHost,
 } from "./hosts";
+import { QuickOpenHost, type ProjectSubject } from "./QuickOpenHost";
 
 const AddProjectDialog = lazy(() => import("../views/AddProjectDialog"));
 const AgentSetupDialog = lazy(() => import("../views/AgentSetupDialog"));
@@ -30,6 +30,8 @@ export interface AppOverlaysProps {
   openTaskId: string | null;
   hasOpenTask: boolean;
   projects: string[];
+  /** The project the content column is showing, when it is showing one. */
+  projectSubject: ProjectSubject | null;
 }
 
 export function AppOverlays({
@@ -39,6 +41,7 @@ export function AppOverlays({
   openTaskId,
   hasOpenTask,
   projects,
+  projectSubject,
 }: AppOverlaysProps) {
   const pendingAgentSetup = useSyncExternalStore(daemon.subscribe, getPendingAgentSetup);
   const pendingQuit = useTauriClose();
@@ -56,7 +59,7 @@ export function AppOverlays({
   return (
     <>
       {pushOpen && <PushDialog open onOpenChange={setPushOpen} task={openTask} />}
-      <QuickOpenHost openTaskId={openTaskId} hasOpenTask={hasOpenTask} />
+      <QuickOpenHost openTaskId={openTaskId} hasOpenTask={hasOpenTask} project={projectSubject} />
       <PrAssistantLifecycleHost projects={projects} />
       <AgentUpdatesHost />
       <SettingsPrefetchHost />
