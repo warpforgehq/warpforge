@@ -2,6 +2,7 @@ import { Group, Panel as MotionPanel, Separator, type AnyPanelProps } from "moti
 import type { Transition } from "motion/react";
 import type { ComponentProps } from "react";
 
+import { EASE_FOLD } from "@/lib/easing";
 import { cn } from "@/lib/utils";
 
 /**
@@ -11,7 +12,7 @@ import { cn } from "@/lib/utils";
  */
 export const PanelGroup = Group;
 
-const FOLD: Transition = { duration: 0.18, ease: [0.32, 0.72, 0, 1] };
+const FOLD: Transition = { duration: 0.18, ease: EASE_FOLD };
 
 /**
  * The library's panel element is a plain block box. Every pane in this app is

@@ -190,7 +190,7 @@ export function SidebarTaskTooltipBody({
 }
 
 const ACTION_BUTTON =
-  "grid size-[22px] shrink-0 place-items-center rounded text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+  "grid size-[22px] shrink-0 place-items-center rounded text-muted-foreground/70 transition-[color,background-color,transform] duration-100 ease-[var(--ease-out)] active:scale-[0.97] hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 function RowActions({
   task,

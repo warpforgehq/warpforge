@@ -14,8 +14,8 @@
           var raw = localStorage.getItem("wf-ui");
           var state = (raw && JSON.parse(raw).state) || {};
           var opacity = typeof state.sidebarOpacity === "number" ? state.sidebarOpacity : 0.85;
-          root.style.setProperty("--sidebar-opacity", String(Math.max(0.15, Math.min(1, opacity))));
-          if (state.bodyGlass !== false) root.classList.add("glass-body");
+          root.style.setProperty("--sidebar-opacity", String(Math.max(0.6, Math.min(1, opacity))));
+          if (state.bodyGlass === true) root.classList.add("glass-body");
           var hasNativeGlass = /Mac|iPhone|iPad|Win/i.test(navigator.platform);
           if (state.transparentWindow && hasNativeGlass) root.classList.add("native-glass");
         } catch (_) {}

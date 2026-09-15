@@ -91,44 +91,16 @@
     opacity: 0;
   }
 }
-@keyframes zoom-in-95 {
+@keyframes scale-in {
   from {
-    transform: scale(0.95);
+    opacity: 0;
+    scale: 0.97;
   }
 }
-@keyframes zoom-out-95 {
+@keyframes scale-out {
   to {
-    transform: scale(0.95);
-  }
-}
-@keyframes zoom-in-100 {
-  from {
-    transform: scale(1);
-  }
-}
-@keyframes zoom-out-100 {
-  to {
-    transform: scale(1);
-  }
-}
-@keyframes slide-in-from-top-2 {
-  from {
-    transform: translateY(-0.5rem);
-  }
-}
-@keyframes slide-in-from-bottom-2 {
-  from {
-    transform: translateY(0.5rem);
-  }
-}
-@keyframes slide-in-from-left-2 {
-  from {
-    transform: translateX(-0.5rem);
-  }
-}
-@keyframes slide-in-from-right-2 {
-  from {
-    transform: translateX(0.5rem);
+    opacity: 0;
+    scale: 0.97;
   }
 }
 @keyframes accordion-down {
@@ -155,31 +127,38 @@
  * DropdownMenu, Tooltip, Dialog), so an unscoped `[data-state]` rule fades
  * every trigger in on open and out on close — reading as a blink on each
  * click, and on every tooltip hover-out. Match popper content only as a direct
- * child of its wrapper, so nested open triggers inside a menu are untouched. */
+ * child of its wrapper, so nested open triggers inside a menu are untouched.
+ *
+ * `scale` animates independently of Radix's own positioning `transform` (the
+ * popper wrapper) and of the dialog's centering `translate`, so it never
+ * fights either one. `data-wf-tooltip` narrows the tooltip's own duration —
+ * it shares the popper wrapper with dropdown/select content but reads faster. */
 
-[data-radix-popper-content-wrapper] > [data-state="open"],
-[role="dialog"][data-state="open"],
+[data-radix-popper-content-wrapper] > [data-state="open"] {
+  transform-origin: var(--radix-popper-transform-origin);
+  animation: scale-in 160ms var(--ease-out);
+}
+[data-radix-popper-content-wrapper] > [data-state="closed"] {
+  transform-origin: var(--radix-popper-transform-origin);
+  animation: scale-out 96ms var(--ease-out);
+}
+[data-wf-tooltip][data-state="open"] {
+  animation-duration: 125ms;
+}
+[data-wf-tooltip][data-state="closed"] {
+  animation-duration: 75ms;
+}
+[role="dialog"][data-state="open"] {
+  animation: scale-in 200ms var(--ease-out);
+}
+[role="dialog"][data-state="closed"] {
+  animation: scale-out 120ms var(--ease-out);
+}
 [data-wf-overlay][data-state="open"] {
-  animation: fade-in 150ms linear;
+  animation: fade-in 200ms var(--ease-out);
 }
-[data-radix-popper-content-wrapper] > [data-state="closed"],
-[role="dialog"][data-state="closed"],
 [data-wf-overlay][data-state="closed"] {
-  animation: fade-out 150ms linear;
-}
-
-/* Dropdown/tooltip specific: directional slide */
-[data-radix-popper-content-wrapper] > [data-side="bottom"] {
-  animation: slide-in-from-top-2 150ms ease-out;
-}
-[data-radix-popper-content-wrapper] > [data-side="left"] {
-  animation: slide-in-from-right-2 150ms ease-out;
-}
-[data-radix-popper-content-wrapper] > [data-side="right"] {
-  animation: slide-in-from-left-2 150ms ease-out;
-}
-[data-radix-popper-content-wrapper] > [data-side="top"] {
-  animation: slide-in-from-bottom-2 150ms ease-out;
+  animation: fade-out 120ms var(--ease-out);
 }
 
 /* ============================================================
@@ -266,6 +245,13 @@
   --info: 172 48% 63%;
 
   --radius: 0.375rem;
+
+  /* Motion curves. Unlayered, so `--ease-out` also shadows Tailwind's theme
+     value and its `ease-out` utility. `--ease-fold` is mirrored as a tuple in
+     lib/easing.ts for framer-motion — keep the two in sync. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-fold: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-move: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ── Typography scale ── */
   /* UI font: general chrome, labels, chat prose. Mono font: code, diffs, editor. */

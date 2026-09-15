@@ -5,6 +5,7 @@ import { DEFAULT_BACKLOG_PARAMS } from "@/components/backlog/types";
 import {
   clampSidebarWidth,
   DEFAULT_TASK_SURFACE,
+  SIDEBAR_OPACITY_MIN,
   SIDEBAR_WIDTH_DEFAULT,
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_MIN,
@@ -250,5 +251,70 @@ describe("task workspace surface state", () => {
     await useUi.persist.rehydrate();
 
     expect(useUi.getState().view).toBe("projects");
+  });
+
+  it("migrates version 3 glass settings onto the new defaults", async () => {
+    localStorage.setItem(
+      "wf-ui",
+      JSON.stringify({
+        state: {
+          bodyGlass: true,
+          inboxListCollapsed: true,
+          pullFilesPanelCollapsed: true,
+          sidebarOpacity: 0.3,
+        },
+        version: 3,
+      }),
+    );
+
+    await useUi.persist.rehydrate();
+
+    expect(useUi.getState().bodyGlass).toBe(false);
+    expect(useUi.getState().sidebarOpacity).toBe(SIDEBAR_OPACITY_MIN);
+  });
+
+  it("leaves a persisted sidebarOpacity alone once it already clears the new floor", async () => {
+    localStorage.setItem(
+      "wf-ui",
+      JSON.stringify({ state: { sidebarOpacity: 0.75 }, version: 3 }),
+    );
+
+    await useUi.persist.rehydrate();
+
+    expect(useUi.getState().sidebarOpacity).toBe(0.75);
+  });
+});
+
+describe("narrow-window layout defaults", () => {
+  it("does not persist inboxListCollapsed or pullFilesPanelCollapsed across reload", () => {
+    localStorage.clear();
+    useUi.setState({ inboxListCollapsed: true, pullFilesPanelCollapsed: true });
+
+    const persisted = JSON.parse(localStorage.getItem("wf-ui") ?? "{}") as {
+      state?: { inboxListCollapsed?: unknown; pullFilesPanelCollapsed?: unknown };
+    };
+
+    expect(persisted.state?.inboxListCollapsed).toBeUndefined();
+    expect(persisted.state?.pullFilesPanelCollapsed).toBeUndefined();
+  });
+
+  it("drops stale inboxListCollapsed/pullFilesPanelCollapsed from a pre-v4 migration", async () => {
+    localStorage.setItem(
+      "wf-ui",
+      JSON.stringify({
+        state: { inboxListCollapsed: true, pullFilesPanelCollapsed: true },
+        version: 3,
+      }),
+    );
+
+    await useUi.persist.rehydrate();
+
+    // Re-derived from the current window width at store creation, not the
+    // stale persisted value from a previous, possibly wider, session.
+    const persisted = JSON.parse(localStorage.getItem("wf-ui") ?? "{}") as {
+      state?: { inboxListCollapsed?: unknown; pullFilesPanelCollapsed?: unknown };
+    };
+    expect(persisted.state?.inboxListCollapsed).toBeUndefined();
+    expect(persisted.state?.pullFilesPanelCollapsed).toBeUndefined();
   });
 });

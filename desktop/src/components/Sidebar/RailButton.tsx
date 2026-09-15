@@ -30,7 +30,7 @@ export function RailButton({
           aria-expanded={ariaExpanded}
           aria-current={active ? "page" : undefined}
           className={cn(
-            "relative grid size-9 place-items-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            "relative grid size-9 place-items-center rounded-md transition-[color,background-color,transform] duration-100 ease-[var(--ease-out)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             active
               ? "bg-accent text-foreground"
               : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
@@ -41,10 +41,12 @@ export function RailButton({
             <span
               aria-hidden
               className={cn(
-                "absolute right-1 top-1 size-1.5 rounded-full",
-                hot ? "bg-warn" : "bg-muted-foreground/50",
+                "tnum absolute bottom-0.5 right-1 text-[10px] leading-none",
+                hot ? "text-warn" : "text-muted-foreground/60",
               )}
-            />
+            >
+              {count}
+            </span>
           )}
         </button>
       </TooltipTrigger>

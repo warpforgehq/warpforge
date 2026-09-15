@@ -52,8 +52,8 @@ const FONT_SIZE_MAX = 24;
 const MONO_FONT_SIZE_MIN = 9;
 const MONO_FONT_SIZE_MAX = 22;
 
-/** Glass tint of the chrome surfaces — 1 is opaque, 0.15 is nearly all desktop. */
-export const SIDEBAR_OPACITY_MIN = 0.15;
+/** Glass tint of the chrome surfaces — 1 is opaque, below this the app is unreadable. */
+export const SIDEBAR_OPACITY_MIN = 0.6;
 export const SIDEBAR_OPACITY_MAX = 1;
 export const SIDEBAR_OPACITY_DEFAULT = 0.85;
 
@@ -232,6 +232,7 @@ interface UiState extends SettingsState {
   setMissionControlTab: (tab: "live" | "needs" | "failed" | "pinned") => void;
   setSidebarWidth: (w: number) => void;
   toggleSidebarCollapsed: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
   toggleFilesPanelCollapsed: () => void;
   toggleRuntimeSidebarCollapsed: () => void;
   toggleDiffPanelCollapsed: () => void;
@@ -295,7 +296,7 @@ export const useUi = create<UiState>()(
       transparentWindow: false,
       sidebarOpacity: SIDEBAR_OPACITY_DEFAULT,
       blurRadius: BLUR_RADIUS_DEFAULT,
-      bodyGlass: true,
+      bodyGlass: false,
       lspEnabled: true,
       settingsPage: "appearance",
 
@@ -386,6 +387,7 @@ export const useUi = create<UiState>()(
       setMissionControlTab: (missionControlTab) => set({ missionControlTab }),
       setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: clampSidebarWidth(sidebarWidth) }),
       toggleSidebarCollapsed: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       toggleFilesPanelCollapsed: () =>
         set((s) => ({ filesPanelCollapsed: !s.filesPanelCollapsed })),
       toggleRuntimeSidebarCollapsed: () =>
@@ -440,7 +442,8 @@ export const useUi = create<UiState>()(
     }),
     {
       name: "wf-ui",
-      version: 3,
+      // Next persisted-shape change must bump this to 5.
+      version: 4,
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
         if (version === 0 && state && "sidebarWidth" in state) {
@@ -456,10 +459,30 @@ export const useUi = create<UiState>()(
         if (version < 3 && state && state.view === "board") {
           state = { ...state, view: "control" };
         }
+        if (version < 4 && state) {
+          // Glass defaults inverted (chrome may be glass, the work surface is
+          // solid) and the opacity floor raised — apply both to existing
+          // installs, not just new ones.
+          const {
+            inboxListCollapsed: _inboxListCollapsed,
+            pullFilesPanelCollapsed: _pullFilesPanelCollapsed,
+            ...rest
+          } = state;
+          state = { ...rest, bodyGlass: false };
+          if (
+            typeof state.sidebarOpacity === "number" &&
+            state.sidebarOpacity < SIDEBAR_OPACITY_MIN
+          ) {
+            state = { ...state, sidebarOpacity: SIDEBAR_OPACITY_MIN };
+          }
+        }
         return state;
       },
       // OpenTaskId is session-only — a reload shouldn't force-open a stale task.
       // activeSurface follows rightPanel: task-scoped, reset by openTask, not persisted.
+      // inboxListCollapsed/pullFilesPanelCollapsed default from window width at
+      // boot — persisting them freezes that one-time read instead of letting it
+      // re-evaluate on the next launch.
       partialize: ({
         openTaskId: _openTaskId,
         openTaskNav: _openTaskNav,
@@ -468,6 +491,8 @@ export const useUi = create<UiState>()(
         repositoryOperation: _repositoryOperation,
         rightPanel: _rightPanel,
         activeSurface: _activeSurface,
+        inboxListCollapsed: _inboxListCollapsed,
+        pullFilesPanelCollapsed: _pullFilesPanelCollapsed,
         backlogParamsByProject,
         ...rest
       }) => ({

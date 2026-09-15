@@ -3,7 +3,6 @@ import { memo, useCallback } from "react";
 
 import { AgentUpdateBanner } from "@/components/AgentUpdateBanner";
 import { SidebarTaskRow } from "@/components/SidebarTaskRow";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import UpdateControl from "@/components/UpdateControl";
 import type { ConnectionState, DaemonState } from "@/daemon";
@@ -95,7 +94,7 @@ function Sidebar({
   }
 
   return (
-    <TooltipProvider delayDuration={400}>
+    <>
       <aside
         data-testid="sidebar"
         className="flex h-full min-h-0 min-w-0 flex-col border-r border-border bg-card"
@@ -267,7 +266,7 @@ function Sidebar({
           setDeletingShelf(null);
         }}
       />
-    </TooltipProvider>
+    </>
   );
 }
 

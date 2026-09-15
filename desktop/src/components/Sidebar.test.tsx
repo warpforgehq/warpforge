@@ -87,6 +87,7 @@ import { useUi } from "../store/ui";
 import type { View } from "../store/ui";
 import Sidebar from "./Sidebar";
 import { SidebarTaskTooltipBody } from "./SidebarTaskRow";
+import { TooltipProvider } from "./ui/tooltip";
 
 function task(id: string, overrides: Partial<TaskInfo> = {}): TaskInfo {
   return {
@@ -154,16 +155,19 @@ function renderSidebar(
 ) {
   return render(
     // The sidebar reads the inbox badge through React Query; a fresh client
-    // per render keeps one test's cache out of the next.
+    // per render keeps one test's cache out of the next. The app normally
+    // mounts one TooltipProvider at the root; standalone renders need their own.
     <QueryClientProvider client={new QueryClient()}>
-      <Sidebar
-        state={state}
-        view="control"
-        openTaskId={null}
-        collapsed={false}
-        {...handlers}
-        {...overrides}
-      />
+      <TooltipProvider delayDuration={300} skipDelayDuration={0}>
+        <Sidebar
+          state={state}
+          view="control"
+          openTaskId={null}
+          collapsed={false}
+          {...handlers}
+          {...overrides}
+        />
+      </TooltipProvider>
     </QueryClientProvider>,
   );
 }
@@ -236,13 +240,15 @@ describe("Sidebar shell", () => {
 
     rerender(
       <QueryClientProvider client={new QueryClient()}>
-        <Sidebar
-          state={makeState([task("t1")])}
-          view="projects"
-          openTaskId="t1"
-          collapsed={false}
-          {...handlers}
-        />
+        <TooltipProvider delayDuration={300} skipDelayDuration={0}>
+          <Sidebar
+            state={makeState([task("t1")])}
+            view="projects"
+            openTaskId="t1"
+            collapsed={false}
+            {...handlers}
+          />
+        </TooltipProvider>
       </QueryClientProvider>,
     );
     expect(screen.getByRole("button", { name: /^Projects/ })).not.toHaveAttribute("aria-current");

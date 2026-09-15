@@ -263,6 +263,19 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [startNewTask]);
 
+  // ⌘\ toggles the sidebar the way most editors bind it — chrome was
+  // otherwise reachable only by mouse.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+      if (event.key !== "\\") return;
+      event.preventDefault();
+      toggleSidebarCollapsed();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [toggleSidebarCollapsed]);
+
   const projectNames = useMemo(
     () => snapshot.projects.map((project) => project.name),
     [snapshot.projects],
@@ -360,7 +373,7 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider delayDuration={300}>
+      <TooltipProvider delayDuration={300} skipDelayDuration={0}>
         {/* Prototype shell: full-height sidebar beside a column of topbar + content. */}
         <div
           className={`flex h-screen flex-col ${

@@ -159,6 +159,16 @@ describe("App sidebar layout", () => {
     fireEvent.keyDown(window, { key: "n", metaKey: true });
     expect(await screen.findByTestId("new-task-dialog")).toBeInTheDocument();
   });
+
+  it("⌘\\ toggles the sidebar collapse", async () => {
+    await renderApp();
+
+    expect(useUi.getState().sidebarCollapsed).toBe(false);
+    fireEvent.keyDown(window, { key: "\\", metaKey: true });
+    expect(useUi.getState().sidebarCollapsed).toBe(true);
+    fireEvent.keyDown(window, { key: "\\", metaKey: true });
+    expect(useUi.getState().sidebarCollapsed).toBe(false);
+  });
 });
 
 describe("Sidebar resize separator", () => {
