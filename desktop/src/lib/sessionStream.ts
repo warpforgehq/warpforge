@@ -119,6 +119,11 @@ export function deriveTranscriptRows(
    *  left `pending` by a killed session is history, not activity — without
    *  this the group pulses forever after a daemon restart. */
   sessionLive: boolean,
+  /** The session's one unanswered permission, if it has one. A call can keep
+   *  the `pendingPermission` flag long after its request was abandoned — the
+   *  flags outnumber live requests — so only the current request may hold a
+   *  group open. */
+  pendingRequestId: string | null = null,
 ): TranscriptListRow[] {
   const rows: TranscriptListRow[] = [];
   let group: TranscriptEntry[] = [];
@@ -152,9 +157,13 @@ export function deriveTranscriptRows(
     const hasFailure = group.some(
       (entry) => entry.update.kind === "tool_call" && entry.update.status === "failed",
     );
-    const hasPendingApproval = group.some(
-      (entry) => entry.update.kind === "tool_call" && Boolean(entry.update.pendingPermission),
-    );
+    const hasPendingApproval =
+      pendingRequestId !== null &&
+      group.some(
+        (entry) =>
+          entry.update.kind === "tool_call" &&
+          entry.update.pendingPermission?.request_id === pendingRequestId,
+      );
     // A failure opens the group by default so it is not missed, but the reader
     // may fold it away — a non-zero exit is not a blocker. An unanswered prompt
     // is a blocker, but only while the session that asked is still working: a

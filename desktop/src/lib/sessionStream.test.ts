@@ -129,7 +129,7 @@ describe("session stream coalescing", () => {
       },
     ];
 
-    const settled = deriveTranscriptRows(updates, new Map(), null, null, false)[0];
+    const settled = deriveTranscriptRows(updates, new Map(), null, null, false, "perm-stale")[0];
     if (settled.kind !== "activity") throw new Error("expected an activity group");
     expect(settled.live).toBe(false);
     expect(settled.open).toBe(false);
@@ -195,7 +195,7 @@ describe("session stream coalescing", () => {
       },
     ];
 
-    const settled = deriveTranscriptRows(updates, new Map(), null, null, false)[0];
+    const settled = deriveTranscriptRows(updates, new Map(), null, null, false, "perm-stale")[0];
     if (settled.kind !== "activity") throw new Error("expected an activity group");
     expect(settled.hasPendingApproval).toBe(true);
     expect(settled.open).toBe(false);
@@ -206,9 +206,70 @@ describe("session stream coalescing", () => {
       null,
       null,
       false,
+      "perm-stale",
     )[0];
     if (folded.kind !== "activity") throw new Error("expected an activity group");
     expect(folded.open).toBe(false);
+  });
+
+  it("only the session's current request holds a group open", () => {
+    // Abandoned requests leave their flag on the call: the flags outnumber the
+    // live requests, so a group whose flag is stale must stay foldable while
+    // the group that owns the current request is forced open.
+    const stale: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        pendingPermission: { options: ["allow", "deny"], request_id: "old-1" },
+        status: "pending",
+        title: "Run old",
+        tool_call_id: "old",
+        tool_kind: "execute",
+      },
+      {
+        kind: "tool_call",
+        status: "completed",
+        title: "Run ls",
+        tool_call_id: "ls",
+        tool_kind: "execute",
+      },
+    ];
+    const current: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        pendingPermission: { options: ["allow", "deny"], request_id: "now-1" },
+        status: "pending",
+        title: "Run now",
+        tool_call_id: "now",
+        tool_kind: "execute",
+      },
+      {
+        kind: "tool_call",
+        status: "completed",
+        title: "Run ls",
+        tool_call_id: "ls2",
+        tool_kind: "execute",
+      },
+    ];
+
+    const staleRow = deriveTranscriptRows(stale, new Map(), null, null, true, "now-1")[0];
+    if (staleRow.kind !== "activity") throw new Error("expected an activity group");
+    expect(staleRow.hasPendingApproval).toBe(false);
+    expect(staleRow.open).toBe(true); // live group opens by default — but folds:
+    const folded = deriveTranscriptRows(
+      stale,
+      new Map([[staleRow.groupId, false]]),
+      null,
+      null,
+      true,
+      "now-1",
+    )[0];
+    if (folded.kind !== "activity") throw new Error("expected an activity group");
+    expect(folded.open).toBe(false);
+
+    const currentRow = deriveTranscriptRows(current, new Map(), null, null, true, "now-1")[0];
+    if (currentRow.kind !== "activity") throw new Error("expected an activity group");
+    expect(currentRow.hasPendingApproval).toBe(true);
+    expect(currentRow.open).toBe(true);
   });
 
   it("forces a group open while a permission is unanswered, override or not", () => {
@@ -230,13 +291,20 @@ describe("session stream coalescing", () => {
       },
     ];
 
-    const rows = deriveTranscriptRows(updates, new Map(), null, null, true);
+    const rows = deriveTranscriptRows(updates, new Map(), null, null, true, "perm-1");
     const group = rows[0];
     if (group.kind !== "activity") throw new Error("expected an activity group");
     expect(group.hasPendingApproval).toBe(true);
     expect(group.open).toBe(true);
 
-    const folded = deriveTranscriptRows(updates, new Map([[group.groupId, false]]), null, null, true);
+    const folded = deriveTranscriptRows(
+      updates,
+      new Map([[group.groupId, false]]),
+      null,
+      null,
+      true,
+      "perm-1",
+    );
     const foldedGroup = folded[0];
     if (foldedGroup.kind !== "activity") throw new Error("expected an activity group");
     expect(foldedGroup.open).toBe(true);

@@ -6,6 +6,7 @@ import { ContinueSessionDialog } from "@/components/ContinueSessionDialog";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSessionHistory } from "@/hooks/useSessionHistory";
+import { pendingPermission } from "@/lib/sessionPermissions";
 import type { SessionActivity } from "@/lib/sessionActivity";
 import {
   activityOpenState,
@@ -168,6 +169,9 @@ export function SessionChat({
   // A call left pending by a killed session is history: only a session that is
   // actually working keeps its groups pulsing.
   const sessionLive = task.status === "running" || task.status === "queued";
+  // Only the session's current request may hold a group open: the per-call
+  // flags outlive abandoned requests, and those groups must stay foldable.
+  const pendingRequestId = pendingPermission(merged)?.request_id ?? null;
   const transcriptRows = useMemo(
     () =>
       deriveTranscriptRows(
@@ -176,8 +180,16 @@ export function SessionChat({
         thinkingIndex,
         streamingTextIndex,
         sessionLive,
+        pendingRequestId,
       ),
-    [merged, sessionLive, streamingTextIndex, thinkingIndex, workGroupOverrides],
+    [
+      merged,
+      pendingRequestId,
+      sessionLive,
+      streamingTextIndex,
+      thinkingIndex,
+      workGroupOverrides,
+    ],
   );
   // A live group folds itself once its turn settles. That is a disclosure the
   // user never triggered, so it misses the anchor a manual toggle sets and the

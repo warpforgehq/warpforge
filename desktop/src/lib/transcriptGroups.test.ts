@@ -56,10 +56,19 @@ const fileEdit = (
 const thought = (text: string): SessionUpdate => ({ kind: "agent_thought", text });
 const prose = (text: string): SessionUpdate => ({ kind: "agent_text", text });
 
-function activityRows(updates: SessionUpdate[], overrides = new Map<string, boolean>()) {
-  return deriveTranscriptRows(coalesceUpdates(updates), overrides, null, null, true).filter(
-    (row) => row.kind === "activity",
-  );
+function activityRows(
+  updates: SessionUpdate[],
+  overrides = new Map<string, boolean>(),
+  pendingRequestId: string | null = null,
+) {
+  return deriveTranscriptRows(
+    coalesceUpdates(updates),
+    overrides,
+    null,
+    null,
+    true,
+    pendingRequestId,
+  ).filter((row) => row.kind === "activity");
 }
 
 describe("transcript work grouping", () => {
@@ -155,6 +164,7 @@ describe("transcript work grouping", () => {
     const rows = activityRows(
       [read("r1", "src/a.ts"), pending],
       new Map([["work:tool:r1", false]]),
+      "req-1",
     );
     expect(rows[0].hasPendingApproval).toBe(true);
     expect(rows[0].open).toBe(true);
