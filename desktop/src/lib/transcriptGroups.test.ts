@@ -43,8 +43,8 @@ const editCall = (
 const fileEdit = (
   id: string,
   path: string,
-  additions: number,
-  deletions: number,
+  additions?: number,
+  deletions?: number,
 ): SessionUpdate => ({
   kind: "file_edit",
   path,
@@ -107,6 +107,22 @@ describe("transcript work grouping", () => {
     );
     const edit = group.summary.clips.find((clip) => clip.kind === "edit");
     expect(edit).toMatchObject({ additions: 18, deletions: 6 });
+  });
+
+  it("leaves the diffstat out when no edit reported line counts", () => {
+    const rows = activityRows([editCall("e1", "src/a.ts"), fileEdit("e1", "src/a.ts")]);
+    const tally = tallyActivity(rows[0].items);
+    expect(tally.additions).toBeNull();
+    expect(tally.deletions).toBeNull();
+    const edit = rows[0].summary.clips.find((clip) => clip.kind === "edit");
+    expect(edit).toMatchObject({ additions: undefined, deletions: undefined });
+    expect(rows[0].summary.text).toBe("Edited a.ts");
+  });
+
+  it("sums the counts it has when only some edits report them", () => {
+    const rows = activityRows([fileEdit("e1", "src/a.ts"), fileEdit("e2", "src/b.ts", 4, 1)]);
+    const edit = rows[0].summary.clips.find((clip) => clip.kind === "edit");
+    expect(edit).toMatchObject({ files: 2, additions: 4, deletions: 1 });
   });
 
   it("keeps an in-flight call live with present tense and open by default", () => {

@@ -24,8 +24,9 @@ export interface ActivityTally {
   reads: Set<string>;
   searches: number;
   edits: Set<string>;
-  additions: number;
-  deletions: number;
+  /** `null` while no edit in the group reported a line count. */
+  additions: number | null;
+  deletions: number | null;
   runs: number;
   others: number;
   failed: number;
@@ -38,8 +39,9 @@ export type ActivityClip =
   | {
       kind: "edit";
       files: number;
-      additions: number;
-      deletions: number;
+      /** Absent when the agent reported no line counts at all. */
+      additions?: number;
+      deletions?: number;
       /** Set only when the group edited a single file, so the diffstat can open it. */
       path?: string;
       text: string;
@@ -119,8 +121,8 @@ export function tallyActivity(items: ActivityItem[]): ActivityTally {
     reads: new Set(),
     searches: 0,
     edits: new Set(),
-    additions: 0,
-    deletions: 0,
+    additions: null,
+    deletions: null,
     runs: 0,
     others: 0,
     failed: 0,
@@ -148,8 +150,10 @@ export function tallyActivity(items: ActivityItem[]): ActivityTally {
     if (update.kind === "file_edit") {
       note("edit");
       tally.edits.add(update.path || item.key);
-      tally.additions += update.additions ?? 0;
-      tally.deletions += update.deletions ?? 0;
+      if (update.additions !== undefined)
+        tally.additions = (tally.additions ?? 0) + update.additions;
+      if (update.deletions !== undefined)
+        tally.deletions = (tally.deletions ?? 0) + update.deletions;
       continue;
     }
     if (update.kind !== "tool_call") continue;
@@ -230,8 +234,8 @@ export function summarizeActivity(items: ActivityItem[], live = false): Activity
         clips.push({
           kind: "edit",
           files: files.length,
-          additions: tally.additions,
-          deletions: tally.deletions,
+          additions: tally.additions ?? undefined,
+          deletions: tally.deletions ?? undefined,
           path: files.length === 1 ? files[0] : undefined,
           text: `${verb("Edited", "Editing", live, isRunning)} ${fileLabel(tally.edits)}`,
         });

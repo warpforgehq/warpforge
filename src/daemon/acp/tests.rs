@@ -15,7 +15,7 @@ use super::process::{
 };
 use super::session::parse_permission;
 use super::tool::tool_title;
-use super::update::parse_update;
+use super::update::{parse_update, ToolKinds};
 use super::*;
 use crate::daemon::prompt::{PreparedPrompt, PromptContent};
 
@@ -200,7 +200,9 @@ fn tool_call_uses_raw_command_instead_of_technical_id() {
         }
     });
 
-    let Some(AcpUpdate::ToolCall { title, content, .. }) = parse_update(&params) else {
+    let Some(AcpUpdate::ToolCall { title, content, .. }) =
+        parse_update(&params, &mut ToolKinds::default())
+    else {
         panic!("expected tool call");
     };
     assert_eq!(title, "git diff --stat");
@@ -222,7 +224,9 @@ fn tool_call_exposes_raw_output_and_never_falls_back_to_id() {
         }
     });
 
-    let Some(AcpUpdate::ToolCall { title, content, .. }) = parse_update(&params) else {
+    let Some(AcpUpdate::ToolCall { title, content, .. }) =
+        parse_update(&params, &mut ToolKinds::default())
+    else {
         panic!("expected tool call");
     };
     assert_eq!(title, "Run command");
@@ -252,7 +256,7 @@ fn file_edit_reports_line_counts_from_acp_diff() {
         additions,
         deletions,
         hunks,
-    }) = parse_update(&params)
+    }) = parse_update(&params, &mut ToolKinds::default())
     else {
         panic!("expected file edit");
     };
@@ -281,6 +285,134 @@ fn file_edit_reports_line_counts_from_acp_diff() {
     );
     assert!(hunks[1].lines.contains(&"-    old();".to_string()));
     assert!(hunks[1].lines.contains(&"+    new();".to_string()));
+}
+
+#[test]
+fn completion_without_kind_still_reads_the_edit_diff() {
+    let mut kinds = ToolKinds::default();
+    let start = json!({
+        "update": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "call-oc-1",
+            "kind": "edit",
+            "status": "pending",
+            "locations": [{ "path": "src/app.ts" }]
+        }
+    });
+    assert!(matches!(
+        parse_update(&start, &mut kinds),
+        Some(AcpUpdate::FileEdit {
+            additions: None,
+            deletions: None,
+            ..
+        })
+    ));
+
+    // opencode's completion frame repeats neither `kind` nor `locations`.
+    let done = json!({
+        "update": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "call-oc-1",
+            "status": "completed",
+            "content": [
+                { "type": "content", "content": { "type": "text", "text": "done" } },
+                {
+                    "type": "diff",
+                    "path": "src/app.ts",
+                    "oldText": "const a = 1;\n",
+                    "newText": "const a = 2;\nconst b = 3;\n"
+                }
+            ]
+        }
+    });
+    let Some(AcpUpdate::FileEdit {
+        path,
+        additions,
+        deletions,
+        hunks,
+        ..
+    }) = parse_update(&done, &mut kinds)
+    else {
+        panic!("expected file edit");
+    };
+    assert_eq!(path, "src/app.ts");
+    assert_eq!((additions, deletions), (Some(2), Some(1)));
+    assert_eq!(hunks.len(), 1);
+}
+
+#[test]
+fn unknown_tool_call_id_stays_a_generic_tool_call() {
+    let params = json!({
+        "update": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "call-unseen",
+            "status": "completed",
+            "content": [{ "type": "content", "content": { "type": "text", "text": "hi" } }]
+        }
+    });
+    assert!(matches!(
+        parse_update(&params, &mut ToolKinds::default()),
+        Some(AcpUpdate::ToolCall { .. })
+    ));
+}
+
+#[test]
+fn file_edit_derives_counts_from_tool_input_when_no_diff_content() {
+    let params = json!({
+        "update": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "call-oc-2",
+            "kind": "edit",
+            "status": "in_progress",
+            "rawInput": {
+                "filePath": "/repo/src/lib.rs",
+                "oldString": "let x = 1;\nlet y = 2;\n",
+                "newString": "let x = 10;\nlet y = 2;\nlet z = 3;\n"
+            }
+        }
+    });
+
+    let Some(AcpUpdate::FileEdit {
+        path,
+        additions,
+        deletions,
+        hunks,
+        ..
+    }) = parse_update(&params, &mut ToolKinds::default())
+    else {
+        panic!("expected file edit");
+    };
+    assert_eq!(path, "/repo/src/lib.rs");
+    assert_eq!((additions, deletions), (Some(2), Some(1)));
+    assert!(!hunks.is_empty());
+}
+
+#[test]
+fn whole_file_write_reports_unknown_counts_rather_than_zero() {
+    let params = json!({
+        "update": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "call-oc-3",
+            "kind": "edit",
+            "status": "in_progress",
+            "locations": [{ "path": "src/new.ts" }],
+            "rawInput": { "filePath": "src/new.ts", "content": "export const a = 1;\n" }
+        }
+    });
+
+    let Some(AcpUpdate::FileEdit {
+        path,
+        additions,
+        deletions,
+        hunks,
+        ..
+    }) = parse_update(&params, &mut ToolKinds::default())
+    else {
+        panic!("expected file edit");
+    };
+    assert_eq!(path, "src/new.ts");
+    assert_eq!((additions, deletions), (None, None));
+    assert!(hunks.is_empty());
 }
 
 #[test]
@@ -322,7 +454,9 @@ fn parses_context_usage_and_optional_cost() {
         }
     });
 
-    let Some(AcpUpdate::Usage { used, size, cost }) = parse_update(&params) else {
+    let Some(AcpUpdate::Usage { used, size, cost }) =
+        parse_update(&params, &mut ToolKinds::default())
+    else {
         panic!("expected usage update");
     };
     assert_eq!(used, 53_000);

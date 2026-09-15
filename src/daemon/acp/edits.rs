@@ -8,51 +8,87 @@ pub(super) struct EditInfo {
     pub(super) hunks: Vec<wire::EditHunk>,
 }
 
-/// Pull edit details from ACP diff content, falling back to `locations` when
-/// the agent only reports which file it touched.
+/// Pull edit details from ACP diff content, then from the tool input's
+/// before/after strings, then from `locations` when the agent only reports
+/// which file it touched. Counts stay `None` when nothing is derivable —
+/// `+0 −0` would claim the file did not change.
 pub(super) fn edit_info(update: &Value) -> Option<EditInfo> {
+    let mut content_path: Option<String> = None;
     if let Some(content) = update.get("content").and_then(|c| c.as_array()) {
         for item in content {
             let Some(path) = item.get("path").and_then(|p| p.as_str()) else {
                 continue;
             };
             if item.get("type").and_then(|v| v.as_str()) == Some("diff") {
-                let new_text = item.get("newText").and_then(|v| v.as_str());
-                if let Some(new_text) = new_text {
+                if let Some(new_text) = item.get("newText").and_then(|v| v.as_str()) {
                     let old_text = item.get("oldText").and_then(|v| v.as_str());
-                    let (additions, deletions) = line_change_counts(old_text, new_text);
-                    let hunks = line_change_hunks(old_text, new_text);
-                    return Some(EditInfo {
-                        path: path.to_string(),
-                        additions: Some(additions),
-                        deletions: Some(deletions),
-                        hunks,
-                    });
+                    return Some(counted_edit(path.to_string(), old_text, new_text));
                 }
             }
-            return Some(EditInfo {
-                path: path.to_string(),
-                additions: None,
-                deletions: None,
-                hunks: Vec::new(),
-            });
+            if content_path.is_none() {
+                content_path = Some(path.to_string());
+            }
         }
     }
-    if let Some(path) = update
+
+    let raw_input = update.get("rawInput");
+    if let Some((old_text, new_text)) = raw_input.and_then(raw_edit_texts) {
+        if let Some(path) = content_path
+            .clone()
+            .or_else(|| raw_input.and_then(raw_edit_path))
+            .or_else(|| first_location_path(update))
+        {
+            return Some(counted_edit(path, Some(old_text), new_text));
+        }
+    }
+
+    let path = content_path.or_else(|| first_location_path(update))?;
+    Some(EditInfo {
+        path,
+        additions: None,
+        deletions: None,
+        hunks: Vec::new(),
+    })
+}
+
+fn counted_edit(path: String, old_text: Option<&str>, new_text: &str) -> EditInfo {
+    let (additions, deletions) = line_change_counts(old_text, new_text);
+    EditInfo {
+        path,
+        additions: Some(additions),
+        deletions: Some(deletions),
+        hunks: line_change_hunks(old_text, new_text),
+    }
+}
+
+/// The replaced/replacement pair an edit tool takes as input. Both spellings
+/// are in the wild: opencode sends `oldString`/`newString`, Claude Code sends
+/// `old_string`/`new_string`. A whole-file write carries only the new content,
+/// so it is deliberately not matched here — its deletions are unknowable.
+fn raw_edit_texts(raw_input: &Value) -> Option<(&str, &str)> {
+    let old_text = string_field(raw_input, &["oldString", "old_string"])?;
+    let new_text = string_field(raw_input, &["newString", "new_string"])?;
+    Some((old_text, new_text))
+}
+
+fn raw_edit_path(raw_input: &Value) -> Option<String> {
+    string_field(raw_input, &["filePath", "file_path", "filepath", "path"]).map(String::from)
+}
+
+fn string_field<'a>(value: &'a Value, keys: &[&str]) -> Option<&'a str> {
+    keys.iter()
+        .find_map(|key| value.get(*key))
+        .and_then(Value::as_str)
+}
+
+fn first_location_path(update: &Value) -> Option<String> {
+    update
         .get("locations")
         .and_then(|l| l.as_array())
         .and_then(|locations| locations.first())
         .and_then(|location| location.get("path"))
         .and_then(|path| path.as_str())
-    {
-        return Some(EditInfo {
-            path: path.to_string(),
-            additions: None,
-            deletions: None,
-            hunks: Vec::new(),
-        });
-    }
-    None
+        .map(String::from)
 }
 
 /// Count the shortest line-level edit script using Myers' algorithm. The ACP

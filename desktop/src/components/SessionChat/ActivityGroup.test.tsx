@@ -131,6 +131,19 @@ describe("ActivityGroup", () => {
     expect(onOpenFileDiff).toHaveBeenCalledWith("src/b.ts", undefined);
   });
 
+  it("shows no diffstat at all when the agent reported no line counts", () => {
+    const uncounted: SessionUpdate[] = [
+      updates[0],
+      { kind: "file_edit", path: "/Users/dev/app/src/b.ts", tool_call_id: "e1" },
+      updates[2],
+    ];
+    const { container } = renderGroup(activityRow(uncounted));
+
+    expect(container.textContent).toContain("Edited b.ts");
+    expect(container.textContent).not.toContain("+0");
+    expect(container.textContent).not.toContain("−0");
+  });
+
   it("marks a failed group and keeps it open", () => {
     const failed: SessionUpdate[] = [
       {

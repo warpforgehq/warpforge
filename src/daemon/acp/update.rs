@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde_json::Value;
 use warpforge_protocol as wire;
 
@@ -6,7 +8,39 @@ use super::model::parse_config_options;
 use super::tool::{content_text, tool_details, tool_title};
 use super::AcpUpdate;
 
-pub(super) fn parse_update(params: &Value) -> Option<AcpUpdate> {
+/// Tool kinds seen per `toolCallId`, for the length of one session.
+///
+/// ACP lets a `tool_call_update` repeat only what changed. opencode's
+/// completion frame drops `kind` — and that frame is the one carrying the edit
+/// diff — so without this the diff would be read as a generic tool call and the
+/// line counts would never be computed.
+#[derive(Default)]
+pub(super) struct ToolKinds(HashMap<String, String>);
+
+impl ToolKinds {
+    fn resolve(&mut self, id: &str, kind: Option<&str>, status: &str) -> String {
+        if id.is_empty() {
+            return kind.unwrap_or("other").to_string();
+        }
+        let resolved = match kind {
+            Some(kind) => {
+                self.0.insert(id.to_string(), kind.to_string());
+                kind.to_string()
+            }
+            None => self
+                .0
+                .get(id)
+                .cloned()
+                .unwrap_or_else(|| "other".to_string()),
+        };
+        if matches!(status, "completed" | "failed") {
+            self.0.remove(id);
+        }
+        resolved
+    }
+}
+
+pub(super) fn parse_update(params: &Value, tool_kinds: &mut ToolKinds) -> Option<AcpUpdate> {
     let update = params.get("update")?;
     let kind = update.get("sessionUpdate")?.as_str()?;
     match kind {
@@ -25,11 +59,8 @@ pub(super) fn parse_update(params: &Value) -> Option<AcpUpdate> {
                 .and_then(|v| v.as_str())
                 .unwrap_or("in_progress")
                 .to_string();
-            let kind = update
-                .get("kind")
-                .and_then(|v| v.as_str())
-                .unwrap_or("other")
-                .to_string();
+            let kind =
+                tool_kinds.resolve(&id, update.get("kind").and_then(|v| v.as_str()), &status);
             // A file edit still emits a dedicated FileEdit for the diff badge…
             if kind == "edit" {
                 if let Some(edit) = edit_info(update) {
