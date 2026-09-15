@@ -13,7 +13,7 @@ export interface TranscriptRowContextValue {
   onOpenFileDiff: (path: string, hunks?: EditHunk[]) => void;
   onOpenTask: (id: string) => void;
   onRequestBranch: (agent: string, throughIndex: number) => void;
-  onToggleWorkGroup: (id: string) => void;
+  onToggleWorkGroup: (id: string, open: boolean) => void;
   project: string;
   resolveFilePath: FileLinkResolver;
   resolved: Record<string, string>;

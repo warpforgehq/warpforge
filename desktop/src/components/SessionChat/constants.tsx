@@ -16,9 +16,15 @@ export const CHAT_DRAW_DISTANCE_PX = 1000;
  * Measured mean row height. Only mounted rows are measured, so this decides
  * almost the whole content height — and an estimate that is wrong in one
  * direction makes the height drift that way as rows do measure, dragging the
- * scroll with it. Sampled live: median 26, mean 66, max 591.
+ * scroll with it. Sampled live: median 26, mean 66, max 591. Grouping work
+ * behind one header replaces many tall cards with 24px steps, so the median
+ * drops; the mean is still carried by `agent_text`.
  */
-export const CHAT_ESTIMATED_ROW_PX = 65;
+export const CHAT_ESTIMATED_ROW_PX = 48;
+/** One borderless step inside an expanded activity group. */
+export const CHAT_ACTIVITY_ROW_PX = 24;
+/** An activity group's summary header. */
+export const CHAT_GROUP_HEADER_PX = 24;
 export const CHAT_MAINTAIN_SCROLL_AT_END = {
   animated: false,
   on: { dataChange: true, itemLayout: true, layout: true },

@@ -122,8 +122,8 @@ export function SessionChat({
   const requestBranch = useCallback((agent: string, throughIndex: number) => {
     setBranchRequest({ agent, throughIndex });
   }, []);
-  const [expandedWorkGroups, setExpandedWorkGroups] = useState<ReadonlySet<string>>(
-    () => new Set(),
+  const [workGroupOverrides, setWorkGroupOverrides] = useState<ReadonlyMap<string, boolean>>(
+    () => new Map(),
   );
   const disclosureAnchorKey = useRef<string | null>(null);
   const [disclosureSettling, setDisclosureSettling] = useState(false);
@@ -149,24 +149,23 @@ export function SessionChat({
     return () => disclosureFrames.current.forEach(cancelAnimationFrame);
   }, []);
   const toggleWorkGroup = useCallback(
-    (id: string) => {
+    (id: string, open: boolean) => {
       // Anchor compensation to the toggled row's own id so the trigger stays
-      // under the pointer instead of the viewport chasing the end. The toggle
-      // row's id is `work-toggle:${groupId}` (sessionStream.ts:127), and
+      // under the pointer instead of the viewport chasing the end. The group
+      // row's id is `activity:${groupId}` (sessionStream.ts), and
       // `shouldRestorePosition` compares against row.id.
-      suspendForDisclosure(`work-toggle:${id}`);
-      setExpandedWorkGroups((current) => {
-        const next = new Set(current);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
+      suspendForDisclosure(`activity:${id}`);
+      setWorkGroupOverrides((current) => {
+        const next = new Map(current);
+        next.set(id, open);
         return next;
       });
     },
     [suspendForDisclosure],
   );
   const transcriptRows = useMemo(
-    () => deriveTranscriptRows(merged, expandedWorkGroups, thinkingIndex, streamingTextIndex),
-    [expandedWorkGroups, merged, streamingTextIndex, thinkingIndex],
+    () => deriveTranscriptRows(merged, workGroupOverrides, thinkingIndex, streamingTextIndex),
+    [merged, streamingTextIndex, thinkingIndex, workGroupOverrides],
   );
   const rowContext = useMemo<TranscriptRowContextValue>(
     () => ({

@@ -1,5 +1,15 @@
 import type { EditHunk, SessionUpdate, ToolCallStatus } from "../protocol";
 import { preferToolTitle } from "./toolDisplay";
+import {
+  type ActivityItem,
+  type ActivitySummary,
+  type TranscriptEntry,
+  categoryForUpdate,
+  isActivityUpdate,
+  summarizeActivity,
+} from "./transcriptGroups";
+
+export type { TranscriptEntry };
 
 export const MAX_SESSION_UPDATES = 2000;
 const TOOL_CONTENT_HEAD = 2048;
@@ -68,11 +78,6 @@ export function hasReconnectingTransient(updates: SessionUpdate[]): boolean {
   return last.kind === "agent_text" && last.text === RECONNECTING_TEXT;
 }
 
-export interface TranscriptEntry {
-  mergedIndex: number;
-  update: SessionUpdate;
-}
-
 export type TranscriptListRow =
   | {
       kind: "update";
@@ -82,18 +87,22 @@ export type TranscriptListRow =
       textStreaming: boolean;
     }
   | {
-      kind: "work-toggle";
+      kind: "activity";
       id: string;
       groupId: string;
-      hiddenCount: number;
-      expanded: boolean;
+      items: ActivityItem[];
+      summary: ActivitySummary;
+      /** False for a lone step, which renders without a header. */
+      expandable: boolean;
+      /** True while a call in this group is still in flight. */
+      live: boolean;
+      hasFailure: boolean;
+      hasPendingApproval: boolean;
+      /** Resolved open state: user override, else live/pending/failure default. */
+      open: boolean;
     };
 
-function isWorkUpdate(update: SessionUpdate): boolean {
-  return ["agent_thought", "file_edit", "plan", "tool_call"].includes(update.kind);
-}
-
-function workEntryIsActive(entry: TranscriptEntry, thinkingIndex: number | null): boolean {
+function activityEntryIsLive(entry: TranscriptEntry, thinkingIndex: number | null): boolean {
   if (entry.mergedIndex === thinkingIndex) return true;
   return (
     entry.update.kind === "tool_call" &&
@@ -103,12 +112,12 @@ function workEntryIsActive(entry: TranscriptEntry, thinkingIndex: number | null)
 
 export function deriveTranscriptRows(
   updates: SessionUpdate[],
-  expandedWorkGroups: ReadonlySet<string>,
+  workGroupOverrides: ReadonlyMap<string, boolean>,
   thinkingIndex: number | null,
   streamingTextIndex: number | null,
 ): TranscriptListRow[] {
   const rows: TranscriptListRow[] = [];
-  let workEntries: TranscriptEntry[] = [];
+  let group: TranscriptEntry[] = [];
 
   const pushUpdate = (entry: TranscriptEntry) => {
     rows.push({
@@ -120,43 +129,53 @@ export function deriveTranscriptRows(
     });
   };
 
-  const flushWork = () => {
-    if (workEntries.length === 0) return;
-    if (workEntries.length === 1) {
-      pushUpdate(workEntries[0]);
-      workEntries = [];
-      return;
-    }
-
-    const groupId = `work:${sessionUpdateKey(workEntries[0].update, workEntries[0].mergedIndex)}`;
-    const active = workEntries.some((entry) => workEntryIsActive(entry, thinkingIndex));
-    const expanded = active || expandedWorkGroups.has(groupId);
-    const visibleEntries = expanded ? workEntries : workEntries.slice(-1);
-    for (const entry of visibleEntries) pushUpdate(entry);
-    if (!active) {
-      rows.push({
-        kind: "work-toggle",
-        id: `work-toggle:${groupId}`,
-        groupId,
-        hiddenCount: workEntries.length - 1,
-        expanded,
-      });
-    }
-    workEntries = [];
+  const flushGroup = () => {
+    if (group.length === 0) return;
+    const first = group[0];
+    const groupId = `work:${sessionUpdateKey(first.update, first.mergedIndex)}`;
+    const items: ActivityItem[] = group.map((entry) => ({
+      key: sessionUpdateKey(entry.update, entry.mergedIndex),
+      category: categoryForUpdate(entry.update),
+      entry,
+    }));
+    const live = group.some((entry) => activityEntryIsLive(entry, thinkingIndex));
+    const hasFailure = group.some(
+      (entry) => entry.update.kind === "tool_call" && entry.update.status === "failed",
+    );
+    const hasPendingApproval = group.some(
+      (entry) => entry.update.kind === "tool_call" && Boolean(entry.update.pendingPermission),
+    );
+    // A failure or an unanswered prompt keeps the group open whatever the
+    // reader last chose; a live group only while no explicit collapse overrides
+    // it, so a manual choice sticks as the stream continues.
+    const forcedOpen = hasFailure || hasPendingApproval;
+    rows.push({
+      kind: "activity",
+      id: `activity:${groupId}`,
+      groupId,
+      items,
+      summary: summarizeActivity(items, live),
+      expandable: items.length >= 2,
+      live,
+      hasFailure,
+      hasPendingApproval,
+      open: forcedOpen ? true : (workGroupOverrides.get(groupId) ?? live),
+    });
+    group = [];
   };
 
   for (let mergedIndex = 0; mergedIndex < updates.length; mergedIndex += 1) {
     const update = updates[mergedIndex];
     if (!isRenderableTranscriptUpdate(update)) continue;
     const entry = { mergedIndex, update };
-    if (isWorkUpdate(update)) {
-      workEntries.push(entry);
+    if (isActivityUpdate(update)) {
+      group.push(entry);
     } else {
-      flushWork();
+      flushGroup();
       pushUpdate(entry);
     }
   }
-  flushWork();
+  flushGroup();
   return rows;
 }
 
@@ -256,14 +275,36 @@ export function transcriptRowsAreEqual(
     if (previous.entry.update === next.entry.update) return true;
     return sessionUpdatesSemanticallyEqual(previous.entry.update, next.entry.update);
   }
-  if (previous.kind === "work-toggle" && next.kind === "work-toggle") {
-    return (
-      previous.expanded === next.expanded &&
-      previous.groupId === next.groupId &&
-      previous.hiddenCount === next.hiddenCount
-    );
+  if (previous.kind === "activity" && next.kind === "activity") {
+    return activityRowsAreEqual(previous, next);
   }
   return false;
+}
+
+function activityRowsAreEqual(
+  previous: Extract<TranscriptListRow, { kind: "activity" }>,
+  next: Extract<TranscriptListRow, { kind: "activity" }>,
+): boolean {
+  if (
+    previous.groupId !== next.groupId ||
+    previous.live !== next.live ||
+    previous.hasFailure !== next.hasFailure ||
+    previous.hasPendingApproval !== next.hasPendingApproval ||
+    previous.expandable !== next.expandable ||
+    previous.open !== next.open ||
+    previous.summary.text !== next.summary.text ||
+    previous.items.length !== next.items.length
+  ) {
+    return false;
+  }
+  return previous.items.every((item, index) => {
+    const other = next.items[index];
+    return (
+      item.key === other.key &&
+      (item.entry.update === other.entry.update ||
+        sessionUpdatesSemanticallyEqual(item.entry.update, other.entry.update))
+    );
+  });
 }
 
 /** Fold one raw update into an in-progress coalesced stream. */

@@ -1,4 +1,3 @@
-import { ChevronDown } from "lucide-react";
 import { memo, useContext } from "react";
 
 import {
@@ -8,12 +7,17 @@ import {
 } from "@/lib/sessionStream";
 import { cn } from "@/lib/utils";
 
+import { ActivityGroup } from "./ActivityGroup";
 import { TranscriptRow, TranscriptRowContext } from "./TranscriptRow";
 
 const TranscriptListItem = memo(
   function TranscriptListItem({ row }: { row: TranscriptListRow }) {
     const shared = useContext(TranscriptRowContext);
     if (!shared) throw new Error("Transcript row rendered outside its context");
+
+    if (row.kind === "activity") {
+      return <ActivityGroup row={row} />;
+    }
 
     const renderEntry = (
       entry: TranscriptEntry,
@@ -37,35 +41,7 @@ const TranscriptListItem = memo(
       />
     );
 
-    if (row.kind === "update") {
-      return renderEntry(row.entry, row.thinkingActive, row.textStreaming);
-    }
-
-    const noun = row.hiddenCount === 1 ? "work update" : "work updates";
-    return (
-      <button
-        type="button"
-        aria-expanded={row.expanded}
-        onClick={() => shared.onToggleWorkGroup(row.groupId)}
-        className="flex w-full cursor-pointer items-center gap-1.5 rounded-md px-0.5 py-0.5 text-left text-xs leading-5 text-muted-foreground transition-colors hover:bg-accent/20 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70"
-      >
-        <span className="flex size-5 shrink-0 items-center justify-center">
-          <ChevronDown
-            className={cn(
-              "size-3.5 shrink-0 opacity-70 transition-transform duration-200",
-              row.expanded && "rotate-180",
-            )}
-          />
-        </span>
-        {row.expanded ? (
-          <span className="font-medium text-foreground/80">Show fewer work updates</span>
-        ) : (
-          <span className="font-medium text-foreground/80">
-            +{row.hiddenCount} previous {noun}
-          </span>
-        )}
-      </button>
-    );
+    return renderEntry(row.entry, row.thinkingActive, row.textStreaming);
   },
   (previous, next) => transcriptRowsAreEqual(previous.row, next.row),
 );

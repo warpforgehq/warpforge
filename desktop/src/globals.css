@@ -354,6 +354,51 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
+/* Activity group rail: a 1px spine down an expanded group's body with each
+ * step branching off it on a quarter circle, and the last step shortening the
+ * spine so it does not run past the work it holds. Same geometry as MonoCode's
+ * phase rail (`ref-projects/monocode/src/index.css`). */
+.activity-rail {
+  position: relative;
+}
+.activity-rail-step {
+  position: relative;
+  padding-left: 20px;
+  --activity-rail: hsl(var(--border) / 0.5);
+}
+.activity-rail-step::before,
+.activity-rail-step::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+}
+.activity-rail-step::before {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--activity-rail);
+}
+.activity-rail-step:last-child::before {
+  bottom: auto;
+  height: 12px;
+}
+.activity-rail-step::after {
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-left: 1px solid var(--activity-rail);
+  border-bottom: 1px solid var(--activity-rail);
+  border-bottom-left-radius: 8px;
+}
+/* A live group is a short window on its newest step, so a long run cannot push
+ * the answer off screen. */
+.activity-rail-live {
+  max-height: min(17.5rem, 45vh);
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+}
+
 /* Native glass. Opaque is the default; the app only goes translucent under
  * `.native-glass`, which useTheme sets when the window is actually running
  * with native blur (macOS and Windows under Tauri — Linux stays opaque).

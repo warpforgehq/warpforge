@@ -1,0 +1,158 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+
+import { deriveTranscriptRows, type TranscriptListRow } from "@/lib/sessionStream";
+
+import type { SessionUpdate } from "../../protocol";
+import { ActivityGroup } from "./ActivityGroup";
+import { TranscriptRowContext } from "./TranscriptRow";
+
+type ActivityRow = Extract<TranscriptListRow, { kind: "activity" }>;
+
+const updates: SessionUpdate[] = [
+  {
+    kind: "tool_call",
+    tool_call_id: "r1",
+    title: "Read file '/Users/dev/app/src/a.ts'",
+    status: "completed",
+    tool_kind: "read",
+  },
+  {
+    kind: "file_edit",
+    path: "/Users/dev/app/src/b.ts",
+    tool_call_id: "e1",
+    additions: 12,
+    deletions: 3,
+  },
+  {
+    kind: "tool_call",
+    tool_call_id: "x1",
+    title: "npm test",
+    status: "completed",
+    tool_kind: "execute",
+  },
+];
+
+function activityRow(source: SessionUpdate[], overrides = new Map<string, boolean>()): ActivityRow {
+  const row = deriveTranscriptRows(source, overrides, null, null).find(
+    (candidate) => candidate.kind === "activity",
+  );
+  if (!row || row.kind !== "activity") throw new Error("expected an activity row");
+  return row;
+}
+
+function renderGroup(
+  row: ActivityRow,
+  handlers: { onOpenFile?: (path: string) => void; onOpenFileDiff?: (path: string) => void } = {},
+) {
+  const onToggleWorkGroup = vi.fn<(id: string, open: boolean) => void>();
+  const result = render(
+    <TranscriptRowContext.Provider
+      value={{
+        agents: [],
+        onOpenFile: handlers.onOpenFile ?? vi.fn<(path: string) => void>(),
+        onOpenFileDiff: handlers.onOpenFileDiff ?? vi.fn<(path: string) => void>(),
+        onOpenTask: vi.fn<(id: string) => void>(),
+        onRequestBranch: vi.fn<(agent: string, index: number) => void>(),
+        onToggleWorkGroup,
+        project: "app",
+        resolveFilePath: (value) =>
+          value.includes("/Users/") ? value.slice(value.indexOf("/src/") + 1) : value,
+        resolved: {},
+        taskId: "task-1",
+      }}
+    >
+      <ActivityGroup row={row} />
+    </TranscriptRowContext.Provider>,
+  );
+  return { ...result, onToggleWorkGroup };
+}
+
+function renderExpanded(handlers = {}) {
+  return renderGroup(activityRow(updates, new Map([["work:tool:r1", true]])), handlers);
+}
+
+describe("ActivityGroup", () => {
+  it("collapses a settled group behind one summary line with no status words", () => {
+    renderGroup(activityRow(updates));
+
+    const header = screen.getByRole("button", { name: /show the work/i });
+    expect(header).toHaveAttribute("aria-expanded", "false");
+    expect(header).toHaveTextContent("Read a.ts");
+    expect(header).toHaveTextContent("Edited b.ts");
+    expect(header).toHaveTextContent("Ran a command");
+    expect(screen.queryByText(/completed/i)).not.toBeInTheDocument();
+  });
+
+  it("opens on click and reports the desired state", async () => {
+    const { onToggleWorkGroup } = renderGroup(activityRow(updates));
+
+    await userEvent.click(screen.getByRole("button", { name: /show the work/i }));
+
+    expect(onToggleWorkGroup).toHaveBeenCalledTimes(1);
+    const [groupId, open] = onToggleWorkGroup.mock.calls[0];
+    expect(groupId).toBe("work:tool:r1");
+    expect(open).toBe(true);
+  });
+
+  it("renders steps on the rail only when open, as 24px borderless lines", () => {
+    const { container } = renderExpanded();
+
+    expect(container.querySelector(".activity-rail")).not.toBeNull();
+    expect(container.querySelectorAll(".activity-rail-step")).toHaveLength(updates.length);
+    const line = screen.getByText("npm test").closest("div");
+    expect(line?.className).toContain("py-1");
+    expect(line?.className).toContain("text-[13px]");
+    expect(line?.className).toContain("leading-5");
+    expect(container.querySelector(".activity-rail-step")?.className).not.toContain("border");
+  });
+
+  it("shows the basename with the repo-relative path in the title, never the absolute path", () => {
+    const { container } = renderExpanded();
+
+    expect(screen.getByTitle("src/a.ts")).toHaveTextContent("a.ts");
+    expect(container.textContent).not.toContain("/Users/");
+    expect(container.querySelector('[title*="/Users/"]')).toBeNull();
+  });
+
+  it("offers a clickable diffstat on the edit step", async () => {
+    const onOpenFileDiff = vi.fn<(path: string) => void>();
+    renderExpanded({ onOpenFileDiff });
+
+    const diffstats = screen.getAllByRole("button", {
+      name: /12 lines added, 3 lines deleted/i,
+    });
+    expect(diffstats[0]).toHaveTextContent("+12");
+    expect(diffstats[0]).toHaveTextContent("−3");
+    await userEvent.click(diffstats[diffstats.length - 1]);
+    expect(onOpenFileDiff).toHaveBeenCalledWith("src/b.ts", undefined);
+  });
+
+  it("marks a failed group and keeps it open", () => {
+    const failed: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        tool_call_id: "r1",
+        title: "Read file 'src/a.ts'",
+        status: "completed",
+        tool_kind: "read",
+      },
+      {
+        kind: "tool_call",
+        tool_call_id: "r2",
+        title: "Read file 'src/missing.ts'",
+        status: "failed",
+        tool_kind: "read",
+      },
+    ];
+    const row = activityRow(failed);
+    renderGroup(row);
+
+    expect(screen.getByRole("button", { name: /hide the work/i })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByText(/1 failed/)).toBeInTheDocument();
+  });
+});
