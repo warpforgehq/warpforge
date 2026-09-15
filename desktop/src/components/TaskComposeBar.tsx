@@ -37,8 +37,10 @@ export type TaskMode = "single" | "orchestrator" | "workflow";
  * buttons, dropdowns and segmented groups, and letting each pick its own pill
  * radius made the row read as unrelated widgets rather than one context strip.
  */
-const CONTROL =
-  "flex h-8 shrink-0 items-center rounded-lg border-border px-2.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40";
+/** Standalone focus shape: a bare control gets a 2px ring with a 1px offset. */
+const FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background";
+const CONTROL = `flex h-8 shrink-0 items-center rounded-lg border-border px-2.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${FOCUS_RING}`;
 const ACTIVE_CONTROL = "border-primary/40 bg-primary/10 text-foreground";
 /** Segmented groups wrap their items, so the border+height sit on the wrapper. */
 const GROUP = "flex h-8 shrink-0 items-center gap-0.5 rounded-lg border border-border p-0.5";
@@ -130,6 +132,7 @@ export function TaskComposeBar({
                 onClick={() => onAgentChange(a.id)}
                 className={cn(
                   "flex h-full items-center rounded-md px-2 transition-colors",
+                  FOCUS_RING,
                   agent === a.id ? "bg-secondary" : "opacity-50 hover:opacity-100",
                 )}
               >
@@ -248,6 +251,7 @@ function ModeButton({
       onClick={() => onSelect(mode)}
       className={cn(
         "h-full rounded-md px-2.5 text-sm transition-colors",
+        FOCUS_RING,
         current === mode
           ? "bg-primary/15 text-foreground"
           : "text-muted-foreground hover:text-foreground",
@@ -354,6 +358,7 @@ export function WorkflowPicker({
           title="Which pipeline to run"
           className={cn(
             "flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors",
+            FOCUS_RING,
             selected ? ACTIVE_CONTROL : "border-border text-muted-foreground",
           )}
         >

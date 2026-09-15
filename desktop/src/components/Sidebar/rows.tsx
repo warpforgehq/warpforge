@@ -39,7 +39,7 @@ export function ShelfRow({
           row.count === 1 ? "" : "s"
         } in ${row.project}`}
         onClick={() => onToggle(row.project)}
-        className="flex h-6 w-full items-center gap-1.5 rounded-md pl-2 pr-7 text-left text-[11px] text-muted-foreground/45 transition-colors hover:bg-accent/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="flex h-6 w-full items-center gap-1.5 rounded-md pl-2 pr-7 text-left text-[11px] text-muted-foreground/45 transition-colors hover:bg-accent/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <ChevronRight
           aria-hidden
@@ -54,7 +54,7 @@ export function ShelfRow({
           aria-label={deleteTitle}
           title={deleteTitle}
           onClick={() => onDelete(row)}
-          className="pointer-events-none absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-muted-foreground/50 opacity-0 transition-opacity hover:bg-accent hover:text-destructive focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/shelf:pointer-events-auto group-hover/shelf:opacity-100"
+          className="pointer-events-none absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-muted-foreground/50 opacity-0 transition-opacity hover:bg-accent hover:text-destructive focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring group-hover/shelf:pointer-events-auto group-hover/shelf:opacity-100"
         >
           <Trash2 className="size-3" />
         </button>
@@ -83,7 +83,7 @@ export function EmptyRow({
         <button
           type="button"
           onClick={onAddProject}
-          className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
         >
           Add project
         </button>
@@ -120,7 +120,7 @@ export function ProjectRow({
         aria-expanded={row.expanded}
         aria-label={`${row.expanded ? "Collapse" : "Expand"} project ${row.name}`}
         onClick={() => onToggle(row.name)}
-        className="grid size-5 shrink-0 place-items-center rounded text-muted-foreground/40 transition-colors hover:bg-secondary/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="grid size-5 shrink-0 place-items-center rounded text-muted-foreground/40 transition-colors hover:bg-secondary/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <ChevronRight
           aria-hidden
@@ -132,11 +132,11 @@ export function ProjectRow({
         data-project={row.name}
         aria-label={`Open project ${row.name}`}
         onClick={() => onOpenProject(row.name)}
-        className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md pl-1 pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md pl-1 pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <span
           aria-hidden
-          className="grid size-[18px] shrink-0 place-items-center rounded-[5px] bg-primary/15 text-[10px] font-bold uppercase leading-none text-primary"
+          className="grid size-[18px] shrink-0 place-items-center rounded-[5px] bg-secondary text-[10px] font-bold uppercase leading-none text-muted-foreground"
         >
           {row.name.slice(0, 1)}
         </span>
@@ -171,7 +171,7 @@ export function ProjectRow({
           onMouseLeave={() => onSettleHover?.(false)}
           onFocus={() => onSettleHover?.(true)}
           onBlur={() => onSettleHover?.(false)}
-          className="pointer-events-none absolute right-1 top-1/2 grid size-[22px] -translate-y-1/2 place-items-center rounded text-muted-foreground/70 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/proj:pointer-events-auto group-hover/proj:opacity-100"
+          className="pointer-events-none absolute right-1 top-1/2 grid size-[22px] -translate-y-1/2 place-items-center rounded text-muted-foreground/70 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring group-hover/proj:pointer-events-auto group-hover/proj:opacity-100"
         >
           <CheckCheck className="size-3.5" />
         </button>

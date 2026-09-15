@@ -193,7 +193,7 @@ export function UnifiedDiff({
               aria-label={collapsed ? `Expand ${doc.path}` : `Collapse ${doc.path}`}
               title={collapsed ? "Expand this file's diff" : "Collapse this file's diff"}
               onClick={onToggleCollapsed}
-              className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
             >
               <ChevronDown
                 className={cn("size-3.5 transition-transform", collapsed && "-rotate-90")}

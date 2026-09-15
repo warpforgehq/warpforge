@@ -25,7 +25,19 @@ export const RailButton = forwardRef<
     ariaExpanded?: boolean;
   }
 >(function RailButton(
-  { label, active, count, hot, shortcut, icon: Icon, children, onClick, onFocus, tabIndex, ariaExpanded },
+  {
+    label,
+    active,
+    count,
+    hot,
+    shortcut,
+    icon: Icon,
+    children,
+    onClick,
+    onFocus,
+    tabIndex,
+    ariaExpanded,
+  },
   ref,
 ) {
   return (
@@ -75,7 +87,7 @@ export const RailButton = forwardRef<
       >
         <span>{label}</span>
         {shortcut && (
-          <kbd className="tnum rounded border border-border/60 px-1 font-sans text-[10px]">
+          <kbd className="tnum rounded border border-border px-1 font-sans text-[10px]">
             {shortcut}
           </kbd>
         )}

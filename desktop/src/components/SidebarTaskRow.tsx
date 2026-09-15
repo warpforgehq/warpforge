@@ -75,7 +75,7 @@ function LiveElapsed({ since }: { since: number }) {
 }
 
 const ACTION_BUTTON =
-  "grid size-[22px] shrink-0 place-items-center rounded text-muted-foreground/70 transition-[color,background-color,transform] duration-100 ease-[var(--ease-out)] active:scale-[0.97] hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+  "grid size-[22px] shrink-0 place-items-center rounded text-muted-foreground/70 transition-[color,background-color,transform] duration-100 ease-[var(--ease-out)] active:scale-[0.97] hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring";
 
 function RowActions({
   task,
@@ -293,7 +293,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
             style={{ paddingLeft: SIDEBAR_ROW_INSET_PX + gutterWidth + LANE_TWISTY_PX }}
             className={cn(
               "flex h-8 w-full items-center gap-2 rounded-md pr-1.5 text-left transition-colors",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
               active ? "font-medium text-foreground" : "hover:bg-accent/60",
             )}
           >
@@ -370,7 +370,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
           aria-label={`${expanded ? "Collapse" : "Expand"} ${childCount} subtask${childCount === 1 ? "" : "s"} of ${label}`}
           onClick={() => onToggle(task.id)}
           style={{ left: SIDEBAR_ROW_INSET_PX + gutterWidth }}
-          className="absolute top-1/2 grid size-4 -translate-y-1/2 place-items-center rounded text-muted-foreground/50 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="absolute top-1/2 grid size-4 -translate-y-1/2 place-items-center rounded text-muted-foreground/50 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
         >
           <ChevronRight
             aria-hidden

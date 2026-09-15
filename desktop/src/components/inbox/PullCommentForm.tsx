@@ -94,7 +94,7 @@ export function PullCommentForm({
           }}
           placeholder={placeholder}
           aria-label={label}
-          className="max-h-64 min-h-8 flex-1 resize-none overflow-y-auto border-border/60 bg-background/40 py-1.5 text-sm"
+          className="max-h-64 min-h-8 flex-1 resize-none overflow-y-auto border-border bg-background/40 py-1.5 text-sm"
         />
         {/* The send affordance stays visible but inert while there is nothing
             to send: a control that appears on the first keystroke moves the

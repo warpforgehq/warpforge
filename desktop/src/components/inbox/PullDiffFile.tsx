@@ -163,13 +163,13 @@ export const PullDiffFile = React.memo(function PullDiffFile({
   );
 
   return (
-    <div ref={attach} className="rounded-md border border-border/70">
+    <div ref={attach} className="rounded-md border border-border">
       <div
         className={cn(
           // Opaque, not `bg-secondary/60` + `backdrop-blur-sm`: a blur layer
           // per sticky header is what made a 50-file diff stutter on scroll —
           // the compositor re-blurred 52 elements every frame.
-          "sticky top-0 z-10 flex h-9 items-center gap-2 rounded-t-md border-b border-border/70 bg-secondary px-2",
+          "sticky top-0 z-10 flex h-9 items-center gap-2 rounded-t-md border-b border-rule bg-secondary px-2",
           viewed && "opacity-60",
         )}
       >

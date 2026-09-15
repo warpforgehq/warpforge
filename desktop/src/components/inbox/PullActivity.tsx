@@ -109,7 +109,7 @@ export function PullActivity({
 
       {/* One place to say something at the conversation level, always at the
           foot of the timeline where the newest card is. */}
-      <div className="min-w-0 rounded-md border border-border/70 bg-card px-3 py-2.5">
+      <div className="min-w-0 rounded-md border border-border bg-card px-3 py-2.5">
         <PullCommentForm
           project={pr.project}
           number={pr.number}

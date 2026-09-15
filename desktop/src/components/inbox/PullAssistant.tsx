@@ -139,7 +139,7 @@ export function PullAssistant({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-border/70 px-2">
+      <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-rule px-2">
         {/* The harness a live conversation runs on cannot change under it, so
             the picker becomes a label once there is a task. */}
         {task ? (

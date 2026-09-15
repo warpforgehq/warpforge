@@ -70,7 +70,7 @@ export const MessageActions = memo(function MessageActions({
       <button
         type="button"
         onClick={() => void copy()}
-        className="rounded p-1 hover:bg-secondary hover:text-foreground"
+        className="rounded p-1 hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
         aria-label="Copy message"
         title="Copy message"
       >
@@ -82,7 +82,7 @@ export const MessageActions = memo(function MessageActions({
           <button
             type="button"
             disabled={startingAgent !== null}
-            className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-50"
+            className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
             aria-label="Continue with another agent"
             title="Continue with…"
           >

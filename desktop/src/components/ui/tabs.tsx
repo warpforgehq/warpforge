@@ -1,4 +1,5 @@
 import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -11,22 +12,36 @@ const TabsList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn("inline-flex h-8 items-center gap-0.5 rounded-md bg-muted/50 p-0.5", className)}
+    className={cn("inline-flex items-center gap-1", className)}
     {...props}
   />
 ));
 TabsList.displayName = TabsPrimitive.List.displayName;
 
+const tabsTriggerVariants = cva(
+  "inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50",
+  {
+    defaultVariants: {
+      variant: "underline",
+    },
+    variants: {
+      variant: {
+        underline:
+          "h-9 border-b-2 border-transparent px-3 data-[state=active]:border-primary data-[state=active]:text-foreground",
+        pill: "h-7 rounded-md px-2.5 data-[state=active]:bg-secondary data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+      },
+    },
+  },
+);
+
 const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> &
+    VariantProps<typeof tabsTriggerVariants>
+>(({ className, variant, ...props }, ref) => (
   <TabsPrimitive.Trigger
     ref={ref}
-    className={cn(
-      "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 data-[state=active]:bg-secondary data-[state=active]:text-foreground data-[state=active]:shadow-sm",
-      className,
-    )}
+    className={cn(tabsTriggerVariants({ variant }), className)}
     {...props}
   />
 ));

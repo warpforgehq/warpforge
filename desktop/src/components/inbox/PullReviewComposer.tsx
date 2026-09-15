@@ -51,7 +51,7 @@ export function PullReviewComposer({
   }, [body, number, onSubmitted, pending, project, ready, verdict]);
 
   return (
-    <div className="flex shrink-0 flex-col gap-2 border-b border-border/70 px-3 py-2">
+    <div className="flex shrink-0 flex-col gap-2 border-b border-rule px-3 py-2">
       <textarea
         autoFocus
         rows={3}

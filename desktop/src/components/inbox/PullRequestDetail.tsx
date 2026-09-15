@@ -309,7 +309,7 @@ export function PullRequestDetail({
       {/* Tabs left, review actions right: the verdict is what you do once,
           at the end, so it sits out of the reading path rather than shouting
           from the header. */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-border/70 px-2">
+      <div className="flex shrink-0 items-center gap-2 border-b border-rule px-2">
         <SurfaceTabs
           aria-label="Pull request sections"
           value={tab}

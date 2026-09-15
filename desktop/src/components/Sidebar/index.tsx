@@ -130,7 +130,7 @@ function Sidebar({
         >
           <div className="flex items-center gap-1.5">
             <strong className="select-none text-[11px] font-bold uppercase tracking-[0.2em] text-foreground">
-              WARP<span className="text-primary">FORGE</span>
+              WARP<span>FORGE</span>
             </strong>
             <ConnectionDot connection={connection} connectionError={connectionError} />
           </div>
@@ -140,7 +140,7 @@ function Sidebar({
             aria-label="Collapse sidebar"
             title="Collapse sidebar"
             aria-expanded
-            className="grid size-6 place-items-center rounded text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="grid size-6 place-items-center rounded text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
           >
             <PanelLeftClose className="size-4" />
           </button>
@@ -158,7 +158,7 @@ function Sidebar({
           <button
             type="button"
             onClick={onNewTask}
-            className="flex h-8 w-full items-center gap-2 rounded-md border border-primary/40 bg-primary/15 px-2.5 text-left text-[13px] font-semibold text-primary transition-colors hover:border-primary/60 hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex h-8 w-full items-center gap-2 rounded-md bg-primary/15 px-2.5 text-left text-[13px] font-semibold text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
           >
             <Plus className="size-4 shrink-0" />
             <span className="min-w-0 flex-1 truncate">New task</span>
@@ -179,7 +179,7 @@ function Sidebar({
                 onClick={() => onSelectView(item.id)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                  "flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
                   active
                     ? "bg-accent font-medium text-foreground"
                     : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
@@ -188,7 +188,7 @@ function Sidebar({
                 <item.icon
                   className={cn(
                     "size-4 shrink-0",
-                    active ? "text-primary" : "text-muted-foreground/60",
+                    active ? "text-foreground" : "text-muted-foreground/60",
                   )}
                 />
                 <span className="min-w-0 flex-1 truncate">{item.label}</span>
@@ -305,7 +305,7 @@ function Sidebar({
             <button
               type="button"
               onClick={onOpenSettings}
-              className="flex h-8 flex-1 items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-8 flex-1 items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
             >
               <Settings className="size-4 shrink-0 text-muted-foreground/60" />
               Settings

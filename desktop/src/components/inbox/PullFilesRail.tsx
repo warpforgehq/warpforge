@@ -124,7 +124,7 @@ export function PullFilesRail({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-border/70 px-2">
+      <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-rule px-2">
         <Input
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
@@ -136,7 +136,7 @@ export function PullFilesRail({
         <div
           role="group"
           aria-label="File list view"
-          className="flex shrink-0 items-center rounded border border-border/70 p-0.5"
+          className="flex shrink-0 items-center rounded border border-border p-0.5"
         >
           <ViewButton
             active={view === "tree"}

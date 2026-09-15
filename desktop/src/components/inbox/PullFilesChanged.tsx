@@ -139,7 +139,7 @@ function FileGroup({
         </span>
       </button>
       {open && (
-        <div className="ml-1 flex min-w-0 flex-col border-l border-border/60 pl-1.5">
+        <div className="ml-1 flex min-w-0 flex-col border-l border-rule pl-1.5">
           {group.files.map((file) => (
             <FileRow key={file.path} file={file} dim={noise} onOpenFile={onOpenFile} />
           ))}

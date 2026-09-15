@@ -53,9 +53,9 @@ export function PullThreadCard({
 }) {
   const all = [root, ...root.replies];
   return (
-    <div className={cn("overflow-hidden rounded-md border border-border/70 bg-card", className)}>
+    <div className={cn("overflow-hidden rounded-md border border-border bg-card", className)}>
       {path ? (
-        <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-border/60 bg-secondary/40 px-2.5">
+        <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-rule bg-secondary/40 px-2.5">
           <MessageSquare aria-hidden className="size-3 shrink-0 text-muted-foreground/70" />
           <span
             className="min-w-0 truncate font-mono text-[11px] text-muted-foreground"
@@ -85,7 +85,7 @@ export function PullThreadCard({
       ) : null}
 
       {quote && quote.length > 0 && (
-        <div className="border-b border-border/50 bg-secondary/20 px-3 py-1.5 font-mono text-[11px] leading-5">
+        <div className="border-b border-rule bg-secondary/20 px-3 py-1.5 font-mono text-[11px] leading-5">
           {quote.map((row) => (
             <div
               key={`${row.kind}:${row.number}:${row.text}`}
@@ -155,7 +155,7 @@ export function PullThreadCard({
       </div>
 
       {(onReply || footer) && (
-        <div className="flex min-w-0 flex-col gap-2 border-t border-border/50 px-3 py-2">
+        <div className="flex min-w-0 flex-col gap-2 border-t border-rule px-3 py-2">
           {footer}
           {/* A host that opens a composer clears `onReply` while it is open,
               so the two never stack. */}

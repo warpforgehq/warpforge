@@ -143,4 +143,11 @@ describe("TaskComposeBar — execution mode", () => {
     renderBar({ branch: "feature/oauth" });
     expect(screen.getByText("feature/oauth")).toBeInTheDocument();
   });
+
+  it("carries the standalone focus ring on its bare controls", () => {
+    renderBar({ mode: "single" });
+    const mode = screen.getByRole("radio", { name: "Single" });
+    expect(mode.className).toContain("focus-visible:ring-2");
+    expect(mode.className).toContain("focus-visible:ring-offset-1");
+  });
 });

@@ -38,7 +38,7 @@ export function PullDiffToolbar({
   onRangeChange: (range: CommitRange | null) => void;
 }) {
   return (
-    <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-border/70 px-2">
+    <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-rule px-2">
       <Pill
         icon={ListTree}
         label="Files"
@@ -61,7 +61,7 @@ export function PullDiffToolbar({
       </span>
       {truncated && <span className="text-xs text-warn">diff truncated by the size cap</span>}
       <div className="ml-auto flex shrink-0 items-center gap-2">
-        <div className="flex rounded-md border border-border/80 bg-background/30 p-0.5">
+        <div className="flex rounded-md border border-border bg-background/30 p-0.5">
           {(["unified", "split"] as const).map((value) => (
             <button
               type="button"
@@ -108,7 +108,7 @@ function Pill({
         "flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs",
         pressed
           ? "border-border bg-secondary text-foreground"
-          : "border-border/70 text-muted-foreground hover:text-foreground",
+          : "border-border text-muted-foreground hover:text-foreground",
       )}
     >
       <Icon aria-hidden className="size-3" />

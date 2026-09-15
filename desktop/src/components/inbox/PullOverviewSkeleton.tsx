@@ -47,7 +47,7 @@ export function PullOverviewSkeleton({ variant }: { variant: "description" | "ac
           <div
             key={card}
             data-testid="pull-activity-skeleton-card"
-            className="overflow-hidden rounded-md border border-border/70 bg-card"
+            className="overflow-hidden rounded-md border border-border bg-card"
           >
             <div className="flex flex-col gap-3 px-3 py-2.5">
               <div className="flex min-w-0 items-center gap-2.5">

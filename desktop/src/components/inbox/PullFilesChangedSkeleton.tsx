@@ -26,7 +26,7 @@ export function PullFilesChangedSkeleton() {
             <SkeletonBar h={10} className="w-4 shrink-0" />
             <SkeletonBar h={10} className="ml-auto w-12 shrink-0" />
           </div>
-          <div className="ml-1 flex min-w-0 flex-col border-l border-border/60 pl-1.5">
+          <div className="ml-1 flex min-w-0 flex-col border-l border-rule pl-1.5">
             {Array.from({ length: ROWS_PER_GROUP }, (_row, row) => (
               <div
                 key={row}

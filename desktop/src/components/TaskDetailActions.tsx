@@ -41,7 +41,7 @@ export const TaskDetailActions = memo(function TaskDetailActions({ task }: { tas
         title="Language servers (autocomplete, diagnostics, hover)"
         onClick={toggleLsp}
         className={cn(
-          "flex items-center gap-1 rounded-sm px-1 text-[11px] hover:bg-secondary hover:text-foreground",
+          "flex items-center gap-1 rounded-sm px-1 text-[11px] hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
           lspEnabled ? "text-foreground" : "text-muted-foreground",
         )}
       >
@@ -110,7 +110,7 @@ function ActionButton({
       title={label}
       onClick={onClick}
       className={cn(
-        "flex size-4 items-center justify-center rounded-sm hover:bg-secondary hover:text-foreground",
+        "flex size-4 items-center justify-center rounded-sm hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
         active ? "text-foreground" : "text-muted-foreground",
       )}
     >

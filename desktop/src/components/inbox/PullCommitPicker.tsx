@@ -56,7 +56,7 @@ export function PullCommitPicker({
         className={cn(
           "flex h-6 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs disabled:text-muted-foreground/40",
           all
-            ? "border-border/70 text-muted-foreground hover:text-foreground"
+            ? "border-border text-muted-foreground hover:text-foreground"
             : "border-primary/50 bg-primary/10 text-foreground",
         )}
       >

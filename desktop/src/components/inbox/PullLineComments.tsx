@@ -197,7 +197,7 @@ function Composer({
     <div
       className={cn(
         "flex flex-col gap-1.5",
-        !embedded && "overflow-hidden rounded-md border border-border/70 bg-card p-2.5",
+        !embedded && "overflow-hidden rounded-md border border-border bg-card p-2.5",
       )}
     >
       <div className="flex min-w-0 items-center gap-2">
@@ -240,7 +240,7 @@ function Composer({
         }}
         placeholder="Leave a comment… (⌘⏎ to post)"
         aria-label="Comment body"
-        className="max-h-80 min-h-24 resize-none overflow-y-auto border-border/60 bg-background/40 text-sm"
+        className="max-h-80 min-h-24 resize-none overflow-y-auto border-border bg-background/40 text-sm"
       />
       {error && <p className="text-xs text-destructive">{error}</p>}
       <div className="flex items-center justify-end gap-1.5">

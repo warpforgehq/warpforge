@@ -70,18 +70,10 @@ export function SurfaceTabs<T extends string = WorkspaceSurface>({
       <TabsList
         {...listProps}
         aria-label={ariaLabel ?? "Workspace surfaces"}
-        className={cn(
-          "flex h-9 min-w-0 justify-start gap-0 overflow-x-auto rounded-none border-0 bg-transparent p-0",
-          className,
-        )}
+        className={cn("flex h-9 min-w-0 justify-start gap-0 overflow-x-auto", className)}
       >
         {tabs.map(({ count, disabled, icon: Icon, id, label }) => (
-          <TabsTrigger
-            key={id}
-            value={id}
-            disabled={disabled}
-            className="group h-9 shrink-0 rounded-none border-b-2 border-transparent px-2 text-xs font-medium text-muted-foreground hover:bg-secondary/50 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-          >
+          <TabsTrigger key={id} value={id} disabled={disabled} className="group shrink-0 px-2">
             <Icon aria-hidden className="size-3.5" />
             {label}
             {count != null && (

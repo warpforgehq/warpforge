@@ -71,7 +71,7 @@ export function BodyPicker({
               move(index, direction);
             }}
             className={cn(
-              "flex h-[26px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              "flex h-[26px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
               active
                 ? "bg-background font-medium text-foreground shadow-sm dark:bg-secondary"
                 : "text-muted-foreground hover:text-foreground",

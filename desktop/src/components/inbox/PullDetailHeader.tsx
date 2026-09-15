@@ -45,7 +45,7 @@ export function PullDetailHeader({
   const branch = details?.headRefName || pr.headRefName;
 
   return (
-    <header className="flex shrink-0 flex-col gap-0.5 border-b border-border/70 px-3 py-2">
+    <header className="flex shrink-0 flex-col gap-0.5 border-b border-rule px-3 py-2">
       <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
         {/* The reference is the menu, the way Linear does it: everything you
             would want to do with this pull request hangs off its own name.

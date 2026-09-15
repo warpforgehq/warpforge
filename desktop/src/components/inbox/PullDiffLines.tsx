@@ -156,7 +156,7 @@ export const PullDiffLines = React.memo(function PullDiffLines({
   );
 
   const header = (
-    <div className="sticky left-0 border-y border-border/40 bg-secondary/20 px-2.5 text-muted-foreground/70">
+    <div className="sticky left-0 border-y border-rule bg-secondary/20 px-2.5 text-muted-foreground/70">
       {hunk.header}
     </div>
   );
@@ -262,7 +262,7 @@ function SplitHalf({
     <div
       className={cn(
         "group/line flex w-1/2 min-w-0",
-        bordered && "border-l border-border/40",
+        bordered && "border-l border-rule",
         line ? LINE_CLASS[line.kind] : "bg-secondary/10",
       )}
     >
