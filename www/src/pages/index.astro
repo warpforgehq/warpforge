@@ -137,12 +137,12 @@ const specs = [
               aria-label={starLabel}
             >
               <Icon name="ph:star-fill" size={16} />
+              <span class="star-cta" aria-hidden="true">Star</span>
               {
                 starCount !== null && (
                   <span class="star-count" aria-hidden="true">{formatStarCount(starCount)}</span>
                 )
               }
-              <span class="star-cta" aria-hidden="true">Star us</span>
             </a>
           </div>
         </div>
@@ -373,6 +373,7 @@ const specs = [
   .ghost-link {
     display: inline-flex;
     color: var(--faint);
+    text-decoration: none;
     transition: color 0.15s ease;
   }
   .ghost-link:hover {
@@ -403,19 +404,30 @@ const specs = [
     height: 0.95rem;
     flex-shrink: 0;
   }
-  .star-pill .star-count {
+  .star-pill .star-cta {
     color: var(--fg);
     font-weight: 500;
+  }
+  /* GitHub's shape: the action first, the count behind a hairline, so the
+     number reads as the repo's stat rather than as part of the invitation. */
+  .star-pill .star-count {
+    margin-left: 0.05rem;
+    padding-left: 0.4rem;
+    border-left: 1px solid hsl(var(--border));
+    color: var(--faint);
     font-variant-numeric: tabular-nums;
   }
-  .star-pill .star-cta {
-    color: var(--faint);
-  }
   /* Narrow header: drop the invitation, keep the glyph and count so the row
-     stays on one line at the width where the theme name also goes. */
+     stays on one line at the width where the theme name also goes. The
+     hairline belongs to the invitation, so it goes with it. */
   @media (max-width: 560px) {
     .star-pill .star-cta {
       display: none;
+    }
+    .star-pill .star-count {
+      margin-left: 0;
+      padding-left: 0;
+      border-left: none;
     }
   }
 
