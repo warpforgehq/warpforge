@@ -25,11 +25,11 @@ import type {
 } from "../../protocol";
 import { usePanelLayout } from "../../store/panelLayout";
 import { useUi } from "../../store/ui";
-import { type DiffWorkspaceHandle } from "./DiffWorkspace";
 import { hunkKey } from "./diffAnchors";
+import { type DiffWorkspaceHandle } from "./DiffWorkspace";
 import { formatFileDiffAsMessage } from "./FileDiffView";
-import { useTaskQueries, type ActiveTab } from "./useTaskQueries";
 import { useSplitResize } from "./useSplitResize";
+import { useTaskQueries, type ActiveTab } from "./useTaskQueries";
 
 export { WORKSPACE_MIN_WIDTH } from "./useSplitResize";
 
@@ -368,14 +368,21 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
 
   // A hunk position is restored only after the diff actually carries the file.
   // The workspace mounts a frame behind the shell, so retry like a diff
-  // navigation; bounded, so a hunk the diff no longer has cannot spin.
+  // navigation; bounded, so a hunk the diff no longer has cannot spin. The
+  // restore is not user-driven: if the reader clicks a file while it is
+  // pending, the nonce moves and the restore gives the scroll up.
   useEffect(() => {
     if (!restoreHunk) return;
+    const startNonce = diffWorkspaceRef.current?.explicitScrollNonce() ?? 0;
     let frame = 0;
     let attempts = 0;
     const scroll = () => {
       const workspace = diffWorkspaceRef.current;
-      if (workspace?.scrollToHunk(restoreHunk.path, restoreHunk.hunkKey)) {
+      if (workspace && workspace.explicitScrollNonce() !== startNonce) {
+        setRestoreHunk(null);
+        return;
+      }
+      if (workspace?.scrollToHunk(restoreHunk.path, restoreHunk.hunkKey, { explicit: false })) {
         setRestoreHunk(null);
         return;
       }
