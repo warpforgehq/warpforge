@@ -67,8 +67,70 @@ describe("session stream coalescing", () => {
     expect(reopened.id).toBe(group.id);
   });
 
-  it("keeps an active thinking group live and open by default", () => {
+  it("opens a failed group by default but lets the reader fold it away", () => {
     const updates: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        status: "completed",
+        title: "Run ls",
+        tool_call_id: "ok",
+        tool_kind: "execute",
+      },
+      {
+        kind: "tool_call",
+        status: "failed",
+        title: "Run rg",
+        tool_call_id: "bad",
+        tool_kind: "execute",
+      },
+    ];
+
+    const rows = deriveTranscriptRows(updates, new Map(), null, null);
+    const group = rows[0];
+    if (group.kind !== "activity") throw new Error("expected an activity group");
+    expect(group.hasFailure).toBe(true);
+    expect(group.open).toBe(true);
+
+    // A non-zero exit is not a blocker: unlike an unanswered prompt, the reader
+    // may fold it away and the choice sticks.
+    const folded = deriveTranscriptRows(updates, new Map([[group.groupId, false]]), null, null);
+    const foldedGroup = folded[0];
+    if (foldedGroup.kind !== "activity") throw new Error("expected an activity group");
+    expect(foldedGroup.open).toBe(false);
+  });
+
+  it("forces a group open while a permission is unanswered, override or not", () => {
+    const updates: SessionUpdate[] = [
+      {
+        kind: "tool_call",
+        pendingPermission: { options: ["allow", "deny"], request_id: "perm-1" },
+        status: "pending",
+        title: "Run rm",
+        tool_call_id: "blocked",
+        tool_kind: "execute",
+      },
+      {
+        kind: "tool_call",
+        status: "completed",
+        title: "Run ls",
+        tool_call_id: "done",
+        tool_kind: "execute",
+      },
+    ];
+
+    const rows = deriveTranscriptRows(updates, new Map(), null, null);
+    const group = rows[0];
+    if (group.kind !== "activity") throw new Error("expected an activity group");
+    expect(group.hasPendingApproval).toBe(true);
+    expect(group.open).toBe(true);
+
+    const folded = deriveTranscriptRows(updates, new Map([[group.groupId, false]]), null, null);
+    const foldedGroup = folded[0];
+    if (foldedGroup.kind !== "activity") throw new Error("expected an activity group");
+    expect(foldedGroup.open).toBe(true);
+  });
+
+  it("keeps an active thinking group live and open by default", () => {    const updates: SessionUpdate[] = [
       { kind: "agent_thought", text: "Looking" },
       {
         kind: "tool_call",

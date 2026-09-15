@@ -145,10 +145,10 @@ export function deriveTranscriptRows(
     const hasPendingApproval = group.some(
       (entry) => entry.update.kind === "tool_call" && Boolean(entry.update.pendingPermission),
     );
-    // A failure or an unanswered prompt keeps the group open whatever the
-    // reader last chose; a live group only while no explicit collapse overrides
-    // it, so a manual choice sticks as the stream continues.
-    const forcedOpen = hasFailure || hasPendingApproval;
+    // A failure opens the group by default so it is not missed, but the reader
+    // may fold it away — a non-zero exit is not a blocker. An unanswered prompt
+    // is a blocker: it forces the group open whatever the reader last chose.
+    const forcedOpen = hasPendingApproval;
     rows.push({
       kind: "activity",
       id: `activity:${groupId}`,
@@ -159,7 +159,9 @@ export function deriveTranscriptRows(
       live,
       hasFailure,
       hasPendingApproval,
-      open: forcedOpen ? true : (workGroupOverrides.get(groupId) ?? live),
+      open: forcedOpen
+        ? true
+        : (workGroupOverrides.get(groupId) ?? (hasFailure || live)),
     });
     group = [];
   };
