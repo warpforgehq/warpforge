@@ -136,7 +136,7 @@ const specs = [
               rel="noopener"
               aria-label={starLabel}
             >
-              <Icon name="ph:star-fill" size={16} />
+              <Icon name="ph:github-logo-fill" size={16} />
               <span class="star-cta" aria-hidden="true">Star</span>
               {
                 starCount !== null && (
@@ -379,14 +379,15 @@ const specs = [
   .ghost-link:hover {
     color: var(--fg);
   }
-  /* Header star pill: count plus invitation, opening the repo. Same tokens and
-     pill shape as the theme control beside it, so the two read as one row
-     rather than a bolt-on. `ghost-link` supplies the flex box and focus ring. */
+  /* Header star pill: the GitHub mark, the invitation, the repo's count. Pill
+     metrics are the theme control's beside it — same height, radius, tokens and
+     type size — so the two read as one row. `ghost-link` supplies the flex box
+     and the focus ring. */
   .star-pill {
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.4rem;
     height: 1.9rem;
-    padding-inline: 0.55rem;
+    padding-inline: 0.6rem;
     border: 1px solid hsl(var(--border));
     border-radius: 999px;
     background: hsl(var(--card));
@@ -394,6 +395,10 @@ const specs = [
     font-size: 0.8125rem;
     line-height: 1;
     white-space: nowrap;
+    /* Stated on the pill, not left to `.ghost-link`: the label and the count
+       pick up a link underline from the cascade otherwise. */
+    text-decoration: none;
+    transition: color 0.15s ease, border-color 0.15s ease;
   }
   .star-pill:hover {
     color: var(--fg);
@@ -405,29 +410,32 @@ const specs = [
     flex-shrink: 0;
   }
   .star-pill .star-cta {
-    color: var(--fg);
     font-weight: 500;
   }
-  /* GitHub's shape: the action first, the count behind a hairline, so the
-     number reads as the repo's stat rather than as part of the invitation. */
+  /* The count as a chip rather than a figure behind a hairline: one small
+     saturated mark carries the accent of whichever theme is on, and the pill
+     stops competing with the buttons below it. */
   .star-pill .star-count {
-    margin-left: 0.05rem;
-    padding-left: 0.4rem;
-    border-left: 1px solid hsl(var(--border));
-    color: var(--faint);
+    display: inline-flex;
+    align-items: center;
+    height: 1.125rem;
+    padding-inline: 0.375rem;
+    border-radius: 999px;
+    background: hsl(var(--primary) / 0.12);
+    color: hsl(var(--primary));
+    font-size: 0.6875rem;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
+    transition: background-color 0.15s ease;
   }
-  /* Narrow header: drop the invitation, keep the glyph and count so the row
-     stays on one line at the width where the theme name also goes. The
-     hairline belongs to the invitation, so it goes with it. */
+  .star-pill:hover .star-count {
+    background: hsl(var(--primary) / 0.2);
+  }
+  /* Narrow header: drop the invitation, as the theme control drops its name at
+     the same width, so the row stays on one line. */
   @media (max-width: 560px) {
     .star-pill .star-cta {
       display: none;
-    }
-    .star-pill .star-count {
-      margin-left: 0;
-      padding-left: 0;
-      border-left: none;
     }
   }
 
