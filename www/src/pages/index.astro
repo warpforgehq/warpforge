@@ -10,6 +10,35 @@ import ThemeSwitcher from "@/components/landing/ThemeSwitcher.tsx";
 import { THEMES } from "@app/lib/themes";
 import { DEFAULT_THEME_ID, THEME_STORAGE_KEY } from "@/lib/landing-theme";
 
+const REPO_API = "https://api.github.com/repos/warpforgehq/warpforge";
+
+/* Fetched once at build time, so the pill arrives server-rendered with its
+   number and the page ships no client script for it. An offline or
+   rate-limited build drops the count instead of failing or printing NaN. */
+async function fetchStarCount(): Promise<number | null> {
+  try {
+    const res = await fetch(REPO_API, { headers: { Accept: "application/vnd.github+json" } });
+    if (!res.ok) return null;
+    const body: unknown = await res.json();
+    const count = (body as { stargazers_count?: unknown }).stargazers_count;
+    return typeof count === "number" && Number.isFinite(count) ? count : null;
+  } catch {
+    return null;
+  }
+}
+
+/* GitHub's own abbreviation: 999 -> "999", 1200 -> "1.2k", 12345 -> "12.3k". */
+function formatStarCount(count: number): string {
+  if (count < 1000) return String(count);
+  return `${Math.round(count / 100) / 10}k`;
+}
+
+const starCount = await fetchStarCount();
+const starLabel =
+  starCount === null
+    ? "Star warpforge on GitHub"
+    : `Star warpforge on GitHub — ${starCount} ${starCount === 1 ? "star" : "stars"}`;
+
 const themes = Object.fromEntries(THEMES.map((t) => [t.id, { colors: t.colors, mode: t.mode }]));
 const defaultTheme = themes[DEFAULT_THEME_ID];
 
@@ -102,11 +131,19 @@ const specs = [
             <ThemeSwitcher client:load />
             <a
               href="https://github.com/warpforgehq/warpforge"
-              class="ghost-link"
+              class="ghost-link star-pill"
               target="_blank"
               rel="noopener"
-              aria-label="GitHub"><Icon name="ph:github-logo" size={16} /></a
+              aria-label={starLabel}
             >
+              <Icon name="ph:star-fill" size={16} />
+              {
+                starCount !== null && (
+                  <span class="star-count" aria-hidden="true">{formatStarCount(starCount)}</span>
+                )
+              }
+              <span class="star-cta" aria-hidden="true">Star us</span>
+            </a>
           </div>
         </div>
       </header>
@@ -340,6 +377,46 @@ const specs = [
   }
   .ghost-link:hover {
     color: var(--fg);
+  }
+  /* Header star pill: count plus invitation, opening the repo. Same tokens and
+     pill shape as the theme control beside it, so the two read as one row
+     rather than a bolt-on. `ghost-link` supplies the flex box and focus ring. */
+  .star-pill {
+    align-items: center;
+    gap: 0.35rem;
+    height: 1.9rem;
+    padding-inline: 0.55rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 999px;
+    background: hsl(var(--card));
+    color: var(--mut);
+    font-size: 0.8125rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .star-pill:hover {
+    color: var(--fg);
+    border-color: hsl(var(--primary) / 0.5);
+  }
+  .star-pill svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+  }
+  .star-pill .star-count {
+    color: var(--fg);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .star-pill .star-cta {
+    color: var(--faint);
+  }
+  /* Narrow header: drop the invitation, keep the glyph and count so the row
+     stays on one line at the width where the theme name also goes. */
+  @media (max-width: 560px) {
+    .star-pill .star-cta {
+      display: none;
+    }
   }
 
   /* ---- buttons, per lib/buttonVariants.ts ----
