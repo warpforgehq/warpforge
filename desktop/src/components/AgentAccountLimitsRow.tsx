@@ -51,7 +51,7 @@ export function AgentAccountLimitsRow({
   const hasWindows = account.windows.length > 0;
   const outdated = isSnapshotOutdated(account.fetchedAt, nowSec);
   return (
-    <div className="space-y-3 rounded-md border border-border/80 bg-card p-4">
+    <div className="space-y-3 rounded-md border border-border bg-card p-4">
       <div className="flex items-center gap-2">
         <AgentLogo
           agentId={account.agentId}
@@ -114,7 +114,7 @@ export function AgentAccountLimitsRow({
           the action — present only where switching is meaningful — has a fixed
           place on the right. Staleness worth acting on is the header's
           "Outdated" tag; this is just the raw age. */}
-      <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-2">
+      <div className="flex items-center justify-between gap-2 border-t border-rule pt-2">
         <span className="text-[10px] text-muted-foreground/70" title={`source: ${account.source}`}>
           updated {formatFetched(account.fetchedAt, nowSec)}
         </span>
@@ -135,7 +135,7 @@ function SpendBlock({ spend }: { spend: AgentSpend }) {
   if (!spend.reported) {
     return (
       <div
-        className="flex items-center gap-2 border-t border-border/60 pt-2 text-xs text-muted-foreground"
+        className="flex items-center gap-2 border-t border-rule pt-2 text-xs text-muted-foreground"
         title={SPEND_DISCLAIMER}
       >
         <span>Spend</span>
@@ -149,7 +149,7 @@ function SpendBlock({ spend }: { spend: AgentSpend }) {
   if (!today && !total) return null;
 
   return (
-    <div className="space-y-1 border-t border-border/60 pt-2" title={SPEND_DISCLAIMER}>
+    <div className="space-y-1 border-t border-rule pt-2" title={SPEND_DISCLAIMER}>
       {today && <SpendLine label="Today" value={today} />}
       {total && <SpendLine label="Total" value={total} />}
     </div>

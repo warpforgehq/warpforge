@@ -3,7 +3,7 @@ import { useMemo } from "react";
 
 import { Card } from "@/components/ui/card";
 import { Panel, PanelCollapseHint, PanelGroup, PanelSeparator } from "@/components/ui/panels";
-import { FlipButton, FocusButton } from "@/components/workspace";
+import { FlipButton, FocusButton, PaneHeader } from "@/components/workspace";
 import { setTaskDiff, setTaskEditorView, setTaskFiles } from "@/lib/sessionStore";
 import { cn } from "@/lib/utils";
 
@@ -147,17 +147,25 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
             !showDiff && "mx-auto max-w-[1100px]",
           )}
         >
-          <div className="flex h-9 shrink-0 items-center border-b border-border bg-card px-2">
-            <div className="min-w-0 flex-1 truncate text-sm font-semibold">Conversation</div>
-            {taskGroup && (
-              <TaskAgentSwitcher tree={taskGroup} currentTaskId={task.id} onOpenTask={onOpenTask} />
-            )}
-            <FocusButton
-              focused={!showDiff}
-              label={showDiff ? "Focus conversation" : "Restore split view"}
-              onClick={() => setShowDiff(!showDiff)}
-            />
-          </div>
+          <PaneHeader
+            title="Conversation"
+            actions={
+              <>
+                {taskGroup && (
+                  <TaskAgentSwitcher
+                    tree={taskGroup}
+                    currentTaskId={task.id}
+                    onOpenTask={onOpenTask}
+                  />
+                )}
+                <FocusButton
+                  focused={!showDiff}
+                  label={showDiff ? "Focus conversation" : "Restore split view"}
+                  onClick={() => setShowDiff(!showDiff)}
+                />
+              </>
+            }
+          />
           <AgentLimitsExhaustedBanner agentId={task.agent} />
           <SessionLostBanner task={task} onOpenTask={onOpenTask} />
           <ModelMismatchBanner task={task} />

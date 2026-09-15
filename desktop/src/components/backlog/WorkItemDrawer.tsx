@@ -206,7 +206,7 @@ function WorkItemDetails({
       {/* The title is what the panel is about, so it is the panel's heading;
           which tracker it came from is metadata, and reads with the rest of it
           below. */}
-      <header className="flex min-h-12 shrink-0 items-center gap-3 border-b border-border/60 px-6 py-2">
+      <header className="flex min-h-12 shrink-0 items-center gap-3 border-b border-rule px-6 py-2">
         <DialogTitle
           className="min-w-0 flex-1 text-base font-medium leading-snug text-foreground"
           title={title}
@@ -232,7 +232,7 @@ function WorkItemDetails({
                     commitTitle();
                   }
                 }}
-                className="-my-1 w-full rounded-md border border-border/60 bg-background/40 px-2 py-1 text-base font-medium text-foreground outline-none focus:border-border"
+                className="-my-1 w-full rounded-md border border-border bg-background/40 px-2 py-1 text-base font-medium text-foreground outline-none focus:border-border"
               />
             </>
           ) : editable ? (
@@ -265,7 +265,7 @@ function WorkItemDetails({
           )}
           {/* The one destructive control sits a rule away from Close, which is
               the button the same hand reaches for a dozen times a day. */}
-          {editable && <span aria-hidden className="mx-1 h-4 w-px bg-border/60" />}
+          {editable && <span aria-hidden className="mx-1 h-4 w-px bg-rule" />}
           {item.url && (
             <Button
               variant="ghost"
@@ -384,7 +384,7 @@ function WorkItemDetails({
               }
             }}
             placeholder="Describe the work… (markdown)"
-            className="min-h-[12rem] w-full max-w-[80ch] resize-y rounded-md border border-border/60 bg-background/40 p-3 text-[13px] leading-relaxed text-foreground/90 outline-none placeholder:text-muted-foreground/50 focus:border-border"
+            className="min-h-[12rem] w-full max-w-[80ch] resize-y rounded-md border border-border bg-background/40 p-3 text-[13px] leading-relaxed text-foreground/90 outline-none placeholder:text-muted-foreground/50 focus:border-border"
           />
         ) : (
           <div className="group/description relative max-w-[80ch]">
@@ -435,7 +435,7 @@ function WorkItemDetails({
       {/* Timestamps ride in the footer rather than closing the description:
           they are the least-read thing here, and putting them on the action
           bar's empty half costs no vertical space at all. */}
-      <footer className="flex h-14 shrink-0 items-center justify-between gap-4 border-t border-border/60 px-6">
+      <footer className="flex h-14 shrink-0 items-center justify-between gap-4 border-t border-rule px-6">
         <dl className="flex min-w-0 flex-wrap items-baseline gap-x-4 text-[11px] text-muted-foreground">
           <div className="flex items-baseline gap-1.5">
             <dt>Created</dt>
@@ -506,7 +506,7 @@ const TASK_TONE: Record<string, string> = {
 function LinkedTaskSummary({ task }: { task: TaskInfo }) {
   const visual = taskStatusVisual(task.status);
   return (
-    <div className="flex min-w-0 max-w-[80ch] items-center gap-2 rounded-md border border-border/70 bg-background/30 px-3 py-2 text-xs">
+    <div className="flex min-w-0 max-w-[80ch] items-center gap-2 rounded-md border border-border bg-background/30 px-3 py-2 text-xs">
       <span className={cn("size-1.5 shrink-0 rounded-full", TASK_TONE[visual.tone])} aria-hidden />
       <span className="min-w-0 flex-1 truncate text-foreground">{task.title || task.prompt}</span>
       <span className="shrink-0 text-muted-foreground">{statusLabel(task.status)}</span>

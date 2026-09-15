@@ -245,7 +245,7 @@ function AccountAction({
 /** An account the daemon has never polled: no numbers to show, still switchable. */
 function PlainAccountCard({ card, action }: { card: AccountCard; action: ReactNode }) {
   return (
-    <div className="space-y-3 rounded-md border border-border/80 bg-card p-4">
+    <div className="space-y-3 rounded-md border border-border bg-card p-4">
       <div className="flex items-center gap-2">
         <AgentLogo
           agentId={card.agentId}
@@ -271,7 +271,7 @@ function PlainAccountCard({ card, action }: { card: AccountCard; action: ReactNo
       {/* Never polled, so there is no timestamp to sit on the left of this row —
           only the action, and nothing at all when it is the active account. */}
       {action && (
-        <div className="flex items-center justify-end border-t border-border/60 pt-2">{action}</div>
+        <div className="flex items-center justify-end border-t border-rule pt-2">{action}</div>
       )}
     </div>
   );

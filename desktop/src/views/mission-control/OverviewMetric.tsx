@@ -15,7 +15,7 @@ function OverviewMetric({
   return (
     <Card
       className={cn(
-        "min-w-0 rounded-md border-border/70 bg-card/35 px-3 py-2.5 shadow-none",
+        "min-w-0 rounded-md border-border bg-card/35 px-3 py-2.5 shadow-none",
         tone === "warn" && "border-warn/40 bg-warn/[0.06]",
       )}
     >

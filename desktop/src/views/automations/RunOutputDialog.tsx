@@ -62,7 +62,7 @@ export function RunOutputDialog({ automationName, onClose, onOpenTask, run }: Pr
             )}
 
             {run.output ? (
-              <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md border border-border/70 bg-secondary/25 px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground">
+              <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-secondary/25 px-3 py-2 font-mono text-[11px] leading-relaxed text-foreground">
                 {run.output}
               </pre>
             ) : (

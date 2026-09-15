@@ -1,5 +1,6 @@
 import { Check, Code, Eye, Loader2, Save, Wand2 } from "lucide-react";
 
+import { PaneHeader } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 
 import { LSP_LABELS, type SaveStatus } from "./constants";
@@ -35,55 +36,60 @@ export function EditorToolbar({
 }) {
   return (
     <>
-      <div className="flex h-9 shrink-0 items-center gap-3 border-b px-3 text-xs text-muted-foreground">
-        <span className="min-w-0 flex-1 truncate font-mono">{path}</span>
-        <span
-          className={cn(
-            "flex items-center gap-1",
-            status === "unsaved" && "text-warn",
-            status === "saved" && "text-ok",
-          )}
-        >
-          {status === "unsaved" ? (
-            "unsaved"
-          ) : status === "saved" ? (
-            <>
-              <Check className="size-3" /> saved
-            </>
-          ) : null}
-        </span>
-        {(markdown || htmlDoc || svgImage) && (
-          <button
-            type="button"
-            onClick={onTogglePreview}
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-secondary hover:text-foreground"
-          >
-            {preview ? (
-              <>
-                <Code className="size-3" /> source
-              </>
-            ) : (
-              <>
-                <Eye className="size-3" /> preview
-              </>
+      <PaneHeader
+        mono
+        title={path}
+        actions={
+          <>
+            <span
+              className={cn(
+                "flex items-center gap-1",
+                status === "unsaved" && "text-warn",
+                status === "saved" && "text-ok",
+              )}
+            >
+              {status === "unsaved" ? (
+                "unsaved"
+              ) : status === "saved" ? (
+                <>
+                  <Check className="size-3" /> saved
+                </>
+              ) : null}
+            </span>
+            {(markdown || htmlDoc || svgImage) && (
+              <button
+                type="button"
+                onClick={onTogglePreview}
+                className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-secondary hover:text-foreground"
+              >
+                {preview ? (
+                  <>
+                    <Code className="size-3" /> source
+                  </>
+                ) : (
+                  <>
+                    <Eye className="size-3" /> preview
+                  </>
+                )}
+              </button>
             )}
-          </button>
-        )}
-        {/* A view that cannot write (a project file outside any task) gets no
-            save control at all, rather than a permanently dead one. */}
-        {!isReadOnly && editable && (
-          <button
-            type="button"
-            onClick={onSave}
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-secondary hover:text-foreground"
-          >
-            <Save className="size-3" />
-            save
-          </button>
-        )}
-      </div>
+            {/* A view that cannot write (a project file outside any task) gets no
+                save control at all, rather than a permanently dead one. */}
+            {!isReadOnly && editable && (
+              <button
+                type="button"
+                onClick={onSave}
+                className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-secondary hover:text-foreground"
+              >
+                <Save className="size-3" />
+                save
+              </button>
+            )}
+          </>
+        }
+      />
       {lspMissing && (
-        <div className="flex shrink-0 items-center gap-2 border-b border-border/60 bg-warn/10 px-3 py-1.5 text-[11px]">
+        <div className="flex shrink-0 items-center gap-2 border-b border-rule bg-warn/10 px-3 py-1.5 text-[11px]">
           <Wand2 className="size-3 shrink-0 text-warn" />
           <span className="min-w-0 flex-1 text-muted-foreground">
             {LSP_LABELS[lspMissing] ?? lspMissing} IntelliSense isn&apos;t installed

@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PaneHeader } from "@/components/workspace";
 import { useTaskSessionUpdates } from "@/hooks/useTaskSessionUpdates";
 import { sessionActivity } from "@/lib/sessionActivity";
 import type { TaskTree } from "@/lib/taskGroups";
@@ -121,15 +122,15 @@ function StepTranscript({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border/70 px-3 py-2">
-        <StatusBadge status={task.status} size="xs" />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-          {taskLabel(task)}
-        </span>
-        <Button type="button" size="sm" variant="secondary" onClick={() => onOpenTask(task.id)}>
-          Open task
-        </Button>
-      </div>
+      <PaneHeader
+        leading={<StatusBadge status={task.status} size="xs" />}
+        title={taskLabel(task)}
+        actions={
+          <Button type="button" size="sm" variant="secondary" onClick={() => onOpenTask(task.id)}>
+            Open task
+          </Button>
+        }
+      />
       <div className="flex min-h-0 flex-1 flex-col">
         <ChatTranscript
           key={task.id}
@@ -221,13 +222,15 @@ export function PipelineSurface({
         className="min-w-0"
       >
         <div className="flex h-full min-h-0 flex-col">
-          <div className="flex shrink-0 items-center gap-2 border-b border-border/70 px-3 py-2">
-            <ListTodo className="size-4 text-muted-foreground" />
-            <span className="text-sm font-semibold">Stages</span>
-            <span className="tnum ml-auto text-xs text-muted-foreground">
-              {completed}/{steps.length}
-            </span>
-          </div>
+          <PaneHeader
+            icon={ListTodo}
+            title="Stages"
+            actions={
+              <span className="tnum text-[11px] text-muted-foreground">
+                {completed}/{steps.length}
+              </span>
+            }
+          />
           <ScrollArea className="min-h-0 flex-1">
             <div className="flex flex-col gap-1 p-2">
               {steps.map((step) => (

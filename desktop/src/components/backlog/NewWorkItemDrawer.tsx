@@ -319,7 +319,7 @@ export function NewWorkItemDrawer({ open, onOpenChange, project }: NewWorkItemDr
         <DialogContent
           hideClose
           className={cn(
-            "flex max-w-none flex-col gap-0 overflow-hidden rounded-lg border border-border/60 bg-popover p-0 shadow-2xl",
+            "flex max-w-none flex-col gap-0 overflow-hidden rounded-lg border border-border bg-popover p-0 shadow-2xl",
             "transition-[max-width,height] duration-200",
             expanded
               ? "h-[88vh] w-[min(1000px,calc(100vw-2rem))]"
@@ -508,7 +508,7 @@ export function NewWorkItemDrawer({ open, onOpenChange, project }: NewWorkItemDr
           </div>
 
           {/* Footer: draft affordance left, the one action right. */}
-          <footer className="flex h-14 shrink-0 items-center justify-between gap-2 border-t border-border/60 px-4">
+          <footer className="flex h-14 shrink-0 items-center justify-between gap-2 border-t border-rule px-4">
             <Button
               variant="ghost"
               size="icon"
@@ -522,8 +522,8 @@ export function NewWorkItemDrawer({ open, onOpenChange, project }: NewWorkItemDr
             </Button>
             <div className="flex items-center gap-3">
               <span className="hidden items-center gap-1 text-[11px] text-muted-foreground sm:flex">
-                <kbd className="rounded border border-border/60 px-1 font-sans">⌘</kbd>
-                <kbd className="rounded border border-border/60 px-1 font-sans">↵</kbd>
+                <kbd className="rounded border border-border px-1 font-sans">⌘</kbd>
+                <kbd className="rounded border border-border px-1 font-sans">↵</kbd>
               </span>
               <Button
                 type="button"

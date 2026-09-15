@@ -6,6 +6,7 @@ import { Check, ChevronDown, Send, Undo2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { PaneHeader } from "@/components/workspace";
 import { useThemeMode } from "@/hooks/useTheme";
 import { codemirrorLanguageForPath } from "@/lib/codemirrorLanguages";
 import { cmChromeForMode } from "@/lib/codemirrorTheme";
@@ -182,62 +183,67 @@ export function UnifiedDiff({
 
   return (
     <div className="flex flex-col">
-      <div className="flex h-9 shrink-0 items-center gap-2 border-b bg-secondary/30 px-3 text-xs">
-        {onToggleCollapsed && (
-          <button
-            type="button"
-            aria-label={collapsed ? `Expand ${doc.path}` : `Collapse ${doc.path}`}
-            title={collapsed ? "Expand this file's diff" : "Collapse this file's diff"}
-            onClick={onToggleCollapsed}
-            className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            <ChevronDown
-              className={cn("size-3.5 transition-transform", collapsed && "-rotate-90")}
-            />
-          </button>
-        )}
-        <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">{doc.path}</span>
-        <span className="ml-auto flex shrink-0 items-center gap-2">
-          <span
-            className={cn(
-              "flex items-center gap-1 text-[11px] whitespace-nowrap",
-              status === "unsaved" && "text-warn",
-              status === "saved" && "text-ok",
-            )}
-          >
-            {status === "unsaved" ? (
-              "● unsaved"
-            ) : status === "saved" ? (
-              <>
-                <Check className="size-3" /> saved
-              </>
-            ) : null}
-          </span>
-          {editable && (
+      <PaneHeader
+        mono
+        title={doc.path}
+        leading={
+          onToggleCollapsed ? (
             <button
               type="button"
-              onClick={discard}
-              className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground"
-              title="Restore this file to how the agent left it"
+              aria-label={collapsed ? `Expand ${doc.path}` : `Collapse ${doc.path}`}
+              title={collapsed ? "Expand this file's diff" : "Collapse this file's diff"}
+              onClick={onToggleCollapsed}
+              className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
-              <Undo2 className="size-3" /> revert
+              <ChevronDown
+                className={cn("size-3.5 transition-transform", collapsed && "-rotate-90")}
+              />
             </button>
-          )}
-          {onSendToChat && (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-5 shrink-0 gap-1 px-1.5 text-[11px] text-muted-foreground hover:text-foreground"
-              onClick={() => onSendToChat(file)}
-              title="Send this file's diff to chat"
+          ) : undefined
+        }
+        actions={
+          <>
+            <span
+              className={cn(
+                "flex items-center gap-1 text-[11px] whitespace-nowrap",
+                status === "unsaved" && "text-warn",
+                status === "saved" && "text-ok",
+              )}
             >
-              <Send className="size-3" />
-              send
-            </Button>
-          )}
-        </span>
-      </div>
+              {status === "unsaved" ? (
+                "● unsaved"
+              ) : status === "saved" ? (
+                <>
+                  <Check className="size-3" /> saved
+                </>
+              ) : null}
+            </span>
+            {editable && (
+              <button
+                type="button"
+                onClick={discard}
+                className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground"
+                title="Restore this file to how the agent left it"
+              >
+                <Undo2 className="size-3" /> revert
+              </button>
+            )}
+            {onSendToChat && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-5 shrink-0 gap-1 px-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+                onClick={() => onSendToChat(file)}
+                title="Send this file's diff to chat"
+              >
+                <Send className="size-3" />
+                send
+              </Button>
+            )}
+          </>
+        }
+      />
       {!collapsed && <div ref={host} className="warpforge-unified-diff overflow-auto bg-card" />}
     </div>
   );

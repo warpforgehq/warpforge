@@ -76,7 +76,7 @@ export function PanelSeparator({
       }}
       className={cn(
         "group/sep relative z-10 shrink-0 select-none focus-visible:outline-none",
-        divider ? "bg-border/70" : "bg-transparent",
+        divider ? "bg-edge" : "bg-transparent",
         // `after` is the grab area: 8px wide, so the 1px seam is still easy to hit.
         "after:absolute after:bg-transparent",
         // `before` is the accent on top of that rule: a soft blurred band rather

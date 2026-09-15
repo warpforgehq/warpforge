@@ -15,7 +15,7 @@ export function BacklogRowSkeleton({ rows = 10 }: { rows?: number }) {
         <div
           key={row}
           data-testid="backlog-skeleton-row"
-          className="flex min-w-0 items-center border-b border-border/40 pr-2"
+          className="flex min-w-0 items-center border-b border-rule pr-2"
           style={{ height: ESTIMATED_ROW_HEIGHT }}
         >
           <div className="flex h-full min-w-0 flex-1 items-center gap-3 pl-3 pr-2">

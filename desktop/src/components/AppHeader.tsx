@@ -70,7 +70,7 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
     // controls in this row still click.
     <header
       data-tauri-drag-region="deep"
-      className="flex h-10 shrink-0 items-center gap-2 border-b border-border/70 bg-card px-2.5"
+      className="flex h-10 shrink-0 items-center gap-2 border-b border-rule bg-card px-2.5"
     >
       <nav
         aria-label="Breadcrumb"

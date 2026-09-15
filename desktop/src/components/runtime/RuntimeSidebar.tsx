@@ -1,6 +1,7 @@
 import { Loader2, Play, RotateCw, Square } from "lucide-react";
 import { memo } from "react";
 
+import { PaneHeader } from "@/components/workspace";
 import { pfBadge, serviceBadge } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
@@ -44,38 +45,42 @@ function SectionHeader({
 }) {
   const { allUp, hasStartable, hasStoppable, isSettling, noun, project } = bulk;
   return (
-    <div className="flex h-9 items-center gap-2 border-b px-3 text-sm font-semibold">
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      {!allUp && (
-        <button
-          type="button"
-          disabled={!hasStartable || isSettling}
-          className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          title={
-            isSettling
-              ? `${noun} starting…`
-              : hasStartable
-                ? `Start all ${noun}`
-                : `No startable ${noun}`
-          }
-          aria-label={`Start all ${noun}`}
-          onClick={() => safeRequest(bulk.startMethod, { project }, onError)}
-        >
-          <Play className="size-3.5" />
-        </button>
-      )}
-      {hasStoppable && (
-        <button
-          type="button"
-          className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          title={`Stop all ${noun}`}
-          aria-label={`Stop all ${noun}`}
-          onClick={() => safeRequest(bulk.stopMethod, { project }, onError)}
-        >
-          <Square className="size-3.5" />
-        </button>
-      )}
-    </div>
+    <PaneHeader
+      title={label}
+      actions={
+        <>
+          {!allUp && (
+            <button
+              type="button"
+              disabled={!hasStartable || isSettling}
+              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              title={
+                isSettling
+                  ? `${noun} starting…`
+                  : hasStartable
+                    ? `Start all ${noun}`
+                    : `No startable ${noun}`
+              }
+              aria-label={`Start all ${noun}`}
+              onClick={() => safeRequest(bulk.startMethod, { project }, onError)}
+            >
+              <Play className="size-3.5" />
+            </button>
+          )}
+          {hasStoppable && (
+            <button
+              type="button"
+              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              title={`Stop all ${noun}`}
+              aria-label={`Stop all ${noun}`}
+              onClick={() => safeRequest(bulk.stopMethod, { project }, onError)}
+            >
+              <Square className="size-3.5" />
+            </button>
+          )}
+        </>
+      }
+    />
   );
 }
 

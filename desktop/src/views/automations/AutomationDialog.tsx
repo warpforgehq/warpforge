@@ -256,7 +256,7 @@ function Section({
   title: string;
 }) {
   return (
-    <section className="space-y-2 border-t border-border/60 pt-3 first-of-type:border-t-0 first-of-type:pt-0">
+    <section className="space-y-2 border-t border-rule pt-3 first-of-type:border-t-0 first-of-type:pt-0">
       <div>
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           {title}

@@ -25,7 +25,7 @@ describe("BacklogRowSkeleton", () => {
 
     expect(row).toHaveStyle({ height: "37px" });
     expect(row.className).toContain("border-b");
-    expect(row.className).toContain("border-border/40");
+    expect(row.className).toContain("border-rule");
     expect(row.className).toContain("pr-2");
 
     const body = row.firstElementChild!;

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowDownToLine, Loader2, PackageOpen, RefreshCw, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { PaneHeader } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { EditorSkeleton } from "@/views/task-detail/EditorSkeleton";
 
@@ -156,55 +157,62 @@ export function StashTab({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-card">
-      <div className="flex h-9 items-center gap-1 border-b border-rule px-3 text-sm font-semibold">
-        <button
-          type="button"
-          aria-label={selected ? `Apply ${selected.id}` : "Apply stash entry"}
-          title="Apply the entry, keeping it in the stash"
-          disabled={busy || !selected}
-          onClick={() => void apply(false)}
-          className="flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
-        >
-          {busy ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <ArrowDownToLine className="size-3.5" />
-          )}
-          Apply
-        </button>
-          <button
-          type="button"
-          aria-label={selected ? `Apply and drop ${selected.id}` : "Apply and drop stash entry"}
-          title="Apply the entry and drop it from the stash"
-          disabled={busy || !selected}
-          onClick={() => selected && setConfirm({ action: "apply-drop", id: selected.id })}
-          className="flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
-        >
-          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <PackageOpen className="size-3.5" />}
-          Apply & Drop
-        </button>
-        <span className="min-w-0 flex-1" />
-        <button
-          type="button"
-          aria-label="Refresh stash"
-          title="Refresh stash"
-          disabled={busy}
-          onClick={() => void listQuery.refetch()}
-          className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
-        >
-          <RefreshCw className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          aria-label={selected ? `Drop ${selected.id}` : "Drop stash entry"}
-          title="Drop this stash entry (the worktree is untouched)"
-          disabled={busy || !selected}
-          onClick={() => selected && setConfirm({ action: "drop", id: selected.id })}
-          className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-destructive disabled:opacity-40"
-        >
-          <Trash2 className="size-3.5" />
-        </button>
-      </div>
+      <PaneHeader
+        leading={
+          <>
+            <button
+              type="button"
+              aria-label={selected ? `Apply ${selected.id}` : "Apply stash entry"}
+              title="Apply the entry, keeping it in the stash"
+              disabled={busy || !selected}
+              onClick={() => void apply(false)}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
+            >
+              {busy ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <ArrowDownToLine className="size-3.5" />
+              )}
+              Apply
+            </button>
+            <button
+              type="button"
+              aria-label={selected ? `Apply and drop ${selected.id}` : "Apply and drop stash entry"}
+              title="Apply the entry and drop it from the stash"
+              disabled={busy || !selected}
+              onClick={() => selected && setConfirm({ action: "apply-drop", id: selected.id })}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-1 text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
+            >
+              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <PackageOpen className="size-3.5" />}
+              Apply & Drop
+            </button>
+          </>
+        }
+        actions={
+          <>
+            <button
+              type="button"
+              aria-label="Refresh stash"
+              title="Refresh stash"
+              disabled={busy}
+              onClick={() => void listQuery.refetch()}
+              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
+            >
+              <RefreshCw className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              aria-label={selected ? `Drop ${selected.id}` : "Drop stash entry"}
+              title="Drop this stash entry (the worktree is untouched)"
+              disabled={busy || !selected}
+              onClick={() => selected && setConfirm({ action: "drop", id: selected.id })}
+              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-destructive disabled:opacity-40"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </>
+        }
+      />
 
       <div className="min-h-0 flex-1 overflow-auto py-1.5">
         {listQuery.isPending ? (

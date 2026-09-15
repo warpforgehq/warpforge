@@ -36,9 +36,9 @@ export function FailedSection({
   hideHeader?: boolean;
 }) {
   return (
-    <Card className="min-w-0 overflow-hidden rounded-md border-border/70 bg-card/35 shadow-none">
+    <Card className="min-w-0 overflow-hidden rounded-md border-border bg-card/35 shadow-none">
       {!hideHeader && (
-        <div className="flex items-start gap-3 border-b border-border/60 px-3 py-3">
+        <div className="flex items-start gap-3 border-b border-rule px-3 py-3">
           <CircleX className="mt-0.5 size-4 shrink-0 text-destructive" />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -63,7 +63,7 @@ export function FailedSection({
               type="button"
               onClick={() => onOpenTask(item.task.id)}
               aria-label={`Open ${taskLabel(item.task)}`}
-              className="flex w-full min-w-0 flex-col gap-1.5 border-b border-border/55 px-3 py-3 text-left last:border-b-0 transition-colors hover:bg-secondary/35 focus-visible:bg-secondary/35 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+              className="flex w-full min-w-0 flex-col gap-1.5 border-b border-rule px-3 py-3 text-left last:border-b-0 transition-colors hover:bg-secondary/35 focus-visible:bg-secondary/35 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
             >
               <div className="flex min-w-0 items-center gap-2">
                 <span className="shrink-0 text-[11px] font-medium text-muted-foreground">

@@ -140,7 +140,7 @@ export function ScheduleFields({ form, now, patch, problems, projects }: Props) 
         </div>
       )}
 
-      <div className="rounded-md border border-border/70 bg-secondary/25 px-3 py-2">
+      <div className="rounded-md border border-border bg-secondary/25 px-3 py-2">
         <p className="flex items-center gap-1.5 text-xs">
           <CalendarClock aria-hidden className="size-3.5 shrink-0 text-primary" />
           {problems.cron ? (

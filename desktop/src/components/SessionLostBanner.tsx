@@ -28,7 +28,7 @@ export function SessionLostBanner({
   if (task.blockedKind !== "session_lost") return null;
 
   return (
-    <div className="flex items-start gap-2 border-b border-border/80 bg-warn/10 px-4 py-2 text-xs">
+    <div className="flex items-start gap-2 border-b border-rule bg-warn/10 px-4 py-2 text-xs">
       <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warn" />
       <div className="min-w-0 flex-1">
         <p className="font-medium text-foreground">

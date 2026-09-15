@@ -3,6 +3,7 @@ import { Activity, ExternalLink, FileText, MoreHorizontal, PinOff, Wrench } from
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Card } from "@/components/ui/card";
+import { PaneHeader } from "@/components/workspace";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -187,10 +188,10 @@ function FocusPane({
   return (
     <Card
       className={cn(
-        "group flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border/80 bg-card shadow-none",
+        "group flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border bg-card shadow-none",
       )}
     >
-      <div className="border-b border-border/80 px-3 py-1.5">
+      <div className="border-b border-rule px-3 py-1.5">
         <div className="flex min-w-0 items-center gap-2">
           <button
             type="button"
@@ -232,44 +233,46 @@ function FocusPane({
         </div>
       </div>
 
-      <div className="flex h-9 shrink-0 items-center border-b border-border/80 px-3">
-        <span className="text-xs font-semibold text-foreground">Conversation</span>
-        <div className="ml-auto flex items-center gap-1">
-          <TaskAgentSwitcher currentTaskId={selectedId} tree={tree} onOpenTask={onSelect} />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label="Conversation activity"
-                className="flex size-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-                title="Activity"
-              >
-                <MoreHorizontal className="size-3.5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 p-2">
-              <div className="flex flex-wrap gap-1">
-                <ActivityChip icon={<Activity />} label={`${stream.length} events`} />
-                {tools.total > 0 && (
-                  <ActivityChip
-                    icon={<Wrench />}
-                    label={`${tools.total} tools`}
-                    tone={tools.active > 0 ? "warn" : "muted"}
-                    detail={tools.failed > 0 ? `${tools.failed} failed` : undefined}
-                  />
-                )}
-                {files.length > 0 && (
-                  <ActivityChip
-                    icon={<FileText />}
-                    label={`${files.length} files`}
-                    detail={files.slice(0, 2).join(", ")}
-                  />
-                )}
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+      <PaneHeader
+        title="Conversation"
+        actions={
+          <>
+            <TaskAgentSwitcher currentTaskId={selectedId} tree={tree} onOpenTask={onSelect} />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Conversation activity"
+                  className="flex size-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  title="Activity"
+                >
+                  <MoreHorizontal className="size-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64 p-2">
+                <div className="flex flex-wrap gap-1">
+                  <ActivityChip icon={<Activity />} label={`${stream.length} events`} />
+                  {tools.total > 0 && (
+                    <ActivityChip
+                      icon={<Wrench />}
+                      label={`${tools.total} tools`}
+                      tone={tools.active > 0 ? "warn" : "muted"}
+                      detail={tools.failed > 0 ? `${tools.failed} failed` : undefined}
+                    />
+                  )}
+                  {files.length > 0 && (
+                    <ActivityChip
+                      icon={<FileText />}
+                      label={`${files.length} files`}
+                      detail={files.slice(0, 2).join(", ")}
+                    />
+                  )}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+      />
 
       <SessionChat
         activity={activity}

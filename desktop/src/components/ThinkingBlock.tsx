@@ -65,7 +65,7 @@ export const ThinkingBlock = memo(function ThinkingBlock({
     <section
       className={cn(
         "min-w-0 overflow-hidden rounded-lg border bg-secondary/20",
-        streaming ? "border-border bg-secondary/30" : "border-border/70",
+        streaming ? "border-border bg-secondary/30" : "border-border",
       )}
       aria-label="Agent thinking"
     >
@@ -98,7 +98,7 @@ export const ThinkingBlock = memo(function ThinkingBlock({
         ) : null}
       </button>
       {open && (
-        <div id={contentId} className="border-t border-border/60 px-3 py-2.5">
+        <div id={contentId} className="border-t border-rule px-3 py-2.5">
           <MemoizedMarkdown
             className="text-muted-foreground [&_em]:text-foreground/80 [&_strong]:text-foreground/90"
             resolveFilePath={resolveFilePath}

@@ -53,7 +53,7 @@ export function ProjectList({
   onRemoveProject,
 }: ProjectListProps) {
   return (
-    <Card className="flex min-h-0 flex-col rounded-md border-border/80 bg-card shadow-none">
+    <Card className="flex min-h-0 flex-col rounded-md border-border bg-card shadow-none">
       <div className="flex h-10 items-center gap-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <span>Projects</span>
         <span className="tnum text-[11px] font-normal tracking-normal text-muted-foreground/70">

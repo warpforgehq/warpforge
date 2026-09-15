@@ -55,7 +55,7 @@ export function FileDiffSkeleton({
       className="flex animate-pulse flex-col overflow-hidden [--animate-pulse:pulse_1.4s_ease-in-out_infinite] motion-reduce:animate-none"
       style={{ height }}
     >
-      <div className="flex h-9 shrink-0 items-center gap-2 border-b bg-secondary/30 px-3 text-xs">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-b border-rule px-3 text-xs">
         <span
           className="h-3 min-w-0 shrink rounded-sm bg-muted-foreground/15"
           style={{ width: `${pathWidth}%` }}

@@ -219,7 +219,7 @@ export default function MissionControl({ state, onOpenTask, onNewTask }: Props) 
           </Button>
         </header>
 
-        <div role="tablist" className="flex gap-2 border-b border-border">
+        <div role="tablist" className="flex gap-2 border-b border-rule">
           {(["live", "needs", "failed", "pinned"] as const).map((tab) => {
             const count =
               tab === "live"
@@ -307,7 +307,7 @@ export default function MissionControl({ state, onOpenTask, onNewTask }: Props) 
                   ))}
                 </ReactGridLayout>
               ) : (
-                <div className="flex flex-col items-center gap-1 rounded-md border border-dashed border-border/70 px-4 py-8 text-center text-muted-foreground">
+                <div className="flex flex-col items-center gap-1 rounded-md border border-dashed border-border px-4 py-8 text-center text-muted-foreground">
                   <p className="text-sm text-foreground">No pinned sessions.</p>
                   <p className="max-w-md text-xs">
                     Pin sessions from the sidebar when you want them on the Mission Control board.
@@ -319,7 +319,7 @@ export default function MissionControl({ state, onOpenTask, onNewTask }: Props) 
         )}
 
         {live.length === 0 && attentionQueue.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-border/70 px-4 py-10 text-center text-muted-foreground">
+          <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-border px-4 py-10 text-center text-muted-foreground">
             <p>No live sessions.</p>
             <Button variant="outline" onClick={() => onNewTask()}>
               <Plus className="size-4" />

@@ -2,6 +2,7 @@ import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useEffect, useState, useTransition, type RefObject } from "react";
 
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
+import { PaneHeader } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { PANEL_BOUNDS, useAutoHiddenRail, usePanelSize } from "@/store/panelLayout";
 import { useUi } from "@/store/ui";
@@ -112,43 +113,49 @@ export function DiffSurface({
   }, []);
   return (
     <div ref={surfaceRef} className="flex h-full min-h-0 flex-col">
-      <div className="flex h-9 items-center gap-2 border-b border-rule bg-background/25 px-2">
-        {diff && (
-          <span className="tnum text-xs text-muted-foreground">{diff.files.length} files</span>
-        )}
-        <div className="ml-auto flex items-center gap-2">
-          <div className="flex rounded-md border border-border/80 bg-background/30 p-0.5">
-            {(["unified", "split"] as const).map((v) => (
-              <button
-                type="button"
-                key={v}
-                onClick={() => onSetDiffView(v)}
-                className={cn(
-                  "rounded px-2 py-0.5 text-xs capitalize transition-colors",
-                  diffView === v
-                    ? "bg-secondary text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            aria-label={collapsed ? "Expand changes panel" : "Collapse changes panel"}
-            title={collapsed ? "Expand changes panel" : "Collapse changes panel"}
-            onClick={toggleCollapsed}
-            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            {collapsed ? (
-              <PanelRightOpen className="size-4" />
-            ) : (
-              <PanelRightClose className="size-4" />
-            )}
-          </button>
-        </div>
-      </div>
+      <PaneHeader
+        leading={
+          diff ? (
+            <span className="tnum text-[11px] text-muted-foreground">
+              {diff.files.length} files
+            </span>
+          ) : undefined
+        }
+        actions={
+          <>
+            <div className="flex rounded-md border border-border bg-background/30 p-0.5">
+              {(["unified", "split"] as const).map((v) => (
+                <button
+                  type="button"
+                  key={v}
+                  onClick={() => onSetDiffView(v)}
+                  className={cn(
+                    "rounded px-2 py-0.5 text-xs capitalize transition-colors",
+                    diffView === v
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              aria-label={collapsed ? "Expand changes panel" : "Collapse changes panel"}
+              title={collapsed ? "Expand changes panel" : "Collapse changes panel"}
+              onClick={toggleCollapsed}
+              className="shrink-0 rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              {collapsed ? (
+                <PanelRightOpen className="size-4" />
+              ) : (
+                <PanelRightClose className="size-4" />
+              )}
+            </button>
+          </>
+        }
+      />
       <PanelGroup orientation="horizontal" className="min-h-0 min-w-0 flex-1">
         <Panel pin className="min-h-0 min-w-0">
           {workspaceReady ? (

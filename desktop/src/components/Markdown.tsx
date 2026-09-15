@@ -141,7 +141,7 @@ export function MarkdownImageFrame({
   return (
     <button
       type="button"
-      className="my-2 block max-w-full overflow-hidden rounded-md border border-border/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="my-2 block max-w-full overflow-hidden rounded-md border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       title={title ?? `Open ${alt}`}
       onClick={() => void openExternalLink(target)}
     >
@@ -185,7 +185,7 @@ const MARKDOWN_COMPONENTS: Components = {
   code: MarkdownCode,
   // Only reachable with `allowHtml`; GitHub collapses release notes into these.
   details: ({ children: content }) => (
-    <details className="my-1.5 rounded-md border border-border/70 px-2.5 py-1.5">{content}</details>
+    <details className="my-1.5 rounded-md border border-border px-2.5 py-1.5">{content}</details>
   ),
   summary: ({ children: content }) => (
     <summary className="cursor-pointer text-sm font-medium text-foreground/90">{content}</summary>

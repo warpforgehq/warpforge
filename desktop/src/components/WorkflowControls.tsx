@@ -40,7 +40,7 @@ export const WorkflowControls = memo(function WorkflowControls({ task }: { task:
   };
 
   return (
-    <div className="shrink-0 border-t border-border/70 px-3 py-2">
+    <div className="shrink-0 border-t border-rule px-3 py-2">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <StageIndicator run={run} />
         <span className="ml-auto flex items-center gap-1.5">

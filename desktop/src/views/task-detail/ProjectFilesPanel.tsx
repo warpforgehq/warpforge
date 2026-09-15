@@ -10,6 +10,7 @@ import {
   type MouseEvent,
 } from "react";
 
+import { PaneHeader } from "@/components/workspace";
 import { getFileIconUrl } from "@/lib/fileIcon";
 import { cn } from "@/lib/utils";
 
@@ -385,7 +386,7 @@ export function ProjectFilesPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-9 items-center border-b px-3 text-sm font-semibold">Files</div>
+      <PaneHeader title="Files" />
       {error && <p className="border-b px-3 py-2 text-xs text-destructive">{error}</p>}
       <div
         ref={scrollRef}

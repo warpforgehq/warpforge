@@ -46,13 +46,18 @@
    * component is how the same rule ended up rendering in three shades where a
    * split handle, a panel header and a tab strip meet.
    *
-   *   border-edge   structural — boundaries between top-level panes
-   *   border-border a surface on the ground — the outline of a card
-   *   border-rule   inside a surface — row separators, header rules, footers
+   *   border-edge   structural (1.0) — boundaries between top-level panes
+   *   border-border surface (0.6) — the outline of a card
+   *   border-rule   interior (0.3) — row separators, header rules, footers
+   *
+   * The three alphas are a full step apart so structure reads as structure:
+   * the seam between panes is stronger than a card's outline, which is in turn
+   * stronger than a rule inside a surface. Deriving `border-border/NN` per
+   * component is banned — pick the token for the level instead.
    */
-  --color-edge: hsl(var(--border));
-  --color-border: hsl(var(--border) / 0.8);
-  --color-rule: hsl(var(--border) / 0.5);
+  --color-edge: hsl(var(--border) / 1);
+  --color-border: hsl(var(--border) / 0.6);
+  --color-rule: hsl(var(--border) / 0.3);
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 

@@ -21,9 +21,9 @@ export function DecisionQueue({
   hideHeader?: boolean;
 }) {
   return (
-    <Card className="min-w-0 overflow-hidden rounded-md border-border/70 bg-card/35 shadow-none">
+    <Card className="min-w-0 overflow-hidden rounded-md border-border bg-card/35 shadow-none">
       {!hideHeader && (
-        <div className="flex items-start gap-3 border-b border-border/60 px-3 py-3">
+        <div className="flex items-start gap-3 border-b border-rule px-3 py-3">
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warn" />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -45,7 +45,7 @@ export function DecisionQueue({
       ) : (
         <div className="max-h-[28rem] overflow-y-auto">
           {items.map((item) => (
-            <div key={item.task.id} className="border-b border-border/55 last:border-b-0">
+            <div key={item.task.id} className="border-b border-rule last:border-b-0">
               <button
                 type="button"
                 onClick={() => onOpenTask(item.task.id)}

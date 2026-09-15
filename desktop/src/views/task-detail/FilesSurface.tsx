@@ -2,13 +2,14 @@ import { FileText, PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import { lazy, Suspense } from "react";
 
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
+import { PaneHeader } from "@/components/workspace";
 import type { EditorViewState } from "@/lib/sessionStore";
 import { cn } from "@/lib/utils";
 import { PANEL_BOUNDS, useAutoHiddenRail, usePanelSize } from "@/store/panelLayout";
 import { useUi } from "@/store/ui";
 
-import type { FileDoc, FileRange, ProjectFile, SymbolMatch } from "../../protocol";
 import type { EditorPosition } from "../../components/CodeEditor/session";
+import type { FileDoc, FileRange, ProjectFile, SymbolMatch } from "../../protocol";
 import { EditorSkeleton } from "./EditorSkeleton";
 import { ProjectFilesPanel, type ProjectTreeState } from "./ProjectFilesPanel";
 
@@ -91,65 +92,69 @@ export function FilesSurface({
 
   return (
     <div ref={surfaceRef} className="flex h-full min-h-0 min-w-0 flex-col">
-      <div className="flex h-9 min-w-0 items-center gap-2 border-b bg-background/25 px-2">
-        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-          {openTabs.length === 0 ? (
-            <span className="px-1 text-xs text-muted-foreground">No file open</span>
-          ) : (
-            openTabs.map((f) => {
-              const name = f.path.split("/").pop() ?? f.path;
-              const active = activeFilePath === f.path;
-              return (
-                <div
-                  key={f.path}
-                  title={f.path}
-                  className={cn(
-                    "flex h-7 max-w-[240px] shrink-0 items-center overflow-hidden rounded-md border font-mono text-xs",
-                    active
-                      ? "border-border bg-secondary text-foreground"
-                      : "border-transparent text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
-                  )}
-                >
-                  <button
-                    type="button"
-                    onClick={() => onSelectTab(f.path)}
-                    className="flex min-w-0 items-center gap-1.5 px-2"
+      <PaneHeader
+        leading={
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+            {openTabs.length === 0 ? (
+              <span className="px-1 text-xs text-muted-foreground">No file open</span>
+            ) : (
+              openTabs.map((f) => {
+                const name = f.path.split("/").pop() ?? f.path;
+                const active = activeFilePath === f.path;
+                return (
+                  <div
+                    key={f.path}
+                    title={f.path}
+                    className={cn(
+                      "flex h-7 max-w-[240px] shrink-0 items-center overflow-hidden rounded-md border font-mono text-xs",
+                      active
+                        ? "border-border bg-secondary text-foreground"
+                        : "border-transparent text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                    )}
                   >
-                    <FileText
-                      className={cn(
-                        "size-3.5 shrink-0",
-                        f.changed ? "text-info" : "text-muted-foreground",
-                      )}
-                    />
-                    <span className="truncate">{name}</span>
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Close ${name}`}
-                    onClick={() => onCloseTab(f.path)}
-                    className="mr-1 rounded p-0.5 text-muted-foreground hover:bg-background/70 hover:text-foreground"
-                  >
-                    <X className="size-3" />
-                  </button>
-                </div>
-              );
-            })
-          )}
-        </div>
-        <button
-          type="button"
-          aria-label={collapsed ? "Expand file panel" : "Collapse file panel"}
-          title={collapsed ? "Expand file panel" : "Collapse file panel"}
-          onClick={toggleCollapsed}
-          className="shrink-0 rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-        >
-          {collapsed ? (
-            <PanelRightOpen className="size-4" />
-          ) : (
-            <PanelRightClose className="size-4" />
-          )}
-        </button>
-      </div>
+                    <button
+                      type="button"
+                      onClick={() => onSelectTab(f.path)}
+                      className="flex min-w-0 items-center gap-1.5 px-2"
+                    >
+                      <FileText
+                        className={cn(
+                          "size-3.5 shrink-0",
+                          f.changed ? "text-info" : "text-muted-foreground",
+                        )}
+                      />
+                      <span className="truncate">{name}</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Close ${name}`}
+                      onClick={() => onCloseTab(f.path)}
+                      className="mr-1 rounded p-0.5 text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        }
+        actions={
+          <button
+            type="button"
+            aria-label={collapsed ? "Expand file panel" : "Collapse file panel"}
+            title={collapsed ? "Expand file panel" : "Collapse file panel"}
+            onClick={toggleCollapsed}
+            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            {collapsed ? (
+              <PanelRightOpen className="size-4" />
+            ) : (
+              <PanelRightClose className="size-4" />
+            )}
+          </button>
+        }
+      />
       <PanelGroup orientation="horizontal" className="min-h-0 min-w-0 flex-1">
         <Panel pin className="min-h-0 min-w-0">
           <div className="h-full min-h-0 min-w-0">

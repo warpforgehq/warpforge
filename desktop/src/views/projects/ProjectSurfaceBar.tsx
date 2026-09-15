@@ -26,7 +26,7 @@ export function ProjectSurfaceBar({
   tabs = PROJECT_SURFACE_TABS,
 }: ProjectSurfaceBarProps) {
   return (
-    <div className="flex h-9 min-w-0 items-center border-b border-border/70">
+    <div className="flex h-9 min-w-0 items-center border-b border-rule">
       <SurfaceTabs
         aria-label="Project surfaces"
         value={activeSurface}

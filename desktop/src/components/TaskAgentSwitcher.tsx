@@ -60,7 +60,7 @@ export const TaskAgentSwitcher = memo(function TaskAgentSwitcher({
     return (
       <span
         title="Orchestrator lead — no worker sessions yet"
-        className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-secondary/40 px-2 text-[11px] font-medium text-muted-foreground"
+        className="flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-border bg-secondary/40 px-2 text-[11px] font-medium text-muted-foreground"
       >
         <Users className="size-3.5 text-muted-foreground" />
         Orchestrator
@@ -85,11 +85,11 @@ export const TaskAgentSwitcher = memo(function TaskAgentSwitcher({
           <span className="text-[11px] text-muted-foreground">{members.length - 1}</span>
           <span className="text-muted-foreground/50">·</span>
           {currentIndex === 0 ? (
-            <span className="max-w-24 truncate rounded-full border border-border/60 bg-secondary/40 px-1.5 py-px text-[11px] font-medium text-foreground">
+            <span className="max-w-24 truncate rounded-full border border-border bg-secondary/40 px-1.5 py-px text-[11px] font-medium text-foreground">
               {workflow ? "Workflow" : "Lead"}
             </span>
           ) : (
-            <span className="max-w-40 truncate rounded-full border border-border/60 bg-secondary/40 px-1.5 py-px text-[11px] font-medium text-foreground">
+            <span className="max-w-40 truncate rounded-full border border-border bg-secondary/40 px-1.5 py-px text-[11px] font-medium text-foreground">
               {currentLabel}
             </span>
           )}

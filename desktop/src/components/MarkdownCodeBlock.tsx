@@ -29,7 +29,7 @@ export function MarkdownCodeBlock({ text, children }: { text: string; children: 
       <button
         type="button"
         onClick={() => void copy()}
-        className="absolute right-2 top-2 rounded-md border border-border/80 bg-background/95 p-1 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-secondary hover:text-foreground group-hover/code:opacity-100 group-focus-within/code:opacity-100"
+        className="absolute right-2 top-2 rounded-md border border-border bg-background/95 p-1 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-secondary hover:text-foreground group-hover/code:opacity-100 group-focus-within/code:opacity-100"
         aria-label="Copy code"
         title="Copy code"
       >

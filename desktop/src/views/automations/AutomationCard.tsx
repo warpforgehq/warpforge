@@ -118,7 +118,7 @@ export function AutomationCard({
         </p>
       </div>
 
-      <div className="mt-3 flex items-center gap-2 border-t border-border/70 px-3 py-2">
+      <div className="mt-3 flex items-center gap-2 border-t border-rule px-3 py-2">
         {last ? (
           <Badge variant={last.badge} className="py-0 text-[11px]" title={last.hint}>
             {last.label}

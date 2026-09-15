@@ -63,7 +63,7 @@ export const MessageActions = memo(function MessageActions({
   return (
     <div
       className={cn(
-        "flex items-center rounded-md border border-border/80 bg-background/95 p-0.5 text-muted-foreground opacity-0 shadow-sm transition-opacity group-hover/message:opacity-100 group-focus-within/message:opacity-100",
+        "flex items-center rounded-md border border-border bg-background/95 p-0.5 text-muted-foreground opacity-0 shadow-sm transition-opacity group-hover/message:opacity-100 group-focus-within/message:opacity-100",
         className,
       )}
     >

@@ -54,7 +54,7 @@ export function estimateFileHeight(file: FileDiff | undefined): number {
 function EmptyChangesState({ onOpenFiles }: { onOpenFiles: () => void }) {
   return (
     <div className="flex h-full min-h-56 flex-col items-center justify-center gap-3 px-6 text-center">
-      <div className="rounded-full border border-border/70 bg-secondary/40 p-3 text-muted-foreground">
+      <div className="rounded-full border border-border bg-secondary/40 p-3 text-muted-foreground">
         <FileText className="size-5" />
       </div>
       <div>

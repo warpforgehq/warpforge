@@ -363,7 +363,7 @@ export function ContinueSessionDialog({
             conversation, so there is nothing to hand it. */}
         {continueHereAllowed ? (
           <div
-            className="space-y-2 border-t border-border pt-3"
+            className="space-y-2 border-t border-rule pt-3"
             role="radiogroup"
             aria-label="Where the work continues"
           >
@@ -385,7 +385,7 @@ export function ContinueSessionDialog({
             </Choice>
           </div>
         ) : (
-          <p className="border-t border-border pt-3 text-xs text-muted-foreground">
+          <p className="border-t border-rule pt-3 text-xs text-muted-foreground">
             Opens a new task seeded with the context. This one is left as it stands.
           </p>
         )}

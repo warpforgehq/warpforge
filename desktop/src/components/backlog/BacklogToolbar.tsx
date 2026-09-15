@@ -56,7 +56,7 @@ export function BacklogToolbar({
   const sources = useProjectSources(project);
   const sourceOptions = WORK_ITEM_SOURCES.filter((value) => sourceAvailable(sources.data, value));
   return (
-    <div className="flex w-full shrink-0 flex-wrap items-center gap-2 border-b border-border/50 px-1 py-1.5">
+    <div className="flex w-full shrink-0 flex-wrap items-center gap-2 border-b border-rule px-1 py-1.5">
       <SearchInput value={params.search} onChange={(search) => onChange({ search })} />
       <FilterSelect
         label="Status"

@@ -109,7 +109,7 @@ export function WorkflowEventLine({
         (compact ? (
           <Markdown className="mt-2 text-xs text-current">{update.detail}</Markdown>
         ) : (
-          <div className="mt-2 border-t border-border pt-2 text-foreground">
+          <div className="mt-2 border-t border-rule pt-2 text-foreground">
             <CollapsibleMarkdown>{update.detail}</CollapsibleMarkdown>
           </div>
         ))}

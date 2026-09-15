@@ -55,7 +55,7 @@ export function AutomationDrawer({
         >
           {automation && (
             <>
-              <header className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3">
+              <header className="flex shrink-0 items-center gap-2 border-b border-rule px-4 py-3">
                 <div className="min-w-0 flex-1">
                   <DialogTitle className="truncate text-base">{automation.name}</DialogTitle>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
@@ -132,7 +132,7 @@ export function AutomationDrawer({
                 <h3 className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Prompt
                 </h3>
-                <pre className="mt-1.5 whitespace-pre-wrap rounded-md border border-border/70 bg-secondary/25 px-3 py-2 font-mono text-[11px] leading-relaxed">
+                <pre className="mt-1.5 whitespace-pre-wrap rounded-md border border-border bg-secondary/25 px-3 py-2 font-mono text-[11px] leading-relaxed">
                   {automation.prompt}
                 </pre>
 
@@ -144,7 +144,7 @@ export function AutomationDrawer({
                     No runs yet. “Run now” starts one without touching the schedule.
                   </p>
                 ) : (
-                  <ul className="mt-1.5 divide-y divide-border/60 rounded-md border border-border/70">
+                  <ul className="mt-1.5 divide-y divide-rule rounded-md border border-border">
                     {runs.map((run) => (
                       <RunRow
                         key={run.id}
@@ -157,7 +157,7 @@ export function AutomationDrawer({
                 )}
               </div>
 
-              <footer className="flex shrink-0 items-center gap-2 border-t border-border px-4 py-3">
+              <footer className="flex shrink-0 items-center gap-2 border-t border-rule px-4 py-3">
                 <Button
                   type="button"
                   size="sm"

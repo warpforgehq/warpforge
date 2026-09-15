@@ -45,7 +45,7 @@ export const BacklogRow = React.memo(function BacklogRow({
   const StatusIcon = status.icon;
 
   return (
-    <div className="group flex h-9 min-w-0 items-center border-b border-border/40 pr-2 hover:bg-secondary/40">
+    <div className="group flex h-9 min-w-0 items-center border-b border-rule pr-2 hover:bg-secondary/40">
       <button
         type="button"
         onClick={() => actions.onOpen(item)}

@@ -33,7 +33,7 @@ export function AutomationCardSkeleton() {
         <SkeletonBar h={10} className="w-1/2" />
       </div>
 
-      <div className="mt-3 flex items-center gap-2 border-t border-border/70 px-3 py-2">
+      <div className="mt-3 flex items-center gap-2 border-t border-rule px-3 py-2">
         <SkeletonBar h={10} className="w-12" />
         <span className="flex-1" />
         <SkeletonBar className="h-6 w-16 shrink-0" />

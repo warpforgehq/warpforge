@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { PaneHeader } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { useUi } from "@/store/ui";
 
@@ -231,7 +232,11 @@ export function CommitPane({
     void showContextMenu({
       requestId: groupMenuId,
       items: [
-        { type: "item", id: "by-directory", label: `${groupBy === "directory" ? "✓ " : ""}Directory` },
+        {
+          type: "item",
+          id: "by-directory",
+          label: `${groupBy === "directory" ? "✓ " : ""}Directory`,
+        },
         { type: "item", id: "by-flat", label: `${groupBy === "flat" ? "✓ " : ""}Flat` },
       ],
     });
@@ -404,85 +409,91 @@ export function CommitPane({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-card">
-      <div className="flex h-9 items-center gap-2 border-b border-rule px-3 text-sm font-semibold">
-        <button
-          type="button"
-          aria-label="Expand all"
-          title="Expand all"
-          onClick={expandAll}
-          className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-        >
-          <UnfoldVertical className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          aria-label="Collapse all"
-          title="Collapse all"
-          onClick={collapseAll}
-          className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-        >
-          <FoldVertical className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          aria-label="Group by"
-          title={`Group by: ${groupBy === "directory" ? "Directory" : "Flat"}`}
-          onClick={openGroupMenu}
-          className={cn(
-            "rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground",
-            groupBy === "flat" && "text-foreground",
-          )}
-        >
-          <FolderTree className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          aria-label="Shelve silently"
-          title="Shelve checked files without asking"
-          disabled={shelveBusy || staged.size === 0}
-          onClick={() => void shelveSilently()}
-          className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
-        >
-          <Archive className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          aria-label="Refresh changes"
-          title="Refresh changes"
-          onClick={onRefresh}
-          className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-        >
-          <RefreshCw className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          aria-label={rollbackConfirm ? "Confirm rollback checked files" : "Rollback checked files"}
-          title={
-            rollbackConfirm ? "Click again to rollback checked files" : "Rollback checked files"
-          }
-          disabled={!canRollback}
-          onClick={rollbackChecked}
-          className={cn(
-            "rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40",
-            rollbackConfirm && "text-destructive hover:text-destructive",
-          )}
-        >
-          <Undo2 className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          aria-label={showIgnored ? "Hide ignored files" : "Show ignored files"}
-          title={showIgnored ? "Hide ignored files" : "Show ignored files"}
-          aria-pressed={showIgnored}
-          onClick={() => setShowIgnored((on) => !on)}
-          className={cn(
-            "rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground",
-            showIgnored && "text-foreground",
-          )}
-        >
-          {showIgnored ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
-        </button>
-      </div>
+      <PaneHeader
+        leading={
+          <>
+            <button
+              type="button"
+              aria-label="Expand all"
+              title="Expand all"
+              onClick={expandAll}
+              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <UnfoldVertical className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Collapse all"
+              title="Collapse all"
+              onClick={collapseAll}
+              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <FoldVertical className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Group by"
+              title={`Group by: ${groupBy === "directory" ? "Directory" : "Flat"}`}
+              onClick={openGroupMenu}
+              className={cn(
+                "rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground",
+                groupBy === "flat" && "text-foreground",
+              )}
+            >
+              <FolderTree className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Shelve silently"
+              title="Shelve checked files without asking"
+              disabled={shelveBusy || staged.size === 0}
+              onClick={() => void shelveSilently()}
+              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40"
+            >
+              <Archive className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Refresh changes"
+              title="Refresh changes"
+              onClick={onRefresh}
+              className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <RefreshCw className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              aria-label={
+                rollbackConfirm ? "Confirm rollback checked files" : "Rollback checked files"
+              }
+              title={
+                rollbackConfirm ? "Click again to rollback checked files" : "Rollback checked files"
+              }
+              disabled={!canRollback}
+              onClick={rollbackChecked}
+              className={cn(
+                "rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40",
+                rollbackConfirm && "text-destructive hover:text-destructive",
+              )}
+            >
+              <Undo2 className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              aria-label={showIgnored ? "Hide ignored files" : "Show ignored files"}
+              title={showIgnored ? "Hide ignored files" : "Show ignored files"}
+              aria-pressed={showIgnored}
+              onClick={() => setShowIgnored((on) => !on)}
+              className={cn(
+                "rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground",
+                showIgnored && "text-foreground",
+              )}
+            >
+              {showIgnored ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+            </button>
+          </>
+        }
+      />
       <div className="flex h-8 items-center gap-2 border-b border-rule bg-secondary/55 px-3 text-xs text-muted-foreground">
         <input
           aria-label="Stage all files"

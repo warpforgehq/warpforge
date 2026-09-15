@@ -50,7 +50,7 @@ export function MermaidDiagram({ code, className }: { code: string; className?: 
   return (
     <div
       className={cn(
-        "group/diagram relative my-2 overflow-x-auto rounded-md border border-border/70 bg-card/40 p-3",
+        "group/diagram relative my-2 overflow-x-auto rounded-md border border-border bg-card/40 p-3",
         // No empty frame before the diagram lands.
         !svg && "hidden",
         className,
@@ -69,7 +69,7 @@ export function MermaidDiagram({ code, className }: { code: string; className?: 
             event.stopPropagation();
             setEnlarged(true);
           }}
-          className="absolute right-2 top-2 rounded-md border border-border/80 bg-background/95 p-1 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-secondary hover:text-foreground group-hover/diagram:opacity-100 group-focus-within/diagram:opacity-100"
+          className="absolute right-2 top-2 rounded-md border border-border bg-background/95 p-1 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-secondary hover:text-foreground group-hover/diagram:opacity-100 group-focus-within/diagram:opacity-100"
           aria-label="Enlarge diagram"
           title="Enlarge diagram"
         >

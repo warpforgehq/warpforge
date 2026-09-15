@@ -96,7 +96,7 @@ function TerminalEmptyState({
           <button
             type="button"
             onClick={onRetry}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border/80 bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
           >
             <RefreshCw className="size-3.5" />
             Retry
@@ -106,7 +106,7 @@ function TerminalEmptyState({
         <button
           type="button"
           onClick={onNew}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border/80 bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
           aria-label="Start terminal"
         >
           <Plus className="size-3.5" />
@@ -135,7 +135,7 @@ const TerminalTabBar = memo(function TerminalTabBar({
   onNew: () => void;
 }) {
   return (
-    <div className="flex h-8 shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border/60 bg-background/25 px-1.5">
+    <div className="flex h-8 shrink-0 items-center gap-0.5 overflow-x-auto border-b border-rule bg-background/25 px-1.5">
       {terminals.map((entry) => (
         <TerminalTab
           key={entry.terminalId}
@@ -356,7 +356,7 @@ const TerminalPane = memo(function TerminalPane({
                 <button
                   type="button"
                   onClick={onRestart}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border/80 bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
                 >
                   <RefreshCw className="size-3.5" />
                   Restart
@@ -369,7 +369,7 @@ const TerminalPane = memo(function TerminalPane({
                 <button
                   type="button"
                   onClick={onRetryClose}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border/80 bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
                 >
                   <RefreshCw className="size-3.5" />
                   Retry
