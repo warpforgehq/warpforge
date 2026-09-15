@@ -162,6 +162,16 @@ describe("PullOverview", () => {
     expect(screen.getByText("Outdated")).toBeInTheDocument();
   });
 
+  it("keeps every group folded until the reviewer picks one", () => {
+    renderOverview(emptyThread);
+
+    expect(screen.getByText("Implementation")).toBeInTheDocument();
+    expect(screen.getByText("Documentation")).toBeInTheDocument();
+    // Nothing is open by default: the list is headings until you choose.
+    expect(screen.queryByText("a.ts")).not.toBeInTheDocument();
+    expect(screen.queryByText("notes.md")).not.toBeInTheDocument();
+  });
+
   it("lists every file rather than hiding the tail behind a second click", () => {
     const many = Array.from({ length: 30 }, (_, index) => ({
       path: `src/file-${index}.ts`,

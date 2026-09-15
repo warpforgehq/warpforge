@@ -1,8 +1,18 @@
-import { ChevronDown, ChevronRight, Square, SquareCheck } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  LayoutList,
+  ListTree,
+  Square,
+  SquareCheck,
+  type LucideIcon,
+} from "lucide-react";
 import * as React from "react";
 
+import { PULL_GROUP_ICONS } from "@/components/inbox/PullFilesChanged";
 import { Input } from "@/components/ui/input";
 import { countPatchStats, type PatchFileBlock } from "@/lib/pullDiff";
+import { groupPullFiles, type PullFileGroup } from "@/lib/pullFileGroups";
 import {
   buildPullFileTree,
   compactPullFileTree,
@@ -12,15 +22,43 @@ import {
   type PullTreeNode,
 } from "@/lib/pullFileTree";
 import { cn } from "@/lib/utils";
+import type { PullRequestFile } from "@/protocol";
+
+/** Which of the two readings of the file list the rail is showing. */
+type FilesView = "tree" | "groups";
+
+const VIEW_KEY = "wf-pull-files-view";
+
+/** Per-device preference: which reading of a diff you like is not a fact
+ *  about the PR, so it lives in localStorage beside the viewed marks. */
+function readFilesView(): FilesView {
+  try {
+    return window.localStorage.getItem(VIEW_KEY) === "groups" ? "groups" : "tree";
+  } catch {
+    return "tree";
+  }
+}
+
+function writeFilesView(view: FilesView) {
+  try {
+    window.localStorage.setItem(VIEW_KEY, view);
+  } catch {
+    // Storage is a convenience here; the session keeps the toggle either way.
+  }
+}
 
 /**
- * The changed-file rail: what this pull request touches, as a folder tree,
- * plus what you have ticked off and a filter to reach one file in a 40-file
- * review without scrolling for it. Selecting a file scrolls the diff to it —
- * the rail navigates, it does not hide anything.
+ * The changed-file rail: what this pull request touches, plus what you have
+ * ticked off and a filter to reach one file in a 40-file review without
+ * scrolling for it. Selecting a file scrolls the diff to it — the rail
+ * navigates, it does not hide anything.
  *
- * Filtering flattens the tree on purpose: someone typing a name wants the
- * matches, not the folders they happen to live in.
+ * Two readings share the rail. *Tree* is the folder hierarchy, for finding a
+ * file you already have in mind. *Groups* is the same triage the overview
+ * uses — migrations, implementation, tests, config, generated, docs — for
+ * working through the review a block at a time ("let me do the migrations
+ * first"). Filtering flattens either one on purpose: someone typing a name
+ * wants the matches, not the folders they happen to live in.
  */
 export function PullFilesRail({
   blocks,
@@ -38,6 +76,11 @@ export function PullFilesRail({
 }) {
   const [filter, setFilter] = React.useState("");
   const needle = filter.trim().toLowerCase();
+  const [view, setView] = React.useState<FilesView>(readFilesView);
+  const changeView = (next: FilesView) => {
+    setView(next);
+    writeFilesView(next);
+  };
 
   const tree = React.useMemo(() => compactPullFileTree(buildPullFileTree(blocks)), [blocks]);
   // Every folder starts open: a review you have to unfold before you can see
@@ -50,6 +93,22 @@ export function PullFilesRail({
   }, [closed, tree]);
 
   const rows = React.useMemo(() => flattenPullTree(tree, open), [open, tree]);
+
+  const grouped = React.useMemo<PullRequestFile[]>(
+    () =>
+      blocks.map((block) => {
+        const stats = countPatchStats([block]);
+        return { additions: stats.additions, deletions: stats.deletions, path: block.path };
+      }),
+    [blocks],
+  );
+  const groups = React.useMemo(() => groupPullFiles(grouped), [grouped]);
+  // A click on a group heading overrides its default. Nothing opens on its
+  // own, unless there is only one group — then there is nothing to choose
+  // between, and a closed heading over an empty pane helps nobody.
+  const soleGroup = groups.length === 1;
+  const [groupOverrides, setGroupOverrides] = React.useState<Record<string, boolean>>({});
+
   const matches = React.useMemo(
     () => (needle ? blocks.filter((block) => block.path.toLowerCase().includes(needle)) : []),
     [blocks, needle],
@@ -74,6 +133,24 @@ export function PullFilesRail({
           spellCheck={false}
           className="h-7 min-w-0 flex-1 border-transparent bg-transparent px-2 text-xs shadow-none focus-visible:border-border"
         />
+        <div
+          role="group"
+          aria-label="File list view"
+          className="flex shrink-0 items-center rounded border border-border/70 p-0.5"
+        >
+          <ViewButton
+            active={view === "tree"}
+            icon={ListTree}
+            label="Tree"
+            onClick={() => changeView("tree")}
+          />
+          <ViewButton
+            active={view === "groups"}
+            icon={LayoutList}
+            label="Groups"
+            onClick={() => changeView("groups")}
+          />
+        </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto py-1">
         {needle ? (
@@ -95,7 +172,7 @@ export function PullFilesRail({
               />
             ))
           )
-        ) : (
+        ) : view === "tree" ? (
           rows.map((row) =>
             row.folder ? (
               <FolderRow
@@ -120,9 +197,55 @@ export function PullFilesRail({
               />
             ),
           )
+        ) : (
+          groups.map((group) => (
+            <GroupSection
+              key={group.id}
+              group={group}
+              open={groupOverrides[group.id] ?? (soleGroup || group.defaultOpen)}
+              onToggle={() =>
+                setGroupOverrides((current) => ({
+                  ...current,
+                  [group.id]: !(current[group.id] ?? (soleGroup || group.defaultOpen)),
+                }))
+              }
+              viewed={viewed}
+              activePath={activePath}
+              onSelect={onSelect}
+              onToggleViewed={onToggleViewed}
+            />
+          ))
         )}
       </div>
     </div>
+  );
+}
+
+function ViewButton({
+  active,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      aria-label={`${label} view`}
+      title={`${label} view`}
+      onClick={onClick}
+      className={cn(
+        "grid size-6 place-items-center rounded-sm",
+        active ? "bg-accent text-foreground" : "text-muted-foreground/60 hover:bg-secondary/50",
+      )}
+    >
+      <Icon aria-hidden className="size-3.5" />
+    </button>
   );
 }
 
@@ -166,8 +289,82 @@ function FolderRow({
   );
 }
 
+/** One triage block in the grouped reading, with how much of it is ticked. */
+function GroupSection({
+  group,
+  open,
+  onToggle,
+  viewed,
+  activePath,
+  onSelect,
+  onToggleViewed,
+}: {
+  group: PullFileGroup;
+  open: boolean;
+  onToggle: () => void;
+  viewed: ReadonlySet<string>;
+  activePath: string | null;
+  onSelect: (path: string) => void;
+  onToggleViewed: (path: string) => void;
+}) {
+  const Icon = PULL_GROUP_ICONS[group.id];
+  const done = group.files.reduce((count, file) => count + (viewed.has(file.path) ? 1 : 0), 0);
+  return (
+    <div className="flex min-w-0 flex-col">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="sticky top-0 z-10 flex h-7 w-full min-w-0 items-center gap-1 bg-background pr-2.5 text-left hover:bg-secondary/40"
+        style={indent(0)}
+      >
+        {open ? (
+          <ChevronDown aria-hidden className="size-3 shrink-0 text-muted-foreground/70" />
+        ) : (
+          <ChevronRight aria-hidden className="size-3 shrink-0 text-muted-foreground/70" />
+        )}
+        <Icon
+          aria-hidden
+          className={cn(
+            "size-3 shrink-0",
+            group.tone === "critical" ? "text-warn" : "text-muted-foreground/50",
+          )}
+        />
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate text-xs font-medium",
+            group.tone === "noise" ? "text-muted-foreground/70" : "text-foreground/85",
+          )}
+        >
+          {group.label}
+        </span>
+        <span className="tnum shrink-0 font-mono text-[10px] text-muted-foreground/50">
+          {done}/{group.files.length}
+        </span>
+      </button>
+      {open &&
+        group.files.map((file) => (
+          <FileRow
+            key={file.path}
+            name={file.name}
+            dir={file.dir}
+            path={file.path}
+            additions={file.additions}
+            deletions={file.deletions}
+            depth={1}
+            active={file.path === activePath}
+            viewed={viewed.has(file.path)}
+            onSelect={onSelect}
+            onToggleViewed={onToggleViewed}
+          />
+        ))}
+    </div>
+  );
+}
+
 function FileRow({
   name,
+  dir,
   path,
   additions,
   deletions,
@@ -178,6 +375,7 @@ function FileRow({
   onToggleViewed,
 }: {
   name: string;
+  dir?: string;
   path: string;
   additions: number;
   deletions: number;
@@ -226,9 +424,12 @@ function FileRow({
           <Square aria-hidden className="size-3.5 text-muted-foreground/50" />
         )}
       </span>
-      {/* The name truncates and the counts never do: how big a file's change
-          is decides whether you open it next. */}
-      <span className="min-w-0 flex-1 truncate text-xs text-foreground/85">{name}</span>
+      {/* In folder-tree mode the folders already carry the directory; in the
+          grouped reading the row has to say where the file lives itself. */}
+      <span className="min-w-0 max-w-[70%] flex-1 truncate text-xs text-foreground/85">{name}</span>
+      {dir && (
+        <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground/60">{dir}</span>
+      )}
       <span className="tnum flex shrink-0 items-center gap-1 font-mono text-[10px]">
         {additions > 0 && <span className="text-ok">+{additions}</span>}
         {deletions > 0 && <span className="text-destructive">−{deletions}</span>}
