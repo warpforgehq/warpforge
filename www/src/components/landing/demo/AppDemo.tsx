@@ -176,10 +176,12 @@ export default function AppDemo() {
             <Sidebar
               collapsed={false}
               connection="connected"
+              onAddProject={noop}
               onNewTask={noop}
               onOpenProject={noop}
               onOpenSettings={noop}
               onOpenTask={setOpenTaskId}
+              onSelectTasksSegment={noop}
               onSelectView={noop}
               onToggleCollapsed={noop}
               openTaskId={openTaskId}
