@@ -4,6 +4,8 @@ import {
   boardTasks,
   closedPrAssistantTasks,
   findPrAssistantTask,
+  isPrAssistantRunning,
+  prAssistantTaskIndex,
   prTaskTag,
 } from "@/lib/taskOrigin";
 import type { PullRequestSummary, TaskInfo } from "@/protocol";
@@ -80,6 +82,57 @@ describe("findPrAssistantTask", () => {
       createdAt: 2,
     });
     expect(findPrAssistantTask([first, second], pr())?.id).toBe("t3");
+  });
+});
+
+describe("prAssistantTaskIndex", () => {
+  it("indexes shadow tasks by PR tag, newest winning, board tasks excluded", () => {
+    const first = task({
+      id: "t2",
+      origin: "pr-review",
+      tags: ["pr:acme/widgets#7"],
+      createdAt: 1,
+    });
+    const second = task({
+      id: "t3",
+      origin: "pr-review",
+      tags: ["pr:acme/widgets#7"],
+      createdAt: 2,
+    });
+    const other = task({
+      id: "t4",
+      origin: "pr-review",
+      tags: ["pr:acme/widgets#9"],
+      createdAt: 3,
+    });
+    const board = task({ id: "t5", tags: ["pr:acme/widgets#7"], createdAt: 4 });
+
+    const index = prAssistantTaskIndex([first, second, other, board]);
+
+    expect(index.get("pr:acme/widgets#7")?.id).toBe("t3");
+    expect(index.get("pr:acme/widgets#9")?.id).toBe("t4");
+    expect(index.size).toBe(2);
+  });
+
+  it("is memoized against the tasks array's identity, so rows do not rescan", () => {
+    const tasks = [task({ id: "t2", origin: "pr-review", tags: ["pr:acme/widgets#7"] })];
+    const first = prAssistantTaskIndex(tasks);
+    expect(prAssistantTaskIndex(tasks)).toBe(first);
+
+    const copy = [...tasks];
+    const rebuilt = prAssistantTaskIndex(copy);
+    expect(rebuilt).not.toBe(first);
+    expect(prAssistantTaskIndex(copy)).toBe(rebuilt);
+  });
+});
+
+describe("isPrAssistantRunning", () => {
+  it("counts queued and running, and nothing else", () => {
+    expect(isPrAssistantRunning(task({ status: "queued" }))).toBe(true);
+    expect(isPrAssistantRunning(task({ status: "running" }))).toBe(true);
+    for (const status of ["waiting", "blocked", "interrupted", "done"] as const) {
+      expect(isPrAssistantRunning(task({ status }))).toBe(false);
+    }
   });
 });
 

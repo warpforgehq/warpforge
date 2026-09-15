@@ -23,18 +23,46 @@ export function prTaskTag(pr: Pick<PullRequestSummary, "repo" | "number">): stri
   return `pr:${pr.repo}#${pr.number}`;
 }
 
+/** A shadow task is "working" while the daemon has it queued or running. */
+export function isPrAssistantRunning(task: Pick<TaskInfo, "status">): boolean {
+  return task.status === "running" || task.status === "queued";
+}
+
+/** What a PR row must say about its assistant: work in flight, a review that
+ *  finished and has not been opened, or nothing. */
+export type PrAssistantState = "running" | "unseen";
+
+let indexedTasks: readonly TaskInfo[] | null = null;
+let indexedAssistantTasks: ReadonlyMap<string, TaskInfo> = new Map();
+
+/**
+ * One pass over `snapshot.tasks`, keyed by `prTaskTag`, newest task winning.
+ * The sidebar renders dozens of PR rows, so the per-row lookup must not rescan
+ * the task list; the result is cached against the tasks array's identity, which
+ * the daemon only replaces when the task set actually moves.
+ */
+export function prAssistantTaskIndex(tasks: readonly TaskInfo[]): ReadonlyMap<string, TaskInfo> {
+  if (indexedTasks === tasks) return indexedAssistantTasks;
+  const index = new Map<string, TaskInfo>();
+  for (const task of tasks) {
+    if (task.origin !== PR_REVIEW_ORIGIN) continue;
+    const tag = task.tags.find((candidate) => candidate.startsWith("pr:"));
+    if (!tag) continue;
+    const current = index.get(tag);
+    if (!current || task.createdAt > current.createdAt) index.set(tag, task);
+  }
+  indexedTasks = tasks;
+  indexedAssistantTasks = index;
+  return index;
+}
+
 /** Reopen-not-spawn: the pane's only way to resolve its task. Newest wins,
  *  so a duplicate from two windows racing resolves the same for both. */
 export function findPrAssistantTask(
   tasks: readonly TaskInfo[],
   pr: Pick<PullRequestSummary, "repo" | "number">,
 ): TaskInfo | null {
-  const tag = prTaskTag(pr);
-  const matches = tasks.filter(
-    (task) => task.origin === PR_REVIEW_ORIGIN && task.tags.includes(tag),
-  );
-  if (matches.length === 0) return null;
-  return matches.reduce((newest, task) => (task.createdAt > newest.createdAt ? task : newest));
+  return prAssistantTaskIndex(tasks).get(prTaskTag(pr)) ?? null;
 }
 
 /** The pull request a shadow task belongs to, read back off its tags. */

@@ -21,6 +21,12 @@ export function inboxItemKey(pr: { repo: string; number: number }): string {
   return `${pr.repo}#${pr.number}`;
 }
 
+/** The assistant's review of a PR is a second thing that can go unseen, stored
+ *  in the same map under a suffixed key so it cannot collide with the PR's. */
+export function prAssistantSeenKey(pr: { repo: string; number: number }): string {
+  return `${inboxItemKey(pr)}:assistant`;
+}
+
 function loadAll(): Record<string, number> {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -70,6 +76,24 @@ export function unseenKeysSnapshot(entries: InboxSeenEntry[]): ReadonlySet<strin
   if (cached && cached.version === version && cached.entries === entries) return cached.value;
   const value = new Set(entries.filter((entry) => isInboxEntryUnseen(entry)).map((e) => e.key));
   unseenCache = { entries, value, version };
+  return value;
+}
+
+let assistantUnseenCache: {
+  entries: readonly InboxSeenEntry[];
+  value: ReadonlySet<string>;
+  version: number;
+} | null = null;
+
+/** `unseenKeysSnapshot` for the assistant-review marks; its own cache slot so
+ *  the two snapshots cannot evict each other on every render. */
+export function assistantUnseenKeysSnapshot(
+  entries: readonly InboxSeenEntry[],
+): ReadonlySet<string> {
+  const cached = assistantUnseenCache;
+  if (cached && cached.version === version && cached.entries === entries) return cached.value;
+  const value = new Set(entries.filter((entry) => isInboxEntryUnseen(entry)).map((e) => e.key));
+  assistantUnseenCache = { entries, value, version };
   return value;
 }
 

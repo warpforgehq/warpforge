@@ -52,7 +52,7 @@ export function FileDiffSkeleton({
       aria-busy
       data-testid="file-skeleton"
       data-path={file?.path}
-      className="flex animate-pulse flex-col overflow-hidden [animation-duration:1.4s] [animation-timing-function:ease-in-out] motion-reduce:animate-none"
+      className="flex animate-pulse flex-col overflow-hidden [--animate-pulse:pulse_1.4s_ease-in-out_infinite] motion-reduce:animate-none"
       style={{ height }}
     >
       <div className="flex h-9 shrink-0 items-center gap-2 border-b bg-secondary/30 px-3 text-xs">
@@ -86,7 +86,9 @@ export function FileDiffSkeleton({
             </div>
           );
         })}
-        {tail > 0 && <div className="min-h-0 flex-1 bg-gradient-to-b from-secondary/20 to-transparent" />}
+        {tail > 0 && (
+          <div className="min-h-0 flex-1 bg-gradient-to-b from-secondary/20 to-transparent" />
+        )}
       </div>
     </div>
   );

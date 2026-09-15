@@ -66,7 +66,7 @@ export function PullOverview({
    * under the activity and the whole thing is one scroller again.
    */
   const document = (
-    <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6">
+    <div className="flex w-full min-w-0 flex-col gap-6">
       <section className="flex min-w-0 flex-col gap-2">
         <h3 className="text-xs font-medium text-muted-foreground">Description</h3>
         {detailsLoading && !details ? (
@@ -76,16 +76,14 @@ export function PullOverview({
             Could not load the pull request: {detailsError.message}
           </p>
         ) : body ? (
-          <div className="max-w-[80ch]">
-            <Markdown
-              density="comfortable"
-              renderImage={TrackerImage}
-              allowHtml
-              className="text-foreground/90"
-            >
-              {inlineHtmlImages(body)}
-            </Markdown>
-          </div>
+          <Markdown
+            density="comfortable"
+            renderImage={TrackerImage}
+            allowHtml
+            className="text-foreground/90"
+          >
+            {inlineHtmlImages(body)}
+          </Markdown>
         ) : (
           <p className="text-sm text-muted-foreground/60">No description.</p>
         )}

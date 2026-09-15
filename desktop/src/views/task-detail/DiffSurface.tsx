@@ -9,15 +9,27 @@ import { useUi } from "@/store/ui";
 import { ChangesRail } from "../../components/ChangesRail";
 import type { EditHunk, FileDiff, HunkResolution, TaskDiff } from "../../protocol";
 import type { DiffView } from "../../store/ui";
-import { DiffWorkspace, type DiffWorkspaceHandle } from "./DiffWorkspace";
+import { DiffWorkspace, estimateFileHeight, type DiffWorkspaceHandle } from "./DiffWorkspace";
+import { FileDiffSkeleton } from "./FileDiffSkeleton";
 
-/** The shell's placeholder while the diff workspace is still unmounted. Static
- *  on purpose: a pulse over a full-height pane is noise, not information. */
-function DiffSkeleton() {
+/** The shell's placeholder while the diff workspace is still unmounted. It is
+ *  the same file skeleton the workspace shows per loading file, so the two
+ *  loading states share one visual language. */
+function DiffSkeleton({ files }: { files: readonly FileDiff[] }) {
+  const shown = files.slice(0, 6);
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 p-3" aria-busy data-testid="diff-skeleton">
-      {[0, 1, 2].map((row) => (
-        <div key={row} className="h-28 rounded-md border border-rule bg-secondary/20" />
+    <div
+      aria-busy
+      data-testid="diff-skeleton"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
+    >
+      {(shown.length > 0 ? shown : [undefined, undefined, undefined]).map((file, index) => (
+        <FileDiffSkeleton
+          key={file?.path ?? index}
+          file={file}
+          height={Math.min(estimateFileHeight(file), 520)}
+          index={index}
+        />
       ))}
     </div>
   );
@@ -142,7 +154,7 @@ export function DiffSurface({
               taskId={taskId}
             />
           ) : (
-            <DiffSkeleton />
+            <DiffSkeleton files={diff?.files ?? []} />
           )}
         </Panel>
         <PanelSeparator aria-label="Resize changes panel" />

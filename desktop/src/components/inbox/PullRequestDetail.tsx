@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 
+import { AssistantWorkingGlyph } from "@/components/inbox/AssistantWorkingGlyph";
 import { PullAssistantLive } from "@/components/inbox/PullAssistant";
 import { AssistantThreadItem } from "@/components/inbox/PullAssistantControls";
 import { PullDetailHeader } from "@/components/inbox/PullDetailHeader";
@@ -30,11 +31,18 @@ import {
 import { SurfaceTabs, type SurfaceTab } from "@/components/workspace/SurfaceTabs";
 import { daemon } from "@/daemon";
 import {
+  isInboxEntryUnseen,
+  markInboxItemSeen,
+  prAssistantSeenKey,
+  subscribeInboxSeen,
+} from "@/lib/inboxSeen";
+import {
   inboxTaskPrompt,
   unresolvedReviewComments,
   type InboxTaskIntent,
 } from "@/lib/inboxTaskPrompt";
 import type { CommitRange } from "@/lib/pullCommits";
+import { isPrAssistantRunning, prAssistantTaskIndex, prTaskTag } from "@/lib/taskOrigin";
 import { cn } from "@/lib/utils";
 import type { PullRequestSummary } from "@/protocol";
 
@@ -93,6 +101,43 @@ export function PullRequestDetail({
     const timer = setTimeout(() => setFilesRequested(true), FILE_LIST_DELAY_MS);
     return () => clearTimeout(timer);
   }, [pr.project, pr.number]);
+
+  // The Assistant tab's indicator, and the one place an open review is ticked
+  // off: the seen mark is the inbox's own store, namespaced by a suffixed key.
+  const tasks = React.useSyncExternalStore(
+    daemon.subscribe,
+    () => daemon.getState().snapshot.tasks,
+  );
+  const assistantTask = React.useMemo(
+    () => prAssistantTaskIndex(tasks).get(prTaskTag(pr)) ?? null,
+    [pr, tasks],
+  );
+  const assistantRunning = !!assistantTask && isPrAssistantRunning(assistantTask);
+  const assistantUnseen = React.useSyncExternalStore(
+    subscribeInboxSeen,
+    () =>
+      !!assistantTask &&
+      !isPrAssistantRunning(assistantTask) &&
+      isInboxEntryUnseen({ key: prAssistantSeenKey(pr), updatedAt: assistantTask.updatedAt }),
+  );
+  React.useEffect(() => {
+    if (tab !== "assistant" || !assistantTask) return;
+    markInboxItemSeen({ key: prAssistantSeenKey(pr), updatedAt: assistantTask.updatedAt });
+  }, [assistantTask, pr, tab]);
+  const detailTabs = React.useMemo(() => {
+    const indicator = assistantRunning ? (
+      <AssistantWorkingGlyph className="size-3" />
+    ) : assistantUnseen ? (
+      <span
+        aria-label="Assistant review ready"
+        className="block size-1.5 rounded-full bg-primary"
+      />
+    ) : null;
+    if (!indicator) return DETAIL_TABS;
+    return DETAIL_TABS.map((entry) =>
+      entry.id === "assistant" ? { ...entry, count: indicator } : entry,
+    );
+  }, [assistantRunning, assistantUnseen]);
 
   const detailsQuery = useQuery({
     queryKey: ["pull", "details", pr.project, pr.number],
@@ -270,7 +315,7 @@ export function PullRequestDetail({
           aria-label="Pull request sections"
           value={tab}
           onValueChange={setTab}
-          tabs={DETAIL_TABS}
+          tabs={detailTabs}
         />
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           <Button

@@ -1,6 +1,7 @@
 import { GitPullRequest } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import type { PrAssistantState } from "@/lib/taskOrigin";
 import { cn } from "@/lib/utils";
 import type { PullRequestSummary } from "@/protocol";
 
@@ -10,6 +11,8 @@ export interface PullRequestListProps {
   items: PullRequestSummary[];
   /** Keys of PRs the user has not seen yet (`inboxItemKey`). */
   unseenKeys: ReadonlySet<string>;
+  /** Per-PR assistant state, keyed by `inboxItemKey`. */
+  assistantStates?: ReadonlyMap<string, PrAssistantState>;
   selectedKey: string | null;
   actions: PullRequestRowActions;
   isLoading: boolean;
@@ -29,6 +32,7 @@ export interface PullRequestListProps {
 export function PullRequestList({
   items,
   unseenKeys,
+  assistantStates,
   selectedKey,
   actions,
   isLoading,
@@ -59,6 +63,7 @@ export function PullRequestList({
               key={key}
               pr={pr}
               unseen={unseenKeys.has(key)}
+              assistant={assistantStates?.get(key) ?? null}
               active={key === selectedKey}
               actions={actions}
             />

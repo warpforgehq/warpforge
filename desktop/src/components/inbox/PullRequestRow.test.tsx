@@ -148,7 +148,12 @@ describe("PullRequestRow", () => {
   it("keeps the repo truncating while the numeric lanes stay fixed", () => {
     const { container } = render(
       <PullRequestRow
-        pr={pr({ additions: 28525, deletions: 46, number: 482, repo: "edenlabllc/kodjin-analytics" })}
+        pr={pr({
+          additions: 28525,
+          deletions: 46,
+          number: 482,
+          repo: "edenlabllc/kodjin-analytics",
+        })}
         unseen={false}
         active={false}
         actions={{ onOpen: () => {} }}
@@ -209,6 +214,65 @@ describe("PullRequestRow", () => {
     );
     expect(screen.queryByText("+0")).not.toBeInTheDocument();
     expect(container.querySelector("button")!.children).toHaveLength(2);
+  });
+
+  it("marks a running assistant review with the house working glyph", () => {
+    render(
+      <PullRequestRow
+        pr={pr()}
+        unseen={false}
+        assistant="running"
+        active={false}
+        actions={{ onOpen: () => {} }}
+      />,
+    );
+    const glyph = screen.getByLabelText("Assistant review in progress");
+    expect(glyph).toHaveAttribute("role", "img");
+    expect(glyph.querySelector("circle")).toHaveAttribute("stroke-dasharray", "25 75");
+  });
+
+  it("marks a finished assistant review that has not been opened", () => {
+    render(
+      <PullRequestRow
+        pr={pr()}
+        unseen={false}
+        assistant="unseen"
+        active={false}
+        actions={{ onOpen: () => {} }}
+      />,
+    );
+    expect(screen.getByLabelText("Assistant review ready")).toBeInTheDocument();
+  });
+
+  it("keeps one status lane for the assistant and the decision, so glyphs never stair-step", () => {
+    const { container, rerender } = render(
+      <PullRequestRow
+        pr={pr({ reviewDecision: "APPROVED" })}
+        unseen={false}
+        active={false}
+        actions={{ onOpen: () => {} }}
+      />,
+    );
+    const lane = () => container.querySelector('[data-lane="status"]')!;
+
+    // No assistant: the decision glyph falls back into the same slot.
+    expect(lane()).toBeInTheDocument();
+    expect(lane().querySelector('[aria-label="Approved"]')).not.toBeNull();
+    const className = lane().className;
+
+    rerender(
+      <PullRequestRow
+        pr={pr({ reviewDecision: "APPROVED" })}
+        unseen={false}
+        assistant="unseen"
+        active={false}
+        actions={{ onOpen: () => {} }}
+      />,
+    );
+    // The assistant owns the slot; the lane geometry is unchanged.
+    expect(lane().className).toBe(className);
+    expect(lane().querySelector('[aria-label="Assistant review ready"]')).not.toBeNull();
+    expect(lane().querySelector('[aria-label="Approved"]')).toBeNull();
   });
 
   it("wears the sidebar's row language rather than a full-bleed band", () => {

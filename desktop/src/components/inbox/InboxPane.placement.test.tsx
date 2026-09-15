@@ -26,18 +26,25 @@ function pull(number: number, title: string): PullRequestSummary {
 
 const pulls = [pull(2, "Second widget"), pull(1, "First widget")];
 
-vi.mock("@/daemon", () => ({
-  daemon: {
-    listPulls: vi.fn<() => Promise<PullRequestSummary[]>>(async () => pulls),
-    pullDetails: vi.fn<() => Promise<null>>(async () => null),
-    pullThread: vi.fn<() => Promise<{ comments: []; reviews: [] }>>(async () => ({
-      comments: [],
-      reviews: [],
-    })),
-    pullDiff: vi.fn<() => Promise<null>>(async () => null),
-    pullCommits: vi.fn<() => Promise<[]>>(async () => []),
-  },
-}));
+vi.mock("@/daemon", () => {
+  // One object for the life of the mock: a fresh snapshot per `getState` call
+  // makes `useSyncExternalStore` re-render forever.
+  const state = { snapshot: { agents: [] as unknown[], tasks: [] as unknown[] } };
+  return {
+    daemon: {
+      getState: () => state,
+      subscribe: () => () => {},
+      listPulls: vi.fn<() => Promise<PullRequestSummary[]>>(async () => pulls),
+      pullDetails: vi.fn<() => Promise<null>>(async () => null),
+      pullThread: vi.fn<() => Promise<{ comments: []; reviews: [] }>>(async () => ({
+        comments: [],
+        reviews: [],
+      })),
+      pullDiff: vi.fn<() => Promise<null>>(async () => null),
+      pullCommits: vi.fn<() => Promise<[]>>(async () => []),
+    },
+  };
+});
 
 import { InboxPane } from "./InboxPane";
 

@@ -1,10 +1,12 @@
-import { GitPullRequest, GitPullRequestClosed, GitPullRequestDraft } from "lucide-react";
+import { Bot, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft } from "lucide-react";
 import * as React from "react";
 
 import { elapsed } from "@/lib/status";
+import type { PrAssistantState } from "@/lib/taskOrigin";
 import { cn } from "@/lib/utils";
 import type { PullRequestSummary } from "@/protocol";
 
+import { AssistantWorkingGlyph } from "./AssistantWorkingGlyph";
 import { ReviewDecisionGlyph } from "./ReviewDecisionChip";
 
 export interface PullRequestRowActions {
@@ -30,11 +32,14 @@ export interface PullRequestRowActions {
 export const PullRequestRow = React.memo(function PullRequestRow({
   pr,
   unseen,
+  assistant = null,
   active,
   actions,
 }: {
   pr: PullRequestSummary;
   unseen: boolean;
+  /** What the PR's assistant task is doing, if it has one. */
+  assistant?: PrAssistantState | null;
   active: boolean;
   actions: PullRequestRowActions;
 }) {
@@ -97,10 +102,19 @@ export const PullRequestRow = React.memo(function PullRequestRow({
           </span>
         )}
         <span className="ml-auto flex shrink-0 items-center gap-1.5 pl-1">
-          {/* Reserved: the decision draws on some rows only, and the age column
-              must not move when it does. */}
-          <span className="flex size-3.5 shrink-0 items-center justify-center">
-            <ReviewDecisionGlyph decision={pr.reviewDecision} />
+          {/* ONE status column, always reserved. A second lane for the
+              assistant put its glyph and the decision glyph at different x, so
+              a list where only one of them draws read as a staircase; here the
+              assistant takes the slot when it has something to say, and the
+              decision glyph falls back into it otherwise. */}
+          <span data-lane="status" className="flex size-3.5 shrink-0 items-center justify-center">
+            {assistant === "running" ? (
+              <AssistantWorkingGlyph className="size-3.5" />
+            ) : assistant === "unseen" ? (
+              <Bot aria-label="Assistant review ready" className="size-3.5 text-primary" />
+            ) : (
+              <ReviewDecisionGlyph decision={pr.reviewDecision} />
+            )}
           </span>
           <span
             className="tnum w-8 shrink-0 text-right text-muted-foreground/70"

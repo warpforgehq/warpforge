@@ -3,14 +3,23 @@ import * as React from "react";
 
 import { InboxToolbar, PullRequestList } from "@/components/inbox/PullRequestList";
 import { Button } from "@/components/ui/button";
+import { daemon } from "@/daemon";
 import { DEFAULT_INBOX_FILTERS, hasActiveInboxFilters } from "@/lib/inboxFilters";
 import {
+  assistantUnseenKeysSnapshot,
   inboxItemKey,
   markInboxItemsSeen,
+  prAssistantSeenKey,
   subscribeInboxSeen,
   unseenKeysSnapshot,
   type InboxSeenEntry,
 } from "@/lib/inboxSeen";
+import {
+  isPrAssistantRunning,
+  prAssistantTaskIndex,
+  prTaskTag,
+  type PrAssistantState,
+} from "@/lib/taskOrigin";
 
 import { useInboxItems } from "./useInboxItems";
 
@@ -43,6 +52,38 @@ export function InboxListPane({
     unseenKeysSnapshot(entries),
   );
   const markAllSeen = React.useCallback(() => markInboxItemsSeen(entries), [entries]);
+
+  // One lookup map over the task snapshot, shared across every row's render.
+  const tasks = React.useSyncExternalStore(
+    daemon.subscribe,
+    () => daemon.getState().snapshot.tasks,
+  );
+  const assistantByPr = prAssistantTaskIndex(tasks);
+  const assistantEntries = React.useMemo(
+    () =>
+      items.flatMap((pr) => {
+        const task = assistantByPr.get(prTaskTag(pr));
+        if (!task || isPrAssistantRunning(task)) return [];
+        return [{ key: prAssistantSeenKey(pr), updatedAt: task.updatedAt }];
+      }),
+    [assistantByPr, items],
+  );
+  const assistantUnseen = React.useSyncExternalStore(subscribeInboxSeen, () =>
+    assistantUnseenKeysSnapshot(assistantEntries),
+  );
+  const assistantStates = React.useMemo(() => {
+    const states = new Map<string, PrAssistantState>();
+    for (const pr of items) {
+      const task = assistantByPr.get(prTaskTag(pr));
+      if (!task) continue;
+      if (isPrAssistantRunning(task)) {
+        states.set(inboxItemKey(pr), "running");
+      } else if (assistantUnseen.has(prAssistantSeenKey(pr))) {
+        states.set(inboxItemKey(pr), "unseen");
+      }
+    }
+    return states;
+  }, [assistantByPr, assistantUnseen, items]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -80,6 +121,7 @@ export function InboxListPane({
         <PullRequestList
           items={items}
           unseenKeys={unseenKeys}
+          assistantStates={assistantStates}
           selectedKey={selected ? inboxItemKey(selected) : null}
           actions={{ onOpen: openPull }}
           isLoading={listing.isPending && !listing.isError}

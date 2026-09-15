@@ -17,6 +17,7 @@ import { daemon } from "../../daemon";
 import type { EditHunk, FileDiff, HunkResolution, TaskDiff } from "../../protocol";
 import { fileAnchor } from "./diffAnchors";
 import { matchingHunkIndexes } from "./editHunkMatch";
+import { FileDiffSkeleton } from "./FileDiffSkeleton";
 import { useSplitFileQueries } from "./useTaskQueries";
 
 const MergeDiff = lazy(async () => ({
@@ -37,7 +38,7 @@ const EMPTY_DIFF_FILES: FileDiff[] = [];
  * rewriting every position below it while scrolling, and the whole list
  * lurched. A close estimate means measurement confirms instead of corrects.
  */
-function estimateFileHeight(file: FileDiff | undefined): number {
+export function estimateFileHeight(file: FileDiff | undefined): number {
   const HEADER_PX = 36;
   const LINE_PX = 20;
   if (!file) return 384;
@@ -285,7 +286,11 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
                       Failed to load {file.path}: {query.error.message}
                     </p>
                   ) : (
-                    <p className="p-3 text-sm text-muted-foreground">Loading {file.path}…</p>
+                    <FileDiffSkeleton
+                      file={file}
+                      height={estimateFileHeight(file)}
+                      index={item.index}
+                    />
                   )}
                 </div>
               );
@@ -339,7 +344,11 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
                     Failed to load {file.path}: {query.error.message}
                   </p>
                 ) : (
-                  <p className="p-3 text-sm text-muted-foreground">Loading {file.path}…</p>
+                  <FileDiffSkeleton
+                    file={file}
+                    height={estimateFileHeight(file)}
+                    index={item.index}
+                  />
                 )}
               </div>
             );

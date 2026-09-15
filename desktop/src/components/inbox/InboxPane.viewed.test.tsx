@@ -50,21 +50,28 @@ const diff: PullRequestDiff = {
   truncated: false,
 };
 
-vi.mock("@/daemon", () => ({
-  daemon: {
-    listPulls: vi.fn<() => Promise<PullRequestSummary[]>>(async () => [pr]),
-    pullDetails: vi.fn<() => Promise<null>>(async () => null),
-    pullThread: vi.fn<() => Promise<{ comments: []; reviews: [] }>>(async () => ({
-      comments: [],
-      reviews: [],
-    })),
-    pullDiff: vi.fn<() => Promise<PullRequestDiff>>(async () => diff),
-    createPullReviewComment: vi.fn<() => Promise<never>>(async () => {
-      throw new Error("not used");
-    }),
-    postPullComment: vi.fn<() => Promise<string>>(async () => "x"),
-  },
-}));
+vi.mock("@/daemon", () => {
+  // One object for the life of the mock: a fresh snapshot per `getState` call
+  // makes `useSyncExternalStore` re-render forever.
+  const state = { snapshot: { agents: [] as unknown[], tasks: [] as unknown[] } };
+  return {
+    daemon: {
+      getState: () => state,
+      subscribe: () => () => {},
+      listPulls: vi.fn<() => Promise<PullRequestSummary[]>>(async () => [pr]),
+      pullDetails: vi.fn<() => Promise<null>>(async () => null),
+      pullThread: vi.fn<() => Promise<{ comments: []; reviews: [] }>>(async () => ({
+        comments: [],
+        reviews: [],
+      })),
+      pullDiff: vi.fn<() => Promise<PullRequestDiff>>(async () => diff),
+      createPullReviewComment: vi.fn<() => Promise<never>>(async () => {
+        throw new Error("not used");
+      }),
+      postPullComment: vi.fn<() => Promise<string>>(async () => "x"),
+    },
+  };
+});
 
 vi.mock("@/lib/pullDiffHighlight", () => ({
   highlightPatchBlock: vi.fn<() => Promise<Map<string, never>>>(
