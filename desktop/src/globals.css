@@ -363,14 +363,17 @@ textarea {
 }
 .activity-rail-step {
   position: relative;
-  padding-left: 20px;
+  /* 14px puts the 1px spine under the group header icon's centre (8px band
+     padding + half a 14px icon); the 8px branch curve then ends exactly at the
+     band edge, so the step's own `px-2` is the only gap to its content. */
+  padding-left: 22px;
   --activity-rail: hsl(var(--border) / 0.5);
 }
 .activity-rail-step::before,
 .activity-rail-step::after {
   content: "";
   position: absolute;
-  left: 6px;
+  left: 14px;
 }
 .activity-rail-step::before {
   top: 0;

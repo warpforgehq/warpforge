@@ -143,7 +143,7 @@ export const ActivityGroup = memo(function ActivityGroup({ row }: { row: Activit
   return (
     <div className="flex min-w-0 flex-col">
       <div
-        className="group relative flex w-full min-w-0 cursor-pointer items-center gap-1.5 rounded py-1 text-left hover:bg-accent/40"
+        className="group relative flex w-full min-w-0 cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-left hover:bg-accent/40"
         onClick={() => shared.onToggleWorkGroup(row.groupId, !row.open)}
       >
         <button
@@ -183,8 +183,10 @@ export const ActivityGroup = memo(function ActivityGroup({ row }: { row: Activit
           className={cn("activity-rail pb-1", row.live && "activity-rail-live")}
         >
           {hiddenSteps > 0 ? (
-            <div className="activity-rail-step py-1 text-[12px] text-muted-foreground">
-              {hiddenSteps} earlier {hiddenSteps === 1 ? "step" : "steps"}
+            <div className="activity-rail-step">
+              <div className="px-2 py-1 text-[12px] text-muted-foreground">
+                {hiddenSteps} earlier {hiddenSteps === 1 ? "step" : "steps"}
+              </div>
             </div>
           ) : null}
           <SettledSteps items={visibleItems.slice(0, -1)} live={row.live} />

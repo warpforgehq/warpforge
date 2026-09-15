@@ -276,8 +276,42 @@ describe("ActivityGroup", () => {
     ]);
     renderGroup(activityRow(source));
 
-    expect(screen.getByText("50 earlier steps")).toBeInTheDocument();
+    const earlier = screen.getByText("50 earlier steps");
+    expect(earlier.className).toContain("px-2");
+    expect(earlier.parentElement?.className).toContain("activity-rail-step");
     expect(document.querySelectorAll(".activity-rail-step")).toHaveLength(151);
+  });
+
+  it("keeps an 8px gutter inside the header band and an expanded step body", async () => {
+    renderExpanded();
+
+    const headerBand = screen.getByRole("button", { name: /hide the work/i }).parentElement;
+    expect(headerBand?.className).toContain("px-2");
+
+    const stepBand = screen.getByText("npm test").closest("div.group");
+    expect(stepBand?.className).toContain("px-2");
+
+    await userEvent.click(screen.getByText("npm test"));
+    expect(screen.getByText("1 test passed").className).toContain("px-2");
+  });
+
+  it("indents a standalone step and its body by the same gutter", async () => {
+    const single: SessionUpdate[] = [
+      {
+        kind: "agent_thought",
+        text: "Reasoning step\nwith more text",
+      },
+    ];
+    renderGroup(activityRow(single));
+
+    const band = screen.getByRole("button", { name: /show thinking/i }).parentElement;
+    expect(band?.className).toContain("px-2");
+
+    await userEvent.click(screen.getByText("Reasoning step"));
+
+    const body = screen.getByLabelText("Agent thinking").parentElement;
+    expect(body?.className).toContain("px-2");
+    expect(body?.className).not.toContain("pl-5");
   });
 });
 

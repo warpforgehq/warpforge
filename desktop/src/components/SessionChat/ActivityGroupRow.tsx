@@ -15,7 +15,13 @@ import { TranscriptRowContext, type TranscriptRowContextValue } from "./Transcri
 type ToolCall = Extract<SessionUpdate, { kind: "tool_call" }>;
 type FileEdit = Extract<SessionUpdate, { kind: "file_edit" }>;
 
-const STEP = "flex min-w-0 items-center gap-1.5 py-1 text-[13px] leading-5";
+/**
+ * One 24px step line. `px-2` is the band's inner breathing room: the hover fill
+ * and the `inset-0` hit area span the whole row, while icon, text, chips and
+ * chevron keep an 8px gutter from its edge. Bodies below a step indent with the
+ * same 8px so output and thinking align with the step's content, not the band.
+ */
+const STEP = "flex min-w-0 items-center gap-1.5 px-2 py-1 text-[13px] leading-5";
 /**
  * The hit area of an interactive step is the whole 24px line: an invisible
  * button covers it (keeping real button semantics and a focus ring) while the
@@ -200,7 +206,7 @@ function ToolCallStep({
         ) : null}
       </StepRow>
       {awaiting && permission ? (
-        <div className="flex flex-wrap items-center gap-1.5 py-1 pl-5">
+        <div className="flex flex-wrap items-center gap-1.5 px-2 py-1">
           <TriangleAlert className="size-3.5 shrink-0 text-warn" />
           {shared.taskId
             ? permission.options.map((option) => (
@@ -224,7 +230,7 @@ function ToolCallStep({
         </div>
       ) : null}
       {open && update.content ? (
-        <pre className="my-1 max-h-56 overflow-auto whitespace-pre-wrap break-words pl-5 font-mono text-[12px] leading-5 text-muted-foreground [overflow-wrap:anywhere]">
+        <pre className="my-1 max-h-56 overflow-auto whitespace-pre-wrap break-words px-2 font-mono text-[12px] leading-5 text-muted-foreground [overflow-wrap:anywhere]">
           {update.content}
         </pre>
       ) : null}
@@ -280,7 +286,7 @@ function ThoughtStep({
         <ChevronRight className={cn(CHEVRON, open && "rotate-90")} strokeWidth={1.75} />
       </StepRow>
       {open ? (
-        <div className="min-w-0 py-1 pl-5">
+        <div className="min-w-0 px-2 py-1">
           <ThinkingBlock
             embedded
             text={text}
