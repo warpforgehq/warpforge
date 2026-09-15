@@ -69,16 +69,18 @@ describe("BodyPicker", () => {
     expect(list.className).toContain("rounded-lg");
     expect(list.className).toContain("p-0.5");
     expect(list.className).toContain("bg-muted/70");
-    expect(list.className).toContain("dark:bg-muted/40");
+    expect(list.className).toContain("dark:bg-muted/60");
     expect(list.className).not.toContain("border");
 
     const tasks = screen.getByRole("tab", { name: /^Tasks/ });
     const inbox = screen.getByRole("tab", { name: /^Inbox/ });
     // Active: a raised neutral pill — never a `primary` fill, never an
     // underline, so it cannot read as the button below it or as a tab strip.
-    // It must be lighter than the track in dark, or it reads as a hole.
+    // It must be measurably lighter than the track in dark (the theme's own
+    // numbers: muted 11%, secondary 15%, accent 20%), or the two halves read
+    // as one flat row — `secondary` sat three points off the track and did.
     expect(tasks.className).toContain("bg-background");
-    expect(tasks.className).toContain("dark:bg-secondary");
+    expect(tasks.className).toContain("dark:bg-accent");
     expect(tasks.className).toContain("rounded-md");
     expect(tasks.className).toContain("shadow-sm");
     expect(tasks.className).toContain("text-foreground");

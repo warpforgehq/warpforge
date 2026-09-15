@@ -46,7 +46,7 @@ export function BodyPicker({
     <div
       role="tablist"
       aria-label="Sidebar contents"
-      className="flex items-stretch rounded-lg bg-muted/70 p-0.5 dark:bg-muted/40"
+      className="flex items-stretch rounded-lg bg-muted/70 p-0.5 dark:bg-muted/60"
     >
       {SEGMENTS.map((item, index) => {
         const active = item.id === segment;
@@ -73,7 +73,7 @@ export function BodyPicker({
             className={cn(
               "flex h-[26px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
               active
-                ? "bg-background font-medium text-foreground shadow-sm dark:bg-secondary"
+                ? "bg-background font-medium text-foreground shadow-sm dark:bg-accent"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
