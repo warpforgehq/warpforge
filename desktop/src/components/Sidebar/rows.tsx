@@ -39,7 +39,7 @@ export function ShelfRow({
           row.count === 1 ? "" : "s"
         } in ${row.project}`}
         onClick={() => onToggle(row.project)}
-        className="flex h-6 w-full items-center gap-1.5 rounded-md pl-2 pr-7 text-left text-[11px] text-muted-foreground/45 transition-colors hover:bg-accent/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+        className="flex h-6 w-full items-center gap-1.5 rounded-md pl-3 pr-7 text-left text-[11px] text-muted-foreground/45 transition-colors hover:bg-accent/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <ChevronRight
           aria-hidden
@@ -113,7 +113,10 @@ export function ProjectRow({
     row.settleIds.length === 1 ? "" : "s"
   } with no changes (reversible per task)${preview}`;
   return (
-    <div className="group/proj relative mt-1 flex items-center">
+    // The row inset lives here too: a task's chevron sits at 12px inside the
+    // panel's gutter, so the project's chevron must start at the same x or the
+    // first level of the tree reads as a staircase under it.
+    <div className="group/proj relative mt-1 flex items-center pl-3">
       <button
         type="button"
         data-project-disclosure={row.name}

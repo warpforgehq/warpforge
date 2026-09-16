@@ -2,4 +2,4 @@
 "warpforge": patch
 ---
 
-The sidebar tree's first level lines up with its project row — the chevron under the chevron, the title under the name — instead of stepping in by an indent; only deeper levels still step in.
+The sidebar's project row, its done-shelf and every task row start on the same left edge, so the chevrons line up in one column instead of the tree stepping to the right under the project.
