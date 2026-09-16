@@ -6,6 +6,11 @@ import { buildTaskForest } from "@/lib/taskGroups";
 import type { TaskInfo } from "@/protocol";
 
 import {
+  LANE_GAP_PX,
+  LANE_TWISTY_PX,
+  SIDEBAR_INDENT_PX,
+  SIDEBAR_MAX_INDENT_LEVELS,
+  SIDEBAR_ROW_INSET_PX,
   SIDEBAR_STATE_META,
   ancestorIds,
   buildSidebarRows,
@@ -17,6 +22,8 @@ import {
   railLanes,
   resolveTaskState,
   rowHeight,
+  sidebarContentLeft,
+  sidebarTwistyLeft,
   snoozeWakeLabel,
   sortProjectsByActivity,
   type SidebarRow,
@@ -586,5 +593,37 @@ describe("nested rail data", () => {
     // Level 1 at x=32 (base 12 + 12 + 8) sits under a depth-1 chevron centre.
     const lanes = railLanes(7, [true, true, true, true, true, true, true], true, false);
     expect(lanes.map((lane) => lane.x)).toEqual([20, 32, 44, 56, 68]);
+  });
+
+  it("ends a connector where the child's own content starts", () => {
+    for (const depth of [1, 2, 5, 9]) {
+      const lanes = railLanes(depth, [], true, false);
+      const connector = lanes[lanes.length - 1];
+      expect(connector.x + connector.run).toBe(sidebarContentLeft(depth));
+    }
+  });
+});
+
+describe("the row columns", () => {
+  it("holds the project row and its first level in one twisty column", () => {
+    expect(sidebarTwistyLeft(0)).toBe(SIDEBAR_ROW_INSET_PX);
+    expect(sidebarTwistyLeft(1)).toBe(sidebarTwistyLeft(0));
+    expect(sidebarTwistyLeft(2)).toBe(sidebarTwistyLeft(1) + SIDEBAR_INDENT_PX);
+  });
+
+  it("stops indenting the columns once nesting hits the clamp", () => {
+    const deepest = sidebarTwistyLeft(SIDEBAR_MAX_INDENT_LEVELS + 1);
+    expect(sidebarTwistyLeft(SIDEBAR_MAX_INDENT_LEVELS + 9)).toBe(deepest);
+    expect(sidebarContentLeft(SIDEBAR_MAX_INDENT_LEVELS + 9)).toBe(
+      deepest + LANE_TWISTY_PX + LANE_GAP_PX,
+    );
+  });
+
+  it("puts the content column one twisty lane and one gap past the chevron", () => {
+    for (const depth of [0, 1, 2, 9]) {
+      expect(sidebarContentLeft(depth)).toBe(
+        sidebarTwistyLeft(depth) + LANE_TWISTY_PX + LANE_GAP_PX,
+      );
+    }
   });
 });

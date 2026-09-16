@@ -2,4 +2,4 @@
 "warpforge": patch
 ---
 
-The sidebar's project row, its done-shelf and every task row start on the same left edge, so the chevrons line up in one column instead of the tree stepping to the right under the project.
+Every row in the sidebar tree now shares one left grid: the project row, its done-shelf and every task row put their expand arrow in the same column, the project's initial and a task's status mark on the next one, and their names on the one after that. The project row's hover highlight also covers its arrow instead of starting beside it.

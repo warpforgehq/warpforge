@@ -33,12 +33,12 @@ import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 
 import {
-  LANE_GAP_PX,
+  LANE_GLYPH_PX,
   LANE_META_PX,
   LANE_TWISTY_PX,
-  SIDEBAR_ROW_INSET_PX,
-  sidebarIndent,
+  sidebarContentLeft,
   SIDEBAR_STATE_META,
+  sidebarTwistyLeft,
   snoozeWakeLabel,
   type SidebarTaskState,
 } from "./Sidebar/logic";
@@ -55,13 +55,13 @@ import { STATE_ICON } from "./Sidebar/stateIcons";
  *
  * Every lane is fixed and shared (spec 08 §C.1): the gutter is `depth × 12px`
  * with the tree rail absolutely positioned inside it, then a 16px twisty lane,
- * a 16px glyph lane, the flexing title, and a 72px meta lane. Indent is the
- * button's `padding-left`, so the row fills the list width and hover/active
- * never stair-step; it is not `margin-left`.
+ * a 16px glyph, the flexing title, and a 68px meta lane. Indent is the button's
+ * `padding-left`, so the row fills the list width and hover/active never
+ * stair-step; it is not `margin-left`.
  *
- * The glyph lane is reserved on every row and only four states draw into it
- * (`SIDEBAR_STATE_META.rowGlyph`), so a silent row's title starts at the same x
- * as a working sibling's — hierarchy is the rail's job, not a width shift.
+ * The glyph is not a reserved column (spec 08 §C.1, owner override): only the
+ * four states with `SIDEBAR_STATE_META.rowGlyph` draw one, and a silent row's
+ * title starts where that glyph would have.
  */
 
 /** Self-ticking so a running row's timer costs one span, not a list re-render. */
@@ -272,7 +272,6 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
   const StateIcon = STATE_ICON[meta.icon];
   const receded = state === "snoozed" || state === "settled" || state === "done";
   const orchestrator = isOrchestratorTask(task, childCount);
-  const gutterWidth = sidebarIndent(depth);
 
   return (
     <div className="group/row relative" data-rail-depth={depth}>
@@ -290,23 +289,24 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
             data-task-state={state}
             onClick={() => onOpen(task.id)}
             aria-label={`Open task: ${label}`}
-            style={{ paddingLeft: SIDEBAR_ROW_INSET_PX + gutterWidth + LANE_TWISTY_PX + LANE_GAP_PX }}
+            style={{ paddingLeft: sidebarContentLeft(depth) }}
             className={cn(
               "flex h-8 w-full items-center gap-2 rounded-md pr-1.5 text-left transition-colors",
               "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
               active ? "font-medium text-foreground" : "hover:bg-accent/60",
             )}
           >
-            {/* The glyph is inline, not a reserved lane: most rows are silent,
-                so a placeholder column would indent the whole list on behalf of
-                the minority that draws one. `gap-2` keeps icon↔title spacing
-                correct on the rows that do carry a glyph. */}
+            {/* Inline, not a reserved lane: most rows are silent, so a
+                placeholder column would indent the whole list for the minority
+                that draws one. Its box is the glyph lane, so a glyphed title
+                lands on the project name's column. */}
             {meta.rowGlyph && (
               <StateIcon
                 aria-hidden
                 data-task-glyph={state}
+                style={{ height: LANE_GLYPH_PX, width: LANE_GLYPH_PX }}
                 className={cn(
-                  "size-3.5 shrink-0",
+                  "shrink-0",
                   meta.toneClass,
                   meta.live && "animate-[spin_3s_linear_infinite] motion-reduce:animate-none",
                 )}
@@ -369,8 +369,8 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
           data-expand={task.id}
           aria-label={`${expanded ? "Collapse" : "Expand"} ${childCount} subtask${childCount === 1 ? "" : "s"} of ${label}`}
           onClick={() => onToggle(task.id)}
-          style={{ left: SIDEBAR_ROW_INSET_PX + gutterWidth }}
-          className="absolute top-1/2 grid size-4 -translate-y-1/2 place-items-center rounded text-muted-foreground/50 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+          style={{ height: LANE_TWISTY_PX, left: sidebarTwistyLeft(depth), width: LANE_TWISTY_PX }}
+          className="absolute top-1/2 grid -translate-y-1/2 place-items-center rounded text-muted-foreground/50 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
         >
           <ChevronRight
             aria-hidden

@@ -2,7 +2,13 @@ import { ArrowUpRight, CheckCheck, ChevronRight, Inbox, Trash2 } from "lucide-re
 
 import { cn } from "@/lib/utils";
 
-import type { SidebarRow } from "./logic";
+import {
+  LANE_GLYPH_PX,
+  LANE_TWISTY_PX,
+  sidebarContentLeft,
+  sidebarTwistyLeft,
+  type SidebarRow,
+} from "./logic";
 
 /**
  * Closes a project group with the history it hides: "12 done". Settled work is
@@ -39,12 +45,18 @@ export function ShelfRow({
           row.count === 1 ? "" : "s"
         } in ${row.project}`}
         onClick={() => onToggle(row.project)}
-        className="flex h-6 w-full items-center gap-1.5 rounded-md pl-3 pr-7 text-left text-[11px] text-muted-foreground/45 transition-colors hover:bg-accent/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+        style={{ paddingLeft: sidebarContentLeft(0) }}
+        className="relative flex h-6 w-full items-center gap-1.5 rounded-md pr-7 text-left text-[11px] text-muted-foreground/45 transition-colors hover:bg-accent/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >
-        <ChevronRight
+        <span
           aria-hidden
-          className={cn("size-3 shrink-0 transition-transform", row.expanded && "rotate-90")}
-        />
+          style={{ left: sidebarTwistyLeft(0), width: LANE_TWISTY_PX }}
+          className="absolute top-1/2 grid -translate-y-1/2 place-items-center"
+        >
+          <ChevronRight
+            className={cn("size-3 shrink-0 transition-transform", row.expanded && "rotate-90")}
+          />
+        </span>
         <span className="tnum">{row.count}</span>
         <span className="min-w-0 truncate">done</span>
       </button>
@@ -113,33 +125,22 @@ export function ProjectRow({
     row.settleIds.length === 1 ? "" : "s"
   } with no changes (reversible per task)${preview}`;
   return (
-    // The row inset lives here too: a task's chevron sits at 12px inside the
-    // panel's gutter, so the project's chevron must start at the same x or the
-    // first level of the tree reads as a staircase under it.
-    <div className="group/proj relative mt-1 flex items-center pl-3">
-      <button
-        type="button"
-        data-project-disclosure={row.name}
-        aria-expanded={row.expanded}
-        aria-label={`${row.expanded ? "Collapse" : "Expand"} project ${row.name}`}
-        onClick={() => onToggle(row.name)}
-        className="grid size-5 shrink-0 place-items-center rounded text-muted-foreground/40 transition-colors hover:bg-secondary/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
-      >
-        <ChevronRight
-          aria-hidden
-          className={cn("size-3 shrink-0 transition-transform", row.expanded && "rotate-90")}
-        />
-      </button>
+    // The project row is a task row with a tile where the status glyph goes: one
+    // full-width fill, the chevron laid over it in the twisty column. Splitting
+    // it into two side-by-side buttons left the chevron outside the hover fill.
+    <div className="group/proj relative mt-1">
       <button
         type="button"
         data-project={row.name}
         aria-label={`Open project ${row.name}`}
         onClick={() => onOpenProject(row.name)}
-        className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md pl-1 pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+        style={{ paddingLeft: sidebarContentLeft(0) }}
+        className="flex h-8 w-full min-w-0 items-center gap-2 rounded-md pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <span
           aria-hidden
-          className="grid size-[18px] shrink-0 place-items-center rounded-[5px] bg-secondary text-[11px] font-bold uppercase leading-none text-muted-foreground"
+          style={{ height: LANE_GLYPH_PX, width: LANE_GLYPH_PX }}
+          className="grid shrink-0 place-items-center rounded-[5px] bg-secondary text-[11px] font-bold uppercase leading-none text-muted-foreground"
         >
           {row.name.slice(0, 1)}
         </span>
@@ -163,6 +164,20 @@ export function ProjectRow({
         >
           {row.count}
         </span>
+      </button>
+      <button
+        type="button"
+        data-project-disclosure={row.name}
+        aria-expanded={row.expanded}
+        aria-label={`${row.expanded ? "Collapse" : "Expand"} project ${row.name}`}
+        onClick={() => onToggle(row.name)}
+        style={{ height: LANE_TWISTY_PX, left: sidebarTwistyLeft(0), width: LANE_TWISTY_PX }}
+        className="absolute top-1/2 grid -translate-y-1/2 place-items-center rounded text-muted-foreground/40 transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+      >
+        <ChevronRight
+          aria-hidden
+          className={cn("size-3 shrink-0 transition-transform", row.expanded && "rotate-90")}
+        />
       </button>
       {settle && (
         <button

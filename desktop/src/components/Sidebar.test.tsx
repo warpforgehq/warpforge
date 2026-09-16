@@ -86,6 +86,12 @@ import type { ProjectInfo, PullRequestSummary, TaskInfo } from "../protocol";
 import { useUi } from "../store/ui";
 import type { GlobalView } from "../store/ui";
 import Sidebar from "./Sidebar";
+import {
+  LANE_GLYPH_PX,
+  LANE_TWISTY_PX,
+  sidebarContentLeft,
+  sidebarTwistyLeft,
+} from "./Sidebar/logic";
 import { SidebarTaskTooltipBody } from "./Sidebar/SidebarTaskTooltip";
 import { TooltipProvider } from "./ui/tooltip";
 
@@ -811,6 +817,33 @@ describe("Sidebar workspace tree", () => {
     // The meta lane fits count + logo + elapsed at 68px (was 72px).
     const meta = taskRows("child")[0].querySelector<HTMLElement>('[data-lane="meta"]')!;
     expect(meta).toHaveStyle({ width: "68px" });
+  });
+
+  it("runs one chevron column and one mark column through every row kind", () => {
+    const state = makeState([
+      task("lead", { prompt: "Lead", status: "running" }),
+      task("child", { parentTaskId: "lead", prompt: "Child", status: "running" }),
+      task("old", { prompt: "Shipped", status: "done" }),
+    ]);
+    const { container } = renderSidebar(state);
+    fireEvent.click(screen.getByRole("button", { name: /^Expand 1 subtask of Lead/ }));
+
+    const twisty = { left: `${sidebarTwistyLeft(0)}px`, width: `${LANE_TWISTY_PX}px` };
+    const shelf = screen.getByRole("button", { name: /^Show 1 done task/ });
+    expect(container.querySelector('[data-project-disclosure="warpforge"]')).toHaveStyle(twisty);
+    expect(container.querySelector('[data-expand="lead"]')).toHaveStyle(twisty);
+    expect(shelf.querySelector("span")).toHaveStyle(twisty);
+
+    const content = { paddingLeft: `${sidebarContentLeft(0)}px` };
+    expect(container.querySelector('[data-project="warpforge"]')).toHaveStyle(content);
+    expect(taskRows("lead")[0]).toHaveStyle(content);
+    expect(shelf).toHaveStyle(content);
+
+    // The project's tile and a task's glyph are the same box at the same start,
+    // so the name and a glyphed title share the column after them.
+    const mark = { height: `${LANE_GLYPH_PX}px`, width: `${LANE_GLYPH_PX}px` };
+    expect(container.querySelector('[data-project="warpforge"] > span')).toHaveStyle(mark);
+    expect(taskRows("lead")[0].querySelector("[data-task-glyph]")).toHaveStyle(mark);
   });
 
   it("keeps depth-1 and depth-2 rails under the parent chevron after the inset", () => {

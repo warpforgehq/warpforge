@@ -46,6 +46,22 @@ export function sidebarIndent(depth: number): number {
   return Math.min(Math.max(depth - 1, 0), SIDEBAR_MAX_INDENT_LEVELS) * SIDEBAR_INDENT_PX;
 }
 
+/**
+ * Left edge of the twisty column, in px. Every row kind places its disclosure
+ * here — project, shelf and task — so one chevron column runs down the tree.
+ */
+export function sidebarTwistyLeft(depth: number): number {
+  return SIDEBAR_ROW_INSET_PX + sidebarIndent(depth);
+}
+
+/**
+ * Left edge of the column after the twisty, in px: a project's initial tile, a
+ * task's status glyph, or the title itself on the rows that carry neither.
+ */
+export function sidebarContentLeft(depth: number): number {
+  return sidebarTwistyLeft(depth) + LANE_TWISTY_PX + LANE_GAP_PX;
+}
+
 /** Half the 16px twisty lane: centres a lane under the ancestor's chevron. */
 const RAIL_LANE_OFFSET_PX = LANE_TWISTY_PX / 2;
 
@@ -72,12 +88,10 @@ export function railLanes(
     const connector = level === levels - 1;
     const x = SIDEBAR_ROW_INSET_PX + level * SIDEBAR_INDENT_PX + RAIL_LANE_OFFSET_PX;
     if (connector) {
-      const childGutter = sidebarIndent(depth);
       lanes.push({
         active: onActivePath,
         level,
-        // Ends where the child's content starts: base inset + gutter + twisty.
-        run: SIDEBAR_ROW_INSET_PX + childGutter + LANE_TWISTY_PX + LANE_GAP_PX - x,
+        run: sidebarContentLeft(depth) - x,
         shape: isLast ? "elbow" : "tee",
         x,
       });
@@ -139,7 +153,8 @@ export type SidebarRow =
 
 const EMPTY_HEIGHT = 34;
 const EMPTY_WITH_HINT_HEIGHT = 50;
-const PROJECT_HEIGHT = 32;
+/** `mt-1` of air above the group plus the row button's `h-8`. */
+const PROJECT_HEIGHT = 36;
 const SHELF_HEIGHT = 28;
 /** Equals the row button's `h-8`, so sibling rails abut with no seam (08 §D). */
 const TASK_HEIGHT = 32;
