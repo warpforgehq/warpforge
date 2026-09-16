@@ -16,6 +16,7 @@ export { projectActivityAt, projectNames, sortProjectsByActivity } from "./proje
 export {
   LANE_GLYPH_PX,
   LANE_META_PX,
+  LANE_GAP_PX,
   LANE_TWISTY_PX,
   RAIL_ELBOW_RADIUS,
   RAIL_W,

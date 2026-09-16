@@ -16,6 +16,10 @@ export const RAIL_W = 1;
 export const RAIL_W_ACTIVE = 2;
 export const RAIL_ELBOW_RADIUS = 8;
 export const LANE_TWISTY_PX = 16;
+/** Air between the twisty lane and whatever follows it. The twisty button is
+ *  16px wide inside its own lane, so without this a title starts exactly on
+ *  the chevron's edge and the two read as one glued control. */
+export const LANE_GAP_PX = 6;
 export const LANE_GLYPH_PX = 16;
 /** Fits count (16) + agent logo (14) + elapsed (28) at the meta lane's 4px
  *  internal gaps, on the 4px grid: 66px of content in 68px. */
@@ -64,7 +68,7 @@ export function railLanes(
         active: onActivePath,
         level,
         // Ends where the child's content starts: base inset + gutter + twisty.
-        run: SIDEBAR_ROW_INSET_PX + childGutter + LANE_TWISTY_PX - x,
+        run: SIDEBAR_ROW_INSET_PX + childGutter + LANE_TWISTY_PX + LANE_GAP_PX - x,
         shape: isLast ? "elbow" : "tee",
         x,
       });

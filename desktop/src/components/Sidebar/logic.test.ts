@@ -568,17 +568,17 @@ describe("nested rail data", () => {
     // x = base inset (12) + level × INDENT + half the twisty lane (8), so a
     // depth-1 connector at x=20 lands under the depth-0 chevron centre.
     expect(railLanes(one.depth, one.ancestorLines, one.isLast, false)).toEqual([
-      { active: false, level: 0, run: 20, shape: "tee", x: 20 },
+      { active: false, level: 0, run: 26, shape: "tee", x: 20 },
     ]);
     expect(railLanes(two.depth, two.ancestorLines, two.isLast, true)).toEqual([
-      { active: true, level: 0, run: 20, shape: "elbow", x: 20 },
+      { active: true, level: 0, run: 26, shape: "elbow", x: 20 },
     ]);
   });
 
   it("draws pass-through lanes only where the ancestor continues", () => {
     expect(railLanes(3, [true, false, true], true, false)).toEqual([
       { active: false, level: 0, run: 1, shape: "pass", x: 20 },
-      { active: false, level: 2, run: 20, shape: "elbow", x: 44 },
+      { active: false, level: 2, run: 26, shape: "elbow", x: 44 },
     ]);
   });
 

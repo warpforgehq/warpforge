@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 
 import {
+  LANE_GAP_PX,
   LANE_META_PX,
   LANE_TWISTY_PX,
   SIDEBAR_INDENT_PX,
@@ -290,7 +291,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
             data-task-state={state}
             onClick={() => onOpen(task.id)}
             aria-label={`Open task: ${label}`}
-            style={{ paddingLeft: SIDEBAR_ROW_INSET_PX + gutterWidth + LANE_TWISTY_PX }}
+            style={{ paddingLeft: SIDEBAR_ROW_INSET_PX + gutterWidth + LANE_TWISTY_PX + LANE_GAP_PX }}
             className={cn(
               "flex h-8 w-full items-center gap-2 rounded-md pr-1.5 text-left transition-colors",
               "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
