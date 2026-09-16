@@ -26,6 +26,7 @@ export {
   SIDEBAR_INDENT_PX,
   SIDEBAR_MAX_INDENT_LEVELS,
   SIDEBAR_ROW_INSET_PX,
+  sidebarIndent,
   type RailLane,
   type SidebarRow,
 } from "./row";

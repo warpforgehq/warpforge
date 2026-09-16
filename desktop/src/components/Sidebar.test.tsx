@@ -803,9 +803,10 @@ describe("Sidebar workspace tree", () => {
     renderSidebar(state);
     fireEvent.click(screen.getByRole("button", { name: /^Expand 1 subtask of Lead/ }));
 
-    // padding-left = base inset 12 + depth × 12 + twisty lane 16 + lane gap 6.
+    // padding-left = base inset 12 + indent (0 at the first level) + twisty 16 + gap 6:
+    // a child aligns with its project, and only deeper levels step in.
     expect(taskRows("lead")[0]).toHaveStyle({ paddingLeft: "34px" });
-    expect(taskRows("child")[0]).toHaveStyle({ paddingLeft: "46px" });
+    expect(taskRows("child")[0]).toHaveStyle({ paddingLeft: "34px" });
 
     // The meta lane fits count + logo + elapsed at 68px (was 72px).
     const meta = taskRows("child")[0].querySelector<HTMLElement>('[data-lane="meta"]')!;

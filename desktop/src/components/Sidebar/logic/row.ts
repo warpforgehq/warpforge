@@ -37,6 +37,15 @@ export interface RailLane {
   active: boolean;
 }
 
+/**
+ * How far a row's content is pushed right, in px. The first level aligns with
+ * the project row — its chevron sits under the project's chevron and its title
+ * under the project's name — and only deeper levels step in by one indent.
+ */
+export function sidebarIndent(depth: number): number {
+  return Math.min(Math.max(depth - 1, 0), SIDEBAR_MAX_INDENT_LEVELS) * SIDEBAR_INDENT_PX;
+}
+
 /** Half the 16px twisty lane: centres a lane under the ancestor's chevron. */
 const RAIL_LANE_OFFSET_PX = LANE_TWISTY_PX / 2;
 
@@ -63,7 +72,7 @@ export function railLanes(
     const connector = level === levels - 1;
     const x = SIDEBAR_ROW_INSET_PX + level * SIDEBAR_INDENT_PX + RAIL_LANE_OFFSET_PX;
     if (connector) {
-      const childGutter = Math.min(depth, SIDEBAR_MAX_INDENT_LEVELS) * SIDEBAR_INDENT_PX;
+      const childGutter = sidebarIndent(depth);
       lanes.push({
         active: onActivePath,
         level,

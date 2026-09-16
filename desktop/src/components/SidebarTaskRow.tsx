@@ -36,9 +36,8 @@ import {
   LANE_GAP_PX,
   LANE_META_PX,
   LANE_TWISTY_PX,
-  SIDEBAR_INDENT_PX,
-  SIDEBAR_MAX_INDENT_LEVELS,
   SIDEBAR_ROW_INSET_PX,
+  sidebarIndent,
   SIDEBAR_STATE_META,
   snoozeWakeLabel,
   type SidebarTaskState,
@@ -273,7 +272,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
   const StateIcon = STATE_ICON[meta.icon];
   const receded = state === "snoozed" || state === "settled" || state === "done";
   const orchestrator = isOrchestratorTask(task, childCount);
-  const gutterWidth = Math.min(depth, SIDEBAR_MAX_INDENT_LEVELS) * SIDEBAR_INDENT_PX;
+  const gutterWidth = sidebarIndent(depth);
 
   return (
     <div className="group/row relative" data-rail-depth={depth}>
