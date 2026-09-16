@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.1
+
+### Patch Changes
+
+- [`e155e90`](https://github.com/warpforgehq/warpforge/commit/e155e905ef9052bc23cac2588a9bf6a84d33e6bb) Thanks [@ephor](https://github.com/ephor)! - Every row in the sidebar tree now shares one left grid: the project row, its done-shelf and every task row put their expand arrow in the same column, the project's initial and a task's status mark on the next one, and their names on the one after that. The project row's hover highlight also covers its arrow instead of starting beside it.
+
 ## 0.20.0
 
 ### Minor Changes
