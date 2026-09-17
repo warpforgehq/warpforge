@@ -58,7 +58,7 @@ export function AgentAccountLimitsRow({
           displayName={agentDisplayName(account.agentId)}
           className="size-4 shrink-0"
         />
-        <span className="text-[13px] font-semibold text-foreground">
+        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">
           {agentDisplayName(account.agentId)}
           {showLabel && (
             <span className="font-medium text-muted-foreground"> · {account.label}</span>
@@ -74,25 +74,33 @@ export function AgentAccountLimitsRow({
             <AlertTriangle className="size-3.5" aria-hidden="true" />
           </span>
         )}
-        {outdated && (
-          <span
-            title={lastUpdatedSentence(account.fetchedAt, nowSec)}
-            className="shrink-0 rounded-sm border border-amber-500/40 bg-amber-500/15 px-1.5 py-px text-[11px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400"
-          >
-            Outdated
-          </span>
-        )}
-        {account.plan && (
-          <span className="rounded-sm border border-border bg-muted/50 px-1.5 py-px text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            {account.plan}
-          </span>
-        )}
-        {account.active && (
-          <span className="rounded-sm border border-primary/40 bg-primary/15 px-1.5 py-px text-[11px] font-medium uppercase tracking-wide text-primary">
-            active
-          </span>
-        )}
       </div>
+
+      {/* Tags get their own line: three of them beside a long harness name
+          ("Claude Code · Work") pushed the name into three lines and ran off
+          the card, and the name is the part that has to stay readable. */}
+      {(outdated || account.plan || account.active) && (
+        <div className="flex flex-wrap items-center gap-1">
+          {outdated && (
+            <span
+              title={lastUpdatedSentence(account.fetchedAt, nowSec)}
+              className="shrink-0 rounded-sm border border-amber-500/40 bg-amber-500/15 px-1 text-[10px] leading-4 font-medium tracking-wide text-amber-600 uppercase dark:text-amber-400"
+            >
+              Outdated
+            </span>
+          )}
+          {account.plan && (
+            <span className="shrink-0 rounded-sm border border-border bg-muted/50 px-1 text-[10px] leading-4 font-medium tracking-wide text-muted-foreground uppercase">
+              {account.plan}
+            </span>
+          )}
+          {account.active && (
+            <span className="shrink-0 rounded-sm border border-primary/40 bg-primary/15 px-1 text-[10px] leading-4 font-medium tracking-wide text-primary uppercase">
+              active
+            </span>
+          )}
+        </div>
+      )}
 
       {hasWindows ? (
         <div className="space-y-3">

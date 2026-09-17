@@ -108,3 +108,29 @@ describe("AgentAccountLimitsRow staleness", () => {
     expect(screen.queryByText("Outdated")).not.toBeInTheDocument();
   });
 });
+
+describe("AgentAccountLimitsRow header", () => {
+  it("keeps the name on one line and lets the tags wrap below it", () => {
+    render(
+      <AgentAccountLimitsRow
+        account={account({
+          fetchedAt: NOW_SEC() - 3 * 3600,
+          label: "Work",
+          plan: "TEAM_STANDARD",
+        })}
+        showLabel
+      />,
+    );
+
+    // A long harness name plus three tags used to push the name into three
+    // lines and run off the card, so the name truncates and the tags get a row.
+    const name = screen.getByText(/Claude Code/);
+    expect(name).toHaveClass("truncate", "min-w-0", "flex-1");
+
+    const tags = screen.getByText("Outdated").parentElement!;
+    expect(tags.className).toContain("flex-wrap");
+    expect(tags).toContainElement(screen.getByText("TEAM_STANDARD"));
+    expect(tags).toContainElement(screen.getByText("active"));
+    expect(tags).not.toContainElement(name);
+  });
+});
