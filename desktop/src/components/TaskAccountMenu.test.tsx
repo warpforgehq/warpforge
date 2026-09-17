@@ -90,6 +90,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+function barFill(trigger: HTMLElement, windowId: string): HTMLElement | null {
+  return trigger.querySelector<HTMLElement>(`[data-window="${windowId}"] [style]`);
+}
+
 describe("TaskAccountMenu trigger", () => {
   it("names the active account and its quota in one control", async () => {
     mockDaemon([limits("claude", "personal", 33)]);
@@ -100,18 +104,17 @@ describe("TaskAccountMenu trigger", () => {
 
     const trigger = await screen.findByRole("button", { name: "Claude Code account" });
     expect(trigger).toHaveTextContent("Personal");
-    // The numbers are bare percentages now that two of them stack in the row;
-    // the "left" sense they carry is spelled out in the tooltip.
-    expect(trigger).toHaveTextContent("67%");
+    // The number beside the bar is quota left; the tooltip spells that out.
+    expect(trigger).toHaveTextContent("67% 5h");
     expect(trigger).toHaveAttribute("title", "Claude Code: Personal · Session: 67% left");
   });
 
-  it("stacks session over weekly, so neither window hides behind the other", async () => {
+  it("lays session and weekly out inline, each bar filled by usage", async () => {
     mockDaemon([
       limits("claude", "personal", 27, {
         windows: [
-          { id: "five_hour", label: "Session", usedPercent: 27 },
-          { id: "seven_day", label: "Weekly", usedPercent: 33 },
+          { id: "five_hour", label: "Session", usedPercent: 27, windowMinutes: 300 },
+          { id: "seven_day", label: "Weekly", usedPercent: 75, windowMinutes: 10080 },
         ],
       }),
     ]);
@@ -119,13 +122,40 @@ describe("TaskAccountMenu trigger", () => {
 
     const trigger = await screen.findByRole("button", { name: "Claude Code account" });
     const text = trigger.textContent ?? "";
-    expect(text).toContain("73%");
-    expect(text).toContain("67%");
-    // Session first: it is the window that turns over in hours.
-    expect(text.indexOf("73%")).toBeLessThan(text.indexOf("67%"));
+    expect(text).toContain("73% 5h");
+    expect(text).toContain("25% wk");
+    expect(text.indexOf("73% 5h")).toBeLessThan(text.indexOf("25% wk"));
+
+    const session = barFill(trigger, "five_hour");
+    expect(session).toHaveStyle({ width: "73%" });
+    expect(session).toHaveClass("bg-foreground/40");
+    const weekly = barFill(trigger, "seven_day");
+    expect(weekly).toHaveStyle({ width: "25%" });
+    expect(weekly).toHaveClass("bg-amber-500");
   });
 
-  it("omits a window the harness never reported rather than inventing a line", async () => {
+  it("keeps every percentage in the accessible description, not the decorative bars", async () => {
+    mockDaemon([
+      limits("claude", "personal", 44, {
+        windows: [
+          { id: "five_hour", label: "Session", usedPercent: 44 },
+          { id: "seven_day", label: "Weekly", usedPercent: 59 },
+        ],
+      }),
+    ]);
+    renderMenu("claude", [account("claude", "personal", { active: true, label: "Personal" })]);
+
+    const trigger = await screen.findByRole("button", { name: "Claude Code account" });
+    expect(trigger).toHaveAccessibleDescription(
+      "Claude Code · Session: 56% left · Weekly: 41% left",
+    );
+    expect(trigger.querySelector("[data-window]")?.parentElement).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  });
+
+  it("omits a window the harness never reported rather than drawing an empty bar", async () => {
     mockDaemon([
       limits("claude", "personal", 40, {
         windows: [{ id: "seven_day", label: "Weekly", usedPercent: 40 }],
@@ -134,7 +164,8 @@ describe("TaskAccountMenu trigger", () => {
     renderMenu("claude", [account("claude", "personal", { active: true, label: "Personal" })]);
 
     const trigger = await screen.findByRole("button", { name: "Claude Code account" });
-    expect(trigger).toHaveTextContent("60%");
+    expect(trigger).toHaveTextContent("60% wk");
+    expect(trigger.querySelectorAll("[data-window]")).toHaveLength(1);
     // One login for this harness, so the button names the harness, not the
     // account — and the title does not repeat it back at itself.
     expect(trigger).toHaveAttribute("title", "Claude Code · Weekly: 60% left");
@@ -148,17 +179,34 @@ describe("TaskAccountMenu trigger", () => {
     ]);
 
     const trigger = await screen.findByRole("button", { name: "Claude Code account" });
-    expect(trigger).toHaveTextContent("95%");
+    expect(trigger).toHaveTextContent("95% 5h");
     expect(trigger).not.toHaveTextContent("8%");
+    expect(barFill(trigger, "five_hour")).toHaveStyle({ width: "95%" });
   });
 
-  it("says exhausted rather than 0% left on a spent window", async () => {
+  it("says exhausted rather than 0% left on a spent window, with an empty danger bar", async () => {
     mockDaemon([limits("claude", "personal", 100)]);
     renderMenu("claude", [account("claude", "personal", { active: true, label: "Personal" })]);
 
-    expect(await screen.findByRole("button", { name: "Claude Code account" })).toHaveTextContent(
-      "exhausted",
-    );
+    const trigger = await screen.findByRole("button", { name: "Claude Code account" });
+    expect(trigger).toHaveTextContent("exhausted 5h");
+    expect(trigger).not.toHaveTextContent("%");
+    expect(trigger).toHaveAttribute("title", "Claude Code · Session: exhausted");
+    const fill = barFill(trigger, "five_hour");
+    expect(fill).toHaveStyle({ width: "0%" });
+    expect(fill).toHaveClass("bg-red-500");
+    expect(screen.getByText(/exhausted/)).toHaveClass("text-destructive");
+  });
+
+  it("refreshes the quota from the strip, without opening the menu", async () => {
+    mockDaemon([limits("claude", "personal", 33)]);
+    renderMenu("claude", [account("claude", "personal", { active: true, label: "Personal" })]);
+
+    const button = await screen.findByRole("button", { name: "Refresh usage" });
+    expect(button).toHaveAttribute("title", "Refresh usage");
+
+    await userEvent.click(button);
+    await waitFor(() => expect(daemon.listAgentLimits).toHaveBeenCalledWith(true));
   });
 
   it("still identifies the task's harness when no quota was reported", async () => {
@@ -167,8 +215,9 @@ describe("TaskAccountMenu trigger", () => {
 
     const trigger = await screen.findByRole("button", { name: "Claude Code account" });
     expect(trigger).toHaveTextContent("Claude Code");
-    // The trigger is also the harness identity, so it stays — minus the numbers.
+    // The trigger is also the harness identity, so it stays — minus the bars.
     expect(trigger).not.toHaveTextContent("%");
+    expect(trigger.querySelector("[data-window]")).toBeNull();
   });
 });
 

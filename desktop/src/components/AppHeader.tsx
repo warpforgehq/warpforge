@@ -1,8 +1,7 @@
-import { Check, ChevronDown, FolderGit2 } from "lucide-react";
+import { Check, ChevronDown, Folder, FolderGit2 } from "lucide-react";
 import { useMemo, useSyncExternalStore } from "react";
 
 import AccountSwitcher from "@/components/AccountSwitcher";
-import { TaskAccountMenu } from "@/components/TaskAccountMenu";
 import { TaskMenu } from "@/components/TaskMenu";
 import { TaskTitleEditor } from "@/components/TaskTitleEditor";
 import {
@@ -31,14 +30,13 @@ interface AppHeaderProps {
 }
 
 /**
- * Global chrome: a breadcrumb row plus the account
- * switcher for whichever agents are relevant. App update and daemon
- * connection moved to the sidebar footer/brand row — chrome you check once in
- * a while doesn't need to sit in the row you look at constantly. Brand,
- * navigation, New task and Settings live in the sidebar too.
+ * Global chrome: a breadcrumb row, plus the account switcher on views with no
+ * single agent in focus. App update and daemon connection sit in the sidebar
+ * footer/brand row, as do brand, navigation, New task and Settings.
  *
  * When a task is open, the breadcrumb's second segment becomes its (editable)
- * title, and its agent plus the task menu appear before the account switcher.
+ * title with the workspace it runs in beside it, then the task menu. The task's
+ * harness, account and quota live in the task footer, next to its git state.
  * Project and status are deliberately not repeated here: the sidebar already
  * establishes which project you're in, and status is one glance away in the
  * conversation itself. Navigating to another view (sidebar nav, or clicking
@@ -81,7 +79,21 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
           /
         </span>
         {openTask ? (
-          <TaskTitleEditor task={openTask} />
+          <>
+            <TaskTitleEditor task={openTask} />
+            {/* Only worth saying when it is the unusual case. A task in the
+                project's own checkout is the default, and a chip announcing
+                "Local Workspace" on most tasks is a label nobody reads. */}
+            {openTask.worktree && (
+              <span
+                className="flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-px text-[11px] text-muted-foreground"
+                title={openTask.worktree}
+              >
+                <Folder className="size-3 shrink-0" />
+                Git Worktree
+              </span>
+            )}
+          </>
         ) : view === "project" ? (
           <>
             {crumbProject && (
@@ -125,33 +137,21 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
       </nav>
 
       {openTask && (
-        <>
-          {/* This task's harness, its account and its quota in one control:
-              the account you switch to is chosen on the numbers, so both live
-              in the same menu. Note it still switches the agent's *global*
-              active account (there is no per-task binding yet): see
-              memory/per_task_account_switch. */}
-          <TaskAccountMenu
-            agentId={openTask.agent}
-            agents={snapshot.agents ?? []}
-            accounts={snapshot.accounts ?? []}
-          />
-          <TaskMenu
-            task={openTask}
-            pinned={taskPinned}
-            onTogglePin={() =>
-              setPinnedTaskIds(
-                setTaskGroupPinned(taskGroupIndex, pinnedTaskIds, openTask.id, !taskPinned),
-              )
-            }
-            onClose={onCloseTask}
-          />
-        </>
+        <TaskMenu
+          task={openTask}
+          pinned={taskPinned}
+          onTogglePin={() =>
+            setPinnedTaskIds(
+              setTaskGroupPinned(taskGroupIndex, pinnedTaskIds, openTask.id, !taskPinned),
+            )
+          }
+          onClose={onCloseTask}
+        />
       )}
 
       {/* Only relevant outside a task, and only where an agent is actually in
-          play: an open task already shows its own harness's account chip on
-          the left, and a *different* agent's switcher here would just be
+          play: an open task already shows its own harness's account chip in
+          its footer, and a *different* agent's switcher here would just be
           account chrome for a tool this task doesn't use. Mission Control and
           Projects have no single agent in focus, so the full switcher belongs
           there. The inbox spends nobody's quota — its one agent action, "Send

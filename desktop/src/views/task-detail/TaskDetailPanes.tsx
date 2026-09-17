@@ -1,4 +1,3 @@
-import { Folder, Loader2 } from "lucide-react";
 import { useMemo } from "react";
 
 import { Card } from "@/components/ui/card";
@@ -17,10 +16,10 @@ import { daemon } from "../../daemon";
 import type { TaskInfo } from "../../protocol";
 import { DiffSurface } from "./DiffSurface";
 import { FilesSurface } from "./FilesSurface";
-import { GitWorkspaceControls } from "./GitWorkspaceControls";
 import { PipelineSurface } from "./PipelineSurface";
 import { TaskConversation } from "./TaskConversation";
 import { TaskConversationHeader } from "./TaskConversationHeader";
+import { TaskStatusStrip } from "./TaskStatusStrip";
 import { TaskSurfaceHeader } from "./TaskSurfaceHeader";
 import { useTaskDetail, WORKSPACE_MIN_WIDTH } from "./useTaskDetail";
 
@@ -359,29 +358,13 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
           }}
         />
       </div>
-      <div className="flex h-4 shrink-0 items-center px-1 text-[11px] text-muted-foreground">
-        <span
-          className="flex min-w-0 items-center gap-1"
-          title={task.worktree ?? "Runs in the local project workspace"}
-        >
-          <Folder className="size-3 shrink-0" />
-          <span>{task.worktree ? "Git Worktree" : "Local Workspace"}</span>
-        </span>
-        {repositoryOperation && (
-          <span className="ml-auto mr-2 flex shrink-0 items-center gap-1 text-muted-foreground">
-            <Loader2 className="size-3 animate-spin" />
-            {repositoryOperation.kind === "pull" ? "Pulling from remote…" : "Pushing to remote…"}
-          </span>
-        )}
-        <span className={cn("flex items-center gap-2", !repositoryOperation && "ml-auto")}>
-          <GitWorkspaceControls
-            taskId={task.id}
-            branch={diff?.branch ?? null}
-            onOpenCommit={openCommit}
-            onOpenPush={onOpenPush}
-          />
-        </span>
-      </div>
+      <TaskStatusStrip
+        task={task}
+        branch={diff?.branch ?? null}
+        repositoryOperation={repositoryOperation}
+        onOpenCommit={openCommit}
+        onOpenPush={onOpenPush}
+      />
     </div>
   );
 }

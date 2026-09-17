@@ -1,5 +1,5 @@
 import { LoaderCircle, RefreshCcw } from "lucide-react";
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { AgentAccountLimitsRow } from "@/components/AgentAccountLimitsRow";
 import { AgentLogo } from "@/components/AgentLogo";
@@ -16,11 +16,13 @@ import { buildAccountCards, SWITCH_NOTE, type AccountCard } from "@/lib/accounts
 import {
   headlineWindows,
   limitRamp,
-  LIMIT_TEXT_RAMP_CLASSES,
+  LIMIT_BAR_RAMP_CLASSES,
   percentLeft,
   SPEND_DISCLAIMER,
 } from "@/lib/agentLimits";
 import { agentDisplayName } from "@/lib/agentNames";
+import { usageWindowShortLabel } from "@/lib/usageWindowLabel";
+import { cn } from "@/lib/utils";
 import type { AccountInfo, AgentConfig, AgentLimitWindow, AgentSpend } from "@/protocol";
 
 /**
@@ -50,6 +52,16 @@ export function TaskAccountMenu({
   const { accounts: limits, refresh } = useAgentLimits();
   const { agents: spend } = useAgentSpend();
   const { pending, error, select } = useAccountSwitch();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const cards = useMemo(
     () => buildAccountCards(accounts, limits, agentId),
@@ -71,10 +83,10 @@ export function TaskAccountMenu({
     // a first account appears.
     return (
       <span
-        className="flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground"
+        className="flex h-5 shrink-0 items-center gap-1.5 rounded px-1.5 text-[11px] text-muted-foreground"
         title={displayName}
       >
-        <AgentLogo agentId={agentId} displayName={displayName} />
+        <AgentLogo agentId={agentId} displayName={displayName} className="size-3.5" />
         <span className="max-w-28 truncate">{displayName}</span>
       </span>
     );
@@ -103,23 +115,18 @@ export function TaskAccountMenu({
     <div className="flex min-w-0 items-center gap-1.5">
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2 text-[13px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          className="flex h-5 min-w-0 items-center gap-1.5 rounded px-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           aria-label={`${displayName} account`}
           title={`${titleHead}${shown.map((w) => ` · ${w.label}: ${quotaSentence(w)}`).join("")}`}
         >
-          <AgentLogo agentId={agentId} displayName={displayName} />
+          <AgentLogo agentId={agentId} displayName={displayName} className="size-3.5" />
           <span className="max-w-28 truncate">
             <EmailBlur text={label} />
           </span>
           {shown.length > 0 && (
-            <span className="flex flex-col items-end text-[11px] font-medium leading-[1.1] tabular-nums">
+            <span aria-hidden className="flex min-w-0 items-center gap-1.5">
               {shown.map((window) => (
-                <span
-                  key={window.id}
-                  className={LIMIT_TEXT_RAMP_CLASSES[limitRamp(window.usedPercent)]}
-                >
-                  {quotaDigits(window)}
-                </span>
+                <QuotaBar key={window.id} window={window} />
               ))}
             </span>
           )}
@@ -128,7 +135,8 @@ export function TaskAccountMenu({
         {/* Capped to the viewport so a machine with several harnesses signed in
             scrolls instead of running off a short screen. */}
         <DropdownMenuContent
-          align="end"
+          side="top"
+          align="start"
           className="max-h-[min(80vh,32rem)] w-80 space-y-2 overflow-y-auto p-2"
         >
           {cards.map((card) => (
@@ -156,6 +164,18 @@ export function TaskAccountMenu({
           </button>
         </DropdownMenuContent>
       </DropdownMenu>
+      {/* Reachable without opening the menu: a stale number is the reason you
+          come here, and the menu's own Refresh is one click further in. */}
+      <button
+        type="button"
+        aria-label="Refresh usage"
+        title="Refresh usage"
+        onClick={() => void onRefresh()}
+        disabled={refreshing}
+        className="grid size-5 shrink-0 place-items-center rounded text-muted-foreground/70 transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-60"
+      >
+        <RefreshCcw aria-hidden className={cn("size-3", refreshing && "animate-spin")} />
+      </button>
       {/* Outside the dropdown on purpose: the menu can close on the same frame a
           switch fails, and an error rendered inside it would go with it. */}
       {error && (
@@ -168,12 +188,32 @@ export function TaskAccountMenu({
 }
 
 /**
- * The trigger's two lines are numbers only — "73%" over "67%" — so both fit the
- * header row. They are quota LEFT, matching the cards behind them; the tooltip
- * spells that out in words, since a bare percent could be read either way.
+ * One inline window: a bar filled by quota LEFT, beside the quota LEFT —
+ * "[bar] 56% 5h". The two have to agree: a fill that follows the used share
+ * while the number beside it reports the remaining share reads as an inversion
+ * ("100%" next to an empty bar). The ramp still follows the used share, so the
+ * colour is what warns. The tooltip spells the number out in words.
  */
-function quotaDigits(window: AgentLimitWindow): string {
-  return window.usedPercent >= 100 ? "exhausted" : `${percentLeft(window.usedPercent)}%`;
+function QuotaBar({ window }: { window: AgentLimitWindow }) {
+  const spent = window.usedPercent >= 100;
+  const left = spent ? 0 : percentLeft(window.usedPercent);
+  return (
+    <span className="flex min-w-0 items-center gap-1" data-window={window.id}>
+      <span className="h-1 w-10 min-w-4 shrink overflow-hidden rounded-full bg-muted">
+        <span
+          className={`block h-full rounded-full ${LIMIT_BAR_RAMP_CLASSES[limitRamp(window.usedPercent)]}`}
+          style={{ width: `${left}%` }}
+        />
+      </span>
+      <span
+        className={`shrink-0 whitespace-nowrap text-[10px] tabular-nums ${
+          spent ? "text-destructive" : "text-muted-foreground"
+        }`}
+      >
+        {spent ? "exhausted" : `${left}%`} {usageWindowShortLabel(window)}
+      </span>
+    </span>
+  );
 }
 
 function quotaSentence(window: AgentLimitWindow): string {
