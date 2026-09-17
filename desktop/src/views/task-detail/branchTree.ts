@@ -50,10 +50,16 @@ export function flattenBranchTree(
   out: BranchRow[],
 ): void {
   const kids = [...node.children.values()].sort((a, b) => {
+    // `main` leads the list outright, ahead of the folders: it is the branch
+    // everything else came from, and scrolling past six groups to find it was
+    // the wrong first question to answer.
+    const ap = intersectPriority(a.name);
+    const bp = intersectPriority(b.name);
+    if (ap !== bp) return ap - bp;
     const af = a.branch ? 1 : 0;
     const bf = b.branch ? 1 : 0;
     if (af !== bf) return af - bf;
-    return intersectPriority(a.name) - intersectPriority(b.name) || a.name.localeCompare(b.name);
+    return a.name.localeCompare(b.name);
   });
   for (const child of kids) {
     const childKey = parentKey ? `${parentKey}/${child.name}` : child.name;

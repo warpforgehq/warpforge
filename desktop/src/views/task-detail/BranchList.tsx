@@ -174,6 +174,7 @@ function BranchRowLine({
   return (
     <div className="relative">
       <div
+        data-branch={branch}
         className={cn(
           "group/row flex w-full items-center gap-1 rounded px-1 py-1 text-left text-[13px]",
           isCurrent ? "bg-accent text-foreground" : "hover:bg-accent/50",
@@ -184,11 +185,7 @@ function BranchRowLine({
           openMenu();
         }}
       >
-        {remote ? (
-          <GitBranch className="size-3.5 shrink-0 text-muted-foreground/60" />
-        ) : (
-          <Check className={cn("size-3.5 shrink-0", isCurrent ? "opacity-100" : "opacity-0")} />
-        )}
+        {remote && <GitBranch className="size-3.5 shrink-0 text-muted-foreground/60" />}
         <ChevronRight
           aria-hidden="true"
           className={cn("size-3.5 shrink-0 transition-transform", menuOpen && "rotate-90")}
@@ -197,10 +194,14 @@ function BranchRowLine({
           type="button"
           onClick={openMenu}
           title={row.branch}
-          className="min-w-0 flex-1 truncate font-mono text-left"
+          className="min-w-0 flex-1 truncate text-left"
         >
           {row.label}
         </button>
+        {/* The current branch is marked at the end of the row, where it reads
+            as "this one" rather than as a prefix that indents it away from
+            every other branch. */}
+        {isCurrent && <Check className="size-3.5 shrink-0 text-foreground" />}
       </div>
       <DropdownMenu
         open={menuOpen}

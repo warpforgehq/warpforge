@@ -70,11 +70,11 @@ function GitMenuAction({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] hover:bg-accent/50 disabled:opacity-50"
+      className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-[13px] hover:bg-accent/50 disabled:opacity-50"
     >
       <span className="text-muted-foreground">{icon}</span>
       <span className="flex-1">{label}</span>
-      <kbd className="font-sans text-[11px] text-muted-foreground">{shortcut}</kbd>
+      <kbd className="font-sans text-[10px] text-muted-foreground">{shortcut}</kbd>
     </button>
   );
 }
@@ -366,7 +366,7 @@ export function GitWorkspaceControls({
           disabled={!branch}
           onClick={() => setOpen((o) => !o)}
           title="Branches and Git actions"
-          className="flex items-center gap-1 rounded px-1 font-mono hover:bg-secondary hover:text-foreground disabled:opacity-60"
+          className="flex items-center gap-1 rounded px-1 hover:bg-secondary hover:text-foreground disabled:opacity-60"
         >
           <GitBranch className="size-3 shrink-0" />
           <span className="max-w-40 truncate">{branch ?? "no-branch"}</span>
@@ -398,7 +398,7 @@ export function GitWorkspaceControls({
                 <div className="space-y-0.5 pb-1.5">
                   {showNewBranch && (
                     <GitMenuAction
-                      icon={<Plus className="size-4" />}
+                      icon={<Plus className="size-3.5" />}
                       label="New Branch…"
                       shortcut="⌥⌘N"
                       disabled={busy || !branch}
@@ -409,9 +409,9 @@ export function GitWorkspaceControls({
                     <GitMenuAction
                       icon={
                         updating ? (
-                          <Loader2 className="size-4 animate-spin" />
+                          <Loader2 className="size-3.5 animate-spin" />
                         ) : (
-                          <Download className="size-4" />
+                          <Download className="size-3.5" />
                         )
                       }
                       label="Sync with remote"
@@ -422,7 +422,7 @@ export function GitWorkspaceControls({
                   )}
                   {showCommit && (
                     <GitMenuAction
-                      icon={<GitCommitVertical className="size-4" />}
+                      icon={<GitCommitVertical className="size-3.5" />}
                       label="Commit…"
                       shortcut="⌘K"
                       onClick={() => {
@@ -433,7 +433,7 @@ export function GitWorkspaceControls({
                   )}
                   {showPush && (
                     <GitMenuAction
-                      icon={<Send className="size-4" />}
+                      icon={<Send className="size-3.5" />}
                       label="Push…"
                       shortcut="⇧⌘K"
                       onClick={() => {
@@ -448,9 +448,6 @@ export function GitWorkspaceControls({
               {(showNewBranch || showSync || showCommit || showPush) && (
                 <div className="mx-1 border-t" />
               )}
-              <div className="px-2 pb-1 pt-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
-                Branches
-              </div>
               {!branchesQuery.isLoading && (
                 <BranchList
                   localRows={localRows}
