@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
 
 use super::process::{ChildState, ProcessGuard, STOP_GRACE};
-use super::AcpCommand;
+use super::{AcpCommand, TurnInitiator};
 use crate::daemon::prompt::PreparedPrompt;
 
 /// Handle the actor keeps per task to drive its agent session.
@@ -18,13 +18,31 @@ pub struct AcpHandle {
 }
 
 impl AcpHandle {
-    pub fn prompt(&self, prompt: PreparedPrompt) -> Result<(), String> {
+    /// Submit a turn. It goes out immediately when the session is idle and
+    /// waits its place in line when a turn is already running.
+    pub fn prompt(&self, prompt: PreparedPrompt, initiator: TurnInitiator) -> Result<(), String> {
         if prompt.has_images && self.image_capability.load(Ordering::Acquire) != 2 {
             return Err("this agent does not support image prompts".into());
         }
         self.cmd_tx
-            .send(AcpCommand::Prompt(prompt))
+            .send(AcpCommand::Prompt { prompt, initiator })
             .map_err(|_| "agent session is no longer running".into())
+    }
+
+    /// End the running turn and send every queued prompt now, joined into one
+    /// turn. The session keeps running; only the turn is cut short. `Err` when
+    /// nothing was queued — no turn is cut short for an empty queue.
+    pub async fn interrupt(&self) -> Result<(), String> {
+        let (tx, rx) = oneshot::channel();
+        if self
+            .cmd_tx
+            .send(AcpCommand::Interrupt { reply: tx })
+            .is_err()
+        {
+            return Err("agent session is no longer running".into());
+        }
+        rx.await
+            .unwrap_or_else(|_| Err("agent session is no longer running".into()))
     }
     pub fn answer(&self, request_id: String, outcome: String) {
         let _ = self.cmd_tx.send(AcpCommand::AnswerPermission {

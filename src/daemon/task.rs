@@ -97,6 +97,9 @@ pub struct Task {
     pub origin: Option<String>,
     /// Last explicit model intent the user expressed for this task.
     pub model: Option<String>,
+    /// Messages submitted while the agent was mid-turn, waiting to be sent as
+    /// their own turns. Live session state, so it is never persisted.
+    pub queued_prompts: Vec<warpforge_protocol::QueuedPrompt>,
 }
 
 impl Task {
@@ -130,6 +133,7 @@ impl Task {
             backlog_item_id: None,
             origin: None,
             model: None,
+            queued_prompts: Vec::new(),
         }
     }
 

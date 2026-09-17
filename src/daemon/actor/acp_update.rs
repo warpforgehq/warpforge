@@ -1,6 +1,6 @@
 use warpforge_protocol as wire;
 
-use crate::daemon::acp::AcpUpdate;
+use crate::daemon::acp::{AcpUpdate, TurnInitiator};
 use crate::daemon::actor::transcript::StageText;
 use crate::daemon::actor::{Daemon, Event};
 use crate::daemon::task::TaskStatus;
@@ -140,7 +140,41 @@ impl Daemon {
                     },
                 )
             }
-            AcpUpdate::TurnEnded { stop_reason } => {
+            // A prompt left the queue: the agent is working on it now, whether
+            // it was typed a second ago or has been waiting for a turn. The
+            // turn buffer starts here, so a cut-short turn's fragment cannot
+            // end up in what this one delivers, and the echo below opens the
+            // turn it belongs to.
+            AcpUpdate::TurnStarted { echo, .. } => {
+                self.turn_updates.remove(&task_id);
+                self.mark_task_running(&task_id);
+                if let Some(echo) = echo {
+                    // A reconnect retry can submit the same text again after
+                    // the first attempt was already recorded; drop only that
+                    // exact consecutive duplicate.
+                    self.emit_session_unless_last_duplicate(
+                        &task_id,
+                        wire::SessionUpdate::UserMessage {
+                            text: echo.text,
+                            attachments: echo.attachments,
+                        },
+                    );
+                }
+            }
+            AcpUpdate::QueueChanged { queued } => {
+                if let Some(task) = self.tasks.get_mut(&task_id) {
+                    if task.queued_prompts != queued {
+                        task.queued_prompts = queued;
+                        let updated = task.clone();
+                        self.emit(Event::TaskUpdated(updated));
+                    }
+                }
+            }
+            AcpUpdate::TurnEnded {
+                stop_reason,
+                initiator,
+                interrupted,
+            } => {
                 // The CLI that just stopped working may have refreshed its
                 // token; if it did so in the shared home, the vault that owns
                 // that login is now stale. Ask before any of the early returns
@@ -150,6 +184,9 @@ impl Daemon {
                 // the agent process dying, which we treat as a failure.
                 let success = stop_reason != "disconnected";
                 let workflow_child = self.workflow_child_of(&task_id).is_some();
+                // A cut-short turn left a fragment, not a stage result: the
+                // task is still the pipeline's, but the pipeline must not move.
+                let stage_finished = workflow_child && !interrupted;
                 let update = wire::SessionUpdate::TurnEnded { stop_reason };
                 if self.should_skip_resume_replay(&task_id, &update) {
                     return;
@@ -175,7 +212,7 @@ impl Daemon {
                         }
                     }
                 }
-                if workflow_child {
+                if stage_finished {
                     // A workflow stage finished — advance the pipeline. Parse
                     // only the latest turn's text from the in-memory turn buffer
                     // (bounded by a turn): answered questions and superseded
@@ -184,20 +221,25 @@ impl Daemon {
                     let text = self.collect_stage_text(&task_id);
                     self.workflow_stage_finished(&task_id, success, text).await;
                 }
+                // A scheduled run is closed by its turn ending, so a turn cut
+                // short has to close it too — otherwise the run stays Running
+                // forever. A person's own turn in that task is not the run's.
+                if interrupted && initiator != TurnInitiator::User {
+                    self.automation_task_interrupted(&task_id);
+                }
                 // If we are an orchestrator whose sub-agents finished mid-turn,
-                // process them now that the turn is over.
-                if self.pending_wake.remove(&task_id) {
+                // process them now that the turn is over. An interrupted turn
+                // keeps the flag: the nudge belongs after the next real end,
+                // not in front of the message the user just forced through.
+                if !interrupted && self.pending_wake.remove(&task_id) {
                     self.wake_parent(&task_id);
                 }
-                // The finished task's full text output is assembled off the loop
-                // (write-behind flush + store read) and delivered back as
+                // The finished turn's text is delivered back as
                 // Command::TaskOutputReady, which notifies the orchestrator and
                 // the parent inbox. Only ask for it when somebody consumes it:
-                // both consumers are no-ops for an ordinary task, and reading
-                // its whole transcript per turn would trade the memory this
-                // change saves for disk it never needed to touch.
-                if self.turn_output_has_consumer(&task_id, workflow_child) {
-                    self.request_task_output(&task_id, success, workflow_child);
+                // both consumers are no-ops for an ordinary task.
+                if !interrupted && self.turn_output_has_consumer(&task_id, workflow_child) {
+                    self.request_task_output(&task_id, success, workflow_child, initiator);
                 }
             }
             AcpUpdate::ModelMismatch { message } => {

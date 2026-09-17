@@ -45,6 +45,30 @@ pub struct PolicyCheck {
     pub reply: oneshot::Sender<PolicyResult>,
 }
 
+/// Who asked for a turn. Travels with the prompt submission and comes back on
+/// [`AcpUpdate::TurnStarted`] / [`AcpUpdate::TurnEnded`], so the actor can tell
+/// whose turn just ended instead of attributing every turn to the task.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TurnInitiator {
+    /// The prompt the task was created with.
+    Initial,
+    /// A person typing into the task's chat.
+    User,
+    /// The daemon itself: an orchestrator inbox nudge, a workflow follow-up.
+    System,
+    /// A scheduled automation run dispatched into an existing session.
+    Automation,
+}
+
+/// A dispatched prompt as the transcript records it. Built when the prompt
+/// leaves for the agent, not when it was submitted: a message that is still
+/// queued has not been said to anyone yet.
+#[derive(Debug, Clone)]
+pub struct PromptEcho {
+    pub text: String,
+    pub attachments: Vec<wire::PromptAttachmentSummary>,
+}
+
 /// An update from an agent session, forwarded to the daemon actor as
 /// `(task_id, AcpUpdate)`.
 #[derive(Debug, Clone)]
@@ -92,8 +116,25 @@ pub enum AcpUpdate {
         image: bool,
         embedded_context: bool,
     },
+    /// A `session/prompt` just went out. Exactly one turn is outstanding from
+    /// here until the matching [`AcpUpdate::TurnEnded`].
+    TurnStarted {
+        initiator: TurnInitiator,
+        /// The submitted message, to record in the transcript now that the
+        /// agent has it. `None` for a turn nobody typed into the chat.
+        echo: Option<PromptEcho>,
+    },
     TurnEnded {
         stop_reason: String,
+        initiator: TurnInitiator,
+        /// The turn was cut short to make room for a queued message rather than
+        /// finished by the agent. Its text is a fragment, never a result.
+        interrupted: bool,
+    },
+    /// Everything submitted that the agent has not been given yet, in the order
+    /// it will go out. Sent whenever that list changes.
+    QueueChanged {
+        queued: Vec<wire::QueuedPrompt>,
     },
     /// A model the user (or task creation) asked for could not be applied to
     /// the session — rejected, transport gone, or timed out. Non-fatal: the
@@ -112,7 +153,19 @@ pub enum AcpUpdate {
 }
 
 pub enum AcpCommand {
-    Prompt(PreparedPrompt),
+    Prompt {
+        prompt: PreparedPrompt,
+        initiator: TurnInitiator,
+    },
+    /// Cut the running turn short and send everything queued behind it as one
+    /// merged turn. Unlike [`AcpCommand::Cancel`] the session survives and the
+    /// queued text is delivered rather than dropped.
+    Interrupt {
+        /// `Err` when there was nothing queued, so a click that lost the race
+        /// with the queue draining tells the user instead of killing a turn
+        /// for nothing.
+        reply: oneshot::Sender<Result<(), String>>,
+    },
     AnswerPermission {
         request_id: String,
         outcome: String,
@@ -145,9 +198,10 @@ pub async fn generate_text(
     const OVERALL_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
 
     let prepared = PreparedPrompt {
-        content: vec![PromptContent::Text(prompt)],
+        content: vec![PromptContent::Text(prompt.clone())],
         summaries: Vec::new(),
         has_images: false,
+        text: prompt,
     };
     let (tx, mut rx) = mpsc::unbounded_channel();
     let handle = spawn_acp_session(

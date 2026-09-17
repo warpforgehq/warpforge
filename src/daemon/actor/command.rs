@@ -136,6 +136,10 @@ pub enum Command {
         task_id: String,
         success: bool,
         workflow_child: bool,
+        /// Who asked for the turn this output belongs to. A scheduled run is
+        /// only closed out by its own turn, never by a person's follow-up that
+        /// happened to land in the same session.
+        initiator: crate::daemon::acp::TurnInitiator,
         output: String,
     },
     CreateTask {
@@ -645,6 +649,13 @@ pub enum Command {
         task_id: String,
         text: String,
         attachments: Vec<wire::PromptAttachment>,
+        initiator: crate::daemon::acp::TurnInitiator,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
+    /// Force-send: end the running turn and deliver the session's queued
+    /// messages now, merged into one turn, instead of one per turn after it.
+    SessionInterrupt {
+        task_id: String,
         reply: oneshot::Sender<Result<(), String>>,
     },
     /// Answer a permission request the agent raised.

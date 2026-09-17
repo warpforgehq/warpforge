@@ -145,6 +145,7 @@ pub fn task_info(t: &Task) -> wire::TaskInfo {
         origin: t.origin.clone(),
         model: t.model.clone(),
         pending_permission: false,
+        queued_prompts: t.queued_prompts.clone(),
     }
 }
 

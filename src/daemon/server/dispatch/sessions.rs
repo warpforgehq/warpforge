@@ -29,6 +29,20 @@ pub(super) async fn session_prompt(
         })
 }
 
+pub(super) async fn session_interrupt(
+    handle: &DaemonHandle,
+    task_id: String,
+) -> Result<serde_json::Value, wire::RpcError> {
+    handle
+        .session_interrupt(&task_id)
+        .await
+        .map(|()| json!(null))
+        .map_err(|message| wire::RpcError {
+            code: wire::ErrorCode::InvalidRequest,
+            message,
+        })
+}
+
 pub(super) async fn session_set_config_option(
     handle: &DaemonHandle,
     task_id: String,

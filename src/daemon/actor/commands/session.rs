@@ -53,10 +53,26 @@ impl Daemon {
                     std::collections::HashMap::new(),
                 );
             }
+            Command::SessionInterrupt { task_id, reply } => {
+                // The verdict comes from the session driver, the only thing
+                // that knows whether anything is queued. Off the loop, like
+                // every other round-trip into a session.
+                match self.sessions.get(&task_id).cloned() {
+                    Some(handle) => {
+                        tokio::spawn(async move {
+                            let _ = reply.send(handle.interrupt().await);
+                        });
+                    }
+                    None => {
+                        let _ = reply.send(Err("this task has no running agent session".into()));
+                    }
+                }
+            }
             Command::SessionPrompt {
                 task_id,
                 text,
                 attachments,
+                initiator,
                 reply,
             } => {
                 let root = self.tasks.get(&task_id).map(|task| {
@@ -81,25 +97,17 @@ impl Daemon {
                         return;
                     }
                 };
-                let user_update = wire::SessionUpdate::UserMessage {
-                    text: text.clone(),
-                    attachments: prepared.summaries.clone(),
-                };
                 let live_delivery = self
                     .sessions
                     .get(&task_id)
                     .cloned()
-                    .map(|handle| handle.prompt(prepared.clone()));
+                    .map(|handle| handle.prompt(prepared.clone(), initiator));
                 match live_delivery {
                     Some(Ok(())) => {
-                        self.mark_task_running(&task_id);
-                        // Echo the developer's message through the same
-                        // persisted stream as agent updates. If a reconnect
-                        // retry submits the same text again after the first
-                        // attempt was already recorded, keep the transcript
-                        // readable by dropping only that exact consecutive
-                        // duplicate.
-                        self.emit_session_unless_last_duplicate(&task_id, user_update);
+                        // Neither the status nor the transcript moves here. A
+                        // message sent mid-turn is queued, and the agent has
+                        // not been told anything yet: `TurnStarted` marks the
+                        // task Running and echoes the message, when it goes out.
                         let _ = reply.send(Ok(()));
                     }
                     Some(Err(_)) | None => {

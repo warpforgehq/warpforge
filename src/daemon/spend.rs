@@ -192,6 +192,7 @@ mod tests {
             origin: None,
             model: None,
             pending_permission: false,
+            queued_prompts: Vec::new(),
         }
     }
 

@@ -1,5 +1,6 @@
 use warpforge_protocol as wire;
 
+use crate::daemon::acp::TurnInitiator;
 use crate::daemon::actor::transcript::agent_text_from_updates;
 use crate::daemon::actor::transcript::is_acp_replay_update;
 use crate::daemon::actor::transcript::replayable_history;
@@ -12,6 +13,19 @@ impl Daemon {
     pub(crate) fn mark_task_running(&mut self, task_id: &str) {
         if let Some(task) = self.tasks.get_mut(task_id) {
             if task.status != TaskStatus::Done {
+                // Every turn calls this, and most find nothing to change. A
+                // TaskUpdated per turn with identical contents is noise every
+                // client has to diff its way back out of.
+                let unchanged = task.status == TaskStatus::Running
+                    && task.blocked_reason.is_none()
+                    && task.blocked_kind.is_none()
+                    && task.settled_override.is_none()
+                    && task.settled_at.is_none()
+                    && task.snoozed_until.is_none()
+                    && task.snoozed_at.is_none();
+                if unchanged {
+                    return;
+                }
                 task.blocked_reason = None;
                 task.blocked_kind = None;
                 task.set_status(TaskStatus::Running);
@@ -87,39 +101,36 @@ impl Daemon {
         orchestrator_node || feeds_parent || self.automation_run_tasks.contains_key(task_id)
     }
 
-    /// Ask a worker to assemble a finished task's full text output off the loop
-    /// and send it back as [`Command::TaskOutputReady`], so the orchestrator /
-    /// parent-inbox delivery never blocks the actor on a disk read.
-    pub(crate) fn request_task_output(&self, task_id: &str, success: bool, workflow_child: bool) {
-        let persist = self.persist.clone();
-        let store = self.store.clone();
-        let cmd_tx = self.cmd_tx.clone();
-        let task_id = task_id.to_string();
-        // Without a database the actor's turn buffer is the only history there
-        // is; hand it back rather than an empty result.
-        let fallback = agent_text_from_updates(
+    /// Hand a finished turn's text to the orchestrator / parent inbox as
+    /// [`Command::TaskOutputReady`]. Routed through the command channel from a
+    /// spawned task because an actor never awaits a send to its own mailbox.
+    ///
+    /// The text is *this turn's*, read from the in-memory turn buffer (reset on
+    /// every `TurnStarted`). It used to be the whole persisted transcript, which
+    /// re-delivered every earlier turn on each follow-up and — worse — carried
+    /// an interrupted turn's half-written fragment into the next turn's answer.
+    pub(crate) fn request_task_output(
+        &self,
+        task_id: &str,
+        success: bool,
+        workflow_child: bool,
+        initiator: TurnInitiator,
+    ) {
+        let output = agent_text_from_updates(
             self.turn_updates
-                .get(&task_id)
+                .get(task_id)
                 .map(Vec::as_slice)
                 .unwrap_or_default(),
         );
+        let cmd_tx = self.cmd_tx.clone();
+        let task_id = task_id.to_string();
         tokio::spawn(async move {
-            persist.flush().await;
-            let lookup = task_id.clone();
-            let output = crate::daemon::runtime::store_read(store, move |store| {
-                store
-                    .load_session_updates(&lookup)
-                    .map(|updates| agent_text_from_updates(&updates))
-                    .unwrap_or_default()
-            })
-            .await
-            // Without a database the actor's turn buffer is the only history.
-            .unwrap_or(fallback);
             let _ = cmd_tx
                 .send(Command::TaskOutputReady {
                     task_id,
                     success,
                     workflow_child,
+                    initiator,
                     output,
                 })
                 .await;
@@ -255,23 +266,26 @@ impl Daemon {
             return;
         };
         self.mark_task_running(parent_id);
-        let _ = handle.prompt(crate::daemon::prompt::PreparedPrompt {
-            content: vec![crate::daemon::prompt::PromptContent::Text(format!(
-                "[System] {pending} sub-agent result(s) ready in your inbox. \
-                 Call the read_inbox tool to collect them, then decide what to do next."
-            ))],
-            summaries: vec![],
-            has_images: false,
-        });
+        let nudge = format!(
+            "[System] {pending} sub-agent result(s) ready in your inbox. \
+             Call the read_inbox tool to collect them, then decide what to do next."
+        );
+        let _ = handle.prompt(
+            crate::daemon::prompt::PreparedPrompt {
+                content: vec![crate::daemon::prompt::PromptContent::Text(nudge.clone())],
+                summaries: vec![],
+                has_images: false,
+                text: nudge,
+            },
+            TurnInitiator::System,
+        );
     }
 
     pub(crate) fn emit_session(&mut self, task_id: &str, update: wire::SessionUpdate) {
         self.persist.session_update(task_id, &update);
-        // A new user message begins a fresh turn: drop the previous turn's
-        // buffer so stage-text reads stay bounded by a turn, not the session.
-        if matches!(update, wire::SessionUpdate::UserMessage { .. }) {
-            self.turn_updates.remove(task_id);
-        }
+        // A mid-turn user message is a queued follow-up, not a turn boundary:
+        // resetting here would cut the running turn's own result in half.
+        // `TurnStarted` is the boundary; stage text splits on the echo itself.
         self.turn_updates
             .entry(task_id.to_string())
             .or_default()

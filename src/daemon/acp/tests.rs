@@ -181,11 +181,7 @@ fn test_process_guard() -> Arc<ProcessGuard> {
 }
 
 fn empty_prompt() -> PreparedPrompt {
-    PreparedPrompt {
-        content: Vec::new(),
-        summaries: Vec::new(),
-        has_images: false,
-    }
+    PreparedPrompt::default()
 }
 
 #[test]
@@ -483,12 +479,13 @@ fn handle_enforces_negotiated_image_capability() {
         }],
         summaries: vec![],
         has_images: true,
+        text: String::new(),
     };
-    assert!(handle.prompt(prompt.clone()).is_err());
+    assert!(handle.prompt(prompt.clone(), TurnInitiator::User).is_err());
     assert!(rx.try_recv().is_err());
     capability.store(2, Ordering::Release);
-    assert!(handle.prompt(prompt).is_ok());
-    assert!(matches!(rx.try_recv(), Ok(AcpCommand::Prompt(_))));
+    assert!(handle.prompt(prompt, TurnInitiator::User).is_ok());
+    assert!(matches!(rx.try_recv(), Ok(AcpCommand::Prompt { .. })));
 }
 
 #[test]

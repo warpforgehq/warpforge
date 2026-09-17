@@ -176,13 +176,18 @@ impl Daemon {
                 task_id,
                 success,
                 workflow_child,
+                initiator,
                 output,
             } => {
                 // A finished turn's full text was assembled off the loop; now
                 // deliver it the way TurnEnded used to. notify_orch_finished is
                 // a no-op unless the task is an orchestrator child.
                 self.notify_orch_finished(&task_id, success, output.clone());
-                self.automation_task_finished(&task_id, success, &output);
+                // A person chatting into a `reuse_session` automation's task
+                // must not close out the scheduled run with their own answer.
+                if initiator != crate::daemon::acp::TurnInitiator::User {
+                    self.automation_task_finished(&task_id, success, &output);
+                }
                 if !workflow_child {
                     self.deliver_child_result(&task_id, success, output);
                 }

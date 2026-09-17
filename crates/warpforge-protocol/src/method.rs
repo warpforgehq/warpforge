@@ -430,6 +430,12 @@ pub enum Method {
         #[serde(default)]
         attachments: Vec<PromptAttachment>,
     },
+    /// Stop the turn the agent is running and send everything queued behind it
+    /// as one merged prompt, in the order it was sent — the chat's "send all
+    /// now" action. Errors with nothing queued: no turn is cut short for an
+    /// empty queue, since the click has then lost a race with it draining.
+    #[serde(rename = "session.interrupt")]
+    SessionInterrupt { task_id: String },
     /// Answer a permission request raised by the agent.
     #[serde(rename = "session.permission")]
     SessionPermission {

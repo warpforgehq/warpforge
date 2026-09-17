@@ -55,11 +55,15 @@ impl Daemon {
             .filter(|handle| handle.is_alive())
             .map(|handle| {
                 handle
-                    .prompt(crate::daemon::prompt::PreparedPrompt {
-                        content: vec![crate::daemon::prompt::PromptContent::Text(text.clone())],
-                        summaries: vec![],
-                        has_images: false,
-                    })
+                    .prompt(
+                        crate::daemon::prompt::PreparedPrompt {
+                            content: vec![crate::daemon::prompt::PromptContent::Text(text.clone())],
+                            summaries: vec![],
+                            has_images: false,
+                            text: text.clone(),
+                        },
+                        crate::daemon::acp::TurnInitiator::System,
+                    )
                     .is_ok()
             })
             .unwrap_or(false);

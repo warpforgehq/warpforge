@@ -36,9 +36,74 @@ pub(super) enum RpcOutcome {
     TransportClosed,
 }
 
-/// Send an RPC while observing a durable child-exit state. If stdout closes,
-/// wait for the process monitor so callers receive the real exit status rather
-/// than racing a consumed channel notification.
+/// Register a request and put it on the writer's queue now, returning the
+/// channel its reply will arrive on.
+///
+/// Writing before returning is what orders the stream: anything queued
+/// afterwards — a `session/cancel` for this very request — reaches the agent
+/// after it. A caller that only spawns the write can be overtaken by its own
+/// cancel and leave the agent with an outstanding prompt nobody cancelled.
+pub(super) fn begin_rpc(
+    out_tx: &mpsc::UnboundedSender<String>,
+    pending: &Pending,
+    next_id: &Arc<AtomicU64>,
+    method: &str,
+    params: Value,
+) -> Option<PendingRpc> {
+    let id = next_id.fetch_add(1, Ordering::SeqCst);
+    let (tx, rx) = oneshot::channel();
+    pending.lock().unwrap().insert(id, tx);
+    if out_tx
+        .send(json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params }).to_string())
+        .is_err()
+    {
+        pending.lock().unwrap().remove(&id);
+        return None;
+    }
+    Some(PendingRpc {
+        id,
+        pending: Arc::clone(pending),
+        rx,
+    })
+}
+
+/// A request registered with the reader, holding the channel its reply arrives
+/// on. Dropping it un-registers the id, so a caller whose task is aborted
+/// mid-await — the driver's cancel grace — leaves no entry behind.
+pub(super) struct PendingRpc {
+    id: u64,
+    pending: Pending,
+    rx: oneshot::Receiver<Value>,
+}
+
+impl Drop for PendingRpc {
+    fn drop(&mut self) {
+        self.pending.lock().unwrap().remove(&self.id);
+    }
+}
+
+/// Await a reply started by [`begin_rpc`] while observing a durable child-exit
+/// state. If stdout closes, wait for the process monitor so callers receive the
+/// real exit status rather than racing a consumed channel notification.
+pub(super) async fn finish_rpc(
+    started: &mut PendingRpc,
+    exit_rx: &mut watch::Receiver<ChildState>,
+) -> RpcOutcome {
+    tokio::select! {
+        result = &mut started.rx => match result {
+            Ok(value) => RpcOutcome::Response(value),
+            Err(_) => wait_for_exit_with_grace(exit_rx).await,
+        },
+        _ = exit_rx.changed() => {
+            let state = exit_rx.borrow().clone();
+            match state {
+                ChildState::Exited(exit) => RpcOutcome::Exited(exit),
+                ChildState::Running => wait_for_exit(exit_rx).await,
+            }
+        }
+    }
+}
+
 pub(super) async fn rpc_with_exit(
     out_tx: &mpsc::UnboundedSender<String>,
     pending: &Pending,
@@ -50,27 +115,9 @@ pub(super) async fn rpc_with_exit(
     if let ChildState::Exited(exit) = exit_rx.borrow().clone() {
         return RpcOutcome::Exited(exit);
     }
-    let id = next_id.fetch_add(1, Ordering::SeqCst);
-    let (tx, rx) = oneshot::channel();
-    pending.lock().unwrap().insert(id, tx);
-    if out_tx
-        .send(json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params }).to_string())
-        .is_err()
-    {
-        return wait_for_exit_with_grace(exit_rx).await;
-    }
-    tokio::select! {
-        result = rx => match result {
-            Ok(value) => RpcOutcome::Response(value),
-            Err(_) => wait_for_exit_with_grace(exit_rx).await,
-        },
-        _ = exit_rx.changed() => {
-            let state = exit_rx.borrow().clone();
-            match state {
-                ChildState::Exited(exit) => RpcOutcome::Exited(exit),
-                ChildState::Running => wait_for_exit(exit_rx).await,
-            }
-        }
+    match begin_rpc(out_tx, pending, next_id, method, params) {
+        Some(mut started) => finish_rpc(&mut started, exit_rx).await,
+        None => wait_for_exit_with_grace(exit_rx).await,
     }
 }
 

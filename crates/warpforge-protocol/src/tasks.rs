@@ -83,6 +83,25 @@ pub struct TaskInfo {
     /// holding any transcript (see `docs/adr/0005`).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub pending_permission: bool,
+    /// Messages sent into this task while its agent was mid-turn, in the order
+    /// they will go out. They are not in the transcript yet — a message is
+    /// echoed as a user message when the agent actually receives it. Live
+    /// session state — empty after a restart.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub queued_prompts: Vec<QueuedPrompt>,
+}
+
+/// One message waiting behind the running turn.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct QueuedPrompt {
+    /// Stable for as long as the message waits, so a client can key a list on
+    /// it. Session-scoped; it means nothing after the session ends.
+    pub id: String,
+    pub text: String,
+    /// `user`, `automation` or `system` — who submitted it. Only `user`
+    /// messages are folded together by `session.interrupt`.
+    pub initiator: String,
 }
 
 /// A task's lifecycle. Deliberately **not** an axis for derived facts: whether

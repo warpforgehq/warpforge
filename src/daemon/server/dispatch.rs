@@ -120,6 +120,7 @@ pub(super) async fn dispatch(
         SessionsList { project } => sessions::sessions_list(handle, project).await,
         TaskResume { project, agent, session_id, title, } => tasks::task_resume(handle, project, agent, session_id, title).await,
         SessionPrompt { task_id, text, attachments, } => sessions::session_prompt(handle, task_id, text, attachments).await,
+        SessionInterrupt { task_id } => sessions::session_interrupt(handle, task_id).await,
         SessionSetConfigOption { task_id, config_id, value, } => sessions::session_set_config_option(handle, task_id, config_id, value).await,
         SessionPermission { task_id, request_id, outcome, } => sessions::session_permission(handle, task_id, request_id, outcome).await,
         PortForwardStop { project, name } => runtime::port_forward_stop(handle, project, name).await,

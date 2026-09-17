@@ -64,6 +64,22 @@ export interface TaskInfo {
    *  shadow task behind a pull request's Assistant tab: the surface owns it,
    *  so board-shaped lists filter it out (`lib/taskOrigin`). */
   origin?: string | null;
+  /** Messages sent while the agent was mid-turn, in the order they will go
+   *  out. They are not in the conversation yet — a message is recorded when
+   *  the agent is handed it. `session.interrupt` stops the running turn and
+   *  sends them all at once, joined into a single prompt; that call errors
+   *  when this is already empty — nothing is left to hurry along. */
+  queuedPrompts?: QueuedPrompt[];
+}
+
+/** One message waiting behind the running turn. */
+export interface QueuedPrompt {
+  /** Stable while the message waits; means nothing once it is sent. */
+  id: string;
+  text: string;
+  /** Who submitted it. Only `user` messages are folded together by
+   *  `session.interrupt`. */
+  initiator: "user" | "automation" | "system";
 }
 
 export type ToolCallStatus = "pending" | "in_progress" | "completed" | "failed";

@@ -44,6 +44,7 @@ import {
   CHAT_MAINTAIN_SCROLL_AT_END,
   CHAT_MAINTAIN_SCROLL_AT_END_THRESHOLD,
 } from "./constants";
+import { QueuedPromptsBar } from "./QueuedPromptsBar";
 import { renderTranscriptItem, transcriptRowKey, transcriptRowType } from "./TranscriptList";
 import { TranscriptRowContext, type TranscriptRowContextValue } from "./TranscriptRow";
 import { TranscriptSkeleton } from "./TranscriptSkeleton";
@@ -356,6 +357,7 @@ export function SessionChat({
           <AgentActivityIndicator activity={activity} compact />
         </div>
       )}
+      {!readOnly && <QueuedPromptsBar taskId={task.id} queued={task.queuedPrompts ?? []} />}
       {task.workflowRun && !readOnly && <WorkflowControls task={task} />}
       {!readOnly && (
         <div>

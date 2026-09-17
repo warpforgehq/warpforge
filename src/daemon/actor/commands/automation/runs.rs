@@ -254,6 +254,7 @@ impl Daemon {
                         task_id: task_id.clone(),
                         text: prompt,
                         attachments: Vec::new(),
+                        initiator: crate::daemon::acp::TurnInitiator::Automation,
                         reply: tx,
                     })
                     .await
@@ -312,6 +313,17 @@ impl Daemon {
     /// run and clear the bookkeeping (the tick's stale-run sweep catches the
     /// cases this misses, e.g. a queued delete landing after the tick).
     pub(crate) fn automation_task_deleted(&mut self, task_id: &str) {
+        self.fail_linked_run(task_id, "the run's task was deleted");
+    }
+
+    /// The run's turn was cut short by a force-send. Its output is a fragment,
+    /// so the run failed — and saying nothing would leave it Running forever,
+    /// skipping every later occurrence behind it.
+    pub(crate) fn automation_task_interrupted(&mut self, task_id: &str) {
+        self.fail_linked_run(task_id, "the run's turn was interrupted");
+    }
+
+    fn fail_linked_run(&mut self, task_id: &str, error: &str) {
         let Some(run_id) = self.automation_run_tasks.remove(task_id) else {
             return;
         };
@@ -320,7 +332,7 @@ impl Daemon {
         if let Some(mut run) = self.load_run(&run_id) {
             run.status = wire::AutomationRunStatus::Failed;
             run.finished_at = Some(now);
-            run.error = Some("the run's task was deleted".into());
+            run.error = Some(error.into());
             self.persist_run(&run);
             if let Some(automation_id) = owner {
                 self.automation_active.remove(&automation_id);

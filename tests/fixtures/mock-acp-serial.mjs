@@ -5,12 +5,17 @@
 // say). Every prompt arrival is timestamped into a log file so the test can
 // assert the daemon delivered them one at a time, in order.
 //
-// argv: <log path> <first-turn hold ms>
+// A gate file, when given, replaces turn 1's timer: the turn holds until the
+// test creates that file, so a loaded machine cannot end the turn before the
+// test has queued the message it is about to assert on.
+//
+// argv: <log path> <first-turn hold ms> [gate file]
 
 import fs from "node:fs";
 
 const logPath = process.argv[2];
 const holdMs = Number(process.argv[3] ?? 300);
+const gate = process.argv[4];
 const sid = "mock-serial-1";
 const markers = ["PROMPT_A", "PROMPT_B", "PROMPT_C", "PROMPT_D"];
 
@@ -19,10 +24,19 @@ let turn = 0;
 let pending = [];
 const log = (line) => fs.appendFileSync(logPath, line + "\n");
 const send = (obj) => process.stdout.write(JSON.stringify(obj) + "\n");
+const say = (text) =>
+  send({
+    jsonrpc: "2.0",
+    method: "session/update",
+    params: { sessionId: sid, update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text } } },
+  });
 
 function finish(entry) {
   if (!pending.includes(entry)) return;
   pending = pending.filter((p) => p !== entry);
+  // A turn's text brackets its hold window, so a message queued while the turn
+  // runs lands between the two chunks.
+  say(`AFTER_${entry.marker}`);
   log(`turn${entry.turn}:end`);
   send({
     jsonrpc: "2.0",
@@ -66,10 +80,19 @@ function handle(msg) {
   }
 
   turn += 1;
-  const entry = { id: msg.id, turn };
+  const entry = { id: msg.id, turn, marker };
   pending.push(entry);
   const delay = turn === 1 ? holdMs : 20;
   log(`turn${turn}:start`);
+  say(`BEFORE_${marker}`);
+  if (turn === 1 && gate) {
+    const poll = setInterval(() => {
+      if (!fs.existsSync(gate)) return;
+      clearInterval(poll);
+      finish(entry);
+    }, 10);
+    return;
+  }
   setTimeout(() => finish(entry), delay);
 }
 

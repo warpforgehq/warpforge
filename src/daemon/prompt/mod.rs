@@ -76,11 +76,38 @@ impl PromptContent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PreparedPrompt {
     pub content: Vec<PromptContent>,
     pub summaries: Vec<PromptAttachmentSummary>,
     pub has_images: bool,
+    /// What the submitter typed, before attachments were resolved into blocks.
+    /// It is what the queue shows and what the transcript records when the
+    /// prompt is dispatched, so it has to survive a merge.
+    pub text: String,
+}
+
+impl PreparedPrompt {
+    /// Fold several submissions into the one prompt a single turn sends, in
+    /// order, separated by a blank line. Each part was image-checked when it
+    /// was submitted, so the merged flag is their union and needs no recheck.
+    pub fn merge(parts: impl IntoIterator<Item = Self>) -> Self {
+        let mut merged = Self::default();
+        let mut texts: Vec<String> = Vec::new();
+        for part in parts {
+            if !merged.content.is_empty() && !part.content.is_empty() {
+                merged.content.push(PromptContent::Text("\n\n".into()));
+            }
+            merged.content.extend(part.content);
+            merged.summaries.extend(part.summaries);
+            merged.has_images |= part.has_images;
+            if !part.text.is_empty() {
+                texts.push(part.text);
+            }
+        }
+        merged.text = texts.join("\n\n");
+        merged
+    }
 }
 
 /// Running totals shared by the per-attachment preparers, so one budget
@@ -133,7 +160,7 @@ pub fn prepare_prompt(
     let mut content = if text.is_empty() {
         Vec::new()
     } else {
-        vec![PromptContent::Text(text)]
+        vec![PromptContent::Text(text.clone())]
     };
     let mut summaries = Vec::with_capacity(attachments.len());
     let mut budget = Budget::default();
@@ -161,5 +188,6 @@ pub fn prepare_prompt(
         content,
         summaries,
         has_images: image_count > 0,
+        text,
     })
 }

@@ -115,6 +115,7 @@ impl Store {
                 backlog_item_id: row.get(20)?,
                 origin: row.get(23)?,
                 model: row.get(22)?,
+                queued_prompts: Vec::new(),
             })
         })?;
         Ok(rows.filter_map(|r| r.ok()).collect())

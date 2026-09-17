@@ -17,11 +17,25 @@ impl DaemonHandle {
             task_id: task_id.into(),
             text: text.into(),
             attachments,
+            initiator: crate::daemon::acp::TurnInitiator::User,
             reply: tx,
         })
         .await;
         rx.await
             .unwrap_or_else(|_| Err("daemon dropped the prompt request".into()))
+    }
+
+    /// Cut the agent's running turn short and hand it every queued message at
+    /// once, as a single turn — the chat's "send all now" action.
+    pub async fn session_interrupt(&self, task_id: &str) -> Result<(), String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::SessionInterrupt {
+            task_id: task_id.into(),
+            reply: tx,
+        })
+        .await;
+        rx.await
+            .unwrap_or_else(|_| Err("daemon dropped the interrupt request".into()))
     }
 
     pub async fn list_sessions(&self, project: &str) -> Vec<wire::ExternalSession> {
