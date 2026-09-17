@@ -107,7 +107,7 @@ describe("QuickOpenHost with a project subject", () => {
     expect(ensureProject(PROJECT.name, PROJECT.path).findInFiles?.query).toBe("spawn");
   });
 
-  it("lands a pick on the project's Files surface", async () => {
+  it("lands a pick on the project's Explorer surface", async () => {
     renderHost(PROJECT);
     doubleShift();
 

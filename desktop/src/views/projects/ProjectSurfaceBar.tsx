@@ -9,7 +9,7 @@ import type { ProjectSurface } from "@/store/ui";
 export const PROJECT_SURFACE_TABS: readonly SurfaceTab<ProjectSurface>[] = [
   { id: "backlog", label: "Backlog", icon: ListTodo },
   { id: "pulls", label: "Pull Requests", icon: GitPullRequest },
-  { id: "files", label: "Files", icon: FolderTree },
+  { id: "files", label: "Explorer", icon: FolderTree },
   { id: "runtime", label: "Runtime", icon: Server },
   { id: "terminal", label: "Terminal", icon: TerminalSquare },
 ];

@@ -34,7 +34,7 @@ describe("TaskDetailActions", () => {
   it("contains tool-window controls without task lifecycle actions", () => {
     render(<TaskDetailActions task={task} />);
 
-    expect(screen.getByRole("button", { name: "Files" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Explorer" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Changes" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Terminal" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /delete task/i })).not.toBeInTheDocument();
@@ -43,7 +43,7 @@ describe("TaskDetailActions", () => {
 
   it("opens the matching contextual panel", () => {
     render(<TaskDetailActions task={task} />);
-    fireEvent.click(screen.getByRole("button", { name: "Files" }));
+    fireEvent.click(screen.getByRole("button", { name: "Explorer" }));
     expect(useUi.getState().rightPanel).toBe("files");
   });
 

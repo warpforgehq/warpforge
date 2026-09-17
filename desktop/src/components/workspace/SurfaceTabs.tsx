@@ -27,7 +27,7 @@ export interface SurfaceTab<T extends string = WorkspaceSurface> {
 }
 
 export const DEFAULT_SURFACE_TABS: readonly SurfaceTab[] = [
-  { id: "files", label: "Files", icon: FolderTree },
+  { id: "files", label: "Explorer", icon: FolderTree },
   { id: "diff", label: "Diff", icon: FileDiff },
   // Runtime is the services/port-forwards board. The interactive shell sits
   // beside it rather than inside it: nesting a tab row within a surface put

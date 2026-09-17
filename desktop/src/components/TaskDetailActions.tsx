@@ -62,7 +62,7 @@ export const TaskDetailActions = memo(function TaskDetailActions({ task }: { tas
         icon={<Diff className="size-3.5" />}
       />
       <ActionButton
-        label="Files"
+        label="Explorer"
         active={rightPanel === "files"}
         onClick={() => togglePanel("files")}
         icon={<Folder className="size-3.5" />}

@@ -10,8 +10,8 @@ import {
   type MouseEvent,
 } from "react";
 
-import { PaneHeader } from "@/components/workspace";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PaneHeader } from "@/components/workspace";
 import { getFileIconUrl } from "@/lib/fileIcon";
 import { cn } from "@/lib/utils";
 
@@ -80,29 +80,26 @@ export function ProjectFilesPanel({
   const treeStateRef = useRef(treeState);
   treeStateRef.current = treeState;
 
-  const setOpenFolders = useCallback(
-    (updater: (previous: Set<string>) => Set<string>) => {
-      const state = treeStateRef.current;
-      if (!state) {
-        setLocalOpenFolders(updater);
-        return;
-      }
-      const next = updater(new Set(state.expandedDirs));
-      const nextDirs = [...next];
-      if (
-        nextDirs.length === state.expandedDirs.length &&
-        nextDirs.every((dir) => state.expandedDirs.includes(dir))
-      ) {
-        return;
-      }
-      state.onChange({
-        expandedDirs: nextDirs,
-        scrollLeft: state.scrollLeft,
-        scrollTop: state.scrollTop,
-      });
-    },
-    [],
-  );
+  const setOpenFolders = useCallback((updater: (previous: Set<string>) => Set<string>) => {
+    const state = treeStateRef.current;
+    if (!state) {
+      setLocalOpenFolders(updater);
+      return;
+    }
+    const next = updater(new Set(state.expandedDirs));
+    const nextDirs = [...next];
+    if (
+      nextDirs.length === state.expandedDirs.length &&
+      nextDirs.every((dir) => state.expandedDirs.includes(dir))
+    ) {
+      return;
+    }
+    state.onChange({
+      expandedDirs: nextDirs,
+      scrollLeft: state.scrollLeft,
+      scrollTop: state.scrollTop,
+    });
+  }, []);
 
   const rows = useMemo(() => {
     const out: ProjectFlatRow[] = [];
@@ -199,17 +196,20 @@ export function ProjectFilesPanel({
     });
   }, []);
 
-  const toggleFolder = useCallback((fk: string) => {
-    setOpenFolders((prev) => {
-      const next = new Set(prev);
-      if (next.has(fk)) {
-        next.delete(fk);
-      } else {
-        next.add(fk);
-      }
-      return next;
-    });
-  }, [setOpenFolders]);
+  const toggleFolder = useCallback(
+    (fk: string) => {
+      setOpenFolders((prev) => {
+        const next = new Set(prev);
+        if (next.has(fk)) {
+          next.delete(fk);
+        } else {
+          next.add(fk);
+        }
+        return next;
+      });
+    },
+    [setOpenFolders],
+  );
 
   const requestId = useRef(`project-files`).current;
   const targetRef = useRef<{ path?: string; fKey?: string }>({});
@@ -389,7 +389,7 @@ export function ProjectFilesPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <PaneHeader title="Files" />
+      <PaneHeader title="Project Files" />
       {error && <p className="border-b px-3 py-2 text-xs text-destructive">{error}</p>}
       <div
         ref={scrollRef}
