@@ -1,7 +1,6 @@
 import { Check, ChevronDown, Folder, FolderGit2 } from "lucide-react";
 import { useMemo, useSyncExternalStore } from "react";
 
-import AccountSwitcher from "@/components/AccountSwitcher";
 import { TaskMenu } from "@/components/TaskMenu";
 import { TaskTitleEditor } from "@/components/TaskTitleEditor";
 import {
@@ -30,22 +29,20 @@ interface AppHeaderProps {
 }
 
 /**
- * Global chrome: a breadcrumb row, plus the account switcher on views with no
- * single agent in focus. App update and daemon connection sit in the sidebar
- * footer/brand row, as do brand, navigation, New task and Settings.
+ * Global chrome: a breadcrumb row, and nothing else. App update and daemon
+ * connection sit in the sidebar footer/brand row, as do brand, navigation,
+ * New task and Settings.
  *
  * When a task is open, the breadcrumb's second segment becomes its (editable)
  * title with the workspace it runs in beside it, then the task menu. The task's
- * harness, account and quota live in the task footer, next to its git state.
- * Project and status are deliberately not repeated here: the sidebar already
- * establishes which project you're in, and status is one glance away in the
- * conversation itself. Navigating to another view (sidebar nav, or clicking
+ * harness, account and quota live in the task footer, next to its git state —
+ * an account picker belongs where the work is, not on a view that has no agent
+ * in focus. Project and status are deliberately not repeated here: the sidebar
+ * already establishes which project you're in, and status is one glance away in
+ * the conversation itself. Navigating to another view (sidebar nav, or clicking
  * another task) closes this one — no separate back control needed.
  */
 export default function AppHeader({ view, openTask, onAddProject, onCloseTask }: AppHeaderProps) {
-  // Accounts come straight from the daemon rather than through App: the chip is
-  // the only consumer, and threading them through every render of the shell
-  // would couple unrelated views to account state.
   const { snapshot } = useSyncExternalStore(daemon.subscribe, daemon.getState);
   const selectedProjectId = useUi((s) => s.selectedProjectId);
   const openProject = useUi((s) => s.openProject);
@@ -147,20 +144,6 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
           }
           onClose={onCloseTask}
         />
-      )}
-
-      {/* Only relevant outside a task, and only where an agent is actually in
-          play: an open task already shows its own harness's account chip in
-          its footer, and a *different* agent's switcher here would just be
-          account chrome for a tool this task doesn't use. Mission Control and
-          Projects have no single agent in focus, so the full switcher belongs
-          there. The inbox spends nobody's quota — its one agent action, "Send
-          to agent", lands in a task that carries its own chip — so an account
-          picker there is chrome for a decision the surface never makes. */}
-      {!openTask && view !== "inbox" && (
-        <div className="ml-auto">
-          <AccountSwitcher agents={snapshot.agents ?? []} accounts={snapshot.accounts ?? []} />
-        </div>
       )}
     </header>
   );

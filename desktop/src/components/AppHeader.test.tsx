@@ -41,14 +41,27 @@ function mockDaemon() {
   vi.spyOn(daemon, "getState").mockReturnValue(state);
 }
 
-function renderHeader(openTask: TaskInfo) {
+function renderHeader(
+  openTask: TaskInfo | null,
+  view: "control" | "project" | "inbox" = "project",
+) {
   return render(
-    <AppHeader view="project" openTask={openTask} onAddProject={() => {}} onCloseTask={() => {}} />,
+    <AppHeader view={view} openTask={openTask} onAddProject={() => {}} onCloseTask={() => {}} />,
   );
 }
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe("AppHeader without a task", () => {
+  it("shows no account control on a view with no agent in focus", () => {
+    mockDaemon();
+    renderHeader(null, "control");
+
+    expect(screen.queryByRole("button", { name: /account$/ })).toBeNull();
+    expect(screen.queryByText("Personal")).toBeNull();
+  });
 });
 
 describe("AppHeader with an open task", () => {
