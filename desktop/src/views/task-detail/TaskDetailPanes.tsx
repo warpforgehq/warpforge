@@ -3,7 +3,7 @@ import { useMemo } from "react";
 
 import { Card } from "@/components/ui/card";
 import { Panel, PanelCollapseHint, PanelGroup, PanelSeparator } from "@/components/ui/panels";
-import { FlipButton, FocusButton, PaneHeader } from "@/components/workspace";
+import { FlipButton, SurfaceRail } from "@/components/workspace";
 import { setTaskDiff, setTaskEditorView, setTaskFiles } from "@/lib/sessionStore";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +20,8 @@ import { FilesSurface } from "./FilesSurface";
 import { GitWorkspaceControls } from "./GitWorkspaceControls";
 import { PipelineSurface } from "./PipelineSurface";
 import { TaskConversation } from "./TaskConversation";
-import { TaskSurfaceTabs } from "./TaskSurfaceTabs";
+import { TaskConversationHeader } from "./TaskConversationHeader";
+import { TaskSurfaceHeader } from "./TaskSurfaceHeader";
 import { useTaskDetail, WORKSPACE_MIN_WIDTH } from "./useTaskDetail";
 
 interface Props {
@@ -142,23 +143,19 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
             !showDiff && "mx-auto max-w-[1100px]",
           )}
         >
-          <PaneHeader
-            title="Conversation"
-            actions={
-              <>
-                {taskGroup && (
-                  <TaskAgentSwitcher
-                    tree={taskGroup}
-                    currentTaskId={task.id}
-                    onOpenTask={onOpenTask}
-                  />
-                )}
-                <FocusButton
-                  focused={!showDiff}
-                  label={showDiff ? "Focus conversation" : "Restore split view"}
-                  onClick={() => setShowDiff(!showDiff)}
+          <TaskConversationHeader
+            showDiff={showDiff}
+            setShowDiff={setShowDiff}
+            toggleChat={toggleChat}
+            side={chatOnRight ? "right" : "left"}
+            extraActions={
+              taskGroup && (
+                <TaskAgentSwitcher
+                  tree={taskGroup}
+                  currentTaskId={task.id}
+                  onOpenTask={onOpenTask}
                 />
-              </>
+              )
             }
           />
           <AgentLimitsExhaustedBanner agentId={task.agent} />
@@ -190,16 +187,24 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
       collapsed={!showDiff}
       onCollapsedChange={(collapsed) => setShowDiff(!collapsed)}
       onSizeChange={handleWorkspaceResize}
-      className="min-w-0 px-1"
+      // Folding drives the panel's width to zero, but its gutter and the card's
+      // own two edges survive it and read as a seam beside the conversation.
+      className={cn("min-w-0", showDiff ? "px-1" : "px-0")}
     >
-      <Card className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border bg-card shadow-none">
-        <TaskSurfaceTabs
+      <Card
+        className={cn(
+          "relative flex h-full min-h-0 flex-col overflow-hidden border bg-card shadow-none",
+          showDiff ? "border-border" : "border-transparent",
+        )}
+      >
+        <TaskSurfaceHeader
           activeSurface={activeSurface}
-          onSurfaceChange={setActiveSurface}
           tabs={surfaceTabs}
-          focused={!showChat}
-          focusLabel={showChat ? "Focus workspace" : "Restore split view"}
-          onToggleFocus={toggleChat}
+          workspaceFocused={!showChat}
+          onFocusWorkspace={toggleChat}
+          onHideSurface={() => setShowDiff(false)}
+          onRestore={toggleChat}
+          side={chatOnRight ? "left" : "right"}
           extraActions={
             showChat && <FlipButton chatOnRight={chatOnRight} onClick={toggleChatOnRight} />
           }
@@ -324,10 +329,35 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
-      <div ref={splitRef} className="relative flex min-h-0 flex-1 gap-2">
-        <PanelGroup orientation="horizontal" className="min-h-0 flex-1 overflow-hidden">
-          {chatOnRight ? [surfacePane, separator, chatPane] : [chatPane, separator, surfacePane]}
-        </PanelGroup>
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+        {/* The rail stays outside the drag track: `splitRef`'s rect is what the
+            fold threshold is measured against.
+
+            `min-w-0` on every layer is load-bearing, not tidiness: a sized
+            panel with `size="100%"` refits to its parent's measured width on
+            every parent resize, and a flex item left at `min-width: auto`
+            would answer that measurement with a larger min-content width, so
+            the group grew a little on each observer tick and ran off the right
+            edge of the window while the workspace owned the split. */}
+        <div ref={splitRef} className="relative flex min-h-0 min-w-0 flex-1 gap-2 overflow-hidden">
+          <PanelGroup orientation="horizontal" className="min-h-0 min-w-0 flex-1 overflow-hidden">
+            {chatOnRight ? [surfacePane, separator, chatPane] : [chatPane, separator, surfacePane]}
+          </PanelGroup>
+        </div>
+        <SurfaceRail
+          tabs={surfaceTabs}
+          activeSurface={activeSurface}
+          onSurfaceChange={(surface) => {
+            setActiveSurface(surface);
+            if (!showDiff) setShowDiff(true);
+          }}
+          chatVisible={showChat}
+          surfaceVisible={showDiff}
+          onConversation={() => {
+            if (!showChat) toggleChat();
+            else setShowDiff(false);
+          }}
+        />
       </div>
       <div className="flex h-4 shrink-0 items-center px-1 text-[11px] text-muted-foreground">
         <span

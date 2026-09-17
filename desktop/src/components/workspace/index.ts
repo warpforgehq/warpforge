@@ -6,3 +6,8 @@ export { PaneHeader } from "./PaneHeader";
 export type { PaneHeaderProps } from "./PaneHeader";
 export { DEFAULT_SURFACE_TABS, SurfaceTabs } from "./SurfaceTabs";
 export type { SurfaceTab, SurfaceTabsProps, WorkspaceSurface } from "./SurfaceTabs";
+export { SurfaceRail } from "./SurfaceRail";
+export type { SurfaceRailProps } from "./SurfaceRail";
+export { surfaceSummary } from "./surfaceRailMeta";
+export { PaneWindowControls } from "./PaneWindowControls";
+export type { PaneWindowControlsProps } from "./PaneWindowControls";
