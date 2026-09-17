@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 
-import { PULL_GROUP_ICONS } from "@/components/inbox/PullFilesChanged";
+import { PULL_GROUP_ICON_CLASS, PULL_GROUP_ICONS } from "@/components/inbox/PullFilesChanged";
 import { Input } from "@/components/ui/input";
 import { countPatchStats, type PatchFileBlock } from "@/lib/pullDiff";
 import { groupPullFiles, type PullFileGroup } from "@/lib/pullFileGroups";
@@ -323,13 +323,7 @@ function GroupSection({
         ) : (
           <ChevronRight aria-hidden className="size-3 shrink-0 text-muted-foreground/70" />
         )}
-        <Icon
-          aria-hidden
-          className={cn(
-            "size-3 shrink-0",
-            group.tone === "critical" ? "text-warn" : "text-muted-foreground/50",
-          )}
-        />
+        <Icon aria-hidden className={cn("size-3 shrink-0", PULL_GROUP_ICON_CLASS[group.id])} />
         <span
           className={cn(
             "min-w-0 flex-1 truncate text-[13px] font-medium",
