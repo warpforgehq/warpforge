@@ -55,32 +55,38 @@ export function BrowserSurface() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-1 px-2 pt-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActive(tab.id)}
-            className={cn(
-              "group flex min-w-0 max-w-[180px] items-center gap-1.5 rounded-t px-2.5 py-1.5 text-xs",
-              tab.id === activeId ? "bg-card" : "bg-transparent text-muted-foreground hover:bg-card/50",
-            )}
-          >
-            <span className="truncate">{tab.loading ? "Loading…" : tab.title}</span>
-            <span
-              role="button"
-              tabIndex={-1}
-              aria-label="Close tab"
-              onClick={(e) => {
-                e.stopPropagation();
-                closeTab(tab.id);
-              }}
-              className="shrink-0 rounded p-0.5 opacity-0 hover:bg-muted group-hover:opacity-100"
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActive(tab.id)}
+              className={cn(
+                "group flex w-[160px] shrink-0 items-center gap-1.5 rounded-t px-2.5 py-1.5 text-xs",
+                tab.id === activeId
+                  ? "bg-card"
+                  : "bg-transparent text-muted-foreground hover:bg-card/50",
+              )}
             >
-              <X className="size-3" />
-            </span>
-          </button>
-        ))}
-        <Button size="sm" variant="ghost" aria-label="New tab" onClick={newTab}>
+              <span className="min-w-0 flex-1 truncate text-left">
+                {tab.loading ? "Loading…" : tab.title}
+              </span>
+              <span
+                role="button"
+                tabIndex={-1}
+                aria-label="Close tab"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeTab(tab.id);
+                }}
+                className="shrink-0 rounded p-0.5 opacity-0 hover:bg-muted group-hover:opacity-100"
+              >
+                <X className="size-3" />
+              </span>
+            </button>
+          ))}
+        </div>
+        <Button size="sm" variant="ghost" aria-label="New tab" className="shrink-0" onClick={newTab}>
           <Plus className="size-3.5" />
         </Button>
       </div>
