@@ -1,6 +1,7 @@
 import type { SurfaceTab, WorkspaceSurface } from "./SurfaceTabs";
 
 const NOUNS: Record<WorkspaceSurface, readonly [string, string]> = {
+  browser: ["tab", "tabs"],
   diff: ["changed file", "changed files"],
   files: ["file", "files"],
   pipeline: ["stage", "stages"],
@@ -9,6 +10,7 @@ const NOUNS: Record<WorkspaceSurface, readonly [string, string]> = {
 };
 
 const RESTING: Record<WorkspaceSurface, string> = {
+  browser: "Browse the web",
   diff: "No changes yet",
   files: "Project tree and editor",
   pipeline: "No stages",

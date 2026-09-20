@@ -15,7 +15,8 @@ description = "Warpforge desktop shell — a thin Tauri client for the warpforge
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["macos-private-api"] }
+# `unstable` gates the multiwebview API: child content webviews for the browser.
+tauri = { version = "2", features = ["macos-private-api", "unstable"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-process = "2"
 tauri-plugin-shell = "2"

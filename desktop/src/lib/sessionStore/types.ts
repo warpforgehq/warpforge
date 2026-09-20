@@ -5,7 +5,7 @@
  * the daemon remains authoritative for file contents, task identity and worktree.
  */
 
-export type SessionSurface = "files" | "diff" | "runtime" | "terminal" | "pipeline";
+export type SessionSurface = "files" | "diff" | "runtime" | "terminal" | "browser" | "pipeline";
 export type ProjectSessionSurface = "backlog" | "pulls" | "files" | "runtime" | "terminal";
 export type SessionDiffView = "unified" | "split";
 

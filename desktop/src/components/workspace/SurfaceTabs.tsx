@@ -1,6 +1,7 @@
 import {
   FileDiff,
   FolderTree,
+  Globe,
   ListTodo,
   Server,
   TerminalSquare,
@@ -11,7 +12,7 @@ import * as React from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
-export type WorkspaceSurface = "files" | "diff" | "runtime" | "terminal" | "pipeline";
+export type WorkspaceSurface = "files" | "diff" | "runtime" | "terminal" | "browser" | "pipeline";
 
 /**
  * Generic over the tab id so the same bar can drive a different set of
@@ -34,6 +35,7 @@ export const DEFAULT_SURFACE_TABS: readonly SurfaceTab[] = [
   // two rows of tabs over one pane and hid the terminal a level down.
   { id: "runtime", label: "Runtime", icon: Server },
   { id: "terminal", label: "Terminal", icon: TerminalSquare },
+  { id: "browser", label: "Browser", icon: Globe },
   // "Pipeline", not "Plan": `plan` is one of the stage kinds this surface
   // lists, so the old name labelled the whole thing after one of its rows.
   { id: "pipeline", label: "Pipeline", icon: ListTodo },
