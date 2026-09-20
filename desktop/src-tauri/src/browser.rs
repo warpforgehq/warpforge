@@ -89,7 +89,10 @@ pub fn browser_open(
                 let tab = tab_for_load.clone();
                 let url = payload.url().to_string();
                 // Title is not on the payload; read it once the page settled.
-                let _ = webview.eval_with_callback("document.title", move |title| {
+                // The callback hands back the eval result JSON-encoded, so a
+                // title is a quoted, escaped string — decode it to plain text.
+                let _ = webview.eval_with_callback("document.title", move |raw| {
+                    let title = serde_json::from_str::<String>(&raw).unwrap_or(raw);
                     let _ = app.emit(
                         "browser:title",
                         serde_json::json!({ "tabId": tab, "url": url, "title": title }),
