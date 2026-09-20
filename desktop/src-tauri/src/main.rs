@@ -9,6 +9,7 @@ use tauri_plugin_shell::{
 };
 use warpforge_protocol::DaemonEndpoint;
 
+mod browser;
 mod context_menu;
 mod desktop_env;
 #[cfg(target_os = "macos")]
@@ -262,7 +263,16 @@ fn main() {
             window::enable_window_glass,
             window::disable_window_glass,
             notifications::notify_attention,
-            context_menu::show_context_menu
+            context_menu::show_context_menu,
+            browser::browser_open,
+            browser::browser_navigate,
+            browser::browser_back,
+            browser::browser_forward,
+            browser::browser_reload,
+            browser::browser_stop,
+            browser::browser_set_bounds,
+            browser::browser_set_visible,
+            browser::browser_close
         ])
         .plugin(tauri_plugin_dialog::init())
         .build(tauri::generate_context!())

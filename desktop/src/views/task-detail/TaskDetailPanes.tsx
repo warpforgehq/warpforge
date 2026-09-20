@@ -14,6 +14,7 @@ import { SessionLostBanner } from "../../components/SessionLostBanner";
 import { TaskAgentSwitcher } from "../../components/TaskAgentSwitcher";
 import { daemon } from "../../daemon";
 import type { TaskInfo } from "../../protocol";
+import { BrowserSurface } from "./browser/BrowserSurface";
 import { DiffSurface } from "./DiffSurface";
 import { FilesSurface } from "./FilesSurface";
 import { PipelineSurface } from "./PipelineSurface";
@@ -303,6 +304,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
             />
           )}
           {activeSurface === "terminal" && <TerminalWorkspaceView project={task.project} />}
+          {activeSurface === "browser" && <BrowserSurface />}
           {activeSurface === "pipeline" && (
             <PipelineSurface
               task={task}
