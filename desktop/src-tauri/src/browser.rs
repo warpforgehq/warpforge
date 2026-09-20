@@ -178,6 +178,23 @@ pub fn browser_close(app: AppHandle, tab_id: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Close every tab belonging to a project, called when the project is removed so
+/// its native views do not outlive it. Tab ids are `<project>:<uuid>`, so the
+/// project's views all share the `browser:<project>:` label prefix.
+#[tauri::command]
+pub fn browser_close_project(app: AppHandle, project: String) -> Result<(), String> {
+    let Some(window) = app.get_window(HOST_WINDOW) else {
+        return Ok(());
+    };
+    let prefix = format!("browser:{project}:");
+    for webview in window.webviews() {
+        if webview.label().starts_with(&prefix) {
+            let _ = webview.close();
+        }
+    }
+    Ok(())
+}
+
 fn set_bounds(
     app: &AppHandle,
     tab_id: &str,
