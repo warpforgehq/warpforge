@@ -304,7 +304,9 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
             />
           )}
           {activeSurface === "terminal" && <TerminalWorkspaceView project={task.project} />}
-          {activeSurface === "browser" && <BrowserSurface project={task.project} />}
+          {activeSurface === "browser" && (
+            <BrowserSurface project={task.project} onSendToChat={appendLogsToChat} />
+          )}
           {activeSurface === "pipeline" && (
             <PipelineSurface
               task={task}
