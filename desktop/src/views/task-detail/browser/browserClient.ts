@@ -20,6 +20,19 @@ export interface BrowserTitleEvent {
   title: string;
 }
 
+export interface BrowserAnnotation {
+  url: string;
+  selector: string;
+  role: string;
+  text: string;
+  href: string | null;
+}
+
+export interface BrowserAnnotationEvent {
+  tabId: string;
+  annotation: BrowserAnnotation;
+}
+
 async function call(command: string, args: Record<string, unknown>): Promise<void> {
   if (!IS_TAURI) return;
   const { invoke } = await import("@tauri-apps/api/core");
@@ -57,6 +70,9 @@ export const browser = {
   closeProject(project: string): Promise<void> {
     return call("browser_close_project", { project });
   },
+  pick(tabId: string): Promise<void> {
+    return call("browser_pick", { tabId });
+  },
 };
 
 async function subscribe<T>(event: string, handler: (payload: T) => void): Promise<() => void> {
@@ -71,4 +87,10 @@ export function onBrowserState(handler: (e: BrowserStateEvent) => void): Promise
 
 export function onBrowserTitle(handler: (e: BrowserTitleEvent) => void): Promise<() => void> {
   return subscribe("browser:title", handler);
+}
+
+export function onBrowserAnnotation(
+  handler: (e: BrowserAnnotationEvent) => void,
+): Promise<() => void> {
+  return subscribe("browser:annotation", handler);
 }

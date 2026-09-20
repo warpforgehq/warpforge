@@ -16,6 +16,13 @@ use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, WebviewUr
 const HOST_WINDOW: &str = "main";
 const STATE_EVENT: &str = "browser:state";
 
+/// Injected before page scripts; dormant until `browser_pick` starts it.
+const PICKER_SCRIPT: &str = include_str!("browser_picker.js");
+
+/// The picker sends a chosen element back by navigating here; the navigation is
+/// intercepted and blocked rather than followed.
+const ANNOTATE_SCHEME: &str = "wf-annotate:";
+
 /// Every child webview is labelled `browser:<tabId>`, so one namespace of
 /// labels belongs to the browser and nothing else collides with it.
 fn label_for(tab_id: &str) -> String {
@@ -73,10 +80,26 @@ pub fn browser_open(
 
     let tab_for_load = tab_id.clone();
     let app_for_load = app.clone();
+    let app_for_nav = app.clone();
+    let tab_for_nav = tab_id.clone();
     // The default (non-incognito) data store is persistent per app, so a login
     // survives restarts without any special store handling.
-    let builder = WebviewBuilder::new(&label, WebviewUrl::External(target)).on_page_load(
-        move |webview, payload| {
+    let builder = WebviewBuilder::new(&label, WebviewUrl::External(target))
+        .initialization_script(PICKER_SCRIPT)
+        .on_navigation(move |url| {
+            if !url.as_str().starts_with(ANNOTATE_SCHEME) {
+                return true;
+            }
+            if let Some(payload) = annotation_payload(url) {
+                let _ = app_for_nav.emit(
+                    "browser:annotation",
+                    serde_json::json!({ "tabId": tab_for_nav, "annotation": payload }),
+                );
+            }
+            // Block: the navigation only ever carried the message.
+            false
+        })
+        .on_page_load(move |webview, payload| {
             let loading = matches!(payload.event(), PageLoadEvent::Started);
             emit_state(
                 &app_for_load,
@@ -99,8 +122,7 @@ pub fn browser_open(
                     );
                 });
             }
-        },
-    );
+        });
 
     window
         .add_child(
@@ -110,6 +132,24 @@ pub fn browser_open(
         )
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// Decode the `d` query parameter of a `wf-annotate://` URL into the element
+/// context the picker gathered. The url crate percent-decodes query pairs.
+fn annotation_payload(url: &tauri::Url) -> Option<serde_json::Value> {
+    let (_, encoded) = url.query_pairs().find(|(k, _)| k == "d")?;
+    serde_json::from_str(&encoded).ok()
+}
+
+/// Enter element-pick mode on the tab: the next trusted click sends its target's
+/// context to the host as a `browser:annotation` event.
+#[tauri::command]
+pub fn browser_pick(app: AppHandle, tab_id: String) -> Result<(), String> {
+    eval(
+        &app,
+        &tab_id,
+        "window.__wfPickStart && window.__wfPickStart()",
+    )
 }
 
 #[tauri::command]

@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Plus, RotateCw, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, MousePointerClick, Plus, RotateCw, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { IS_TAURI } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
-import { browser, type BrowserBounds } from "./browserClient";
+import { browser, onBrowserAnnotation, type BrowserBounds } from "./browserClient";
 import { toDisplayUrl } from "./browserUrl";
+import { formatAnnotation } from "./formatAnnotation";
 import { useBrowserTabs } from "./useBrowserTabs";
 import { useBrowserViewport } from "./useBrowserViewport";
 
@@ -17,7 +18,13 @@ function boundsOf(el: HTMLElement): BrowserBounds {
   return { x: r.x, y: r.y, width: r.width, height: r.height };
 }
 
-export function BrowserSurface({ project }: { project: string }) {
+interface Props {
+  project: string;
+  /** Hands a picked element's context to the agent's chat composer. */
+  onSendToChat?: (text: string) => void;
+}
+
+export function BrowserSurface({ onSendToChat, project }: Props) {
   const { activeId, back, closeTab, forward, navigate, newTab, reload, setActive, stop, tabs } =
     useBrowserTabs(project);
   const pageRef = useRef<HTMLDivElement | null>(null);
@@ -37,6 +44,14 @@ export function BrowserSurface({ project }: { project: string }) {
   }, [active]);
 
   useBrowserViewport(activeId, pageRef);
+
+  // A picked element arrives as an event from the page; hand it to the composer.
+  useEffect(() => {
+    const sub = onBrowserAnnotation(({ annotation, tabId }) => {
+      if (tabId.startsWith(`${project}:`)) onSendToChat?.(formatAnnotation(annotation));
+    });
+    return () => void sub.then((off) => off());
+  }, [project, onSendToChat]);
 
   // The address bar follows the page unless the user is typing in it.
   useEffect(() => {
@@ -106,6 +121,17 @@ export function BrowserSurface({ project }: { project: string }) {
         >
           {active?.loading ? <X className="size-4" /> : <RotateCw className="size-4" />}
         </Button>
+        {onSendToChat && (
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label="Point out an element to the agent"
+            title="Point out an element to the agent"
+            onClick={() => activeId && void browser.pick(activeId)}
+          >
+            <MousePointerClick className="size-4" />
+          </Button>
+        )}
         <Input
           value={draft}
           placeholder="Search or enter address"
