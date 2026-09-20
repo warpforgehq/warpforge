@@ -54,6 +54,9 @@ export const browser = {
   close(tabId: string): Promise<void> {
     return call("browser_close", { tabId });
   },
+  closeProject(project: string): Promise<void> {
+    return call("browser_close_project", { project });
+  },
 };
 
 async function subscribe<T>(event: string, handler: (payload: T) => void): Promise<() => void> {

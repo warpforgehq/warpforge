@@ -272,7 +272,8 @@ fn main() {
             browser::browser_stop,
             browser::browser_set_bounds,
             browser::browser_set_visible,
-            browser::browser_close
+            browser::browser_close,
+            browser::browser_close_project
         ])
         .plugin(tauri_plugin_dialog::init())
         .build(tauri::generate_context!())

@@ -1,5 +1,7 @@
 import { type BacklogParams, DEFAULT_BACKLOG_PARAMS } from "@/components/backlog/types";
 import { forgetProject } from "@/lib/sessionStore";
+import { browser } from "@/views/task-detail/browser/browserClient";
+import { clearBrowserSession } from "@/views/task-detail/browser/browserSession";
 
 import {
   DEFAULT_TASK_SURFACE,
@@ -178,6 +180,9 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       // The workspace session is a separate cache; forget it alongside the
       // preferences so it cannot outlive the project.
       forgetProject(project);
+      // The browser's tabs and its native content views are project-scoped too.
+      clearBrowserSession(project);
+      void browser.closeProject(project);
       return { backlogParamsByProject, projectSurfaceByProject };
     }),
 });

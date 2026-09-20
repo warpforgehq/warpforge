@@ -17,9 +17,9 @@ function boundsOf(el: HTMLElement): BrowserBounds {
   return { x: r.x, y: r.y, width: r.width, height: r.height };
 }
 
-export function BrowserSurface() {
+export function BrowserSurface({ project }: { project: string }) {
   const { activeId, back, closeTab, forward, navigate, newTab, reload, setActive, stop, tabs } =
-    useBrowserTabs();
+    useBrowserTabs(project);
   const pageRef = useRef<HTMLDivElement | null>(null);
   const opened = useRef(new Set<string>());
   const [draft, setDraft] = useState("");
