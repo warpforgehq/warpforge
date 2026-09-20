@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { browser, onBrowserState, onBrowserTitle } from "./browserClient";
+import { loadBrowserSession, saveBrowserSession } from "./browserSession";
 import { toNavigationUrl } from "./browserUrl";
 
 export interface BrowserTab {
@@ -31,13 +32,24 @@ export interface BrowserTabs {
 }
 
 export function useBrowserTabs(): BrowserTabs {
-  const [tabs, setTabs] = useState<BrowserTab[]>(() => [makeTab(HOME)]);
-  const [activeId, setActiveId] = useState<string | null>(() => null);
+  const [tabs, setTabs] = useState<BrowserTab[]>(() => {
+    const saved = loadBrowserSession();
+    if (saved) {
+      return saved.tabs.map((t) => ({ id: t.id, url: t.url, title: "New tab", loading: false }));
+    }
+    return [makeTab(HOME)];
+  });
+  const [activeId, setActiveId] = useState<string | null>(() => loadBrowserSession()?.activeId ?? null);
 
   // First tab becomes active once, after mount, so the surface can open it.
   useEffect(() => {
-    setActiveId((current) => current ?? tabs[0]?.id ?? null);
+    setActiveId((current) => (current && tabs.some((t) => t.id === current) ? current : tabs[0]?.id ?? null));
   }, [tabs]);
+
+  // Persist the open pages so a restart reopens them into the kept-alive login.
+  useEffect(() => {
+    saveBrowserSession({ tabs: tabs.map((t) => ({ id: t.id, url: t.url })), activeId });
+  }, [tabs, activeId]);
 
   useEffect(() => {
     const unstate = onBrowserState(({ tabId, url, loading }) => {
