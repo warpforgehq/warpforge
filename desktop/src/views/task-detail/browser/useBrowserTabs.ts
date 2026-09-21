@@ -44,6 +44,9 @@ export interface BrowserTabs {
   newTab: () => void;
   closeTab: (id: string) => void;
   setActive: (id: string) => void;
+  /** Optimistically set a tab's URL so the start page yields to the webview
+   *  immediately, before the page's first navigation event lands. */
+  setTabUrl: (id: string, url: string) => void;
   back: () => void;
   forward: () => void;
   reload: () => void;
@@ -147,6 +150,10 @@ export function useBrowserTabs(project: string): BrowserTabs {
 
   const setActive = useCallback((id: string) => setActiveId(id), []);
 
+  const setTabUrl = useCallback((id: string, url: string) => {
+    setTabs((list) => list.map((t) => (t.id === id ? { ...t, url } : t)));
+  }, []);
+
   const back = useCallback(() => {
     const id = activeRef.current;
     if (id) {
@@ -172,5 +179,18 @@ export function useBrowserTabs(project: string): BrowserTabs {
   const canBack = !!active && active.pos > 0;
   const canForward = !!active && active.pos < active.entries.length - 1;
 
-  return { tabs, activeId, canBack, canForward, newTab, closeTab, setActive, back, forward, reload, stop };
+  return {
+    tabs,
+    activeId,
+    canBack,
+    canForward,
+    newTab,
+    closeTab,
+    setActive,
+    setTabUrl,
+    back,
+    forward,
+    reload,
+    stop,
+  };
 }
