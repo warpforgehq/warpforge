@@ -1,7 +1,5 @@
 import { Globe, Server } from "lucide-react";
-import { useState } from "react";
 
-import { Input } from "@/components/ui/input";
 import type { ServiceInfo } from "../../../protocol";
 
 interface Props {
@@ -11,30 +9,18 @@ interface Props {
   onGo: (input: string) => void;
 }
 
-/** The new-tab landing: the project's running services first, then an address
- *  box. A work tool opens what you are building, not a search engine's ads. */
+/** The new-tab landing: the project's running services as quick links. Typing
+ *  goes through the address bar above; a work tool opens what you are building,
+ *  not a search engine's ads. */
 export function StartPage({ onGo, services }: Props) {
-  const [draft, setDraft] = useState("");
   const running = services.filter((s) => s.status === "running" || s.status === "starting");
 
   return (
     <div className="flex h-full min-h-0 flex-col items-center overflow-auto bg-background px-6 py-12">
       <div className="w-full max-w-md">
-        <Input
-          autoFocus
-          value={draft}
-          placeholder="Search or enter address"
-          spellCheck={false}
-          className="h-9"
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && draft.trim()) onGo(draft);
-          }}
-        />
-
         {running.length > 0 ? (
           <>
-            <div className="mb-2 mt-6 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <Server className="size-3.5" />
               Running in this project
             </div>
@@ -56,7 +42,7 @@ export function StartPage({ onGo, services }: Props) {
             </div>
           </>
         ) : (
-          <p className="mt-6 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Globe className="size-3.5" />
             Start a service in Runtime and it will show up here.
           </p>
