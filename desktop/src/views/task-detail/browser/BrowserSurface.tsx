@@ -64,6 +64,7 @@ export function BrowserSurface({ onAnnotate, onShot, project, services }: Props)
     newTab,
     reload,
     setActive,
+    setTabUrl,
     stop,
     tabs,
   } = useBrowserTabs(project);
@@ -83,6 +84,9 @@ export function BrowserSurface({ onAnnotate, onShot, project, services }: Props)
     if (!activeId) return;
     const url = toNavigationUrl(input);
     const el = pageRef.current;
+    // Flip the tab off the start page now, so the viewport hook takes over the
+    // new webview instead of waiting for the first navigation event.
+    setTabUrl(activeId, url);
     if (!opened.current.has(activeId) && el) {
       opened.current.add(activeId);
       void browser.open(activeId, url, boundsOf(el));
