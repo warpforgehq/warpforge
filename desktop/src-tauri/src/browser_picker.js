@@ -1,11 +1,13 @@
 // Element picker injected into every browser tab before page scripts run.
 //
-// Dormant until the host calls `__wfPickStart()`. In pick mode it outlines the
-// element under the cursor and, on a trusted click, sends its context to the
+// Dormant until the host calls `__wfPickStart()`. In pick mode a full-window
+// capture overlay eats the mouse — so the cursor is always a crosshair and the
+// page gets no hover or clicks — and the element under the pointer is resolved
+// with `elementFromPoint`. A trusted click sends that element's context to the
 // host by navigating to `wf-annotate://a/?d=<encoded json>`, which the Rust
-// `on_navigation` handler intercepts and blocks. Everything lives in a closed
-// shadow root so the page cannot read the overlay, and every listener is
-// capture-phase and gated on `isTrusted` so a page script cannot drive it.
+// `on_navigation` handler intercepts and blocks. The overlay lives in a closed
+// shadow root and every listener is gated on `isTrusted`, so a page script can
+// neither read it nor drive it.
 (function () {
   if (window.__wfPickerInstalled) return;
   window.__wfPickerInstalled = true;
@@ -17,14 +19,27 @@
   function ensureOverlay() {
     if (host) return;
     host = document.createElement("div");
+    // Captures the mouse while picking; inert otherwise.
     host.style.cssText =
-      "all:initial;position:fixed;inset:0;z-index:2147483647;pointer-events:none";
+      "all:initial;position:fixed;inset:0;z-index:2147483647;pointer-events:none;cursor:crosshair";
     const shadow = host.attachShadow({ mode: "closed" });
     outline = document.createElement("div");
     outline.style.cssText =
-      "position:fixed;border:2px solid #3b82f6;background:rgba(59,130,246,0.15);border-radius:3px;transition:all 40ms;display:none";
+      "position:fixed;border:2px solid #3b82f6;background:rgba(59,130,246,0.15);border-radius:3px;transition:all 40ms;display:none;pointer-events:none";
     shadow.appendChild(outline);
     (document.documentElement || document.body).appendChild(host);
+
+    host.addEventListener("mousemove", onMove, true);
+    host.addEventListener("click", onClick, true);
+  }
+
+  // The overlay is topmost, so hit-testing means briefly making it transparent
+  // to the pointer, asking the document, then restoring capture.
+  function elementUnder(x, y) {
+    host.style.pointerEvents = "none";
+    const el = document.elementFromPoint(x, y);
+    host.style.pointerEvents = "auto";
+    return el;
   }
 
   function drawOutline(el) {
@@ -65,53 +80,32 @@
     };
   }
 
-  let cursorStyle = null;
-  function setCrosshair(on) {
-    if (on && !cursorStyle) {
-      cursorStyle = document.createElement("style");
-      cursorStyle.textContent = "*{cursor:crosshair !important}";
-      document.documentElement.appendChild(cursorStyle);
-    } else if (!on && cursorStyle) {
-      cursorStyle.remove();
-      cursorStyle = null;
-    }
-  }
-
   function stop() {
     picking = false;
+    if (host) host.style.pointerEvents = "none";
     if (outline) outline.style.display = "none";
-    setCrosshair(false);
   }
 
   function send(el) {
-    const json = JSON.stringify(contextFor(el));
-    const encoded = encodeURIComponent(json);
+    const encoded = encodeURIComponent(JSON.stringify(contextFor(el)));
     // A blocked navigation is the message channel; the host cancels it.
     location.href = "wf-annotate://a/?d=" + encoded;
   }
 
-  document.addEventListener(
-    "mousemove",
-    (e) => {
-      if (!picking || !e.isTrusted) return;
-      const el = e.target;
-      if (el && el.nodeType === 1 && el !== host) drawOutline(el);
-    },
-    true,
-  );
+  function onMove(e) {
+    if (!picking || !e.isTrusted) return;
+    const el = elementUnder(e.clientX, e.clientY);
+    if (el && el.nodeType === 1) drawOutline(el);
+  }
 
-  document.addEventListener(
-    "click",
-    (e) => {
-      if (!picking || !e.isTrusted) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const el = e.target;
-      stop();
-      if (el && el.nodeType === 1) send(el);
-    },
-    true,
-  );
+  function onClick(e) {
+    if (!picking || !e.isTrusted) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const el = elementUnder(e.clientX, e.clientY);
+    stop();
+    if (el && el.nodeType === 1) send(el);
+  }
 
   document.addEventListener(
     "keydown",
@@ -127,6 +121,6 @@
   window.__wfPickStart = function () {
     ensureOverlay();
     picking = true;
-    setCrosshair(true);
+    host.style.pointerEvents = "auto";
   };
 })();
