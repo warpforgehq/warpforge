@@ -172,10 +172,10 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
               type="button"
               onClick={() => setActive(tab.id)}
               className={cn(
-                "group flex w-[160px] shrink-0 items-center gap-1.5 rounded-t px-2.5 py-1.5 text-xs",
+                "group flex w-[160px] shrink-0 items-center gap-1.5 rounded-t border border-b-0 border-t-2 px-2.5 py-1.5 text-xs",
                 tab.id === activeId
-                  ? "bg-card"
-                  : "bg-transparent text-muted-foreground hover:bg-card/50",
+                  ? "border-border border-t-primary bg-muted text-foreground"
+                  : "border-transparent bg-card/40 text-muted-foreground hover:bg-muted/40",
               )}
             >
               <TabIcon url={tab.url} />
