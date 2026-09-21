@@ -1,11 +1,14 @@
 # .workspace.yaml — Warpforge project configuration
 name: warpforge
 
+ports:
+  range: "4400-4499"
+
 services:
   # Landing/docs site (Astro + Tailwind v4). Runs from the www/ subdir.
   web:
     command: cd www && bun run dev -- --force
-    port: 4321
+    port: 4400
     # env:
     #   DATABASE_URL: postgres://localhost:${db.port}/mydb
     # healthcheck:

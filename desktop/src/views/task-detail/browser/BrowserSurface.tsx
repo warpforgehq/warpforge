@@ -1,4 +1,13 @@
-import { ArrowLeft, ArrowRight, Globe, MousePointerClick, Plus, RotateCw, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Globe,
+  MousePointerClick,
+  Plus,
+  RotateCw,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -74,9 +83,11 @@ export function BrowserSurface({ onAnnotate, onShot, project, services }: Props)
   const [draft, setDraft] = useState("");
   const [editing, setEditing] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [stalledId, setStalledId] = useState<string | null>(null);
 
   const active = tabs.find((t) => t.id === activeId) ?? null;
   const onStart = !active || isStartUrl(active.url);
+  const unreachable = !!active && !onStart && stalledId === active.id;
 
   // Load a service URL or a typed address into the active tab. The webview is
   // created on first use (needs the placeholder's bounds), navigated after.
@@ -87,6 +98,7 @@ export function BrowserSurface({ onAnnotate, onShot, project, services }: Props)
     // Flip the tab off the start page now, so the viewport hook takes over the
     // new webview instead of waiting for the first navigation event.
     setTabUrl(activeId, url);
+    setStalledId((id) => (id === activeId ? null : id));
     if (!opened.current.has(activeId) && el) {
       opened.current.add(activeId);
       void browser.open(activeId, url, boundsOf(el));
@@ -98,6 +110,29 @@ export function BrowserSurface({ onAnnotate, onShot, project, services }: Props)
 
   // Pick mode belongs to the active tab; leaving it or switching tab ends it.
   useEffect(() => setPicking(false), [activeId]);
+
+  // The runtime reports Started/Finished but never Failed, so a refused
+  // connection just leaves the tab loading forever. If a load never settles,
+  // treat the page as unreachable and show an error instead of a blank webview.
+  useEffect(() => {
+    if (!active || onStart) return;
+    if (!active.loading) {
+      setStalledId((id) => (id === active.id ? null : id));
+      return;
+    }
+    const timer = setTimeout(() => {
+      setStalledId(active.id);
+      void browser.setVisible(active.id, false);
+    }, 15000);
+    return () => clearTimeout(timer);
+  }, [active, onStart]);
+
+  const retry = () => {
+    if (!activeId) return;
+    setStalledId(null);
+    void browser.setVisible(activeId, true);
+    void browser.reload(activeId);
+  };
 
   const togglePick = () => {
     if (!activeId) return;
@@ -119,8 +154,8 @@ export function BrowserSurface({ onAnnotate, onShot, project, services }: Props)
     void browser.open(active.id, active.url, boundsOf(el));
   }, [active]);
 
-  // No webview to position while the start page is showing.
-  useBrowserViewport(onStart ? null : activeId, pageRef);
+  // No webview to position while the start page or the error overlay is up.
+  useBrowserViewport(onStart || unreachable ? null : activeId, pageRef);
 
   // A picked element arrives as an event from the page; add it as a chip and,
   // when the composer takes images, a screenshot of it. The page's picker stops
@@ -288,6 +323,20 @@ export function BrowserSurface({ onAnnotate, onShot, project, services }: Props)
         {onStart && (
           <div className="absolute inset-0 bg-background">
             <StartPage services={services} onGo={go} />
+          </div>
+        )}
+        {unreachable && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background px-6 text-center">
+            <TriangleAlert className="size-8 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">This site can't be reached</p>
+              <p className="mt-1 break-all text-xs text-muted-foreground">
+                {toDisplayUrl(active?.url ?? "")} refused to connect or took too long.
+              </p>
+            </div>
+            <Button size="sm" variant="secondary" onClick={retry}>
+              <RotateCw className="size-3.5" /> Try again
+            </Button>
           </div>
         )}
       </div>
