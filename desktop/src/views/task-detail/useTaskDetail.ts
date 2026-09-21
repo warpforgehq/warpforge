@@ -266,9 +266,12 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     },
     [],
   );
-  const attachBrowserShot = useCallback((name: string, pngBase64: string) => {
-    composerRef.current?.attachImage(name, pngBase64);
-  }, []);
+  const setBrowserContextImage = useCallback(
+    (id: string, image: { name: string; base64: string }) => {
+      composerRef.current?.setContextImage(id, image);
+    },
+    [],
+  );
   const diffError = diffQuery.error?.message ?? resolveHunkMut.error?.message ?? null;
 
   const openTabs = useMemo(() => {
@@ -446,7 +449,7 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     activeSurface,
     appendLogsToChat,
     attachBrowserContext,
-    attachBrowserShot,
+    setBrowserContextImage,
     chatOnRight,
     childTrees,
     clearGotoLocation,

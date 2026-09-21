@@ -87,7 +87,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
     sendDiffToChat,
     appendLogsToChat,
     attachBrowserContext,
-    attachBrowserShot,
+    setBrowserContextImage,
     sendSelectionToChat,
     resolveSessionFilePath,
     handleWorkspaceResize,
@@ -310,7 +310,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
             <BrowserSurface
               project={task.project}
               onAnnotate={attachBrowserContext}
-              onShot={attachBrowserShot}
+              onShot={setBrowserContextImage}
             />
           )}
           {activeSurface === "pipeline" && (
