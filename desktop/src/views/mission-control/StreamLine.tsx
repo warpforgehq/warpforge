@@ -6,6 +6,11 @@ import { withOccurrenceKeys } from "@/lib/renderKeys";
 import { toolDisplayTitle } from "@/lib/toolDisplay";
 import { cn } from "@/lib/utils";
 
+import {
+  BrowserAnnotationCard,
+  hasAnnotation,
+  splitAnnotations,
+} from "../../components/BrowserAnnotationCard";
 import type { FileLinkResolver } from "../../components/Markdown";
 import { BufferedMarkdown, CollapsibleMarkdown, Markdown } from "../../components/Markdown";
 import { ThinkingBlock } from "../../components/ThinkingBlock";
@@ -235,7 +240,19 @@ export function StreamLine({
             compact && "text-xs px-2.5 py-1.5",
           )}
         >
-          {compact ? (
+          {hasAnnotation(update.text) ? (
+            splitAnnotations(update.text).map((part, i) =>
+              part.kind === "annotation" ? (
+                <BrowserAnnotationCard key={i} annotation={part.value} />
+              ) : (
+                part.value.trim() && (
+                  <Markdown key={i} resolveFilePath={resolveFilePath} onOpenFile={onOpenFile}>
+                    {part.value}
+                  </Markdown>
+                )
+              ),
+            )
+          ) : compact ? (
             <Markdown
               className="text-current"
               resolveFilePath={resolveFilePath}
