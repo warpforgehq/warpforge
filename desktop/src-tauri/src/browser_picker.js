@@ -118,9 +118,13 @@
     true,
   );
 
+  // Any navigation leaves pick mode, so a page change never strands the overlay.
+  window.addEventListener("pagehide", stop, true);
+
   window.__wfPickStart = function () {
     ensureOverlay();
     picking = true;
     host.style.pointerEvents = "auto";
   };
+  window.__wfPickStop = stop;
 })();

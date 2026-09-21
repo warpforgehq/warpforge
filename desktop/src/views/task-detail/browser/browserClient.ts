@@ -73,6 +73,9 @@ export const browser = {
   pick(tabId: string): Promise<void> {
     return call("browser_pick", { tabId });
   },
+  pickStop(tabId: string): Promise<void> {
+    return call("browser_pick_stop", { tabId });
+  },
 };
 
 async function subscribe<T>(event: string, handler: (payload: T) => void): Promise<() => void> {
