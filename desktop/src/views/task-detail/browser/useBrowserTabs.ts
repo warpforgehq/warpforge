@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { browser, onBrowserState, onBrowserTitle } from "./browserClient";
 import { loadBrowserSession, saveBrowserSession } from "./browserSession";
-import { toNavigationUrl } from "./browserUrl";
 
 export interface BrowserTab {
   id: string;
@@ -16,7 +15,13 @@ export interface BrowserTab {
   pos: number;
 }
 
-const HOME = "https://duckduckgo.com";
+/** A new tab shows the start page instead of loading a site; no native webview
+ *  exists until the user opens something. */
+export const BROWSER_START = "about:blank";
+
+export function isStartUrl(url: string): boolean {
+  return url === BROWSER_START || url.length === 0;
+}
 
 /** The id is the native webview label's suffix, prefixed with the project so a
  *  removed project's views can be closed as a group and never collide. */
@@ -39,7 +44,6 @@ export interface BrowserTabs {
   newTab: () => void;
   closeTab: (id: string) => void;
   setActive: (id: string) => void;
-  navigate: (input: string) => void;
   back: () => void;
   forward: () => void;
   reload: () => void;
@@ -59,7 +63,7 @@ export function useBrowserTabs(project: string): BrowserTabs {
         pos: 0,
       }));
     }
-    return [makeTab(project, HOME)];
+    return [makeTab(project, BROWSER_START)];
   });
   // A back/forward click is expected to move the position rather than push a
   // new entry; the next navigation event for that tab consumes this.
@@ -94,8 +98,15 @@ export function useBrowserTabs(project: string): BrowserTabs {
             pendingMove.current.delete(tabId);
             next.pos = Math.min(Math.max(t.pos + move, 0), t.entries.length - 1);
           } else if (url !== t.entries[t.pos]) {
-            next.entries = [...t.entries.slice(0, t.pos + 1), url];
-            next.pos = next.entries.length - 1;
+            if (isStartUrl(t.entries[t.pos])) {
+              // The first real load replaces the start entry, so back does not
+              // return to a blank page.
+              next.entries = [...t.entries];
+              next.entries[t.pos] = url;
+            } else {
+              next.entries = [...t.entries.slice(0, t.pos + 1), url];
+              next.pos = next.entries.length - 1;
+            }
           }
           return next;
         }),
@@ -116,7 +127,7 @@ export function useBrowserTabs(project: string): BrowserTabs {
   activeRef.current = activeId;
 
   const newTab = useCallback(() => {
-    const tab = makeTab(project, HOME);
+    const tab = makeTab(project, BROWSER_START);
     setTabs((list) => [...list, tab]);
     setActiveId(tab.id);
   }, [project]);
@@ -135,11 +146,6 @@ export function useBrowserTabs(project: string): BrowserTabs {
   }, []);
 
   const setActive = useCallback((id: string) => setActiveId(id), []);
-
-  const navigate = useCallback((input: string) => {
-    const id = activeRef.current;
-    if (id) void browser.navigate(id, toNavigationUrl(input));
-  }, []);
 
   const back = useCallback(() => {
     const id = activeRef.current;
@@ -166,18 +172,5 @@ export function useBrowserTabs(project: string): BrowserTabs {
   const canBack = !!active && active.pos > 0;
   const canForward = !!active && active.pos < active.entries.length - 1;
 
-  return {
-    tabs,
-    activeId,
-    canBack,
-    canForward,
-    newTab,
-    closeTab,
-    setActive,
-    navigate,
-    back,
-    forward,
-    reload,
-    stop,
-  };
+  return { tabs, activeId, canBack, canForward, newTab, closeTab, setActive, back, forward, reload, stop };
 }

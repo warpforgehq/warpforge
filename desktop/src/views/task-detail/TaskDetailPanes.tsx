@@ -309,6 +309,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
           {activeSurface === "browser" && (
             <BrowserSurface
               project={task.project}
+              services={services}
               onAnnotate={attachBrowserContext}
               onShot={setBrowserContextImage}
             />
