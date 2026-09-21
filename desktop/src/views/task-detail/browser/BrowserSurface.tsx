@@ -49,8 +49,20 @@ interface Props {
 }
 
 export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
-  const { activeId, back, closeTab, forward, navigate, newTab, reload, setActive, stop, tabs } =
-    useBrowserTabs(project);
+  const {
+    activeId,
+    back,
+    canBack,
+    canForward,
+    closeTab,
+    forward,
+    navigate,
+    newTab,
+    reload,
+    setActive,
+    stop,
+    tabs,
+  } = useBrowserTabs(project);
   const pageRef = useRef<HTMLDivElement | null>(null);
   const addressRef = useRef<HTMLInputElement | null>(null);
   const opened = useRef(new Set<string>());
@@ -189,10 +201,16 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
       </div>
 
       <div className="flex items-center gap-1 border-b bg-card px-2 py-1.5">
-        <Button size="sm" variant="ghost" aria-label="Back" onClick={back}>
+        <Button size="sm" variant="ghost" aria-label="Back" disabled={!canBack} onClick={back}>
           <ArrowLeft className="size-4" />
         </Button>
-        <Button size="sm" variant="ghost" aria-label="Forward" onClick={forward}>
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-label="Forward"
+          disabled={!canForward}
+          onClick={forward}
+        >
           <ArrowRight className="size-4" />
         </Button>
         <Button
