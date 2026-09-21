@@ -39,31 +39,47 @@ export const AttachmentBar = memo(function AttachmentBar({
 }: AttachmentBarProps) {
   return (
     <div className="flex flex-wrap gap-1.5 border-b border-input/50 px-2.5 py-2">
-      {contexts.map((c) => (
-        <div
-          key={c.id}
-          className="group flex items-center gap-1.5 rounded-md border bg-secondary/60 py-1 pl-2 pr-1 text-xs"
-        >
-          {c.image ? (
+      {contexts.map((c) =>
+        c.image ? (
+          <div
+            key={c.id}
+            className="group relative w-44 overflow-hidden rounded-md border bg-secondary/60"
+          >
             <img
               alt=""
               src={`data:image/png;base64,${c.image.base64}`}
-              className="h-5 w-5 shrink-0 rounded-sm border object-cover"
+              className="h-24 w-full border-b object-cover"
             />
-          ) : (
-            <MousePointerClick className="size-3.5 shrink-0 text-info" />
-          )}
-          <span className="max-w-[220px] truncate">{c.label}</span>
-          <button
-            type="button"
-            aria-label={`Remove ${c.label}`}
-            className="rounded p-0.5 hover:bg-muted"
-            onClick={() => onRemoveContext(c.id)}
+            <div className="line-clamp-2 px-1.5 py-1 text-[11px] leading-snug" title={c.label}>
+              {c.label}
+            </div>
+            <button
+              type="button"
+              aria-label={`Remove ${c.label}`}
+              onClick={() => onRemoveContext(c.id)}
+              className="absolute right-1 top-1 rounded bg-background/90 p-1 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3" />
+            </button>
+          </div>
+        ) : (
+          <div
+            key={c.id}
+            className="group flex items-center gap-1.5 rounded-md border bg-secondary/60 py-1 pl-2 pr-1 text-xs"
           >
-            <X className="size-3" />
-          </button>
-        </div>
-      ))}
+            <MousePointerClick className="size-3.5 shrink-0 text-info" />
+            <span className="max-w-[220px] truncate">{c.label}</span>
+            <button
+              type="button"
+              aria-label={`Remove ${c.label}`}
+              className="rounded p-0.5 hover:bg-muted"
+              onClick={() => onRemoveContext(c.id)}
+            >
+              <X className="size-3" />
+            </button>
+          </div>
+        ),
+      )}
       {diffs.map((a) => (
         <div
           key={a.id}
