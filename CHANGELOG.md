@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.21.0
+
+### Minor Changes
+
+- [#51](https://github.com/warpforgehq/warpforge/pull/51) [`d1daa7a`](https://github.com/warpforgehq/warpforge/commit/d1daa7ad07b1f1b5a761fc02cd852369458f0432) Thanks [@ephor](https://github.com/ephor)! - A task now has a Browser surface that works like a real browser — tabs, an address bar, back, forward and reload — so you can open docs, a dashboard, or the app you are building without leaving the workspace. Type a URL or a search and it goes; open as many tabs as you need. You stay signed in: log into a site once and the session is kept, so the next time you open the browser you are already there. Available in the desktop app.
+
+### Patch Changes
+
+- [#51](https://github.com/warpforgehq/warpforge/pull/51) [`9558307`](https://github.com/warpforgehq/warpforge/commit/9558307f02bac82a39f2624069276e06f3775028) Thanks [@ephor](https://github.com/ephor)! - The in-app browser now has a single address bar. The start page used to show its own search box on top of the toolbar's, which was confusing and only opened links; now typing anywhere goes through the one address bar at the top, and the cursor lands there automatically on a new tab.
+
+- [#51](https://github.com/warpforgehq/warpforge/pull/51) [`d075e89`](https://github.com/warpforgehq/warpforge/commit/d075e8995f3075cdc343be720e7b66e3c7b15d95) Thanks [@ephor](https://github.com/ephor)! - The browser's new-tab page no longer looks empty and stranded when a project has no running services. It now shows a centered prompt to type a URL or start a service, and once services are running they appear centered as a tidy quick-link list.
+
 ## 0.20.2
 
 ### Patch Changes
