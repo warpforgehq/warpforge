@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, MousePointerClick, Plus, RotateCw, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Globe, MousePointerClick, Plus, RotateCw, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,21 @@ function boundsOf(el: HTMLElement): BrowserBounds {
   return { x: r.x, y: r.y, width: r.width, height: r.height };
 }
 
+/** The origin's favicon, falling back to a globe when the site has none. */
+function TabIcon({ url }: { url: string }) {
+  const [failed, setFailed] = useState(false);
+  let src: string | null = null;
+  try {
+    src = `${new URL(url).origin}/favicon.ico`;
+  } catch {
+    src = null;
+  }
+  if (!src || failed) return <Globe className="size-3.5 shrink-0 text-muted-foreground" />;
+  return (
+    <img alt="" src={src} onError={() => setFailed(true)} className="size-3.5 shrink-0 rounded-sm" />
+  );
+}
+
 interface Props {
   project: string;
   /** Adds a picked element to the agent's chat composer as a context chip. */
@@ -37,6 +52,7 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
   const { activeId, back, closeTab, forward, navigate, newTab, reload, setActive, stop, tabs } =
     useBrowserTabs(project);
   const pageRef = useRef<HTMLDivElement | null>(null);
+  const addressRef = useRef<HTMLInputElement | null>(null);
   const opened = useRef(new Set<string>());
   const [draft, setDraft] = useState("");
   const [editing, setEditing] = useState(false);
@@ -108,6 +124,23 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
     if (!editing) setDraft(active ? toDisplayUrl(active.url) : "");
   }, [active, editing]);
 
+  // Browser keyboard shortcuts, live while the surface is mounted.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return;
+      if (e.key === "l") {
+        e.preventDefault();
+        addressRef.current?.focus();
+        addressRef.current?.select();
+      } else if (e.key === "t") {
+        e.preventDefault();
+        newTab();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [newTab]);
+
   if (!IS_TAURI) {
     return (
       <EmptyState
@@ -133,9 +166,8 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
                   : "bg-transparent text-muted-foreground hover:bg-card/50",
               )}
             >
-              <span className="min-w-0 flex-1 truncate text-left">
-                {tab.loading ? "Loading…" : tab.title}
-              </span>
+              <TabIcon url={tab.url} />
+              <span className="min-w-0 flex-1 truncate text-left">{tab.title}</span>
               <span
                 role="button"
                 tabIndex={-1}
@@ -184,6 +216,7 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
           </Button>
         )}
         <Input
+          ref={addressRef}
           value={draft}
           placeholder="Search or enter address"
           spellCheck={false}
@@ -198,6 +231,11 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
             }
           }}
         />
+      </div>
+
+      {/* Indeterminate progress while the active tab loads. */}
+      <div className="h-0.5 shrink-0 overflow-hidden bg-transparent">
+        {active?.loading && <div className="h-full w-1/3 animate-browser-progress bg-primary" />}
       </div>
 
       {/* The native page view is painted over this rectangle. It stays empty. */}
