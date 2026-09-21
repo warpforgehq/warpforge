@@ -1,9 +1,9 @@
-import { FileDiff, FileMinus, FilePen, FilePlus, X } from "lucide-react";
+import { FileDiff, FileMinus, FilePen, FilePlus, MousePointerClick, X } from "lucide-react";
 import { memo } from "react";
 
 import type { AttachmentDraft } from "../../lib/fileAttachments";
 import type { FileDiff as FileDiffType } from "../../protocol";
-import type { ComposerAttachment } from "../Composer";
+import type { ComposerAttachment, ContextChip } from "../Composer";
 import { DocumentAttachmentChip } from "./DocumentAttachmentChip";
 import { ImageAttachmentPreview } from "./ImageAttachmentPreview";
 
@@ -23,18 +23,34 @@ const statusIcon = (s: FileDiffType["status"]) => {
 interface AttachmentBarProps {
   diffs: ComposerAttachment[];
   attachments: AttachmentDraft[];
+  contexts: ContextChip[];
   onRemoveDiff: (id: string) => void;
   onRemoveAttachment: (attachment: AttachmentDraft) => void;
+  onRemoveContext: (id: string) => void;
 }
 
 export const AttachmentBar = memo(function AttachmentBar({
   diffs,
   attachments,
+  contexts,
   onRemoveDiff,
   onRemoveAttachment,
+  onRemoveContext,
 }: AttachmentBarProps) {
   return (
     <div className="flex flex-wrap gap-1.5 border-b border-input/50 px-2.5 py-2">
+      {contexts.map((c) => (
+        <div
+          key={c.id}
+          className="group flex items-center gap-1.5 rounded-md border bg-secondary/60 px-2 py-1 text-xs"
+        >
+          <MousePointerClick className="size-3.5 text-info" />
+          <span className="max-w-[220px] truncate">{c.label}</span>
+          <button type="button" aria-label={`Remove ${c.label}`} onClick={() => onRemoveContext(c.id)}>
+            <X className="size-3" />
+          </button>
+        </div>
+      ))}
       {diffs.map((a) => (
         <div
           key={a.id}

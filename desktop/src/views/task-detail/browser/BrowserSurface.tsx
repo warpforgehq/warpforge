@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { IS_TAURI } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
-import { browser, onBrowserAnnotation, type BrowserBounds } from "./browserClient";
+import { browser, onBrowserAnnotation, type BrowserAnnotation, type BrowserBounds } from "./browserClient";
 import { toDisplayUrl } from "./browserUrl";
-import { formatAnnotation } from "./formatAnnotation";
+import { annotationLabel, formatAnnotation } from "./formatAnnotation";
 import { useBrowserTabs } from "./useBrowserTabs";
 import { useBrowserViewport } from "./useBrowserViewport";
 
@@ -20,11 +20,11 @@ function boundsOf(el: HTMLElement): BrowserBounds {
 
 interface Props {
   project: string;
-  /** Hands a picked element's context to the agent's chat composer. */
-  onSendToChat?: (text: string) => void;
+  /** Adds a picked element to the agent's chat composer as a context chip. */
+  onAnnotate?: (chip: { id: string; label: string; body: string }) => void;
 }
 
-export function BrowserSurface({ onSendToChat, project }: Props) {
+export function BrowserSurface({ onAnnotate, project }: Props) {
   const { activeId, back, closeTab, forward, navigate, newTab, reload, setActive, stop, tabs } =
     useBrowserTabs(project);
   const pageRef = useRef<HTMLDivElement | null>(null);
@@ -45,13 +45,15 @@ export function BrowserSurface({ onSendToChat, project }: Props) {
 
   useBrowserViewport(activeId, pageRef);
 
-  // A picked element arrives as an event from the page; hand it to the composer.
+  // A picked element arrives as an event from the page; add it as a chip.
   useEffect(() => {
     const sub = onBrowserAnnotation(({ annotation, tabId }) => {
-      if (tabId.startsWith(`${project}:`)) onSendToChat?.(formatAnnotation(annotation));
+      if (!tabId.startsWith(`${project}:`)) return;
+      const a: BrowserAnnotation = annotation;
+      onAnnotate?.({ id: crypto.randomUUID(), label: annotationLabel(a), body: formatAnnotation(a) });
     });
     return () => void sub.then((off) => off());
-  }, [project, onSendToChat]);
+  }, [project, onAnnotate]);
 
   // The address bar follows the page unless the user is typing in it.
   useEffect(() => {
@@ -121,7 +123,7 @@ export function BrowserSurface({ onSendToChat, project }: Props) {
         >
           {active?.loading ? <X className="size-4" /> : <RotateCw className="size-4" />}
         </Button>
-        {onSendToChat && (
+        {onAnnotate && (
           <Button
             size="sm"
             variant="ghost"

@@ -65,9 +65,22 @@
     };
   }
 
+  let cursorStyle = null;
+  function setCrosshair(on) {
+    if (on && !cursorStyle) {
+      cursorStyle = document.createElement("style");
+      cursorStyle.textContent = "*{cursor:crosshair !important}";
+      document.documentElement.appendChild(cursorStyle);
+    } else if (!on && cursorStyle) {
+      cursorStyle.remove();
+      cursorStyle = null;
+    }
+  }
+
   function stop() {
     picking = false;
     if (outline) outline.style.display = "none";
+    setCrosshair(false);
   }
 
   function send(el) {
@@ -114,5 +127,6 @@
   window.__wfPickStart = function () {
     ensureOverlay();
     picking = true;
+    setCrosshair(true);
   };
 })();
