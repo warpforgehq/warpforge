@@ -278,10 +278,11 @@ export function BrowserSurface({ onAnnotate, onShot, project, services }: Props)
       </div>
 
       {/* The native page view is painted over this rectangle; the start page
-          shows here instead while the tab has loaded nothing yet. */}
-      <div ref={pageRef} className="relative min-h-0 flex-1 bg-white">
+          shows here instead while the tab has loaded nothing yet. The base is
+          dark, not white, so no white flashes before a page paints. */}
+      <div ref={pageRef} className="relative min-h-0 flex-1 bg-background">
         {onStart && (
-          <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-background">
             <StartPage services={services} onGo={go} />
           </div>
         )}
