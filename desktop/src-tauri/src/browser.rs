@@ -162,11 +162,13 @@ pub fn browser_pick_stop(app: AppHandle, tab_id: String) -> Result<(), String> {
     )
 }
 
-/// Screenshot the given viewport rect of the tab, emitted as `browser:shot`.
+/// Screenshot the given viewport rect of the tab, emitted as `browser:shot`
+/// carrying `captureId` so the caller can pair it with the annotation it made.
 #[tauri::command]
 pub fn browser_capture_element(
     app: AppHandle,
     tab_id: String,
+    capture_id: String,
     x: f64,
     y: f64,
     width: f64,
@@ -175,7 +177,7 @@ pub fn browser_capture_element(
     let webview = app
         .get_webview(&label_for(&tab_id))
         .ok_or_else(|| "no such browser tab".to_string())?;
-    crate::browser_capture::capture_element(&app, &webview, tab_id, (x, y, width, height));
+    crate::browser_capture::capture_element(&app, &webview, capture_id, (x, y, width, height));
     Ok(())
 }
 

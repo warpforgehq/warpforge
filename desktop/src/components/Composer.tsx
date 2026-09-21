@@ -9,7 +9,6 @@ import {
   useState,
 } from "react";
 
-import { base64ToBytes } from "@/daemon";
 import { cn } from "@/lib/utils";
 
 import {
@@ -46,16 +45,18 @@ export interface ComposerAttachment {
   removedLines: number;
 }
 /** A pre-formatted block shown as a chip and appended to the message on send —
- *  the composer stays generic and never learns what the context is about. */
+ *  the composer stays generic and never learns what the context is about. An
+ *  optional image rides inside the same chip and is sent as an attachment. */
 export interface ContextChip {
   id: string;
   label: string;
   body: string;
+  image?: { name: string; base64: string };
 }
 export interface ComposerHandle {
   attachDiff: (file: FileDiffType, formattedContent: string) => void;
   attachContext: (chip: ContextChip) => void;
-  attachImage: (name: string, pngBase64: string) => void;
+  setContextImage: (id: string, image: { name: string; base64: string }) => void;
   appendDraft: (text: string) => void;
   submit: () => void;
 }
@@ -171,16 +172,11 @@ export const Composer = forwardRef<
         setContexts((prev) => [...prev, chip]);
         textRef.current?.focus();
       },
-      attachImage(name, pngBase64) {
-        // A page screenshot only helps an agent that reads images; drop it
-        // silently otherwise, the annotation chip still carries the text.
+      setContextImage(id, image) {
+        // A screenshot only helps an agent that reads images; a text-only agent
+        // keeps the chip without one.
         if (!imageSupported) return;
-        // Copy into a fresh ArrayBuffer so the File part is not typed over a
-        // possibly-shared buffer.
-        const bytes = base64ToBytes(pngBase64);
-        const buf = new Uint8Array(bytes.length);
-        buf.set(bytes);
-        void addFiles([new File([buf], name, { type: "image/png" })], { imageSupported });
+        setContexts((prev) => prev.map((c) => (c.id === id ? { ...c, image } : c)));
       },
       appendDraft(text) {
         setValue((prev) => {
@@ -261,6 +257,14 @@ export const Composer = forwardRef<
               ...(fileRef.range ? { range: fileRef.range } : {}),
             })),
             ...attachments.map((attachment) => attachment.attachment),
+            ...contexts
+              .filter((c) => c.image)
+              .map((c) => ({
+                type: "image" as const,
+                name: c.image!.name,
+                mimeType: "image/png" as const,
+                data: c.image!.base64,
+              })),
           ],
         });
         setValue("");

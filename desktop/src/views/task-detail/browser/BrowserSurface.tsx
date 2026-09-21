@@ -29,8 +29,8 @@ interface Props {
   project: string;
   /** Adds a picked element to the agent's chat composer as a context chip. */
   onAnnotate?: (chip: { id: string; label: string; body: string }) => void;
-  /** Attaches a screenshot of the picked element to the composer. */
-  onShot?: (name: string, pngBase64: string) => void;
+  /** Fills a chip's screenshot in once the capture returns. */
+  onShot?: (chipId: string, image: { name: string; base64: string }) => void;
 }
 
 export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
@@ -76,21 +76,23 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
     const sub = onBrowserAnnotation(({ annotation, tabId }) => {
       if (!tabId.startsWith(`${project}:`)) return;
       const a: BrowserAnnotation = annotation;
-      onAnnotate?.({ id: crypto.randomUUID(), label: annotationLabel(a), body: formatAnnotation(a) });
-      if (onShot) void browser.captureElement(tabId, a.rect);
+      const id = crypto.randomUUID();
+      onAnnotate?.({ id, label: annotationLabel(a), body: formatAnnotation(a) });
+      // The capture id is the chip id, so the screenshot lands in this chip.
+      if (onShot) void browser.captureElement(tabId, id, a.rect);
       setPicking(false);
     });
     return () => void sub.then((off) => off());
   }, [project, onAnnotate, onShot]);
 
-  // The screenshot arrives asynchronously after the capture request.
+  // The screenshot arrives asynchronously and fills in its chip.
   useEffect(() => {
     if (!onShot) return;
-    const sub = onBrowserShot(({ pngBase64, tabId }) => {
-      if (tabId.startsWith(`${project}:`)) onShot(`browser-${Date.now()}.png`, pngBase64);
+    const sub = onBrowserShot(({ captureId, pngBase64 }) => {
+      onShot(captureId, { name: `element-${Date.now()}.png`, base64: pngBase64 });
     });
     return () => void sub.then((off) => off());
-  }, [project, onShot]);
+  }, [onShot]);
 
   // A navigation (back/forward/reload/link) drops pick mode in the page, so the
   // toggle follows it back to off.

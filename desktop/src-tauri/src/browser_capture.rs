@@ -8,7 +8,7 @@ use tauri::{AppHandle, Webview};
 pub fn capture_element(
     app: &AppHandle,
     webview: &Webview,
-    tab_id: String,
+    capture_id: String,
     rect: (f64, f64, f64, f64),
 ) {
     use base64::Engine;
@@ -51,7 +51,7 @@ pub fn capture_element(
             let b64 = base64::engine::general_purpose::STANDARD.encode(&png);
             let _ = app.emit(
                 "browser:shot",
-                serde_json::json!({ "tabId": tab_id, "pngBase64": b64 }),
+                serde_json::json!({ "captureId": capture_id, "pngBase64": b64 }),
             );
         });
 
@@ -63,7 +63,7 @@ pub fn capture_element(
 pub fn capture_element(
     _app: &AppHandle,
     _webview: &Webview,
-    _tab_id: String,
+    _capture_id: String,
     _rect: (f64, f64, f64, f64),
 ) {
 }

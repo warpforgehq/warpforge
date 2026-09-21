@@ -42,11 +42,24 @@ export const AttachmentBar = memo(function AttachmentBar({
       {contexts.map((c) => (
         <div
           key={c.id}
-          className="group flex items-center gap-1.5 rounded-md border bg-secondary/60 px-2 py-1 text-xs"
+          className="group flex items-center gap-1.5 rounded-md border bg-secondary/60 py-1 pl-2 pr-1 text-xs"
         >
-          <MousePointerClick className="size-3.5 text-info" />
+          {c.image ? (
+            <img
+              alt=""
+              src={`data:image/png;base64,${c.image.base64}`}
+              className="h-5 w-5 shrink-0 rounded-sm border object-cover"
+            />
+          ) : (
+            <MousePointerClick className="size-3.5 shrink-0 text-info" />
+          )}
           <span className="max-w-[220px] truncate">{c.label}</span>
-          <button type="button" aria-label={`Remove ${c.label}`} onClick={() => onRemoveContext(c.id)}>
+          <button
+            type="button"
+            aria-label={`Remove ${c.label}`}
+            className="rounded p-0.5 hover:bg-muted"
+            onClick={() => onRemoveContext(c.id)}
+          >
             <X className="size-3" />
           </button>
         </div>

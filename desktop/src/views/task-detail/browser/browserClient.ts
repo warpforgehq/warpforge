@@ -30,7 +30,7 @@ export interface BrowserAnnotation {
 }
 
 export interface BrowserShotEvent {
-  tabId: string;
+  captureId: string;
   pngBase64: string;
 }
 
@@ -84,9 +84,10 @@ export const browser = {
   },
   captureElement(
     tabId: string,
+    captureId: string,
     rect: { x: number; y: number; width: number; height: number },
   ): Promise<void> {
-    return call("browser_capture_element", { tabId, ...rect });
+    return call("browser_capture_element", { tabId, captureId, ...rect });
   },
 };
 
