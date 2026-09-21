@@ -111,6 +111,12 @@ export function BrowserSurface({ onAnnotate, onShot, project, services }: Props)
   // Pick mode belongs to the active tab; leaving it or switching tab ends it.
   useEffect(() => setPicking(false), [activeId]);
 
+  // On the start page there is nothing to click but the address bar, so land
+  // the cursor there instead of leaving the tab with no focus.
+  useEffect(() => {
+    if (onStart) addressRef.current?.focus();
+  }, [onStart, activeId]);
+
   // The runtime reports Started/Finished but never Failed, so a refused
   // connection just leaves the tab loading forever. If a load never settles,
   // treat the page as unreachable and show an error instead of a blank webview.
