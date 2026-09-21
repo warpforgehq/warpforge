@@ -152,6 +152,16 @@ pub fn browser_pick(app: AppHandle, tab_id: String) -> Result<(), String> {
     )
 }
 
+/// Leave element-pick mode without choosing anything.
+#[tauri::command]
+pub fn browser_pick_stop(app: AppHandle, tab_id: String) -> Result<(), String> {
+    eval(
+        &app,
+        &tab_id,
+        "window.__wfPickStop && window.__wfPickStop()",
+    )
+}
+
 #[tauri::command]
 pub fn browser_navigate(app: AppHandle, tab_id: String, url: String) -> Result<(), String> {
     let target = parse_url(&url)?;

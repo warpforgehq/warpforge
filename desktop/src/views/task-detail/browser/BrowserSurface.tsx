@@ -7,7 +7,13 @@ import { Input } from "@/components/ui/input";
 import { IS_TAURI } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
-import { browser, onBrowserAnnotation, type BrowserAnnotation, type BrowserBounds } from "./browserClient";
+import {
+  browser,
+  onBrowserAnnotation,
+  onBrowserState,
+  type BrowserAnnotation,
+  type BrowserBounds,
+} from "./browserClient";
 import { toDisplayUrl } from "./browserUrl";
 import { annotationLabel, formatAnnotation } from "./formatAnnotation";
 import { useBrowserTabs } from "./useBrowserTabs";
@@ -31,8 +37,23 @@ export function BrowserSurface({ onAnnotate, project }: Props) {
   const opened = useRef(new Set<string>());
   const [draft, setDraft] = useState("");
   const [editing, setEditing] = useState(false);
+  const [picking, setPicking] = useState(false);
 
   const active = tabs.find((t) => t.id === activeId) ?? null;
+
+  // Pick mode belongs to the active tab; leaving it or switching tab ends it.
+  useEffect(() => setPicking(false), [activeId]);
+
+  const togglePick = () => {
+    if (!activeId) return;
+    if (picking) {
+      void browser.pickStop(activeId);
+      setPicking(false);
+    } else {
+      void browser.pick(activeId);
+      setPicking(true);
+    }
+  };
 
   // Create the native webview the first time a tab is shown; later activations
   // are handled by the viewport hook, which must not re-navigate.
@@ -45,15 +66,26 @@ export function BrowserSurface({ onAnnotate, project }: Props) {
 
   useBrowserViewport(activeId, pageRef);
 
-  // A picked element arrives as an event from the page; add it as a chip.
+  // A picked element arrives as an event from the page; add it as a chip. The
+  // page's picker stops itself after a pick, so the toggle returns to off.
   useEffect(() => {
     const sub = onBrowserAnnotation(({ annotation, tabId }) => {
       if (!tabId.startsWith(`${project}:`)) return;
       const a: BrowserAnnotation = annotation;
       onAnnotate?.({ id: crypto.randomUUID(), label: annotationLabel(a), body: formatAnnotation(a) });
+      setPicking(false);
     });
     return () => void sub.then((off) => off());
   }, [project, onAnnotate]);
+
+  // A navigation (back/forward/reload/link) drops pick mode in the page, so the
+  // toggle follows it back to off.
+  useEffect(() => {
+    const sub = onBrowserState(({ loading, tabId }) => {
+      if (loading && tabId === activeId) setPicking(false);
+    });
+    return () => void sub.then((off) => off());
+  }, [activeId]);
 
   // The address bar follows the page unless the user is typing in it.
   useEffect(() => {
@@ -126,10 +158,11 @@ export function BrowserSurface({ onAnnotate, project }: Props) {
         {onAnnotate && (
           <Button
             size="sm"
-            variant="ghost"
-            aria-label="Point out an element to the agent"
-            title="Point out an element to the agent"
-            onClick={() => activeId && void browser.pick(activeId)}
+            variant={picking ? "default" : "ghost"}
+            aria-pressed={picking}
+            aria-label={picking ? "Cancel picking (Esc)" : "Point out an element to the agent"}
+            title={picking ? "Cancel picking (Esc)" : "Point out an element to the agent"}
+            onClick={togglePick}
           >
             <MousePointerClick className="size-4" />
           </Button>
