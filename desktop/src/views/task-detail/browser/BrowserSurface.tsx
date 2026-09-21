@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { IS_TAURI } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
+import type { ServiceInfo } from "../../../protocol";
+
 import {
   browser,
   onBrowserAnnotation,
@@ -15,9 +17,10 @@ import {
   type BrowserAnnotation,
   type BrowserBounds,
 } from "./browserClient";
-import { toDisplayUrl } from "./browserUrl";
+import { toDisplayUrl, toNavigationUrl } from "./browserUrl";
 import { annotationLabel, formatAnnotation } from "./formatAnnotation";
-import { useBrowserTabs } from "./useBrowserTabs";
+import { StartPage } from "./StartPage";
+import { isStartUrl, useBrowserTabs } from "./useBrowserTabs";
 import { useBrowserViewport } from "./useBrowserViewport";
 
 function boundsOf(el: HTMLElement): BrowserBounds {
@@ -42,13 +45,15 @@ function TabIcon({ url }: { url: string }) {
 
 interface Props {
   project: string;
+  /** Running dev services of the project, offered on the start page. */
+  services: ServiceInfo[];
   /** Adds a picked element to the agent's chat composer as a context chip. */
   onAnnotate?: (chip: { id: string; label: string; body: string }) => void;
   /** Fills a chip's screenshot in once the capture returns. */
   onShot?: (chipId: string, image: { name: string; base64: string }) => void;
 }
 
-export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
+export function BrowserSurface({ onAnnotate, onShot, project, services }: Props) {
   const {
     activeId,
     back,
@@ -56,7 +61,6 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
     canForward,
     closeTab,
     forward,
-    navigate,
     newTab,
     reload,
     setActive,
@@ -71,6 +75,22 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
   const [picking, setPicking] = useState(false);
 
   const active = tabs.find((t) => t.id === activeId) ?? null;
+  const onStart = !active || isStartUrl(active.url);
+
+  // Load a service URL or a typed address into the active tab. The webview is
+  // created on first use (needs the placeholder's bounds), navigated after.
+  const go = (input: string) => {
+    if (!activeId) return;
+    const url = toNavigationUrl(input);
+    const el = pageRef.current;
+    if (!opened.current.has(activeId) && el) {
+      opened.current.add(activeId);
+      void browser.open(activeId, url, boundsOf(el));
+    } else {
+      void browser.navigate(activeId, url);
+    }
+    setDraft("");
+  };
 
   // Pick mode belongs to the active tab; leaving it or switching tab ends it.
   useEffect(() => setPicking(false), [activeId]);
@@ -86,16 +106,17 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
     }
   };
 
-  // Create the native webview the first time a tab is shown; later activations
-  // are handled by the viewport hook, which must not re-navigate.
+  // Open the webview for a tab that already has a real URL (e.g. a restored
+  // session). A start-page tab has no webview until the user opens something.
   useEffect(() => {
     const el = pageRef.current;
-    if (!active || !el || opened.current.has(active.id)) return;
+    if (!active || !el || isStartUrl(active.url) || opened.current.has(active.id)) return;
     opened.current.add(active.id);
     void browser.open(active.id, active.url, boundsOf(el));
   }, [active]);
 
-  useBrowserViewport(activeId, pageRef);
+  // No webview to position while the start page is showing.
+  useBrowserViewport(onStart ? null : activeId, pageRef);
 
   // A picked element arrives as an event from the page; add it as a chip and,
   // when the composer takes images, a screenshot of it. The page's picker stops
@@ -244,7 +265,7 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
           onBlur={() => setEditing(false)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              navigate(draft);
+              go(draft);
               e.currentTarget.blur();
             }
           }}
@@ -256,8 +277,15 @@ export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
         {active?.loading && <div className="h-full w-1/3 animate-browser-progress bg-primary" />}
       </div>
 
-      {/* The native page view is painted over this rectangle. It stays empty. */}
-      <div ref={pageRef} className="min-h-0 flex-1 bg-white" />
+      {/* The native page view is painted over this rectangle; the start page
+          shows here instead while the tab has loaded nothing yet. */}
+      <div ref={pageRef} className="relative min-h-0 flex-1 bg-white">
+        {onStart && (
+          <div className="absolute inset-0">
+            <StartPage services={services} onGo={go} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
