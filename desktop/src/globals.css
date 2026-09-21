@@ -74,6 +74,9 @@
   /* Accordion animations (from shadcn) */
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  /* Indeterminate browser loading bar. */
+  --animate-browser-progress: browser-progress 1.1s ease-in-out infinite;
 }
 
 /* ============================================================
@@ -122,6 +125,14 @@
   }
   to {
     height: 0;
+  }
+}
+@keyframes browser-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
   }
 }
 
