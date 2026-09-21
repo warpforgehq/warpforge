@@ -44,8 +44,16 @@ export interface ComposerAttachment {
   addedLines: number;
   removedLines: number;
 }
+/** A pre-formatted block shown as a chip and appended to the message on send —
+ *  the composer stays generic and never learns what the context is about. */
+export interface ContextChip {
+  id: string;
+  label: string;
+  body: string;
+}
 export interface ComposerHandle {
   attachDiff: (file: FileDiffType, formattedContent: string) => void;
+  attachContext: (chip: ContextChip) => void;
   appendDraft: (text: string) => void;
   submit: () => void;
 }
@@ -96,6 +104,7 @@ export const Composer = forwardRef<
     const [caret, setCaret] = useState(0);
     const [menuIndex, setMenuIndex] = useState(0);
     const [diffs, setDiffs] = useState<ComposerAttachment[]>([]);
+    const [contexts, setContexts] = useState<ContextChip[]>([]);
     const [sending, setSending] = useState(false);
     const [stopping, setStopping] = useState(false);
     const [dragging, setDragging] = useState(false);
@@ -117,6 +126,10 @@ export const Composer = forwardRef<
 
     const removeDiff = useCallback((id: string) => {
       setDiffs((prev) => prev.filter((diff) => diff.id !== id));
+    }, []);
+
+    const removeContext = useCallback((id: string) => {
+      setContexts((prev) => prev.filter((c) => c.id !== id));
     }, []);
 
     const attach = useCallback(
@@ -150,6 +163,10 @@ export const Composer = forwardRef<
             ),
           },
         ]);
+        textRef.current?.focus();
+      },
+      attachContext(chip) {
+        setContexts((prev) => [...prev, chip]);
         textRef.current?.focus();
       },
       appendDraft(text) {
@@ -210,9 +227,15 @@ export const Composer = forwardRef<
 
     async function send() {
       const text = value.trim();
-      if ((!text && diffs.length === 0 && attachments.length === 0) || disabled || sending) return;
+      if (
+        (!text && diffs.length === 0 && attachments.length === 0 && contexts.length === 0) ||
+        disabled ||
+        sending
+      )
+        return;
       const parts = text ? [text] : [];
       diffs.forEach((diff) => parts.push(`\`\`\`diff\n${diff.content}\n\`\`\``));
+      contexts.forEach((c) => parts.push(c.body));
       setSending(true);
       setError(null);
       try {
@@ -229,6 +252,7 @@ export const Composer = forwardRef<
         });
         setValue("");
         setDiffs([]);
+        setContexts([]);
         clearAttachments();
         setCaret(0);
       } catch (cause) {
@@ -321,7 +345,7 @@ export const Composer = forwardRef<
       }
     };
 
-    const hasSubmission = !!(value.trim() || diffs.length || attachments.length);
+    const hasSubmission = !!(value.trim() || diffs.length || attachments.length || contexts.length);
     const canSend = hasSubmission && !disabled && !sending;
     const action = onCancel && !hasSubmission ? "stop" : "send";
     return (
@@ -388,12 +412,14 @@ export const Composer = forwardRef<
               {refDrag ? "Drop to attach file as context" : "Drop files to attach"}
             </div>
           )}
-          {(diffs.length > 0 || attachments.length > 0) && (
+          {(diffs.length > 0 || attachments.length > 0 || contexts.length > 0) && (
             <AttachmentBar
               diffs={diffs}
               attachments={attachments}
+              contexts={contexts}
               onRemoveDiff={removeDiff}
               onRemoveAttachment={removeAttachment}
+              onRemoveContext={removeContext}
             />
           )}
           <textarea

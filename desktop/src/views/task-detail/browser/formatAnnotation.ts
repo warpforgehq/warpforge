@@ -26,3 +26,10 @@ export function formatAnnotation(a: BrowserAnnotation): string {
   lines.push("</browser_annotation>");
   return lines.join("\n");
 }
+
+/** Short chip label for a picked element: its role and a trimmed snippet. */
+export function annotationLabel(a: BrowserAnnotation): string {
+  const text = a.text.replace(/\s+/g, " ").trim();
+  const snippet = text.length > 40 ? `${text.slice(0, 40)}…` : text;
+  return snippet ? `${a.role}: ${snippet}` : a.role;
+}
