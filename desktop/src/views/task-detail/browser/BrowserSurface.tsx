@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import {
   browser,
   onBrowserAnnotation,
+  onBrowserShot,
   onBrowserState,
   type BrowserAnnotation,
   type BrowserBounds,
@@ -28,9 +29,11 @@ interface Props {
   project: string;
   /** Adds a picked element to the agent's chat composer as a context chip. */
   onAnnotate?: (chip: { id: string; label: string; body: string }) => void;
+  /** Attaches a screenshot of the picked element to the composer. */
+  onShot?: (name: string, pngBase64: string) => void;
 }
 
-export function BrowserSurface({ onAnnotate, project }: Props) {
+export function BrowserSurface({ onAnnotate, onShot, project }: Props) {
   const { activeId, back, closeTab, forward, navigate, newTab, reload, setActive, stop, tabs } =
     useBrowserTabs(project);
   const pageRef = useRef<HTMLDivElement | null>(null);
@@ -66,17 +69,28 @@ export function BrowserSurface({ onAnnotate, project }: Props) {
 
   useBrowserViewport(activeId, pageRef);
 
-  // A picked element arrives as an event from the page; add it as a chip. The
-  // page's picker stops itself after a pick, so the toggle returns to off.
+  // A picked element arrives as an event from the page; add it as a chip and,
+  // when the composer takes images, a screenshot of it. The page's picker stops
+  // itself after a pick, so the toggle returns to off.
   useEffect(() => {
     const sub = onBrowserAnnotation(({ annotation, tabId }) => {
       if (!tabId.startsWith(`${project}:`)) return;
       const a: BrowserAnnotation = annotation;
       onAnnotate?.({ id: crypto.randomUUID(), label: annotationLabel(a), body: formatAnnotation(a) });
+      if (onShot) void browser.captureElement(tabId, a.rect);
       setPicking(false);
     });
     return () => void sub.then((off) => off());
-  }, [project, onAnnotate]);
+  }, [project, onAnnotate, onShot]);
+
+  // The screenshot arrives asynchronously after the capture request.
+  useEffect(() => {
+    if (!onShot) return;
+    const sub = onBrowserShot(({ pngBase64, tabId }) => {
+      if (tabId.startsWith(`${project}:`)) onShot(`browser-${Date.now()}.png`, pngBase64);
+    });
+    return () => void sub.then((off) => off());
+  }, [project, onShot]);
 
   // A navigation (back/forward/reload/link) drops pick mode in the page, so the
   // toggle follows it back to off.

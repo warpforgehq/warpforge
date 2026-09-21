@@ -10,6 +10,7 @@ use tauri_plugin_shell::{
 use warpforge_protocol::DaemonEndpoint;
 
 mod browser;
+mod browser_capture;
 mod context_menu;
 mod desktop_env;
 #[cfg(target_os = "macos")]
@@ -275,7 +276,8 @@ fn main() {
             browser::browser_close,
             browser::browser_close_project,
             browser::browser_pick,
-            browser::browser_pick_stop
+            browser::browser_pick_stop,
+            browser::browser_capture_element
         ])
         .plugin(tauri_plugin_dialog::init())
         .build(tauri::generate_context!())

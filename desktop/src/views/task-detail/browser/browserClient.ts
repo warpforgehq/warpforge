@@ -26,6 +26,12 @@ export interface BrowserAnnotation {
   role: string;
   text: string;
   href: string | null;
+  rect: { x: number; y: number; width: number; height: number };
+}
+
+export interface BrowserShotEvent {
+  tabId: string;
+  pngBase64: string;
 }
 
 export interface BrowserAnnotationEvent {
@@ -76,6 +82,12 @@ export const browser = {
   pickStop(tabId: string): Promise<void> {
     return call("browser_pick_stop", { tabId });
   },
+  captureElement(
+    tabId: string,
+    rect: { x: number; y: number; width: number; height: number },
+  ): Promise<void> {
+    return call("browser_capture_element", { tabId, ...rect });
+  },
 };
 
 async function subscribe<T>(event: string, handler: (payload: T) => void): Promise<() => void> {
@@ -96,4 +108,8 @@ export function onBrowserAnnotation(
   handler: (e: BrowserAnnotationEvent) => void,
 ): Promise<() => void> {
   return subscribe("browser:annotation", handler);
+}
+
+export function onBrowserShot(handler: (e: BrowserShotEvent) => void): Promise<() => void> {
+  return subscribe("browser:shot", handler);
 }

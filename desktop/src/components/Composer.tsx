@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 
+import { base64ToBytes } from "@/daemon";
 import { cn } from "@/lib/utils";
 
 import {
@@ -54,6 +55,7 @@ export interface ContextChip {
 export interface ComposerHandle {
   attachDiff: (file: FileDiffType, formattedContent: string) => void;
   attachContext: (chip: ContextChip) => void;
+  attachImage: (name: string, pngBase64: string) => void;
   appendDraft: (text: string) => void;
   submit: () => void;
 }
@@ -168,6 +170,17 @@ export const Composer = forwardRef<
       attachContext(chip) {
         setContexts((prev) => [...prev, chip]);
         textRef.current?.focus();
+      },
+      attachImage(name, pngBase64) {
+        // A page screenshot only helps an agent that reads images; drop it
+        // silently otherwise, the annotation chip still carries the text.
+        if (!imageSupported) return;
+        // Copy into a fresh ArrayBuffer so the File part is not typed over a
+        // possibly-shared buffer.
+        const bytes = base64ToBytes(pngBase64);
+        const buf = new Uint8Array(bytes.length);
+        buf.set(bytes);
+        void addFiles([new File([buf], name, { type: "image/png" })], { imageSupported });
       },
       appendDraft(text) {
         setValue((prev) => {
