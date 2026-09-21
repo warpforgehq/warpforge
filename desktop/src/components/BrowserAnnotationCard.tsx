@@ -65,12 +65,17 @@ export function BrowserAnnotationCard({ annotation }: { annotation: ParsedAnnota
     <div className="my-2 rounded-md border bg-secondary/40 px-3 py-2 text-xs">
       <div className="mb-1 flex items-center gap-1.5 text-muted-foreground">
         <MousePointerClick className="size-3.5 text-info" />
-        <span>Pointed at {annotation.role ?? "an element"}</span>
+        <span>Pointed at {annotation.role ?? "an element"} in the browser</span>
         {host && <span className="truncate">· {host}</span>}
       </div>
       {annotation.text && (
-        <p className="line-clamp-4 whitespace-pre-wrap break-words text-foreground">
+        <p className="line-clamp-4 whitespace-pre-wrap break-words leading-relaxed text-foreground">
           {annotation.text}
+        </p>
+      )}
+      {annotation.selector && (
+        <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground" title={annotation.selector}>
+          {annotation.selector}
         </p>
       )}
     </div>
