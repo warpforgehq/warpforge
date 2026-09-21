@@ -43,12 +43,12 @@ export const AttachmentBar = memo(function AttachmentBar({
         c.image ? (
           <div
             key={c.id}
-            className="group relative w-44 overflow-hidden rounded-md border bg-secondary/60"
+            className="group relative w-28 overflow-hidden rounded-md border bg-secondary/60"
           >
             <img
               alt=""
               src={`data:image/png;base64,${c.image.base64}`}
-              className="h-24 w-full border-b object-cover"
+              className="h-16 w-full border-b object-cover"
             />
             <div className="line-clamp-2 px-1.5 py-1 text-[11px] leading-snug" title={c.label}>
               {c.label}
