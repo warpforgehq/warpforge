@@ -162,6 +162,23 @@ pub fn browser_pick_stop(app: AppHandle, tab_id: String) -> Result<(), String> {
     )
 }
 
+/// Screenshot the given viewport rect of the tab, emitted as `browser:shot`.
+#[tauri::command]
+pub fn browser_capture_element(
+    app: AppHandle,
+    tab_id: String,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    let webview = app
+        .get_webview(&label_for(&tab_id))
+        .ok_or_else(|| "no such browser tab".to_string())?;
+    crate::browser_capture::capture_element(&app, &webview, tab_id, (x, y, width, height));
+    Ok(())
+}
+
 #[tauri::command]
 pub fn browser_navigate(app: AppHandle, tab_id: String, url: String) -> Result<(), String> {
     let target = parse_url(&url)?;

@@ -266,6 +266,9 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     },
     [],
   );
+  const attachBrowserShot = useCallback((name: string, pngBase64: string) => {
+    composerRef.current?.attachImage(name, pngBase64);
+  }, []);
   const diffError = diffQuery.error?.message ?? resolveHunkMut.error?.message ?? null;
 
   const openTabs = useMemo(() => {
@@ -443,6 +446,7 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     activeSurface,
     appendLogsToChat,
     attachBrowserContext,
+    attachBrowserShot,
     chatOnRight,
     childTrees,
     clearGotoLocation,

@@ -36,7 +36,27 @@ env_logger = "0.11"
 [target.'cfg(target_os = "macos")'.dependencies]
 mac-usernotifications = "0.3.1"
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", features = ["NSColor", "NSResponder", "NSView", "NSWindow"] }
+objc2-app-kit = { version = "0.3", features = [
+    "NSColor",
+    "NSResponder",
+    "NSView",
+    "NSWindow",
+    "NSImage",
+    "NSImageRep",
+    "NSBitmapImageRep",
+] }
+# Element screenshots: WKWebView.takeSnapshot into an NSImage, encoded to PNG.
+objc2-web-kit = { version = "0.3", features = [
+    "WKWebView",
+    "WKSnapshotConfiguration",
+    "block2",
+    "objc2-core-foundation",
+] }
+objc2-foundation = { version = "0.3", features = ["NSData", "NSDictionary", "NSString"] }
+# CGRect/CGPoint/CGSize live under CFCGTypes, not a "CGGeometry" feature.
+objc2-core-foundation = { version = "0.3", features = ["CFCGTypes"] }
+block2 = "0.6"
+base64 = "0.22"
 raw-window-handle = "0.6"
 
 # Mirrors the root Cargo.toml: this crate is its own workspace, so it needs its

@@ -87,6 +87,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
     sendDiffToChat,
     appendLogsToChat,
     attachBrowserContext,
+    attachBrowserShot,
     sendSelectionToChat,
     resolveSessionFilePath,
     handleWorkspaceResize,
@@ -306,7 +307,11 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
           )}
           {activeSurface === "terminal" && <TerminalWorkspaceView project={task.project} />}
           {activeSurface === "browser" && (
-            <BrowserSurface project={task.project} onAnnotate={attachBrowserContext} />
+            <BrowserSurface
+              project={task.project}
+              onAnnotate={attachBrowserContext}
+              onShot={attachBrowserShot}
+            />
           )}
           {activeSurface === "pipeline" && (
             <PipelineSurface

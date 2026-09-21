@@ -71,12 +71,15 @@
   }
 
   function contextFor(el) {
+    const r = el.getBoundingClientRect();
     return {
       url: location.href,
       selector: selectorFor(el),
       role: el.getAttribute("role") || el.tagName.toLowerCase(),
       text: (el.innerText || el.textContent || "").trim().slice(0, 400),
       href: el.tagName === "A" ? el.href : null,
+      // Viewport coordinates, which is the space takeSnapshot captures in.
+      rect: { x: r.left, y: r.top, width: r.width, height: r.height },
     };
   }
 
