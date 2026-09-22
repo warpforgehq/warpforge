@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.21.1
+
+### Patch Changes
+
+- [`424ad8a`](https://github.com/warpforgehq/warpforge/commit/424ad8a56084049f56d5c3110dae16f02dc9e80e) Thanks [@ephor](https://github.com/ephor)! - OpenCode quota meters update again for accounts that sign in through the OpenCode console. OpenCode moved Go subscriptions to a console sign-in, so the usage figures could stop refreshing and show a 403 even while the plan was active; Warpforge now reads usage the same way the OpenCode app does and keeps showing the session, weekly and monthly windows.
+
 ## 0.21.0
 
 ### Minor Changes
