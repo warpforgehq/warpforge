@@ -1,0 +1,93 @@
+---
+title: The browser
+description: Open the app you're building next to the agent building it — signed in once, scoped per project, and able to hand the agent any element you point at.
+sidebar:
+  order: 5
+  label: Browser
+---
+
+Agent-built work has a gap in the middle of it: the agent writes the change, and you go somewhere else to look at it. Another window, another login, another hunt for which localhost port it came up on — and when something looks wrong, you're back in the chat describing a button instead of showing it.
+
+**Browser** is a task tab that closes that gap. It is a real browser — tabs, an address bar, back and forward, favicons — but it is pointed at what you're building rather than at the web in general.
+
+## It opens what's running
+
+A new tab doesn't land on a search engine. It lands on the services this project has up, each with the address it's actually listening on:
+
+<Steps>
+
+1. Start services in [Runtime](/guides/projects-and-runtime/) — or let them start with the project.
+2. Open **Browser**. Every running service is a row on the start page.
+3. Click one. No copying a port out of a log.
+
+</Steps>
+
+Nothing running yet just says so, and the address bar still takes anything you type.
+
+<Aside type="tip" title="Why this and not a search box">
+  The port a dev service lands on is [assigned by Warpforge](/concepts/ports/), not memorised by you — which makes "which localhost was it this time" a question the tool should answer, not ask. If you pin ports in `.warpforge/workspace.yaml`, these links follow the pin.
+</Aside>
+
+## Sign in once, not every session
+
+Logins persist. Sign into a staging environment, a dashboard, or GitHub inside the Browser tab and you are still signed in after you quit and reopen Warpforge, and in every task.
+
+There is one web session for the app, deliberately. Per-task isolation would mean logging into your own staging site once per task, which is the misery this replaces.
+
+<Aside type="note" title="Passwords come from your password manager">
+  The Browser tab can't reach Safari's iCloud Keychain autofill — no embedded browser in a third-party app can. A password manager with system-wide autofill (1Password, Bitwarden) fills here like it does anywhere else. Warpforge never reads another browser's saved logins or cookies.
+</Aside>
+
+## Tabs belong to the project
+
+Each project keeps its own tabs. Open your docs site, a staging dashboard, and two API responses in one project, and none of it follows you into an unrelated project.
+
+Tabs come back after a restart, into the login that was already there. **Remove a project and its tabs go with it** — the pages it had open are dropped and their views closed. Your logins are not touched; those are the app's, not the project's.
+
+## Point at an element, don't describe it
+
+The hardest thing to put in a prompt is a thing you're looking at. The picker turns it into context.
+
+<Steps>
+
+1. Click the **pointer** button in the toolbar. The cursor becomes a crosshair.
+2. Click the element you mean — a broken button, a mislaid heading, a wrong number.
+3. It lands in the composer as one chip: a **screenshot of that element** with its text underneath.
+4. Write your message around it and send.
+
+</Steps>
+
+The agent receives the element's text, its role, its CSS selector, and the page URL, plus the picture. The chat shows it back as a card, not as raw markup, so the conversation stays readable when you scroll it later.
+
+<Aside type="caution" title="Page content is treated as data">
+  Everything the picker reads comes from the page, and a page is not a trustworthy author. The context is handed over explicitly marked as untrusted data, and the text is neutralised so a page can't close the block early and start issuing instructions to your agent.
+</Aside>
+
+Picking ends on its own after one element, and any navigation cancels it. Click the button again to pick another.
+
+## When a page doesn't load
+
+A dev server that isn't up yet, a port that moved, a service that crashed on boot — the tab says **This site can't be reached** with the address it tried and a **Try again** button, rather than showing you a blank rectangle and letting you wonder.
+
+If that happens on a service link, the usual cause is an app that ignores the `PORT` it was given and binds its own default instead. [How ports work](/concepts/ports/) covers the fix.
+
+## Shortcuts and chrome
+
+| | |
+| --- | --- |
+| <kbd>⌘L</kbd> | Focus the address bar and select it |
+| <kbd>⌘T</kbd> | New tab |
+| **Address bar** | A URL, a bare host like `localhost:5173`, or a search — searches go to DuckDuckGo |
+| **Back / forward** | Greyed when there's nowhere to go |
+| **Reload** | Becomes **Stop** while a page is loading |
+| **Tabs** | Favicons and page titles; the strip scrolls when they overflow |
+
+<Aside type="note" title="Scope and limits">
+  Browser needs the desktop app — it doesn't run in a web build. Element screenshots are macOS today. The agent can read a page you point at, but it cannot drive one: clicking and typing stay yours.
+</Aside>
+
+## See also
+
+- [Working in a task](/guides/working-in-a-task/) — the other ways to get context into the chat
+- [Projects and their runtime](/guides/projects-and-runtime/) — starting the services this tab opens
+- [How ports work](/concepts/ports/) — why a service is on the port it's on
