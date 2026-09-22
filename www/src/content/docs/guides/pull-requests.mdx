@@ -35,13 +35,15 @@ The header is two rows and nothing more: state, review decision, `repo#number`, 
 
 **The rail beside it answers "where does this stand"** — status, each reviewer with their latest verdict, branch, labels, assignees, and the changed files.
 
-Files are grouped **Documentation** then **Implementation** by path: `*.md`, anything under `docs/`, and JSONL datasets are documentation, everything else is implementation. Documentation comes first deliberately — it is the short group, and under a 46-file implementation list it never got on screen at all. Click any file to jump straight to its diff.
+Files are grouped by how much attention they are worth, not by folder: **Migrations**, **Implementation**, **Tests**, **Config & CI**, **Generated**, **Documentation**, in that order. Migrations lead because a handful of lines that touch data is the expensive thing to skim past; lockfiles, `dist/`, snapshots and generated clients sit at the tail, dimmed. Each heading carries its file count and its own `+`/`−`. Every group starts collapsed — a 64-file change reads as six headings until you pick a block — unless there is only one, which opens because there is nothing to choose between. Click any file to jump straight to its diff.
+
+Grouping is by path alone, most-specific rule first: a `.sql` is a migration wherever it lives, a lockfile is generated even inside a test folder, and anything unmatched falls to implementation — a file misfiled as prose is a file the reviewer skips.
 
 The description, the rail and the file list scroll independently, so reading one never moves the other.
 
 ## The diff
 
-**Files** toggles the changed-file rail: a folder tree with a filter, which flattens to plain matches while you type, because someone typing a name wants the matches and not the folders they live in. **`[`** and **`]`** step through files.
+**Files** toggles the changed-file rail, which reads two ways from the same filter box. **Tree** is the folder hierarchy, for reaching a file you already have in mind. **Groups** is the overview's triage — migrations, implementation, tests, config, generated, docs — for working through a review a block at a time. The choice sticks per device. Either view flattens to plain matches while you type, because someone typing a name wants the matches and not the folders they live in. **`[`** and **`]`** step through files.
 
 **Unified or side-by-side**, switched from the right of the toolbar. Both read from the same patch — side-by-side costs no extra fetch.
 
