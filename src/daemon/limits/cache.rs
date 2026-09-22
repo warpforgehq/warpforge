@@ -71,7 +71,8 @@ fn current_identity(
         ("claude", None) => live_claude_email(),
         ("codex", Some(account)) => codex_account_email(account),
         ("codex", None) => super::codex::live_identity(),
-        // opencode has no per-account vault: only the live key identifies it.
+        // opencode has no per-account vault: the live console login (or, for a
+        // legacy setup, the live API key) is the only thing that identifies it.
         ("opencode", _) => super::opencode::live_identity(),
         _ => None,
     };
