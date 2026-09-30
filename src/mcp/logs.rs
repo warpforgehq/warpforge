@@ -5,8 +5,9 @@ use super::daemon_client::DaemonClient;
 use super::format::tool_limit;
 
 /// Fetch a window of retained log lines from the daemon and render them. The
-/// `after` index and `limit` window the raw buffer first; `filter`, when set,
-/// keeps only case-insensitively matching lines from that window.
+/// `after`/`before` seq bounds and `limit` window the raw buffer first;
+/// `filter`, when set, keeps only case-insensitively matching lines from that
+/// window.
 pub(crate) async fn read_logs(
     client: &mut DaemonClient,
     method: &str,
@@ -20,6 +21,7 @@ pub(crate) async fn read_logs(
     // index. Polling with the previous response's `nextSeq` makes reads
     // nearly free regardless of how many lines the ring has since dropped.
     let after = args.get("after").and_then(Value::as_u64).unwrap_or(0);
+    let before = args.get("before").and_then(Value::as_u64);
     let limit = tool_limit(args);
     let filter = args
         .get("filter")
@@ -32,10 +34,10 @@ pub(crate) async fn read_logs(
         .and_then(Value::as_bool)
         .unwrap_or(true);
 
-    // grep|tail and grep -C must see the whole retained buffer, so when a
-    // filter or context is requested we fetch without a limit; otherwise honor
-    // the window limit. Either way the daemon returns aligned `at` timestamps.
-    let fetch_limit: Option<u32> = if filter.is_some() || context > 0 {
+    // grep|tail, grep -C and the `before` bound must see the whole retained
+    // buffer, so they fetch without a limit; otherwise honor the window limit.
+    // Either way the daemon returns aligned `at` timestamps.
+    let fetch_limit: Option<u32> = if filter.is_some() || context > 0 || before.is_some() {
         None
     } else {
         Some(limit)
@@ -43,7 +45,7 @@ pub(crate) async fn read_logs(
     let mut params = json!({ "project": project, "after": after, "limit": fetch_limit });
     params[key_field] = json!(key);
     let result = client.request(method, params).await?;
-    let lines: Vec<String> = result
+    let mut lines: Vec<String> = result
         .get("lines")
         .and_then(Value::as_array)
         .map(|a| {
@@ -52,7 +54,7 @@ pub(crate) async fn read_logs(
                 .collect()
         })
         .unwrap_or_default();
-    let at: Vec<u64> = result
+    let mut at: Vec<u64> = result
         .get("at")
         .and_then(Value::as_array)
         .map(|a| a.iter().filter_map(|v| v.as_u64()).collect())
@@ -61,6 +63,11 @@ pub(crate) async fn read_logs(
         .get("nextSeq")
         .and_then(Value::as_u64)
         .unwrap_or(after);
+    if let Some(before) = before {
+        let keep = lines_before(lines.len(), next_seq, before);
+        lines.truncate(keep);
+        at.truncate(keep);
+    }
 
     let body = render_log_selection(&lines, &at, filter.as_deref(), context, limit, timestamps);
     if body.is_empty() {
@@ -78,6 +85,13 @@ pub(crate) async fn read_logs(
     Ok(format!(
         "[{kind}:{key}] {count} line(s){poll}\n```\n{body}\n```"
     ))
+}
+
+/// How many of `len` contiguous lines ending just below `next_seq` have a seq
+/// below `before`.
+pub(crate) fn lines_before(len: usize, next_seq: u64, before: u64) -> usize {
+    let first_seq = next_seq.saturating_sub(len as u64);
+    (before.saturating_sub(first_seq) as usize).min(len)
 }
 
 /// Pure selection used by [`read_logs`] (and unit-tested here): filter the
@@ -162,4 +176,18 @@ fn civil_from_days(z: i64) -> (i64, i64, i64) {
     let d = doy - (153 * mp + 2) / 5 + 1;
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
     (if m <= 2 { y + 1 } else { y }, m, d)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::lines_before;
+
+    #[test]
+    fn lines_before_keeps_only_seqs_below_the_bound() {
+        // lines carry seqs 10..15
+        assert_eq!(lines_before(5, 15, 13), 3);
+        assert_eq!(lines_before(5, 15, 10), 0);
+        assert_eq!(lines_before(5, 15, 5), 0);
+        assert_eq!(lines_before(5, 15, 99), 5);
+    }
 }

@@ -1,16 +1,43 @@
 import { ChevronDown, ClipboardCopy, MessageSquarePlus, RefreshCw } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { SEND_TO_CHAT_HINT } from "@/components/CodeEditor/constants";
+import { logContextChip } from "@/lib/logContext";
 import { withOccurrenceKeys } from "@/lib/renderKeys";
 import { cn } from "@/lib/utils";
 
 import { daemon } from "../../daemon";
+import type { LogEntry } from "../../daemon/types";
+import type { ContextChip } from "../Composer";
 import { EMPTY_LOGS, FOLLOW_THRESHOLD_PX, LOG_DISPLAY_CAP } from "./constants";
 
 interface SelectionState {
   text: string;
+  entries: LogEntry[];
   top: number;
   left: number;
+}
+
+/** The rendered log lines whose text the range overlaps, oldest first. */
+function selectedEntries(range: Range, container: HTMLElement): LogEntry[] {
+  const entries: LogEntry[] = [];
+  for (const row of container.querySelectorAll<HTMLElement>("[data-seq]")) {
+    const text = row.querySelector("[data-line]") ?? row;
+    const lineRange = document.createRange();
+    // Bounded on the text node itself: a point at (text, 0) sorts after (span, 0).
+    lineRange.selectNodeContents(text.firstChild ?? text);
+    const overlaps =
+      range.compareBoundaryPoints(Range.START_TO_END, lineRange) > 0 &&
+      range.compareBoundaryPoints(Range.END_TO_START, lineRange) < 0;
+    if (overlaps) {
+      entries.push({
+        at: Number(row.dataset.at),
+        line: text.textContent ?? "",
+        seq: Number(row.dataset.seq),
+      });
+    }
+  }
+  return entries;
 }
 
 const LogViewer = memo(function LogViewer({
@@ -24,7 +51,7 @@ const LogViewer = memo(function LogViewer({
   kind: "service" | "portforward";
   project: string;
   name: string;
-  onAppendToChat?: (formattedLogs: string) => void;
+  onAppendToChat?: (context: ContextChip) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const followingRef = useRef(true);
@@ -40,7 +67,7 @@ const LogViewer = memo(function LogViewer({
     return store[logKey] ?? EMPTY_LOGS;
   });
 
-  const [fetchedLogs, setFetchedLogs] = useState<string[]>(EMPTY_LOGS);
+  const [fetchedLogs, setFetchedLogs] = useState<LogEntry[]>(EMPTY_LOGS);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const didInitialFetch = useRef(false);
 
@@ -122,7 +149,7 @@ const LogViewer = memo(function LogViewer({
       const maxLeft = Math.max(containerRect.width - 180, 0);
       const left = Math.min(Math.max(rect.left - containerRect.left, 0), maxLeft);
       const clampedTop = Math.max(Math.min(top, containerRect.height - 32), 0);
-      setSelection({ text, top: clampedTop, left });
+      setSelection({ text, entries: selectedEntries(range, container), top: clampedTop, left });
     };
     document.addEventListener("selectionchange", handleSelectionChange);
     return () => document.removeEventListener("selectionchange", handleSelectionChange);
@@ -149,13 +176,26 @@ const LogViewer = memo(function LogViewer({
   }, [selection, showCopyFeedback]);
 
   const handleAddToChat = useCallback(() => {
-    if (!selection || !onAppendToChat) return;
-    const label = kind === "service" ? `service:${name}` : `portforward:${name}`;
-    const formatted = `${label}\n\`\`\`\n${selection.text}\n\`\`\``;
-    onAppendToChat(formatted);
+    if (!selection || !onAppendToChat || selection.entries.length === 0) return;
+    onAppendToChat(logContextChip(kind, name, selection.entries));
     setSelection(null);
     document.getSelection()?.removeAllRanges();
   }, [selection, onAppendToChat, kind, name]);
+
+  useEffect(() => {
+    if (!selection || !onAppendToChat) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== "l") {
+        return;
+      }
+      e.preventDefault();
+      // Keeps the browser surface's window-level ⌘L from also focusing its address bar.
+      e.stopPropagation();
+      handleAddToChat();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [selection, onAppendToChat, handleAddToChat]);
 
   const handleRefresh = useCallback(() => {
     setFetchError(null);
@@ -178,12 +218,19 @@ const LogViewer = memo(function LogViewer({
         ) : cappedLogs.length === 0 ? (
           <pre className="text-muted-foreground">[{name}] no logs yet</pre>
         ) : (
-          withOccurrenceKeys(cappedLogs, (line) => line).map(({ item: line, key }) => (
-            <pre key={key} className="whitespace-pre-wrap break-all">
-              <span className="select-none text-muted-foreground/50">$ </span>
-              {line}
-            </pre>
-          ))
+          withOccurrenceKeys(cappedLogs, (entry) => String(entry.seq)).map(
+            ({ item: entry, key }) => (
+              <pre
+                key={key}
+                data-seq={entry.seq}
+                data-at={entry.at}
+                className="whitespace-pre-wrap break-all"
+              >
+                <span className="select-none text-muted-foreground/50">$ </span>
+                <span data-line>{entry.line}</span>
+              </pre>
+            ),
+          )
         )}
       </div>
       {selection && (
@@ -192,7 +239,7 @@ const LogViewer = memo(function LogViewer({
           left={selection.left}
           onCopy={handleCopy}
           onAddToChat={handleAddToChat}
-          canAddToChat={!!onAppendToChat}
+          canAddToChat={!!onAppendToChat && selection.entries.length > 0}
         />
       )}
       {copyFeedback && (
@@ -271,7 +318,7 @@ const SelectionToolbar = memo(function SelectionToolbar({
           type="button"
           onClick={onAddToChat}
           className="flex items-center gap-1 rounded px-1.5 py-1 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          title="Add selection to chat composer"
+          title={`Add selected lines to chat (${SEND_TO_CHAT_HINT})`}
           aria-label="Add selected log text to chat"
         >
           <MessageSquarePlus className="size-3" />

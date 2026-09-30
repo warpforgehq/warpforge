@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import type { ContextChip } from "@/components/Composer";
 import { RuntimePanel } from "@/components/RuntimePanel";
 
 import type { PortForwardInfo, ServiceInfo } from "../../protocol";
@@ -9,7 +10,7 @@ export interface ProjectRuntimeSurfaceProps {
   /** Declared services included, so a project that has never run still lists them. */
   services: ServiceInfo[];
   portforwards: PortForwardInfo[];
-  onAppendToChat?: (formattedLogs: string) => void;
+  onAppendToChat?: (context: ContextChip) => void;
 }
 
 /**

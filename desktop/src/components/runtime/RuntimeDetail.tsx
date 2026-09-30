@@ -1,12 +1,15 @@
-import { Pin, PlugZap, TriangleAlert } from "lucide-react";
+import { MessageSquarePlus, Pin, PlugZap, TriangleAlert } from "lucide-react";
 import type { MouseEvent } from "react";
 
 import { openExternalLink } from "@/lib/externalLinks";
+import { logContextChip } from "@/lib/logContext";
 import { portWarningText } from "@/lib/portWarning";
 import { pfBadge, serviceBadge } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
+import { daemon } from "../../daemon";
 import type { PortForwardInfo, ServiceInfo } from "../../protocol";
+import type { ContextChip } from "../Composer";
 import { LogViewer } from "./LogViewer";
 import { StatusDot } from "./StatusDot";
 
@@ -91,6 +94,42 @@ export function PortForwardHeading({ pf }: { pf: PortForwardInfo }) {
   );
 }
 
+const FAILURE_LINES = 50;
+
+function FailureBar({
+  project,
+  service,
+  onAppendToChat,
+}: {
+  project: string;
+  service: string;
+  onAppendToChat: (context: ContextChip) => void;
+}) {
+  const sendLastFailure = () => {
+    const entries = daemon.getState().serviceLogs[`${project}/${service}`] ?? [];
+    if (entries.length === 0) return;
+    onAppendToChat(logContextChip("service", service, entries.slice(-FAILURE_LINES)));
+  };
+  return (
+    <div
+      role="alert"
+      className="flex items-center gap-1.5 border-b border-border px-3 py-1.5 text-[12px] text-destructive"
+    >
+      <TriangleAlert className="size-3.5 shrink-0" />
+      <span className="min-w-0 flex-1 truncate">{service} failed</span>
+      <button
+        type="button"
+        onClick={sendLastFailure}
+        className="flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        title={`Attach the last ${FAILURE_LINES} log lines to the chat`}
+      >
+        <MessageSquarePlus className="size-3" />
+        Send last failure
+      </button>
+    </div>
+  );
+}
+
 export function ServiceDetailPane({
   project,
   service,
@@ -98,7 +137,7 @@ export function ServiceDetailPane({
 }: {
   project: string;
   service: ServiceInfo;
-  onAppendToChat?: (formattedLogs: string) => void;
+  onAppendToChat?: (context: ContextChip) => void;
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -110,6 +149,9 @@ export function ServiceDetailPane({
           <TriangleAlert className="size-3.5 shrink-0" />
           {portWarningText(service.portWarning)}
         </div>
+      )}
+      {service.status === "failed" && onAppendToChat && (
+        <FailureBar project={project} service={service.name} onAppendToChat={onAppendToChat} />
       )}
       <LogViewer
         key={`${project}/${service.name}`}
@@ -130,7 +172,7 @@ export function PortForwardDetailPane({
 }: {
   project: string;
   pf: PortForwardInfo;
-  onAppendToChat?: (formattedLogs: string) => void;
+  onAppendToChat?: (context: ContextChip) => void;
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">

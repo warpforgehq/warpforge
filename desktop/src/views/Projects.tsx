@@ -293,7 +293,7 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
             project={project.name}
             services={runtimeServices}
             portforwards={pfs}
-            onAppendToChat={(formattedLogs) => onNewTask(project.name, formattedLogs)}
+            onAppendToChat={(context) => onNewTask(project.name, context.body)}
           />
         ) : surface === "worktrees" ? (
           <WorktreesSurface project={project.name} />

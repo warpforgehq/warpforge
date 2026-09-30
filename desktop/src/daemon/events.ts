@@ -214,14 +214,17 @@ export class DaemonEvents extends DaemonStore {
       case "service.log": {
         const key = `${ev.data.project}/${ev.data.service}`;
         const existing = this.state.serviceLogs[key] ?? [];
-        const trimmed = [...existing, ev.data.line].slice(-MAX_SERVICE_LOGS);
+        // The event carries no capture time; arrival is within milliseconds of it.
+        const entry = { at: Date.now(), line: ev.data.line, seq: ev.data.seq };
+        const trimmed = [...existing, entry].slice(-MAX_SERVICE_LOGS);
         this.setState({ serviceLogs: { ...this.state.serviceLogs, [key]: trimmed } });
         break;
       }
       case "portforward.log": {
         const key = `${ev.data.project}/${ev.data.name}`;
         const existing = this.state.portforwardLogs[key] ?? [];
-        const trimmed = [...existing, ev.data.line].slice(-MAX_PORTFORWARD_LOGS);
+        const entry = { at: Date.now(), line: ev.data.line, seq: ev.data.seq };
+        const trimmed = [...existing, entry].slice(-MAX_PORTFORWARD_LOGS);
         this.setState({ portforwardLogs: { ...this.state.portforwardLogs, [key]: trimmed } });
         break;
       }

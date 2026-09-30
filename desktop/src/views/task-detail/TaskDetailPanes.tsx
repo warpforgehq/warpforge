@@ -87,7 +87,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
     resolveHunk,
     openProjectFiles,
     sendDiffToChat,
-    appendLogsToChat,
+    attachLogsToChat,
     attachBrowserContext,
     setBrowserContextImage,
     sendSelectionToChat,
@@ -307,7 +307,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
               project={task.project}
               services={services}
               portforwards={portforwards}
-              onAppendToChat={appendLogsToChat}
+              onAppendToChat={attachLogsToChat}
             />
           )}
           {activeSurface === "terminal" && (

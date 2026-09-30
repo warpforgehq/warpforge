@@ -24,7 +24,7 @@ vi.mock("@xterm/addon-fit", () => {
   return { FitAddon: MockFitAddon };
 });
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./TerminalWorkspace", () => ({
@@ -32,7 +32,9 @@ vi.mock("./TerminalWorkspace", () => ({
 }));
 
 import { daemon } from "../../daemon";
+import type { LogEntry } from "../../daemon/types";
 import type { ServiceInfo } from "../../protocol";
+import type { ContextChip } from "../Composer";
 import { RuntimePanel } from "../RuntimePanel";
 
 const webService: ServiceInfo = {
@@ -49,9 +51,16 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function mockSelection(text: string, container: HTMLElement, rect: DOMRect) {
-  const range = document.createRange();
-  range.selectNodeContents(container);
+const logEntries = (...lines: string[]): LogEntry[] =>
+  lines.map((line, seq) => ({ at: 0, line, seq }));
+
+function mockSelection(
+  text: string,
+  container: HTMLElement,
+  rect: DOMRect,
+  range: Range = document.createRange(),
+) {
+  if (range.collapsed) range.selectNodeContents(container);
   const sel = {
     isCollapsed: text.length === 0,
     rangeCount: text.length > 0 ? 1 : 0,
@@ -91,19 +100,19 @@ describe("LogViewer — selection toolbar", () => {
   });
 
   it("no toolbar when no selection", () => {
-    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(["some log line"]);
+    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(logEntries("some log line"));
     render(<RuntimePanel project="warpforge" services={[webService]} portforwards={[]} />);
     expect(screen.queryByRole("button", { name: /copy/i })).not.toBeInTheDocument();
   });
 
   it("toolbar appears with Copy and Add to chat when text is selected", async () => {
-    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(["selected text here"]);
+    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(logEntries("selected text here"));
     render(
       <RuntimePanel
         project="warpforge"
         services={[webService]}
         portforwards={[]}
-        onAppendToChat={vi.fn<(text: string) => void>()}
+        onAppendToChat={vi.fn<(context: ContextChip) => void>()}
       />,
     );
     await waitFor(() => {
@@ -120,13 +129,13 @@ describe("LogViewer — selection toolbar", () => {
   });
 
   it("Copy copies exact selected text and shows feedback", async () => {
-    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(["exact log content"]);
+    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(logEntries("exact log content"));
     render(
       <RuntimePanel
         project="warpforge"
         services={[webService]}
         portforwards={[]}
-        onAppendToChat={vi.fn<(text: string) => void>()}
+        onAppendToChat={vi.fn<(context: ContextChip) => void>()}
       />,
     );
     await waitFor(() => {
@@ -145,13 +154,13 @@ describe("LogViewer — selection toolbar", () => {
 
   it("Copy shows failure feedback on clipboard rejection", async () => {
     (navigator.clipboard.writeText as any).mockRejectedValueOnce(new Error("denied"));
-    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(["text"]);
+    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(logEntries("text"));
     render(
       <RuntimePanel
         project="warpforge"
         services={[webService]}
         portforwards={[]}
-        onAppendToChat={vi.fn<(text: string) => void>()}
+        onAppendToChat={vi.fn<(context: ContextChip) => void>()}
       />,
     );
     await waitFor(() => {
@@ -167,9 +176,51 @@ describe("LogViewer — selection toolbar", () => {
     });
   });
 
-  it("Add to chat sends formatted selection to callback, does not submit", async () => {
-    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(["log snippet"]);
-    const onAppendToChat = vi.fn<(text: string) => void>();
+  async function selectAllLogs(firstLine: string) {
+    await waitFor(() => {
+      expect(screen.getByText(firstLine)).toBeInTheDocument();
+    });
+    const container = screen
+      .getByText(firstLine)
+      .closest('[class*="overflow-y-auto"]') as HTMLElement;
+    mockSelection(container.textContent ?? "", container, new DOMRect(10, 10, 100, 20));
+    fireEvent(document, new Event("selectionchange"));
+  }
+
+  it("Add to chat attaches a chip with the selected seq range, does not submit", async () => {
+    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue([
+      { at: Date.UTC(2026, 8, 30, 12, 0, 1), line: "boot", seq: 1234 },
+      { at: Date.UTC(2026, 8, 30, 12, 0, 7), line: "crash", seq: 1235 },
+    ]);
+    const onAppendToChat = vi.fn<(context: ContextChip) => void>();
+    render(
+      <RuntimePanel
+        project="warpforge"
+        services={[webService]}
+        portforwards={[]}
+        onAppendToChat={onAppendToChat}
+      />,
+    );
+    await selectAllLogs("boot");
+    fireEvent.click(screen.getByRole("button", { name: /add selected log text to chat/i }));
+    expect(onAppendToChat).toHaveBeenCalledTimes(1);
+    const chip = onAppendToChat.mock.calls[0][0];
+    expect(chip.label).toBe("service:web seq 1234–1235");
+    expect(chip.body).toBe(
+      [
+        "service:web seq 1234–1235 (2026-09-30 12:00:01–12:00:07 UTC)",
+        "```",
+        "boot",
+        "crash",
+        "```",
+        'Surrounding lines: read_service_logs(service: "web", after: 1214, before: 1256)',
+      ].join("\n"),
+    );
+  });
+
+  it("a selection ending at the start of the next line leaves that line out", async () => {
+    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(logEntries("one", "two", "three"));
+    const onAppendToChat = vi.fn<(context: ContextChip) => void>();
     render(
       <RuntimePanel
         project="warpforge"
@@ -179,18 +230,58 @@ describe("LogViewer — selection toolbar", () => {
       />,
     );
     await waitFor(() => {
-      expect(screen.getByText("log snippet")).toBeInTheDocument();
+      expect(screen.getByText("two")).toBeInTheDocument();
     });
-    const logEl = screen.getByText("log snippet");
-    const container = logEl.closest('[class*="overflow-y-auto"]') as HTMLElement;
-    mockSelection("log snippet", container, new DOMRect(10, 10, 100, 20));
+    const container = screen.getByText("two").closest('[class*="overflow-y-auto"]') as HTMLElement;
+    const range = document.createRange();
+    range.setStart(screen.getByText("two").firstChild!, 1);
+    range.setEnd(screen.getByText("three").firstChild!, 0);
+    mockSelection("wo\n", container, new DOMRect(10, 10, 100, 20), range);
     fireEvent(document, new Event("selectionchange"));
     fireEvent.click(screen.getByRole("button", { name: /add selected log text to chat/i }));
-    expect(onAppendToChat).toHaveBeenCalledWith("service:web\n```\nlog snippet\n```");
+    expect(onAppendToChat.mock.calls[0][0].label).toBe("service:web seq 1");
+  });
+
+  it("⌘L on a log selection attaches the chip", async () => {
+    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(logEntries("only line"));
+    const onAppendToChat = vi.fn<(context: ContextChip) => void>();
+    render(
+      <RuntimePanel
+        project="warpforge"
+        services={[webService]}
+        portforwards={[]}
+        onAppendToChat={onAppendToChat}
+      />,
+    );
+    await selectAllLogs("only line");
+    fireEvent.keyDown(document, { key: "l", metaKey: true });
+    expect(onAppendToChat).toHaveBeenCalledTimes(1);
+    expect(onAppendToChat.mock.calls[0][0].label).toBe("service:web seq 0");
+  });
+
+  it("Send last failure attaches the newest lines of a failed service", () => {
+    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue([]);
+    vi.spyOn(daemon, "getState").mockReturnValue({
+      ...daemon.getState(),
+      serviceLogs: { "warpforge/web": logEntries("starting", "panic: boom") },
+    });
+    const onAppendToChat = vi.fn<(context: ContextChip) => void>();
+    render(
+      <RuntimePanel
+        project="warpforge"
+        services={[{ ...webService, status: "failed" }]}
+        portforwards={[]}
+        onAppendToChat={onAppendToChat}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /send last failure/i }));
+    const chip = onAppendToChat.mock.calls[0][0];
+    expect(chip.label).toBe("service:web seq 0–1");
+    expect(chip.body).toContain("panic: boom");
   });
 
   it("selection outside log viewer does not show toolbar", async () => {
-    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(["log line"]);
+    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(logEntries("log line"));
     render(<RuntimePanel project="warpforge" services={[webService]} portforwards={[]} />);
     await waitFor(() => {
       expect(screen.getByText("log line")).toBeInTheDocument();
@@ -203,7 +294,7 @@ describe("LogViewer — selection toolbar", () => {
   });
 
   it("collapsed selection does not show toolbar", async () => {
-    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(["log line"]);
+    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(logEntries("log line"));
     render(<RuntimePanel project="warpforge" services={[webService]} portforwards={[]} />);
     await waitFor(() => {
       expect(screen.getByText("log line")).toBeInTheDocument();
@@ -217,149 +308,5 @@ describe("LogViewer — selection toolbar", () => {
     expect(
       screen.queryByRole("button", { name: /copy selected log text/i }),
     ).not.toBeInTheDocument();
-  });
-});
-
-describe("LogViewer — auto-follow", () => {
-  function makeScrollable(container: HTMLElement, scrollTop = 0) {
-    Object.defineProperty(container, "scrollHeight", {
-      value: 1000,
-      configurable: true,
-    });
-    Object.defineProperty(container, "clientHeight", {
-      value: 200,
-      configurable: true,
-    });
-    Object.defineProperty(container, "scrollTop", {
-      value: scrollTop,
-      writable: true,
-      configurable: true,
-    });
-  }
-
-  it("Jump-to-latest is hidden initially when following", async () => {
-    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(["line1"]);
-    render(<RuntimePanel project="warpforge" services={[webService]} portforwards={[]} />);
-    await waitFor(() => {
-      expect(screen.getByText("line1")).toBeInTheDocument();
-    });
-    expect(screen.queryByLabelText("Jump to latest log line")).not.toBeInTheDocument();
-  });
-
-  it("Jump to latest hides after click", async () => {
-    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(["line1"]);
-    render(<RuntimePanel project="warpforge" services={[webService]} portforwards={[]} />);
-    await waitFor(() => {
-      expect(screen.getByText("line1")).toBeInTheDocument();
-    });
-    const container = screen
-      .getByText("line1")
-      .closest('[class*="overflow-y-auto"]') as HTMLElement;
-    makeScrollable(container, 100);
-    fireEvent.scroll(container);
-    await waitFor(() => {
-      expect(screen.getByLabelText("Jump to latest log line")).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByLabelText("Jump to latest log line"));
-    expect(screen.queryByLabelText("Jump to latest log line")).not.toBeInTheDocument();
-  });
-
-  it("scrolling back to bottom hides jump button", async () => {
-    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(["line1"]);
-    render(<RuntimePanel project="warpforge" services={[webService]} portforwards={[]} />);
-    await waitFor(() => {
-      expect(screen.getByText("line1")).toBeInTheDocument();
-    });
-    const container = screen
-      .getByText("line1")
-      .closest('[class*="overflow-y-auto"]') as HTMLElement;
-    makeScrollable(container, 100);
-    fireEvent.scroll(container);
-    await waitFor(() => {
-      expect(screen.getByLabelText("Jump to latest log line")).toBeInTheDocument();
-    });
-    makeScrollable(container, 800);
-    fireEvent.scroll(container);
-    expect(screen.queryByLabelText("Jump to latest log line")).not.toBeInTheDocument();
-  });
-
-  it("new log appended while scrolled up does not yank to bottom", async () => {
-    const logStore: Record<string, string[]> = {
-      "warpforge/web": ["line1"],
-    };
-    vi.spyOn(daemon, "getState").mockReturnValue({
-      ...daemon.getState(),
-      serviceLogs: logStore,
-    });
-    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue([]);
-
-    let subscriber: (() => void) | null = null;
-    vi.spyOn(daemon, "subscribe").mockImplementation((fn: () => void) => {
-      subscriber = fn;
-      return () => {};
-    });
-
-    render(<RuntimePanel project="warpforge" services={[webService]} portforwards={[]} />);
-    await waitFor(() => {
-      expect(screen.getByText("line1")).toBeInTheDocument();
-    });
-
-    const container = screen
-      .getByText("line1")
-      .closest('[class*="overflow-y-auto"]') as HTMLElement;
-    makeScrollable(container, 100);
-    fireEvent.scroll(container);
-
-    const scrollTopBefore = container.scrollTop;
-    logStore["warpforge/web"] = ["line1", "line2"];
-    act(() => {
-      subscriber!();
-    });
-
-    expect(screen.getByText("line2")).toBeInTheDocument();
-    expect(container.scrollTop).toBe(scrollTopBefore);
-    expect(screen.getByLabelText("Jump to latest log line")).toBeInTheDocument();
-  });
-
-  it("after resuming follow, new log appends scroll to bottom", async () => {
-    const logStore: Record<string, string[]> = {
-      "warpforge/web": ["line1"],
-    };
-    vi.spyOn(daemon, "getState").mockReturnValue({
-      ...daemon.getState(),
-      serviceLogs: logStore,
-    });
-    vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue([]);
-
-    let subscriber: (() => void) | null = null;
-    vi.spyOn(daemon, "subscribe").mockImplementation((fn: () => void) => {
-      subscriber = fn;
-      return () => {};
-    });
-
-    render(<RuntimePanel project="warpforge" services={[webService]} portforwards={[]} />);
-    await waitFor(() => {
-      expect(screen.getByText("line1")).toBeInTheDocument();
-    });
-
-    const container = screen
-      .getByText("line1")
-      .closest('[class*="overflow-y-auto"]') as HTMLElement;
-
-    makeScrollable(container, 800);
-    fireEvent.scroll(container);
-
-    logStore["warpforge/web"] = ["line1", "line2"];
-    act(() => {
-      subscriber!();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText("line2")).toBeInTheDocument();
-    });
-
-    await waitFor(() => {
-      expect(container.scrollTop).toBeGreaterThan(800);
-    });
   });
 });

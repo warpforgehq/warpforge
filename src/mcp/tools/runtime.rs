@@ -46,6 +46,10 @@ pub(super) fn defs() -> Vec<Value> {
                         "type": "integer",
                         "description": "Monotonic log cursor (a sequence number). Return lines with seq >= after (start from this cursor). Start with 0 to read from the oldest retained line, then pass the `nextSeq` from a previous response to cheaply poll for new lines. Stable even as the ring buffer drops old lines."
                     },
+                    "before": {
+                        "type": "integer",
+                        "description": "Optional upper sequence bound: return only lines with seq < before. With `after` it reads an exact seq range, such as one a user attached to the chat."
+                    },
                     "limit": {
                         "type": "integer",
                         "description": "Maximum number of lines to return (newest kept). Defaults to 100."
@@ -83,6 +87,10 @@ pub(super) fn defs() -> Vec<Value> {
                     "after": {
                         "type": "integer",
                         "description": "Monotonic log cursor (a sequence number). Return lines with seq >= after (start from this cursor). Start with 0 to read from the oldest retained line, then pass the `nextSeq` from a previous response to cheaply poll for new lines. Stable even as the ring buffer drops old lines."
+                    },
+                    "before": {
+                        "type": "integer",
+                        "description": "Optional upper sequence bound: return only lines with seq < before. With `after` it reads an exact seq range, such as one a user attached to the chat."
                     },
                     "limit": {
                         "type": "integer",

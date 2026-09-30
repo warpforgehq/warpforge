@@ -1,10 +1,29 @@
 import type { CoreClient } from "./client";
-import { MAX_PORTFORWARD_LOGS, MAX_SERVICE_LOGS, type Constructor } from "./types";
+import { MAX_PORTFORWARD_LOGS, MAX_SERVICE_LOGS, type Constructor, type LogEntry } from "./types";
 
 /** What `quitCheck` reports: what a quit would stop, and who owns the daemon. */
 export interface QuitCheck {
   blockers: string[];
   owned: boolean;
+}
+
+/** Retained lines are contiguous by seq and end just below `nextSeq`, so each
+ *  line's seq follows from its position. */
+function toLogEntries(result: unknown): LogEntry[] {
+  const payload = result as { lines?: unknown; at?: unknown; nextSeq?: unknown };
+  const rawLines = Array.isArray(result)
+    ? result
+    : Array.isArray(payload?.lines)
+      ? payload.lines
+      : [];
+  const at = Array.isArray(payload?.at) ? payload.at : [];
+  const nextSeq = typeof payload?.nextSeq === "number" ? payload.nextSeq : rawLines.length;
+  const firstSeq = nextSeq - rawLines.length;
+  return rawLines.map((line, i) => ({
+    at: typeof at[i] === "number" ? at[i] : 0,
+    line: String(line),
+    seq: firstSeq + i,
+  }));
 }
 
 export function RuntimeMethods<TBase extends Constructor<CoreClient>>(Base: TBase) {
@@ -27,20 +46,14 @@ export function RuntimeMethods<TBase extends Constructor<CoreClient>>(Base: TBas
       project: string,
       service: string,
       options: { after?: number; limit?: number } = {},
-    ): Promise<string[]> {
+    ): Promise<LogEntry[]> {
       const result = await this.request("service.logs", {
         after: options.after ?? 0,
         limit: options.limit ?? 300,
         project,
         service,
       });
-      const payload = result as { lines?: unknown };
-      const rawLines = Array.isArray(result)
-        ? result
-        : Array.isArray(payload?.lines)
-          ? payload.lines
-          : [];
-      const lines = rawLines.map(String);
+      const lines = toLogEntries(result);
       const key = `${project}/${service}`;
       this.setState({
         serviceLogs: {
@@ -55,20 +68,14 @@ export function RuntimeMethods<TBase extends Constructor<CoreClient>>(Base: TBas
       project: string,
       name: string,
       options: { after?: number; limit?: number } = {},
-    ): Promise<string[]> {
+    ): Promise<LogEntry[]> {
       const result = await this.request("portforward.logs", {
         after: options.after ?? 0,
         limit: options.limit ?? 300,
         project,
         name,
       });
-      const payload = result as { lines?: unknown };
-      const rawLines = Array.isArray(result)
-        ? result
-        : Array.isArray(payload?.lines)
-          ? payload.lines
-          : [];
-      const lines = rawLines.map(String);
+      const lines = toLogEntries(result);
       const key = `${project}/${name}`;
       this.setState({
         portforwardLogs: {

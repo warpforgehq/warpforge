@@ -32,6 +32,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { daemon } from "../daemon";
+import type { LogEntry } from "../daemon/types";
 import { disposeTerminalWorkspace, getTerminalWorkspace } from "../lib/terminalWorkspace";
 import type { PortForwardInfo, ServiceInfo, TerminalInfo } from "../protocol";
 import { TerminalWorkspaceView } from "./runtime/TerminalWorkspace";
@@ -558,9 +559,12 @@ describe("RuntimePanel — bulk controls are the same for both lists", () => {
   });
 });
 
+const logEntries = (...lines: string[]): LogEntry[] =>
+  lines.map((line, seq) => ({ at: 0, line, seq }));
+
 describe("RuntimePanel — log viewer isolation", () => {
   it("fetches logs only once per target (not per logSeq change)", () => {
-    const fetchSpy = vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(["line1"]);
+    const fetchSpy = vi.spyOn(daemon, "fetchServiceLogs").mockResolvedValue(logEntries("line1"));
     const { rerender } = render(
       <RuntimePanel project="warpforge" services={[webService]} portforwards={[]} />,
     );
@@ -577,8 +581,8 @@ describe("RuntimePanel — log viewer isolation", () => {
 
   it("switching target does not show old fetched logs", async () => {
     vi.spyOn(daemon, "fetchServiceLogs").mockImplementation((_project, service) => {
-      if (service === "web") return Promise.resolve(["web-log-line"]);
-      return Promise.resolve(["api-log-line"]);
+      if (service === "web") return Promise.resolve(logEntries("web-log-line"));
+      return Promise.resolve(logEntries("api-log-line"));
     });
     const { rerender } = render(
       <RuntimePanel

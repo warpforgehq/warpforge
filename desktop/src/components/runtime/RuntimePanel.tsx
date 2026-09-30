@@ -7,6 +7,7 @@ import { PANEL_BOUNDS, useAutoHiddenRail, usePanelSize } from "@/store/panelLayo
 import { useUi } from "@/store/ui";
 
 import type { PortForwardInfo, ServiceInfo } from "../../protocol";
+import type { ContextChip } from "../Composer";
 import { makeSidebarKey, type SidebarItem } from "./constants";
 import {
   PortForwardDetailPane,
@@ -26,7 +27,7 @@ export function RuntimePanel({
   project: string;
   services: ServiceInfo[];
   portforwards: PortForwardInfo[];
-  onAppendToChat?: (formattedLogs: string) => void;
+  onAppendToChat?: (context: ContextChip) => void;
 }) {
   const hasItems = services.length > 0 || portforwards.length > 0;
   const [actionError, setActionError] = useState<string | null>(null);

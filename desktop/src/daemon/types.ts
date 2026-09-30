@@ -9,6 +9,13 @@ import type {
   TaskPullRequest,
 } from "../protocol";
 
+/** One retained log line: its monotonic per-source seq, capture time (epoch ms), and text. */
+export interface LogEntry {
+  seq: number;
+  at: number;
+  line: string;
+}
+
 export type ConnectionState = "connecting" | "connected" | "disconnected";
 
 export interface DaemonState {
@@ -19,9 +26,9 @@ export interface DaemonState {
   /** Retained per-task ACP stream (bounded), keyed by task id. */
   sessionUpdates: Record<string, SessionUpdate[]>;
   /** Service log lines keyed by "project/service", bounded to MAX_SERVICE_LOGS. */
-  serviceLogs: Record<string, string[]>;
+  serviceLogs: Record<string, LogEntry[]>;
   /** Port-forward log lines keyed by "project/name", bounded to MAX_PORTFORWARD_LOGS. */
-  portforwardLogs: Record<string, string[]>;
+  portforwardLogs: Record<string, LogEntry[]>;
   /** Non-null when daemon signals first-run setup is needed. */
   pendingAgentSetup: DetectedAgent[] | null;
   /** Latest per-account harness rate limits, or null until first known. */

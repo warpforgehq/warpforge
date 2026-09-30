@@ -12,7 +12,7 @@ import {
 } from "@/lib/sessionStore";
 import { buildTaskGroupIndex } from "@/lib/taskGroups";
 
-import { type ComposerHandle } from "../../components/Composer";
+import { type ComposerHandle, type ContextChip } from "../../components/Composer";
 import { daemon } from "../../daemon";
 import { mentionToken } from "../../lib/composerMentions";
 import type {
@@ -254,8 +254,8 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
   const sendDiffToChat = useCallback((file: FileDiff) => {
     composerRef.current?.attachDiff(file, formatFileDiffAsMessage(file));
   }, []);
-  const appendLogsToChat = useCallback((text: string) => {
-    composerRef.current?.appendDraft(text);
+  const attachLogsToChat = useCallback((chip: ContextChip) => {
+    composerRef.current?.attachContext(chip);
   }, []);
   const sendSelectionToChat = useCallback((path: string, range: FileRange) => {
     composerRef.current?.appendDraft(mentionToken(path, range));
@@ -444,7 +444,7 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
   return {
     activeFilePath,
     activeSurface,
-    appendLogsToChat,
+    attachLogsToChat,
     attachBrowserContext,
     setBrowserContextImage,
     chatOnRight,

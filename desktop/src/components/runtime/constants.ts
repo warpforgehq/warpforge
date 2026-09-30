@@ -1,4 +1,6 @@
-export const EMPTY_LOGS: string[] = [];
+import type { LogEntry } from "../../daemon/types";
+
+export const EMPTY_LOGS: LogEntry[] = [];
 export const LOG_DISPLAY_CAP = 500;
 export const FOLLOW_THRESHOLD_PX = 40;
 

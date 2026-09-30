@@ -54,6 +54,7 @@ Read a window of a service's retained stdout/stderr. These behave like `kubectl 
 | --- | --- |
 | `service` / `name` | Which one to read (from `list_runtime`) |
 | `after` | Monotonic sequence cursor. Start at `0`, then pass the returned `nextSeq` to cheaply poll for new lines — stable even as old lines age out of the ring buffer |
+| `before` | Optional upper sequence bound: only lines below it. With `after` it reads an exact range — the one a log chip in the chat points at |
 | `limit` | Max lines, newest kept (default 100) |
 | `filter` | Case-insensitive substring, run over the **whole** buffer before `limit` is applied — so a match deep in history isn't lost |
 | `context` | N lines around each match, like `grep -C` |
