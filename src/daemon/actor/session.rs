@@ -252,6 +252,13 @@ impl Daemon {
         let is_orchestrator = mode == BridgeMode::Orchestrator;
         let mcp_servers = mcp_servers(task_id, project, mode);
         bridge_env(&mut env, task_id, project, mode);
+        // A resume keeps whatever mode the person chose; only a fresh start
+        // falls back to auto. The advisor's read-only mode still wins.
+        let config_overrides = if resume.is_none() {
+            self.with_default_mode(agent, config_overrides)
+        } else {
+            config_overrides
+        };
         let config_overrides = self.advisor_overrides(task_id, agent, config_overrides);
         let memory_prefix = if self.memory.enabled() {
             format!("{MEMORY_SYSTEM}\n\n")

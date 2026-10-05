@@ -58,6 +58,7 @@ pub(crate) mod runner;
 mod service_start;
 mod session;
 mod spawn;
+mod start_mode;
 mod transcript;
 mod user_ask;
 mod workflow;
