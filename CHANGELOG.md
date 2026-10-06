@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.24.0
+
+### Minor Changes
+
+- [`421e284`](https://github.com/warpforgehq/warpforge/commit/421e28415d159671efbd9457ae3559e0714710d2) Thanks [@ephor](https://github.com/ephor)! - Agents can now open GitHub and Linear issues for you. Ask an agent to file something on GitHub or Linear and it creates the issue and adds a linked item to your backlog, just like **New work item** does. Without that request, agents still file follow-up work only in your backlog.
+
+- [`0808d89`](https://github.com/warpforgehq/warpforge/commit/0808d89bf991229896f2cfc3c7206c6075a60c40) Thanks [@ephor](https://github.com/ephor)! - New Claude tasks now start in Claude's **Auto** mode instead of **Manual**, so routine steps go ahead without stopping for your approval each time. Prefer to approve every step? Pick **Manual** under **More → Mode** when you create the task or from the composer.
+
 ## 0.23.0
 
 ### Minor Changes
