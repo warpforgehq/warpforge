@@ -4,6 +4,7 @@ use super::handle_tool_call;
 use crate::mcp::daemon_client::fake::FakeDaemon;
 use crate::mcp::daemon_client::DaemonClient;
 
+mod backlog_tracker;
 mod spawn_workflow;
 
 async fn call_single(daemon: &FakeDaemon, project: &str, name: &str, args: Value) -> String {

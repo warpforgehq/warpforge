@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::{anyhow, Result};
 use serde_json::{json, Value};
 
@@ -7,7 +9,12 @@ use crate::mcp::format::json_text;
 pub(crate) const STATUSES: [&str; 5] = ["todo", "in_progress", "waiting", "done", "cancelled"];
 pub(crate) const PRIORITIES: [&str; 5] = ["none", "low", "medium", "high", "urgent"];
 
+pub(crate) const TRACKERS: [&str; 2] = ["github", "linear"];
+
 const PAGE: u64 = 100;
+
+/// The daemon bounds each `gh` call, and one create makes two of them.
+const EXTERNAL_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub(super) async fn dispatch(
     name: &str,
@@ -21,20 +28,42 @@ pub(super) async fn dispatch(
                 .or_else(|| text(args, "prompt"))
                 .ok_or_else(|| anyhow!("'title' is required (or the legacy 'prompt')"))?;
             let proj = project_of(args, project)?;
+            let tracker = choice(args, "tracker", &TRACKERS)?;
+            let body = args.get("body").and_then(Value::as_str).unwrap_or_default();
             let result = client
                 .request(
                     "backlog.create",
                     json!({
                         "project": proj,
                         "title": title,
-                        "body": args.get("body").and_then(Value::as_str).unwrap_or_default(),
+                        "body": body,
                         "priority": args.get("priority").and_then(Value::as_str).unwrap_or_default(),
                         "status": args.get("status").and_then(Value::as_str).unwrap_or_default(),
-                        "source": "local"
+                        "source": tracker.unwrap_or("local")
                     }),
                 )
                 .await?;
-            Ok(format!("Created backlog item\n{}", json_text(&result)?))
+            let Some(provider) = tracker else {
+                return Ok(format!("Created backlog item\n{}", json_text(&result)?));
+            };
+            let item_id = result["id"].as_str().unwrap_or_default();
+            match push_external(client, &proj, item_id, provider, title, body.trim()).await {
+                Ok(url) => Ok(format!(
+                    "Created backlog item and {provider} issue {url}\n{}",
+                    json_text(&result)?
+                )),
+                Err(error) => {
+                    // A failed create must not leave an item claiming to live
+                    // in a tracker it never reached (ADR-0002, invariant 5).
+                    let _ = client
+                        .request(
+                            "backlog.delete",
+                            json!({ "item_id": item_id, "project": proj }),
+                        )
+                        .await;
+                    Err(error.context(format!("could not create the {provider} issue")))
+                }
+            }
         }
         "list_backlog_tasks" => list(client, project, args).await,
         "get_backlog_task" => {
@@ -87,6 +116,42 @@ pub(super) async fn dispatch(
         }
         other => Err(anyhow!("unknown tool: {other}")),
     }
+}
+
+/// Open the tracker issue for a fresh backlog item and link the two, the way
+/// the New Work Item drawer does.
+/// @param client the daemon connection
+/// @param proj the item's project
+/// @param item_id the backlog item to link
+/// @param provider `github` or `linear`
+/// @param title the issue title
+/// @param body the issue body
+/// @returns the issue's URL
+async fn push_external(
+    client: &mut DaemonClient,
+    proj: &str,
+    item_id: &str,
+    provider: &str,
+    title: &str,
+    body: &str,
+) -> Result<String> {
+    let created = client
+        .request_within(
+            "workItem.createExternal",
+            json!({ "item_id": item_id, "project": proj, "provider": provider,
+                    "title": title, "body": body }),
+            EXTERNAL_TIMEOUT,
+        )
+        .await?;
+    let url = created["url"].as_str().unwrap_or_default().to_string();
+    client
+        .request(
+            "backlog.attachExternal",
+            json!({ "item_id": item_id, "project": proj, "provider": provider,
+                    "external_id": created["externalId"], "url": url }),
+        )
+        .await?;
+    Ok(url)
 }
 
 fn text<'a>(args: &'a Value, key: &str) -> Option<&'a str> {

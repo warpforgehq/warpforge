@@ -1,18 +1,23 @@
 use serde_json::{json, Value};
 
-use crate::mcp::handle::{PRIORITIES, STATUSES};
+use crate::mcp::handle::{PRIORITIES, STATUSES, TRACKERS};
 
 pub(super) fn defs() -> Vec<Value> {
     vec![
         json!({
             "name": "create_backlog_task",
-            "description": "Create a local backlog item for follow-up work. It is recorded in the project's backlog and does not start an agent.",
+            "description": "Create a backlog item for follow-up work. It is recorded in the project's backlog and does not start an agent. With `tracker` it also opens a linked issue in GitHub or Linear.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "project": {
                         "type": "string",
                         "description": "Project name. Defaults to the current project."
+                    },
+                    "tracker": {
+                        "type": "string",
+                        "enum": TRACKERS,
+                        "description": "Also create the issue in this tracker and link it to the item. Set it only when the user explicitly asks for a GitHub or Linear issue; omit it for a local item."
                     },
                     "title": {
                         "type": "string",

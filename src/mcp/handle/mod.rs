@@ -5,7 +5,7 @@ use super::automations;
 use super::daemon_client::DaemonClient;
 
 pub(crate) use advisor::ask_advisor;
-pub(crate) use backlog::{PRIORITIES, STATUSES};
+pub(crate) use backlog::{PRIORITIES, STATUSES, TRACKERS};
 
 mod advisor;
 mod agents;

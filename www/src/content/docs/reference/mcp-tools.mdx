@@ -78,10 +78,12 @@ Control a service or port-forward. All dispatch **asynchronously and return imme
 Creates a local backlog item **without** auto-running an agent. It lands in the backlog with status *todo* by default.
 
 ```
-create_backlog_task(title, project?, body?, priority?, status?)
+create_backlog_task(title, project?, body?, priority?, status?, tracker?)
 ```
 
 `title` is required. Older agents that send `prompt` instead are still accepted; `project` defaults to the one the session is working in.
+
+Pass `tracker` (`github` or `linear`) to also open the issue in that tracker and link it to the item, the same as **New work item** does in the backlog. Agents set it only when you ask for a GitHub or Linear issue. If the issue cannot be created, the item is removed too, so nothing claims to live in a tracker it never reached.
 
 **When:** an agent finds real work that isn't the work it was asked to do — a bug next door, a missing test, a refactor the change made obvious. Instead of scope-creeping the current diff or silently dropping it, it files it.
 
