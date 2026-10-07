@@ -83,9 +83,12 @@ only when the frame has focus and the user has just interacted.
    `html-preview:<id>` label.** (`html_render/mod.rs` `route`)
 5. **Deleting a task removes `~/.warpforge/renders/<task>`.**
    (`actor/commands/task.rs` `DeleteTask`)
-6. **The preview's `data:` host page carries no inline script.** Tauri adds
-   the app CSP to `data:` pages, which blocks it; the host's script is a
-   main-frame-only initialization script. (`html_render/preview.rs`)
+6. **The preview's `data:` host page carries no inline script and no `#`,
+   `?` or `%`.** Tauri adds the app CSP to `data:` pages, which blocks inline
+   scripts, and rewrites the URL without escaping those characters, so a `#`
+   cuts the page off. A main-frame-only initialization script creates the
+   sandboxed iframe and sets its URL. (`html_render/preview.rs`, tested
+   against the same rewrite)
 
 ### Manual check
 

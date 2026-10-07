@@ -1,7 +1,8 @@
-//! `render_preview`'s capture: the agent's page in a sandboxed iframe, framed
-//! by a `data:` host page in a child webview of its own, off the visible area.
-//! The host's origin is remote to Tauri, so it can call no app command, and
-//! the page itself never runs as a main frame (ADR 0025).
+//! `render_preview`'s capture: the agent's page in a sandboxed iframe, inside
+//! a `data:` host page in a child webview of its own, off the visible area. A
+//! main-frame user script adds the iframe and records its load, height and
+//! console problems. The host's origin is remote to Tauri, so it can call no
+//! app command, and the page itself never runs as a main frame (ADR 0025).
 
 use std::sync::{mpsc, Mutex};
 use std::time::{Duration, Instant};
@@ -23,13 +24,15 @@ const POLL: Duration = Duration::from_millis(100);
 /// Polls the reported height must hold for before it counts as settled.
 const STABLE_POLLS: u32 = 3;
 
-/// The host page; `{SRC}` is the framed page's URL.
-const HOST_PAGE: &str = r#"<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:transparent}iframe{display:block;border:0;width:100%;height:800px}</style></head><body><iframe id="f" sandbox="allow-scripts allow-forms" src="{SRC}"></iframe></body></html>"#;
+/// The host page. Tauri rewrites `data:` URLs without escaping `#`, `?` or
+/// `%`, so the page holds none of them; the iframe and its URL come from
+/// [`HOST_SCRIPT`].
+const HOST_PAGE: &str = r#"<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:transparent}iframe{display:block;border:0;width:100vw;height:800px}</style></head><body></body></html>"#;
 
-/// Records the frame's load, its last reported height and its console
-/// problems for `__wfPreview`. Tauri adds the app CSP to `data:` pages, which
-/// blocks inline scripts, so this runs as a main-frame user script instead.
-const HOST_SCRIPT: &str = r#"(function(){var st={loaded:false,height:0,messages:[]};document.addEventListener("load",function(e){if(e.target&&e.target.id==="f")st.loaded=true;},true);window.addEventListener("message",function(e){var f=document.getElementById("f");if(!f||e.source!==f.contentWindow)return;var d=e.data,p=d&&d.params;if(!d||d.jsonrpc!=="2.0"||!p)return;if(d.method==="ui/notifications/size-changed"&&typeof p.height==="number"&&isFinite(p.height)&&p.height>0){st.height=Math.ceil(p.height);f.style.height=Math.min(st.height,4000)+"px";}else if(d.method==="notifications/message"&&st.messages.length<20){st.messages.push({level:String(p.level),text:String(p.data).slice(0,500)});}});window.__wfPreview=function(){return JSON.stringify(st);};})();"#;
+/// Frames `{SRC}` sandboxed and serves `__wfPreview`. Tauri adds the app CSP
+/// to `data:` pages, which blocks inline scripts, so this runs as a
+/// main-frame user script; sandbox and src are set before insertion.
+const HOST_SCRIPT: &str = r#"(function(){var st={loaded:false,height:0,messages:[]},f=null;document.addEventListener("DOMContentLoaded",function(){f=document.createElement("iframe");f.id="f";f.setAttribute("sandbox","allow-scripts allow-forms");f.addEventListener("load",function(){st.loaded=true;});f.src={SRC};document.body.appendChild(f);});window.addEventListener("message",function(e){if(!f||e.source!==f.contentWindow)return;var d=e.data,p=d&&d.params;if(!d||d.jsonrpc!=="2.0"||!p)return;if(d.method==="ui/notifications/size-changed"&&typeof p.height==="number"&&isFinite(p.height)&&p.height>0){st.height=Math.ceil(p.height);f.style.height=Math.min(st.height,4000)+"px";}else if(d.method==="notifications/message"&&st.messages.length<20){st.messages.push({level:String(p.level),text:String(p.data).slice(0,500)});}});window.__wfPreview=function(){return JSON.stringify(st);};})();"#;
 
 #[derive(serde::Deserialize, Default)]
 struct HostState {
@@ -69,7 +72,7 @@ fn frame_src(id: &str, fragment: &str) -> String {
 }
 
 /// A theme fragment as the web side builds it: `#wf-theme=` and URI-encoded
-/// JSON, so nothing in it can leave the attribute it is written into.
+/// JSON, so nothing in it can leave the string it is written into.
 fn is_theme_fragment(fragment: &str) -> bool {
     fragment.strip_prefix("#wf-theme=").is_some_and(|rest| {
         rest.chars().all(|c| {
@@ -79,8 +82,8 @@ fn is_theme_fragment(fragment: &str) -> bool {
     })
 }
 
-fn host_page(src: &str) -> String {
-    HOST_PAGE.replace("{SRC}", src)
+fn host_script(src: &str) -> String {
+    HOST_SCRIPT.replace("{SRC}", &Value::from(src).to_string())
 }
 
 fn data_url(html: &str) -> String {
@@ -204,13 +207,13 @@ pub async fn html_preview(
     let window = app
         .get_window(HOST_WINDOW)
         .ok_or_else(|| "main window is not available".to_string())?;
-    let host: Url = data_url(&host_page(&frame_src(&id, &fragment)))
+    let host: Url = data_url(HOST_PAGE)
         .parse()
         .map_err(|_| "invalid preview page".to_string())?;
     let builder = WebviewBuilder::new(preview_label(&id), WebviewUrl::External(host))
         .incognito(true)
         .focused(false)
-        .initialization_script(HOST_SCRIPT)
+        .initialization_script(host_script(&frame_src(&id, &fragment)))
         .on_navigation(may_navigate);
     // Outside the window's visible area but not hidden: a hidden view may
     // not render, and then the snapshot comes back empty.
@@ -252,16 +255,42 @@ mod tests {
 
     #[test]
     fn the_host_frames_the_page_sandboxed_without_same_origin() {
-        let page = host_page(&frame_src("p1", "#wf-theme=%7B%7D"));
-        assert!(page.contains(r#"<iframe id="f" sandbox="allow-scripts allow-forms" src=""#));
-        assert!(!page.contains("allow-same-origin"));
-        assert!(!page.contains("<script"));
+        let script = host_script(&frame_src("p1", "#wf-theme=%7B%7D"));
         let expected = if cfg!(windows) {
-            "http://wf-render.localhost/preview/p1#wf-theme=%7B%7D"
+            r#"f.src="http://wf-render.localhost/preview/p1#wf-theme=%7B%7D";"#
         } else {
-            "wf-render://localhost/preview/p1#wf-theme=%7B%7D"
+            r#"f.src="wf-render://localhost/preview/p1#wf-theme=%7B%7D";"#
         };
-        assert!(page.contains(expected), "{page}");
+        let sandbox = script
+            .find(r#"f.setAttribute("sandbox","allow-scripts allow-forms");"#)
+            .unwrap();
+        let src = script.find(expected).expect(&script);
+        let insert = script.find("document.body.appendChild(f)").unwrap();
+        assert!(sandbox < src && src < insert, "{script}");
+        assert!(!script.contains("allow-same-origin"));
+        assert!(!HOST_PAGE.contains("<script"));
+    }
+
+    /// What `tauri::manager::webview::prepare_webview` does to a `data:` URL
+    /// when the app has a CSP: the decoded page, CSP added, set as the path.
+    #[test]
+    fn the_host_page_survives_tauris_data_url_rewrite() {
+        let config: Value = serde_json::from_str(include_str!("../../tauri.conf.json")).unwrap();
+        let csp = config["app"]["security"]["csp"].as_str().unwrap();
+        let page = HOST_PAGE.replace(
+            "</head>",
+            &format!(r#"<meta http-equiv="Content-Security-Policy" content="{csp}"></head>"#),
+        );
+        let mut url: Url = data_url(HOST_PAGE).parse().unwrap();
+        url.set_path(&format!("text/html,{page}"));
+        let loaded = Url::parse(url.as_str()).unwrap();
+        assert_eq!(loaded.fragment(), None);
+        assert_eq!(loaded.query(), None);
+        assert_eq!(loaded.path(), format!("text/html,{page}"));
+        assert!(loaded.path().ends_with("<body></body></html>"));
+        for c in ['#', '?', '%'] {
+            assert!(!HOST_PAGE.contains(c), "{c}");
+        }
     }
 
     #[test]
