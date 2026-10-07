@@ -321,7 +321,7 @@ function Sidebar({
                               depth={row.depth}
                               ancestorLines={row.ancestorLines}
                               isLast={row.isLast}
-                              onActivePath={row.onActivePath}
+                              activeLane={row.activeLane}
                               active={openTaskId === row.task.id}
                               childCount={row.childCount}
                               expanded={row.expanded}

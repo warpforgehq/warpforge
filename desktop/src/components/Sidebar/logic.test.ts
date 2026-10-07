@@ -541,24 +541,37 @@ describe("nested rail data", () => {
     expect(c.ancestorLines[0]).toBe(true);
     // C is an only child, so its connector ends in an elbow.
     expect(c.isLast).toBe(true);
-    for (const row of [a, b, c]) expect(row.onActivePath).toBe(true);
+    expect(a.activeLane).toBeNull();
+    expect(b.activeLane).toBe(0);
+    expect(c.activeLane).toBe(1);
     for (const row of taskRows(build(tasks, { expandedTaskIds: new Set(["a", "b"]) }))) {
-      expect(row.onActivePath).toBe(false);
+      expect(row.activeLane).toBeNull();
     }
   });
 
-  it("marks only the open task and its ancestors on the active path", () => {
+  it("lights the open branch's lane beside earlier siblings and their subtrees", () => {
+    const tree = [
+      task("p", { updatedAt: 1 }),
+      task("s1", { parentTaskId: "p", updatedAt: 9 }),
+      task("s1kid", { parentTaskId: "s1" }),
+      task("open", { parentTaskId: "p", updatedAt: 5 }),
+      task("openKid", { parentTaskId: "open" }),
+      task("s3", { parentTaskId: "p", updatedAt: 1 }),
+    ];
     const rows = taskRows(
-      build(tasks, {
-        activePathIds: new Set(["b", "c"]),
-        expandedTaskIds: new Set(["a", "b"]),
+      build(tree, {
+        activePathIds: new Set(["p", "open"]),
+        expandedTaskIds: new Set(["p", "s1", "open"]),
       }),
     );
-    const path = (id: string) => rows.find((row) => row.task.id === id)!.onActivePath;
-    expect(path("a")).toBe(false);
-    expect(path("b")).toBe(true);
-    expect(path("c")).toBe(true);
-    expect(path("a2")).toBe(false);
+    const lane = (id: string) => rows.find((row) => row.task.id === id)!.activeLane;
+    expect(rows.map((row) => row.task.id)).toEqual(["p", "s1", "s1kid", "open", "openKid", "s3"]);
+    expect(lane("p")).toBeNull();
+    expect(lane("s1")).toBe(0);
+    expect(lane("s1kid")).toBe(0);
+    expect(lane("open")).toBe(0);
+    expect(lane("openKid")).toBeNull();
+    expect(lane("s3")).toBeNull();
   });
 
   it("computes elbow vs tee from the row's own last-child flag", () => {
@@ -570,34 +583,33 @@ describe("nested rail data", () => {
     const rows = taskRows(build(kids, { expandedTaskIds: new Set(["lead"]) }));
     const one = rows.find((row) => row.task.id === "one")!;
     const two = rows.find((row) => row.task.id === "two")!;
-    // x = level × INDENT + half the twisty lane, so the vertical sits under
-    // the ancestor's chevron; the run ends where the child's content starts.
     // x = base inset (12) + level × INDENT + half the twisty lane (8), so a
-    // depth-1 connector at x=20 lands under the depth-0 chevron centre.
-    expect(railLanes(one.depth, one.ancestorLines, one.isLast, false)).toEqual([
-      { active: false, level: 0, run: 14, shape: "tee", x: 20 },
+    // depth-1 connector at x=20 lands under the depth-0 chevron centre; the
+    // run ends at the child's content start (12 + 12 + 16 + 6 = 46).
+    expect(railLanes(one.depth, one.ancestorLines, one.isLast, null)).toEqual([
+      { active: false, level: 0, run: 26, shape: "tee", x: 20 },
     ]);
-    expect(railLanes(two.depth, two.ancestorLines, two.isLast, true)).toEqual([
-      { active: true, level: 0, run: 14, shape: "elbow", x: 20 },
+    expect(railLanes(two.depth, two.ancestorLines, two.isLast, 0)).toEqual([
+      { active: true, level: 0, run: 26, shape: "elbow", x: 20 },
     ]);
   });
 
   it("draws pass-through lanes only where the ancestor continues", () => {
-    expect(railLanes(3, [true, false, true], true, false)).toEqual([
+    expect(railLanes(3, [true, true, false], true, 2)).toEqual([
       { active: false, level: 0, run: 1, shape: "pass", x: 20 },
-      { active: false, level: 2, run: 14, shape: "elbow", x: 44 },
+      { active: true, level: 2, run: 26, shape: "elbow", x: 44 },
     ]);
   });
 
   it("keeps deeper rails on one evenly spaced grid and clamps at five levels", () => {
     // Level 1 at x=32 (base 12 + 12 + 8) sits under a depth-1 chevron centre.
-    const lanes = railLanes(7, [true, true, true, true, true, true, true], true, false);
+    const lanes = railLanes(7, [true, true, true, true, true, true, true], true, null);
     expect(lanes.map((lane) => lane.x)).toEqual([20, 32, 44, 56, 68]);
   });
 
   it("ends a connector where the child's own content starts", () => {
     for (const depth of [1, 2, 5, 9]) {
-      const lanes = railLanes(depth, [], true, false);
+      const lanes = railLanes(depth, [], true, null);
       const connector = lanes[lanes.length - 1];
       expect(connector.x + connector.run).toBe(sidebarContentLeft(depth));
     }
@@ -605,9 +617,9 @@ describe("nested rail data", () => {
 });
 
 describe("the row columns", () => {
-  it("holds the project row and its first level in one twisty column", () => {
+  it("holds the project row and root tasks in one twisty column", () => {
     expect(sidebarTwistyLeft(0)).toBe(SIDEBAR_ROW_INSET_PX);
-    expect(sidebarTwistyLeft(1)).toBe(sidebarTwistyLeft(0));
+    expect(sidebarTwistyLeft(1)).toBe(sidebarTwistyLeft(0) + SIDEBAR_INDENT_PX);
     expect(sidebarTwistyLeft(2)).toBe(sidebarTwistyLeft(1) + SIDEBAR_INDENT_PX);
   });
 

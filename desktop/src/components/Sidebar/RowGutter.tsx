@@ -5,29 +5,29 @@ import { RAIL_ELBOW_RADIUS, RAIL_W_ACTIVE, type RailLane, railLanes } from "./lo
 /**
  * The tree guide for one task row, drawn per row so it survives virtualization:
  * every lane is a full-slot-height slice computed from the row's own
- * `(depth, ancestorLines, isLast, onActivePath)`. Two rows that should abut
+ * `(depth, ancestorLines, isLast, activeLane)`. Two rows that should abut
  * draw their verticals at the same x and to the same height, so the line is
  * continuous whichever rows the virtualizer has mounted (spec 08 §D).
  *
  * Each lane's vertical is centred under the chevron of the ancestor at that
  * level, so the branch reads as hanging off the arrow that expands the group;
  * the connector's horizontal ends at the row's first glyph lane. Base lanes are
- * the neutral `rule`; on the open task's path only the *vertical* is overlaid
- * at `RAIL_W_ACTIVE` `primary`, tracing the branch without painting across the
- * row.
+ * the neutral `rule`; the one lane the open task's branch runs through has
+ * only its *vertical* overlaid at `RAIL_W_ACTIVE` `primary`, tracing the
+ * branch without painting across the row.
  */
 export function RowGutter({
   depth,
   ancestorLines,
   isLast,
-  onActivePath,
+  activeLane,
 }: {
   depth: number;
   ancestorLines: readonly boolean[];
   isLast: boolean;
-  onActivePath: boolean;
+  activeLane: number | null;
 }) {
-  const lanes = railLanes(depth, ancestorLines, isLast, onActivePath);
+  const lanes = railLanes(depth, ancestorLines, isLast, activeLane);
   if (lanes.length === 0) return null;
   return (
     <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0">

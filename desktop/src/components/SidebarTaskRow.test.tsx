@@ -40,7 +40,7 @@ function renderRow(task: TaskInfo, childCount = 0) {
           depth={0}
           ancestorLines={[]}
           isLast
-          onActivePath={false}
+          activeLane={null}
           active={false}
           childCount={childCount}
           expanded={false}
@@ -121,7 +121,7 @@ describe("SidebarTaskRow pull requests", () => {
             depth={0}
             ancestorLines={[]}
             isLast
-            onActivePath={false}
+            activeLane={null}
             active={false}
             childCount={0}
             expanded={false}

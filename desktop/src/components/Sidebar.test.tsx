@@ -810,10 +810,10 @@ describe("Sidebar workspace tree", () => {
     renderSidebar(state);
     fireEvent.click(screen.getByRole("button", { name: /^Expand 1 subtask of Lead/ }));
 
-    // padding-left = base inset 12 + indent (0 at the first level) + twisty 16 + gap 6:
-    // a child aligns with its project, and only deeper levels step in.
+    // padding-left = base inset 12 + depth × 12 + twisty 16 + gap 6: a root task
+    // aligns with its project and each subtask level steps in by one indent.
     expect(taskRows("lead")[0]).toHaveStyle({ paddingLeft: "34px" });
-    expect(taskRows("child")[0]).toHaveStyle({ paddingLeft: "34px" });
+    expect(taskRows("child")[0]).toHaveStyle({ paddingLeft: "46px" });
 
     // The meta lane fits count + logo + elapsed at 68px (was 72px).
     const meta = taskRows("child")[0].querySelector<HTMLElement>('[data-lane="meta"]')!;
@@ -866,11 +866,12 @@ describe("Sidebar workspace tree", () => {
     // connector (level 1) at 32 sits under Mid's. Lead has no following sibling,
     // so Leaf draws no pass-through on level 0.
     expect(rail("mid", 0)).toHaveStyle({ left: "20px" });
+    expect(document.querySelector('[data-expand="mid"]')).toHaveStyle({ left: "24px" });
     expect(rail("leaf", 0)).toBeNull();
     expect(rail("leaf", 1)).toHaveStyle({ left: "32px" });
   });
 
-  it("draws a lane for every continuing ancestor", () => {
+  it("draws a pass-through lane only beside a continuing subtree", () => {
     const state = makeState([
       task("a", { prompt: "A", updatedAt: 100 }),
       task("a2", { prompt: "A2", updatedAt: 1 }),
@@ -881,10 +882,10 @@ describe("Sidebar workspace tree", () => {
     fireEvent.click(screen.getByRole("button", { name: / of A$/ }));
     fireEvent.click(screen.getByRole("button", { name: / of B$/ }));
 
-    // A has a following sibling, so its lane passes beside C; level 1 is C's
-    // own connector.
+    // Roots hang off the project with no rail, so A2 following A draws nothing
+    // beside C; B is A's only child, so level 0 ends at B's elbow.
     const c = taskRows("c")[0].closest("[data-rail-depth]")!;
-    expect(c.querySelector('[data-rail-level="0"]')).not.toBeNull();
+    expect(c.querySelector('[data-rail-level="0"]')).toBeNull();
     expect(c.querySelector('[data-rail-level="1"]')).not.toBeNull();
   });
 
@@ -905,19 +906,25 @@ describe("Sidebar workspace tree", () => {
 
   it("paints the primary rail along the open task's branch only", () => {
     const state = makeState([
-      task("lead", { prompt: "Lead", status: "running" }),
-      task("mid", { parentTaskId: "lead", prompt: "Mid", status: "running" }),
+      task("lead", { prompt: "Lead", status: "running", updatedAt: 1 }),
+      task("first", { parentTaskId: "lead", prompt: "First", status: "running", updatedAt: 9 }),
+      task("mid", { parentTaskId: "lead", prompt: "Mid", status: "running", updatedAt: 5 }),
       task("leaf", { parentTaskId: "mid", prompt: "Leaf", status: "running" }),
-      task("other", { parentTaskId: "lead", prompt: "Other", status: "running" }),
+      task("other", { parentTaskId: "lead", prompt: "Other", status: "running", updatedAt: 1 }),
+      task("next", { prompt: "Next", status: "running", updatedAt: 0 }),
     ]);
     renderSidebar(state, { openTaskId: "leaf" });
 
-    const mid = taskRows("mid")[0].closest("[data-rail-depth]")!;
-    const leaf = taskRows("leaf")[0].closest("[data-rail-depth]")!;
-    const other = taskRows("other")[0].closest("[data-rail-depth]")!;
-    expect(mid.querySelector("[data-rail-active]")).not.toBeNull();
-    expect(leaf.querySelector("[data-rail-active]")).not.toBeNull();
-    expect(other.querySelector("[data-rail-active]")).toBeNull();
+    const active = (id: string) =>
+      [...taskRows(id)[0].closest("[data-rail-depth]")!.querySelectorAll("[data-rail-active]")].map(
+        (lane) => lane.getAttribute("data-rail-level"),
+      );
+    // One lit lane per row, continuous from Lead through First to Mid, then
+    // Mid's own lane into Leaf.
+    expect(active("first")).toEqual(["0"]);
+    expect(active("mid")).toEqual(["0"]);
+    expect(active("leaf")).toEqual(["1"]);
+    expect(active("other")).toEqual([]);
   });
 
   it("has no expand control for a task without children", () => {

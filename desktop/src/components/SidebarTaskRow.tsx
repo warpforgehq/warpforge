@@ -61,7 +61,7 @@ export interface SidebarTaskRowProps {
   depth: number;
   ancestorLines: readonly boolean[];
   isLast: boolean;
-  onActivePath: boolean;
+  activeLane: number | null;
   active: boolean;
   childCount: number;
   expanded: boolean;
@@ -78,7 +78,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
   depth,
   ancestorLines,
   isLast,
-  onActivePath,
+  activeLane,
   active,
   childCount,
   expanded,
@@ -102,7 +102,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
         depth={depth}
         ancestorLines={ancestorLines}
         isLast={isLast}
-        onActivePath={onActivePath}
+        activeLane={activeLane}
       />
       <Tooltip>
         <TooltipTrigger asChild>

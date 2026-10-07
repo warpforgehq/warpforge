@@ -75,10 +75,17 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
   const byRecency = (a: TaskTree, b: TaskTree) =>
     b.task.updatedAt - a.task.updatedAt || a.task.id.localeCompare(b.task.id);
 
-  const pushTree = (tree: TaskTree, depth: number, ancestorLines: boolean[], isLast: boolean) => {
+  const pushTree = (
+    tree: TaskTree,
+    depth: number,
+    ancestorLines: boolean[],
+    isLast: boolean,
+    activeLane: number | null,
+  ) => {
     const expanded = expandedTaskIds.has(tree.task.id);
     const attention = attentionIds.has(tree.task.id);
     rows.push({
+      activeLane,
       ancestorLines,
       attention,
       childCount: tree.children.length,
@@ -87,7 +94,6 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
       isLast,
       key: `workspace:${tree.task.id}`,
       kind: "task",
-      onActivePath: activePathIds.has(tree.task.id),
       state: resolveTaskState(tree.task, { attention, nowSec }),
       task: tree.task,
     });
@@ -95,13 +101,23 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
     // Subtasks are the parent's story, so a settled one stays inline: the shelf
     // only ever holds whole groups.
     const kids = [...tree.children].sort(byPriority);
+    const onPath = activePathIds.has(tree.task.id);
+    // The open branch's vertical runs from this row down to its path child,
+    // so it also lights the lane beside every earlier sibling's subtree.
+    const pathIndex = onPath ? kids.findIndex((kid) => activePathIds.has(kid.task.id)) : -1;
     kids.forEach((child, index) =>
-      pushTree(child, depth + 1, [...ancestorLines, !isLast], index === kids.length - 1),
+      pushTree(
+        child,
+        depth + 1,
+        [...ancestorLines, !isLast],
+        index === kids.length - 1,
+        index <= pathIndex ? depth : onPath ? null : activeLane,
+      ),
     );
   };
   const pushRoots = (trees: TaskTree[], by: (a: TaskTree, b: TaskTree) => number) => {
     const sorted = [...trees].sort(by);
-    sorted.forEach((tree, index) => pushTree(tree, 0, [], index === sorted.length - 1));
+    sorted.forEach((tree, index) => pushTree(tree, 0, [], index === sorted.length - 1, null));
   };
 
   for (const name of input.projectOrder) {

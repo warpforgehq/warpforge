@@ -38,12 +38,12 @@ export interface RailLane {
 }
 
 /**
- * How far a row's content is pushed right, in px. The first level aligns with
- * the project row — its chevron sits under the project's chevron and its title
- * under the project's name — and only deeper levels step in by one indent.
+ * How far a row's content is pushed right, in px. Root tasks (depth 0) align
+ * with the project row — chevron under chevron, title under name — and each
+ * nesting level steps in by one indent.
  */
 export function sidebarIndent(depth: number): number {
-  return Math.min(Math.max(depth - 1, 0), SIDEBAR_MAX_INDENT_LEVELS) * SIDEBAR_INDENT_PX;
+  return Math.min(Math.max(depth, 0), SIDEBAR_MAX_INDENT_LEVELS) * SIDEBAR_INDENT_PX;
 }
 
 /**
@@ -71,15 +71,21 @@ const RAIL_LANE_OFFSET_PX = LANE_TWISTY_PX / 2;
  * row draws its own full-height slice and adjacent slices abut at the same x.
  *
  * `depth - 1` is the connector level (elbow when the row is last, tee
- * otherwise); shallower levels pass through only when that ancestor still has
- * a following sibling. Every lane shares one grid — `level × INDENT` plus the
- * twisty half-lane — so deeper rails stay parallel and evenly spaced.
+ * otherwise); a shallower level L passes through only when the ancestor at
+ * depth L + 1 still has a following sibling. Lane L sits under the chevron of
+ * the depth-L ancestor, so rails stay parallel and evenly spaced.
+ *
+ * @param depth Row nesting depth; roots are 0 and draw no lanes.
+ * @param ancestorLines Per ancestor depth: whether that ancestor has a following sibling.
+ * @param isLast Whether the row is its parent's last child.
+ * @param activeLane The one lane level painted as the open task's branch, or null.
+ * @returns The lanes to draw for the row, shallowest first.
  */
 export function railLanes(
   depth: number,
   ancestorLines: readonly boolean[],
   isLast: boolean,
-  onActivePath: boolean,
+  activeLane: number | null,
 ): RailLane[] {
   if (depth <= 0) return [];
   const levels = Math.min(depth, SIDEBAR_MAX_INDENT_LEVELS);
@@ -89,14 +95,14 @@ export function railLanes(
     const x = SIDEBAR_ROW_INSET_PX + level * SIDEBAR_INDENT_PX + RAIL_LANE_OFFSET_PX;
     if (connector) {
       lanes.push({
-        active: onActivePath,
+        active: activeLane === level,
         level,
         run: sidebarContentLeft(depth) - x,
         shape: isLast ? "elbow" : "tee",
         x,
       });
-    } else if (ancestorLines[level]) {
-      lanes.push({ active: onActivePath, level, run: RAIL_W, shape: "pass", x });
+    } else if (ancestorLines[level + 1]) {
+      lanes.push({ active: activeLane === level, level, run: RAIL_W, shape: "pass", x });
     }
   }
   return lanes;
@@ -143,8 +149,9 @@ export type SidebarRow =
       ancestorLines: boolean[];
       /** This row is the last of its parent's children (elbow, not tee). */
       isLast: boolean;
-      /** This row is on the open task's ancestor path (root → open), inclusive. */
-      onActivePath: boolean;
+      /** The lane level that carries the open task's branch past or into this
+       *  row, painted `primary`; null when the branch does not cross it. */
+      activeLane: number | null;
       childCount: number;
       expanded: boolean;
       attention: boolean;
