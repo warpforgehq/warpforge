@@ -38,6 +38,15 @@ read the app's window. The scheme handler serves a render only to the `main`
 webview and a preview page only to its own `html-preview:<id>` webview, so a
 browser tab or another webview cannot load one.
 
+**The invoke key is what keeps a page from app commands.** WebKit gives every
+frame `window.webkit.messageHandlers.ipc`, and wry forwards a subframe's
+message with that frame's URL. Tauri counts `wf-render:` as a local origin,
+and app commands have no ACL manifest, so a call with the right key would
+run. Tauri checks the key before anything else and drops a message without
+it; the custom-protocol IPC path needs it as a header, which a form or image
+cannot send. The key is 128 random bits held in a closure of a main-frame-only
+script, and an opaque-origin frame cannot read the main frame.
+
 **Previews run in the desktop.** `render_preview` sends the injected page to
 the app that registered the `browser` capability. It frames the page in a
 `data:` host page inside an incognito child webview placed outside the
@@ -89,6 +98,11 @@ only when the frame has focus and the user has just interacted.
    cuts the page off. A main-frame-only initialization script creates the
    sandboxed iframe and sets its URL. (`html_render/preview.rs`, tested
    against the same rewrite)
+7. **Nothing reaches a render or preview frame that carries the invoke key or
+   `__TAURI_INTERNALS__`.** No message posted into the frame, no
+   for-all-frames initialization script, no `allow-same-origin`. The key is the
+   only gate between a page and every app command.
+   (`components/HtmlRenderFrame.tsx`, `html_render/preview.rs`)
 
 ### Manual check
 
@@ -97,4 +111,5 @@ task with a render, attach Web Inspector, pick the render's frame as the
 context and confirm `window.__TAURI_INTERNALS__` is `undefined`,
 `window.parent.document` throws, and
 `window.webkit.messageHandlers.ipc.postMessage("x")` changes nothing (the
-app log shows an invoke-key mismatch or nothing).
+app log shows an invoke-key mismatch or nothing). That `ipc` handler exists
+in the frame is expected.
