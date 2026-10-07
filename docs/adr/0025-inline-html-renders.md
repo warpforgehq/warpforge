@@ -91,7 +91,9 @@ only when the frame has focus and the user has just interacted.
 4. **The scheme serves renders only to `main` and previews only to their own
    `html-preview:<id>` label.** (`html_render/mod.rs` `route`)
 5. **Deleting a task removes `~/.warpforge/renders/<task>`.**
-   (`actor/commands/task.rs` `DeleteTask`)
+   (`actor/commands/task.rs` `DeleteTask`) Renders of tasks gone from the
+   store are swept at daemon start; archived tasks keep theirs.
+   (`actor/spawn/mod.rs`, `html_render/store.rs` `remove_orphans`)
 6. **The preview's `data:` host page carries no inline script and no `#`,
    `?` or `%`.** Tauri adds the app CSP to `data:` pages, which blocks inline
    scripts, and rewrites the URL without escaping those characters, so a `#`

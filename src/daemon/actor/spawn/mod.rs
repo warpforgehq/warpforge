@@ -65,6 +65,18 @@ impl Daemon {
             .map(|t| (t.id.clone(), t))
             .collect();
 
+        // Skipped under test: the renders root is shared by the whole test process.
+        if !cfg!(test) {
+            if let Some(Ok(known)) = store.as_ref().map(Store::task_ids) {
+                tokio::task::spawn_blocking(move || {
+                    let removed = crate::daemon::html_render::store::remove_orphans(&known);
+                    if removed > 0 {
+                        eprintln!("[daemon] removed renders of {removed} deleted tasks");
+                    }
+                });
+            }
+        }
+
         // Rebuild per-project worktree managers from the persisted tasks (ADR 0015).
         let worktrees = restore_worktrees(&projects, &mut tasks, store.as_ref());
 

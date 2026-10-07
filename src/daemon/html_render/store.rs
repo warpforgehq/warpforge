@@ -2,7 +2,8 @@
 //! desktop serves them from there by task and render id (`wf-render://`), so
 //! the layout is part of the contract with `desktop/src-tauri/src/html_render`.
 
-use std::path::PathBuf;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 
 use crate::daemon::workflow::evidence::is_plain_component;
 
@@ -59,9 +60,61 @@ pub(crate) fn remove_task(task_id: &str) {
     }
 }
 
+/// Delete the pages of tasks that no longer exist. Best effort; symlinks and
+/// anything that is not a plainly named directory are left alone.
+/// @param known every task id, archived included; must not be partial
+/// @returns how many task directories were removed
+pub(crate) fn remove_orphans(known: &HashSet<String>) -> usize {
+    remove_orphans_in(&root(), known)
+}
+
+fn remove_orphans_in(root: &Path, known: &HashSet<String>) -> usize {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return 0;
+    };
+    let mut removed = 0;
+    for entry in entries.flatten() {
+        let Ok(name) = entry.file_name().into_string() else {
+            continue;
+        };
+        // `file_type` does not follow symlinks.
+        let is_dir = entry.file_type().is_ok_and(|t| t.is_dir());
+        if !is_dir || !is_plain_component(&name) || known.contains(&name) {
+            continue;
+        }
+        if std::fs::remove_dir_all(entry.path()).is_ok() {
+            removed += 1;
+        }
+    }
+    removed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn orphans_are_removed_and_everything_else_kept() {
+        let root = std::env::temp_dir().join(format!("warpforge-orphans-{}", std::process::id()));
+        std::fs::create_dir_all(root.join("t_known")).unwrap();
+        std::fs::create_dir_all(root.join("t_gone")).unwrap();
+        std::fs::write(root.join("t_gone/r_1.html"), "x").unwrap();
+        std::fs::write(root.join("t_file"), "x").unwrap();
+        std::fs::create_dir_all(root.join("not plain")).unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(root.join("t_known"), root.join("t_link")).unwrap();
+
+        let known = HashSet::from(["t_known".to_string()]);
+        assert_eq!(remove_orphans_in(&root, &known), 1);
+        assert!(root.join("t_known").is_dir());
+        assert!(!root.join("t_gone").exists());
+        assert!(root.join("t_file").is_file());
+        assert!(root.join("not plain").is_dir());
+        #[cfg(unix)]
+        assert!(root.join("t_link").symlink_metadata().is_ok());
+
+        std::fs::remove_dir_all(&root).unwrap();
+    }
 
     #[test]
     fn pages_round_trip_and_paths_are_refused() {

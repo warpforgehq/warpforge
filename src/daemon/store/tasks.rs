@@ -133,6 +133,17 @@ impl Store {
         Ok(rows.filter_map(|r| r.ok()).collect())
     }
 
+    /// Every task id, archived included. Unlike [`Store::load_tasks`], one
+    /// unreadable row fails the whole call, so the set is never partial.
+    /// @returns the ids
+    pub fn task_ids(&self) -> Result<std::collections::HashSet<String>> {
+        let mut stmt = self.conn.prepare("SELECT id FROM tasks")?;
+        let ids = stmt
+            .query_map([], |row| row.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
+        Ok(ids)
+    }
+
     /// Delete a task and its session history permanently.
     pub fn delete_task(&self, id: &str) -> Result<()> {
         self.conn.execute(
