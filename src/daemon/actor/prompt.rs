@@ -82,6 +82,15 @@ port-forward.\n\
 follow-up work as a local backlog item without starting an agent. The older \
 create_task name is a deprecated alias.";
 
+/// Tells every working session when to answer with a page instead of prose
+/// (`render_html`, ADR 0025).
+pub(crate) const VISUALS_SYSTEM: &str = "\
+Showing visuals: when a chart, table, diagram or UI mockup says more than \
+prose, build one self-contained HTML page, check it with render_preview (fix \
+console errors, use its contentHeight), then publish it with render_html \
+before your final reply. The user sees the page above your reply — don't \
+restate or describe it; add only what it doesn't show.";
+
 /// Shared-memory preamble prepended to every session's first prompt when memory
 /// is enabled. This is the primary channel that teaches harnesses to use
 /// memory_* instead of per-harness CLAUDE.md/AGENTS.md silos. The tool

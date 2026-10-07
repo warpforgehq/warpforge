@@ -195,6 +195,23 @@ describe("transcript work grouping", () => {
     expect(rows[1].kind === "update" && rows[1].entry.update.kind).toBe("plan");
   });
 
+  it("keeps an html_render a top-level row between tool calls", () => {
+    const rows = deriveTranscriptRows(
+      coalesceUpdates([
+        read("r1", "src/a.ts"),
+        { kind: "html_render", render_id: "r_1", title: "Chart", height: 400 },
+        read("r2", "src/b.ts"),
+      ]),
+      new Map(),
+      null,
+      null,
+      true,
+    );
+    expect(rows.map((row) => row.kind)).toEqual(["activity", "update", "activity"]);
+    expect(rows[1].kind === "update" && rows[1].entry.update.kind).toBe("html_render");
+    expect(rows[1].id).toBe("update:render:r_1");
+  });
+
   it("keeps the group id and row key stable as items arrive", () => {
     const two = activityRows([read("r1", "src/a.ts"), read("r2", "src/b.ts")]);
     const three = activityRows([

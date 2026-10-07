@@ -101,7 +101,7 @@ export function recordTabPage(tabId: string, page: { url?: string; title?: strin
   }
 }
 
-type AgentTabListener = (tab: { id: string; url: string }) => void;
+type AgentTabListener = (tab: { id: string; url: string; title?: string }) => void;
 const agentTabListeners = new Map<string, Set<AgentTabListener>>();
 
 /**
@@ -126,7 +126,10 @@ export function onAgentTab(project: string, listener: AgentTabListener): () => v
  * @param project the project
  * @param tab the agent's tab and the address it is loading
  */
-export function showAgentTab(project: string, tab: { id: string; url: string }): void {
+export function showAgentTab(
+  project: string,
+  tab: { id: string; url: string; title?: string },
+): void {
   const saved = loadBrowserSession(project);
   const current: LiveBrowserSession = live.get(project) ?? {
     tabs: (saved?.tabs ?? []).map((t) => ({
@@ -144,7 +147,14 @@ export function showAgentTab(project: string, tab: { id: string; url: string }):
     ? current.tabs
     : [
         ...current.tabs,
-        { id: tab.id, url: tab.url, title: "Agent", loading: true, entries: [tab.url], pos: 0 },
+        {
+          id: tab.id,
+          url: tab.url,
+          title: tab.title ?? "Agent",
+          loading: true,
+          entries: [tab.url],
+          pos: 0,
+        },
       ];
   live.set(project, { tabs, activeId: tab.id });
   saveBrowserSession(project, {
@@ -152,4 +162,13 @@ export function showAgentTab(project: string, tab: { id: string; url: string }):
     activeId: tab.id,
   });
   for (const listener of agentTabListeners.get(project) ?? []) listener(tab);
+}
+
+/**
+ * Open `url` in a new tab of the project's browser and make it the active tab.
+ * @param project the project
+ * @param url the address to load
+ */
+export function openUrlInBrowser(project: string, url: string): void {
+  showAgentTab(project, { id: `${project}:${crypto.randomUUID()}`, url, title: "New tab" });
 }

@@ -20,6 +20,7 @@ pub mod credential_capture;
 pub mod diff;
 pub mod handoff;
 pub mod history_config;
+pub mod html_render;
 pub mod limits;
 pub mod lsp;
 pub mod lsp_servers;

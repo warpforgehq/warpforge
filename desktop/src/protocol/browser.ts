@@ -13,10 +13,19 @@ export type BrowserAction =
   | { action: "console" };
 
 /** The work a `client.request` event asks this client to do. */
-export type ClientRequestBody = {
-  kind: "browser";
-  project: string;
-  action: BrowserAction;
-  /** The page must be on one of these; otherwise answer `{ blocked: origin }`. */
-  allowed_origins: string[];
-};
+export type ClientRequestBody =
+  | {
+      kind: "browser";
+      project: string;
+      action: BrowserAction;
+      /** The page must be on one of these; otherwise answer `{ blocked: origin }`. */
+      allowed_origins: string[];
+    }
+  | {
+      /** Screenshot an agent's HTML page, bootstrap already injected. */
+      kind: "html_preview";
+      html: string;
+      width: number;
+      /** The app's current appearance when absent. */
+      appearance?: "light" | "dark";
+    };

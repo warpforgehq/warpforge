@@ -343,6 +343,10 @@ impl Daemon {
                             eprintln!("[daemon] YAML backlog cleanup failed for {id}: {e}");
                         }
                     }
+                    let renders_of = id.clone();
+                    tokio::task::spawn_blocking(move || {
+                        crate::daemon::html_render::store::remove_task(&renders_of)
+                    });
                     self.emit(Event::TaskRemoved { id: id.clone() });
                     self.advisor_task_deleted(&id);
                     // Deleting a stage child mid-run fails that stage.

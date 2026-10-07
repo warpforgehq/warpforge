@@ -28,3 +28,19 @@ describe("sessionUpdatesSemanticallyEqual for advisor consultations", () => {
     );
   });
 });
+
+describe("sessionUpdatesSemanticallyEqual for html renders", () => {
+  const page: SessionUpdate = {
+    kind: "html_render",
+    render_id: "r_1",
+    title: "Chart",
+    height: 400,
+  };
+
+  it("treats a copy as equal and a different page or size as different", () => {
+    expect(sessionUpdatesSemanticallyEqual(page, { ...page })).toBe(true);
+    expect(sessionUpdatesSemanticallyEqual(page, { ...page, render_id: "r_2" })).toBe(false);
+    expect(sessionUpdatesSemanticallyEqual(page, { ...page, title: "Other" })).toBe(false);
+    expect(sessionUpdatesSemanticallyEqual(page, { ...page, height: 500 })).toBe(false);
+  });
+});

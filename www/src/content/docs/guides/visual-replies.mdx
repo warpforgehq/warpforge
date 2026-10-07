@@ -1,0 +1,31 @@
+---
+title: Visual replies
+description: Ask an agent for a chart, a table, a diagram or a clickable mockup, and it shows the page right in the task's chat — in your theme, sandboxed, with links that open in the in-app browser.
+sidebar:
+  order: 11
+  label: Visual replies
+---
+
+Some answers read better than they describe. A month of numbers is a chart, a comparison is a table, a new screen is a mockup you can click. Agents in Warpforge can answer with the picture itself: they build a small web page and show it **inline in the task's chat**, right above their reply.
+
+## Asking for one
+
+Just ask: "chart the bundle size per release", "show me the three layouts side by side", "sketch the settings page so I can click through it". Agents also reach for a page on their own when a visual says more than prose.
+
+Before showing it, the agent checks its page: it renders a preview, looks at the screenshot, and fixes anything broken. The reply under the page adds what the page doesn't say instead of describing it again.
+
+## How it looks
+
+- **It follows your theme.** The page uses the app's colours and fonts, in light and dark, and switches live when you change theme in Settings.
+- **It fits.** The frame grows to the page's own height, so you scroll the chat, not a box inside it.
+- **Links open in the browser.** Clicking a link in a page opens it in a new tab of the project's [Browser](/guides/browser/), next to the chat.
+
+## Safe by design
+
+Each page runs sandboxed. It has no access to the app, your files, your sessions or your signed-in sites, and it can't call anything on your machine. It can load scripts, styles, fonts and images from `https` addresses (a chart library from a CDN, say) — nothing else on the network.
+
+Deleting a task deletes its pages.
+
+<Aside type="note" title="Previews need the desktop app">
+  The agent's preview check runs in the Warpforge desktop app on macOS. Without it, agents can still show pages; they just publish them without a screenshot to check first.
+</Aside>

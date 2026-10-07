@@ -1,4 +1,4 @@
-import type { ClientRequestBody, DaemonEvent } from "../protocol";
+import { BROWSER_CAPABILITY, type ClientRequestBody, type DaemonEvent } from "../protocol";
 import type { ConnectionState } from "./types";
 
 /** Does the work of one request; rejects with a message for the agent. */
@@ -15,9 +15,13 @@ export interface ClientRequestChannel {
   getState(): { connection: ConnectionState };
 }
 
-/** The capability a request body needs; the daemon routes on the same name. */
-function capabilityOf(body: ClientRequestBody): string {
-  return body.kind;
+/**
+ * The capability a request body needs; the daemon routes on the same name.
+ * @param body the request
+ * @returns the capability; HTML previews are served by the browser's owner
+ */
+export function capabilityOf(body: ClientRequestBody): string {
+  return body.kind === "html_preview" ? BROWSER_CAPABILITY : body.kind;
 }
 
 function message(error: unknown): string {

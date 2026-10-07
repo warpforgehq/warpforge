@@ -39,6 +39,8 @@ pub use event::*;
 pub mod git;
 pub use git::*;
 
+pub mod html_render;
+
 pub mod method;
 pub use method::*;
 

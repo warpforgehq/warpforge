@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ClientRequestBody, DaemonEvent } from "../protocol";
-import { serveClientRequests, type ClientRequestChannel } from "./clientRequests";
+import { capabilityOf, serveClientRequests, type ClientRequestChannel } from "./clientRequests";
 import type { ConnectionState } from "./types";
 
 function fakeChannel(connection: ConnectionState = "connected") {
@@ -112,5 +112,19 @@ describe("serveClientRequests", () => {
     expect(fake.request).not.toHaveBeenCalled();
     fake.setConnection("connected");
     expect(fake.request).toHaveBeenCalledWith("client.register", { capabilities: ["browser"] });
+  });
+});
+
+describe("capabilityOf", () => {
+  it("sends HTML previews to the app that owns the browser", () => {
+    const preview: ClientRequestBody = { kind: "html_preview", html: "<p>x</p>", width: 720 };
+    expect(capabilityOf(preview)).toBe("browser");
+    const browse: ClientRequestBody = {
+      kind: "browser",
+      project: "p",
+      action: { action: "console" },
+      allowed_origins: [],
+    };
+    expect(capabilityOf(browse)).toBe("browser");
   });
 });

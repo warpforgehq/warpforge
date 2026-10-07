@@ -350,6 +350,15 @@ impl Daemon {
                 task_id,
                 request_id,
             } => self.withdraw_ask(task_id, request_id),
+            Command::HtmlRenderPublish {
+                task_id,
+                render_id,
+                title,
+                height,
+                reply,
+            } => {
+                let _ = reply.send(self.html_render_publish(&task_id, render_id, title, height));
+            }
 
             other => self.handle_advisor_command(other).await,
         }

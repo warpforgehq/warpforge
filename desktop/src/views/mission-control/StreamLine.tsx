@@ -13,6 +13,7 @@ import {
   hasAnnotation,
   splitAnnotations,
 } from "../../components/BrowserAnnotationCard";
+import { HtmlRenderFrame } from "../../components/HtmlRenderFrame";
 import type { FileLinkResolver } from "../../components/Markdown";
 import { BufferedMarkdown, CollapsibleMarkdown, Markdown } from "../../components/Markdown";
 import { ThinkingBlock } from "../../components/ThinkingBlock";
@@ -302,6 +303,8 @@ export function StreamLine({
       return <WorkflowEventLine update={update} compact={compact} onOpenTask={onOpenTask} />;
     case "advisor_consultation":
       return <AdvisorConsultationBlock update={update} compact={compact} onOpenTask={onOpenTask} />;
+    case "html_render":
+      return <HtmlRenderFrame update={update} taskId={taskId} compact={compact} />;
     case "agent_thought":
       return compact ? (
         <Markdown

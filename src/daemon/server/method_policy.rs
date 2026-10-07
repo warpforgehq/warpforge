@@ -43,6 +43,7 @@ pub(super) fn method_runs_concurrently(method: &wire::Method) -> bool {
             | PortForwardLogs { .. }
             | RuntimeList { .. }
             | BrowserAct { .. }
+            | HtmlPreview { .. }
             | AdvisorAsk { .. }
             | AdvisorWait { .. }
             | TaskListWorktrees { .. }
@@ -86,6 +87,7 @@ pub(super) fn method_is_mutation(method: &wire::Method) -> bool {
             | ServiceLogs { .. }
             | PortForwardLogs { .. }
             | RuntimeList { .. }
+            | HtmlPreview { .. }
             | TaskListWorktrees { .. }
             | WorktreeList { .. }
             | WorktreeSetupLog { .. }

@@ -104,6 +104,18 @@ fn render_mcp_tool(server: &str, tool: &str, update: &Value) -> String {
             None => "Ask advisor".to_string(),
         };
     }
+    if tool == "render_html" {
+        return match update
+            .get("rawInput")
+            .and_then(|i| input_value(i, &["title"]))
+        {
+            Some(title) => format!("Show page: {title}"),
+            None => "Show page".to_string(),
+        };
+    }
+    if tool == "render_preview" {
+        return "Preview page".to_string();
+    }
     if server.is_empty() || tool.is_empty() {
         return format!("{server} {tool}").trim().to_string();
     }
@@ -249,5 +261,19 @@ mod tests {
         );
         let waiting = json!({ "title": "warpforge_ask_advisor", "rawInput": { "wait": true } });
         assert_eq!(tool_title(&waiting, "c2", "other"), "Ask advisor");
+    }
+
+    #[test]
+    fn render_tools_get_plain_titles() {
+        let render = json!({
+            "title": "mcp__warpforge__render_html",
+            "rawInput": { "title": "Revenue by month", "html": "<p>x</p>" }
+        });
+        assert_eq!(
+            tool_title(&render, "c1", "other"),
+            "Show page: Revenue by month"
+        );
+        let preview = json!({ "title": "mcp__warpforge__render_preview", "rawInput": {} });
+        assert_eq!(tool_title(&preview, "c2", "other"), "Preview page");
     }
 }

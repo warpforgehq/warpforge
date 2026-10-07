@@ -10,6 +10,8 @@ const browser = {
   open: vi.fn<(...args: unknown[]) => Promise<void>>(),
   agentCall: vi.fn<(tabId: string, call: unknown, allowed: string[]) => Promise<unknown>>(),
   agentScreenshot: vi.fn<(tabId: string, allowed: string[]) => Promise<unknown>>(),
+  htmlPreview:
+    vi.fn<(html: string, width: number, fragment: string) => Promise<Record<string, unknown>>>(),
 };
 
 vi.mock("./browserClient", () => ({
@@ -29,7 +31,9 @@ const { resetAgentTabs, runBrowserRequest } = await import("./agentDriver");
 const { clearBrowserSession, loadLiveBrowserSession, onAgentTab, saveLiveBrowserSession } =
   await import("./browserSession");
 
-function request(action: ClientRequestBody["action"]): ClientRequestBody {
+type BrowserBody = Extract<ClientRequestBody, { kind: "browser" }>;
+
+function request(action: BrowserBody["action"]): ClientRequestBody {
   return { kind: "browser", project: "p", action, allowed_origins: ["http://localhost:4001"] };
 }
 
@@ -163,5 +167,31 @@ describe("runBrowserRequest", () => {
     await expect(runBrowserRequest(request({ action: "console" }), signal())).rejects.toThrow(
       "browser_navigate",
     );
+  });
+});
+
+describe("html previews", () => {
+  const preview = (appearance?: "light" | "dark"): ClientRequestBody => ({
+    kind: "html_preview",
+    html: "<p>x</p>",
+    width: 390,
+    ...(appearance ? { appearance } : {}),
+  });
+  const themeIn = (fragment: string) =>
+    JSON.parse(decodeURIComponent(fragment.replace("#wf-theme=", ""))) as { appearance: string };
+
+  it("are captured in the asked appearance, or the app's own, without a browser tab", async () => {
+    browser.htmlPreview.mockResolvedValue({ data: "iVBO", contentHeight: 300 });
+
+    const light = await runBrowserRequest(preview("light"), signal());
+    const [html, width, fragment] = browser.htmlPreview.mock.calls[0];
+    expect([html, width]).toEqual(["<p>x</p>", 390]);
+    expect(themeIn(fragment).appearance).toBe("light");
+    expect(light).toEqual({ data: "iVBO", contentHeight: 300, appearance: "light" });
+
+    const own = await runBrowserRequest(preview(), signal());
+    expect(themeIn(browser.htmlPreview.mock.calls[1][2]).appearance).toBe("dark");
+    expect(own).toMatchObject({ appearance: "dark" });
+    expect(browser.open).not.toHaveBeenCalled();
   });
 });

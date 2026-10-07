@@ -24,6 +24,7 @@ Which tools an agent sees depends on how the task was started:
 | Automations (7 tools) | ✅ | ✅ |
 | Factory (2 tools) | ✅ | ✅ |
 | Browser (6 tools, when the task belongs to a project) | ✅ | ✅ |
+| Visual replies (2 tools) | ✅ | ✅ |
 | Advisor (1 tool, when the task has an [advisor](/guides/choosing-your-mode/#add-an-advisor-to-a-single-session)) | ✅ | — |
 | Sub-agents and pipelines (11 tools) | — | ✅ |
 
@@ -294,6 +295,22 @@ The page's console messages and uncaught errors since it loaded — the newest 2
 
 ---
 
+## Visual replies — show a page in the chat
+
+Available in every session. See [Visual replies](/guides/visual-replies/) for what the user sees.
+
+### `render_preview`
+
+Loads `html` — one self-contained page — the way the chat shows it and returns a screenshot, the height the page needs (`contentHeight`), and its console warnings and errors. `width` defaults to the reply column (720px); `appearance` is `light` or `dark`, defaulting to the app's. It shows nothing to the user. Needs the desktop app on macOS; without it the tool says so and `render_html` still works.
+
+### `render_html`
+
+Shows `html` inline in the task's chat above the agent's reply, under a short `title`. `height` is the frame's starting height (80–2000px); the frame then fits the page. The page gets the app's theme as CSS variables and runs sandboxed: inline scripts and styles, plus scripts, styles, fonts and images from `https` URLs, and no other network access. Pages are at most 512 KB.
+
+**Reach for it** when a chart, table, diagram or mockup says more than prose — after checking the page with `render_preview`.
+
+---
+
 ## Advisor — ask a second agent
 
 Available in a regular task started with an **Advisor** picked in New Task. See [Add an advisor](/guides/choosing-your-mode/#add-an-advisor-to-a-single-session) for when that's worth it.
@@ -306,7 +323,7 @@ Puts `question` to the task's advisor — a second agent, often another harness 
 
 The call waits for the answer. Harnesses that give a tool call a short timeout (Codex) get a "still working" reply after about 50 seconds; calling again with `wait: true` keeps waiting for the same answer instead of asking twice. A turn allows three questions; the fourth is refused, as is a question while the previous one is still being answered or while the advisor's account is out of quota. An answer that takes longer than 15 minutes is given up on.
 
-The advisor's own session is read-only: of these tools it gets only the ones that read — `list_runtime`, the log tools, `memory_search` / `memory_list` / `memory_stats` / `memory_edges`, and the read-only automation tools.
+The advisor's own session is read-only: of these tools it gets only the ones that read — `list_runtime`, the log tools, `memory_search` / `memory_list` / `memory_stats` / `memory_edges`, the read-only automation tools, and `render_preview` / `render_html`.
 
 ---
 

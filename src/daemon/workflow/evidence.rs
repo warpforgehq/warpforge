@@ -17,7 +17,7 @@ fn root() -> PathBuf {
 
 /// Task ids and evidence names are single path components from our own
 /// generators; anything else is refused rather than joined onto a path.
-fn is_plain_component(part: &str) -> bool {
+pub(crate) fn is_plain_component(part: &str) -> bool {
     !part.is_empty()
         && part != "."
         && part != ".."

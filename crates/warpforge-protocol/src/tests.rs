@@ -482,6 +482,24 @@ fn workflow_event_keeps_agent_links_as_distinct_wire_records() {
 }
 
 #[test]
+fn html_render_round_trips_and_replays_from_history() {
+    let update = SessionUpdate::HtmlRender {
+        render_id: "r_1".into(),
+        title: "Revenue".into(),
+        height: 420,
+    };
+    let value = serde_json::to_value(&update).unwrap();
+    assert_eq!(
+        value,
+        serde_json::json!({ "kind": "html_render", "render_id": "r_1", "title": "Revenue", "height": 420 })
+    );
+    assert_eq!(
+        serde_json::from_value::<SessionUpdate>(value).unwrap(),
+        update
+    );
+}
+
+#[test]
 fn event_wire_shape() {
     let ev = Event::ServiceLog {
         project: "my-app".into(),

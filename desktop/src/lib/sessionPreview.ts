@@ -133,6 +133,10 @@ export function latestSessionPreview(
       // branch here a running pipeline shows no activity in the rail or tiles.
       return { kind: "message", label: "Pipeline", text: update.title, truncated: false };
     }
+    if (update.kind === "html_render") {
+      const bounded = boundedText(update.title, "start", maxChars);
+      return { kind: "message", label: "Page", text: bounded.text, truncated: bounded.truncated };
+    }
     if (update.kind === "advisor_consultation") {
       const [firstLine = "", ...rest] = update.answer.trim().split("\n");
       const bounded = boundedText(firstLine, "start", maxChars);

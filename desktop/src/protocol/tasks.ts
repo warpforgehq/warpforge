@@ -196,6 +196,14 @@ export type SessionUpdate =
       model?: string;
       advisor_task_id: string;
       cost?: SessionUsageCost;
+    }
+  | {
+      /** A page the agent published with `render_html`, shown inline. */
+      kind: "html_render";
+      render_id: string;
+      title: string;
+      /** The frame height the agent asked for, reserved until the page reports its own. */
+      height: number;
     };
 
 export interface EditHunk {

@@ -10,5 +10,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react(), babel({ presets: [reactCompilerPreset({ target: "19" })] })],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+  // The HTML render tests read the Rust side's bootstrap and tool text to catch drift.
+  server: {
+    fs: { allow: [".", "../crates/warpforge-protocol/src/html_render", "../src/mcp/tools"] },
+  },
   test: { environment: "jsdom", setupFiles: ["./src/test/setup.ts"], globals: true },
 });

@@ -12,6 +12,7 @@ mod browser_capture;
 mod context_menu;
 mod daemon;
 mod desktop_env;
+mod html_render;
 #[cfg(target_os = "macos")]
 mod macos;
 mod notifications;
@@ -109,8 +110,10 @@ fn main() {
                 }
             };
             app.manage(daemon::start(app.handle(), &sidecar_log));
+            app.manage(html_render::PreviewPages::default());
             Ok(())
         })
+        .register_asynchronous_uri_scheme_protocol(html_render::SCHEME, html_render::serve)
         .on_menu_event(|app, event| {
             let event_id = event.id().0.as_str();
             if let Some(rest) = event_id.strip_prefix("ctx:") {
@@ -150,7 +153,8 @@ fn main() {
             browser::browser_pick_stop,
             browser::browser_capture_element,
             browser_agent::browser_agent_call,
-            browser_agent::browser_agent_screenshot
+            browser_agent::browser_agent_screenshot,
+            html_render::preview::html_preview
         ])
         .plugin(tauri_plugin_dialog::init())
         .build(tauri::generate_context!())

@@ -64,6 +64,14 @@ pub enum ClientRequestBody {
         action: BrowserAction,
         allowed_origins: Vec<String>,
     },
+    /// Screenshot an agent's HTML page at `width`, in the app's theme for
+    /// `appearance` (the app's current one when absent).
+    HtmlPreview {
+        html: String,
+        width: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        appearance: Option<String>,
+    },
 }
 
 impl ClientRequestBody {
@@ -71,7 +79,11 @@ impl ClientRequestBody {
     /// @returns the capability name
     pub fn capability(&self) -> &'static str {
         match self {
-            ClientRequestBody::Browser { .. } => BROWSER_CAPABILITY,
+            // Served by the same app that owns the browser; a connection's
+            // registration replaces its whole capability list.
+            ClientRequestBody::Browser { .. } | ClientRequestBody::HtmlPreview { .. } => {
+                BROWSER_CAPABILITY
+            }
         }
     }
 }
@@ -122,6 +134,25 @@ mod tests {
                 "action": { "action": "console" },
                 "allowed_origins": ["http://localhost:4000"],
             })
+        );
+        assert_eq!(body.capability(), BROWSER_CAPABILITY);
+    }
+
+    #[test]
+    fn an_html_preview_goes_to_the_browser_owner() {
+        let body = ClientRequestBody::HtmlPreview {
+            html: "<p>x</p>".into(),
+            width: 720,
+            appearance: Some("dark".into()),
+        };
+        let value = serde_json::to_value(&body).unwrap();
+        assert_eq!(
+            value,
+            json!({ "kind": "html_preview", "html": "<p>x</p>", "width": 720, "appearance": "dark" })
+        );
+        assert_eq!(
+            serde_json::from_value::<ClientRequestBody>(value).unwrap(),
+            body
         );
         assert_eq!(body.capability(), BROWSER_CAPABILITY);
     }

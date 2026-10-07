@@ -44,6 +44,7 @@ mod command;
 mod config_observer;
 mod dispatch_gate;
 mod event;
+mod html_render;
 pub(crate) mod lifecycle;
 mod origin_sweep;
 mod output;

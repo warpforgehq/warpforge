@@ -11,6 +11,7 @@ mod advisor;
 mod agents;
 mod backlog;
 mod browser;
+mod html;
 mod memory;
 mod runner;
 mod runtime;
@@ -19,8 +20,9 @@ mod spawn_workflow;
 mod tests;
 mod workflows;
 
-/// Run a tool call and return its MCP `content` items. The browser tools
-/// return an image next to their text; every other tool returns text.
+/// Run a tool call and return its MCP `content` items. The browser tools and
+/// `render_preview` return an image next to their text; every other tool
+/// returns text.
 /// @param client the daemon connection
 /// @param parent_task the session's task
 /// @param project the session's project, empty when unbound
@@ -44,6 +46,13 @@ pub(crate) async fn tool_content(
             .cloned()
             .unwrap_or_else(|| json!({}));
         return browser::dispatch(name, client, parent_task, project, &args).await;
+    }
+    if html::is_html_tool(name) {
+        let args = params
+            .and_then(|p| p.get("arguments"))
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+        return html::dispatch(name, client, parent_task, &args).await;
     }
     let text = handle_tool_call(client, parent_task, project, is_orchestrator, params).await?;
     Ok(vec![json!({ "type": "text", "text": text })])

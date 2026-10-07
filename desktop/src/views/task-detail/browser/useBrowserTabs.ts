@@ -141,11 +141,11 @@ export function useBrowserTabs(project: string): BrowserTabs {
   // so what it acts on is what the pane shows.
   useEffect(
     () =>
-      onAgentTab(project, ({ id, url }) => {
+      onAgentTab(project, ({ id, url, title = "Agent" }) => {
         setTabs((list) =>
           list.some((t) => t.id === id)
             ? list
-            : [...list, { id, url, title: "Agent", loading: true, entries: [url], pos: 0 }],
+            : [...list, { id, url, title, loading: true, entries: [url], pos: 0 }],
         );
         setActiveId(id);
       }),

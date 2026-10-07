@@ -18,6 +18,7 @@ mod clients;
 mod files;
 mod git;
 mod history;
+mod html_render;
 mod lsp;
 mod memory;
 mod orchestration;
@@ -145,6 +146,8 @@ pub(super) async fn dispatch(
         RuntimeList { project } => runtime::runtime_list(handle, project).await,
         ClientRegister { .. } | ClientReply { .. } => clients::connection_scoped().await,
         BrowserAct { project, task_id, action } => clients::browser_act(handle, lifecycle, project, task_id, action).await,
+        HtmlRender { task_id, html, title, height } => html_render::html_render(handle, task_id, html, title, height).await,
+        HtmlPreview { task_id, html, width, appearance } => html_render::html_preview(lifecycle, task_id, html, width, appearance).await,
         // ── Legacy PTY terminals (the TUI's live agent panes) ──
         TerminalSpawn { project, command, cols, rows, task_id, } => runtime::terminal_spawn(handle, project, command, cols, rows, task_id).await,
         TerminalInput { terminal_id, data_b64, } => runtime::terminal_input(handle, terminal_id, data_b64).await,

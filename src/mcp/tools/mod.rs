@@ -5,6 +5,7 @@ use super::automations;
 mod advisor;
 mod backlog;
 mod browser;
+mod html;
 mod memory;
 mod orchestrator;
 mod runner;
@@ -16,6 +17,7 @@ pub(crate) fn tool_defs(is_orchestrator: bool) -> Value {
     tools.extend(backlog::defs());
     tools.extend(runner::defs());
     tools.extend(memory::defs());
+    tools.extend(html::defs());
 
     if is_orchestrator {
         if let Value::Array(orch) = orchestrator::defs() {

@@ -10,7 +10,7 @@ use crate::daemon::actor::prompt::bridge_env;
 use crate::daemon::actor::prompt::mcp_servers;
 use crate::daemon::actor::prompt::MEMORY_SYSTEM;
 use crate::daemon::actor::prompt::ORCHESTRATOR_SYSTEM;
-use crate::daemon::actor::prompt::RUNTIME_MCP_SYSTEM;
+use crate::daemon::actor::prompt::{RUNTIME_MCP_SYSTEM, VISUALS_SYSTEM};
 use crate::daemon::actor::PendingSessionStart;
 use crate::daemon::actor::{Daemon, Event};
 use crate::daemon::task::TaskStatus;
@@ -296,7 +296,7 @@ impl Daemon {
                     workflows.join(", ")
                 )
             };
-            format!("{memory_prefix}{ORCHESTRATOR_SYSTEM}{roster}{workflow_roster}\n\n{RUNTIME_MCP_SYSTEM}\n\n{prompt}")
+            format!("{memory_prefix}{ORCHESTRATOR_SYSTEM}{roster}{workflow_roster}\n\n{RUNTIME_MCP_SYSTEM}\n\n{VISUALS_SYSTEM}\n\n{prompt}")
         } else if mode == BridgeMode::Advisor {
             prompt.to_string()
         } else {
@@ -304,7 +304,7 @@ impl Daemon {
                 BridgeMode::Advised => format!("{EXECUTOR_NUDGE}\n\n"),
                 _ => String::new(),
             };
-            format!("{memory_prefix}{pr_assistant_prefix}{RUNTIME_MCP_SYSTEM}\n\n{nudge}{prompt}")
+            format!("{memory_prefix}{pr_assistant_prefix}{RUNTIME_MCP_SYSTEM}\n\n{VISUALS_SYSTEM}\n\n{nudge}{prompt}")
         };
         let full_prompt = match include_runtime_context
             .then(|| self.runtime_context(project, Some(task_id)))

@@ -17,6 +17,7 @@ import {
   type BrowserStateEvent,
 } from "./browserClient";
 import { recordTabPage, showAgentTab } from "./browserSession";
+import { runHtmlPreview } from "./htmlPreview";
 
 /** Where a tab the agent opens sits while no pane shows it; a pane that shows
  *  it moves it into place. */
@@ -113,7 +114,8 @@ async function navigate(project: string, url: string, signal: AbortSignal): Prom
 }
 
 /**
- * Do what one browser request asks, in the project's agent tab.
+ * Do what one browser request asks, in the project's agent tab, or preview an
+ * agent's HTML page.
  * @param body the daemon's request
  * @param signal aborted when the daemon stops waiting
  * @returns the result the daemon hands to the agent
@@ -122,6 +124,7 @@ export async function runBrowserRequest(
   body: ClientRequestBody,
   signal: AbortSignal,
 ): Promise<unknown> {
+  if (body.kind === "html_preview") return runHtmlPreview(body);
   const { action, allowed_origins: allowed, project } = body;
   if (action.action === "navigate") return navigate(project, action.url, signal);
   const tabId = agentTabs.get(project);

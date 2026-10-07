@@ -11,7 +11,8 @@ pub(crate) fn is_acp_replay_update(update: &wire::SessionUpdate) -> bool {
         | wire::SessionUpdate::PermissionResolved { .. }
         | wire::SessionUpdate::PromptCapabilities { .. }
         | wire::SessionUpdate::WorkflowEvent { .. }
-        | wire::SessionUpdate::AdvisorConsultation { .. } => false,
+        | wire::SessionUpdate::AdvisorConsultation { .. }
+        | wire::SessionUpdate::HtmlRender { .. } => false,
         wire::SessionUpdate::AgentText { text } => {
             text != "Reconnecting to the saved agent session…"
                 && !text.starts_with("⚠ No live agent session")

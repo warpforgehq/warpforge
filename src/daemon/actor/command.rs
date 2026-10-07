@@ -264,6 +264,15 @@ pub enum Command {
         context: Option<String>,
         reply: oneshot::Sender<Result<crate::daemon::actor::advisor::AdvisorTicket, String>>,
     },
+    /// `html.render`: add a stored page to the task's transcript. Fails for a
+    /// task that does not exist.
+    HtmlRenderPublish {
+        task_id: String,
+        render_id: String,
+        title: String,
+        height: u32,
+        reply: oneshot::Sender<Result<(), String>>,
+    },
     /// `advisor.wait`: keep waiting for the pending consultation's answer.
     AdvisorWait {
         task_id: String,

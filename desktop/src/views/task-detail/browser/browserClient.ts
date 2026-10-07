@@ -123,6 +123,10 @@ export const browser = {
   agentScreenshot(tabId: string, allowedOrigins: string[]): Promise<unknown> {
     return ask("browser_agent_screenshot", { tabId, allowedOrigins });
   },
+  /** Load an agent's HTML page off screen, themed by `fragment`, and screenshot it. */
+  htmlPreview(html: string, width: number, fragment: string): Promise<Record<string, unknown>> {
+    return ask("html_preview", { html, width, fragment });
+  },
 };
 
 async function subscribe<T>(event: string, handler: (payload: T) => void): Promise<() => void> {

@@ -1,7 +1,8 @@
 use serde_json::{json, Value};
 
 /// What an advisor's own session may call: everything that reads, nothing
-/// that starts, stops, stores or acts.
+/// that starts, stops, stores or acts. Rendering a page only adds to the
+/// caller's own chat, so it counts as read-only.
 pub(crate) const READ_ONLY_TOOLS: &[&str] = &[
     "list_runtime",
     "read_service_logs",
@@ -13,6 +14,8 @@ pub(crate) const READ_ONLY_TOOLS: &[&str] = &[
     "automation_list",
     "automation_get",
     "automation_runs",
+    "render_html",
+    "render_preview",
 ];
 
 pub(super) fn defs() -> Vec<Value> {

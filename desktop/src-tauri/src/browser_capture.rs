@@ -149,3 +149,69 @@ pub fn capture_page(
 ) -> Result<std::sync::mpsc::Receiver<Result<String, String>>, String> {
     Err("browser screenshots are available on macOS only".to_string())
 }
+
+/// Screenshot a whole webview at `width` CSS pixels, 1x, as a base64 PNG:
+/// the `render_preview` capture.
+/// @param webview the preview webview
+/// @param width the output width in pixels
+/// @returns where the result arrives; it is sent exactly once
+#[cfg(target_os = "macos")]
+pub fn capture_png(
+    webview: &Webview,
+    width: f64,
+) -> Result<std::sync::mpsc::Receiver<Result<String, String>>, String> {
+    use base64::Engine;
+    use block2::RcBlock;
+    use objc2::rc::Retained;
+    use objc2::runtime::AnyObject;
+    use objc2::{AnyThread, MainThreadMarker};
+    use objc2_app_kit::{NSBitmapImageFileType, NSBitmapImageRep, NSImage};
+    use objc2_foundation::{NSDictionary, NSError, NSNumber, NSString};
+    use objc2_web_kit::WKSnapshotConfiguration;
+    use std::sync::Mutex;
+
+    unsafe fn encode_png(image: &NSImage) -> Option<Vec<u8>> {
+        let tiff = image.TIFFRepresentation()?;
+        let rep = NSBitmapImageRep::initWithData(NSBitmapImageRep::alloc(), &tiff)?;
+        let props: Retained<NSDictionary<NSString, AnyObject>> = NSDictionary::new();
+        let png = rep.representationUsingType_properties(NSBitmapImageFileType::PNG, &props)?;
+        Some(png.to_vec())
+    }
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    webview
+        .with_webview(move |platform| unsafe {
+            let Some(wk) = crate::browser::adopt_wk_webview(platform) else {
+                let _ = tx.send(Err("the preview has no native view".to_string()));
+                return;
+            };
+            let mtm = MainThreadMarker::new().expect("with_webview runs on the main thread");
+            let config = WKSnapshotConfiguration::new(mtm);
+            config.setSnapshotWidth(Some(&NSNumber::new_f64(width)));
+            let tx = Mutex::new(Some(tx));
+            let handler = RcBlock::new(move |image: *mut NSImage, _err: *mut NSError| {
+                let Some(tx) = tx.lock().ok().and_then(|mut slot| slot.take()) else {
+                    return;
+                };
+                let result = if image.is_null() {
+                    Err("the preview could not be captured".to_string())
+                } else {
+                    encode_png(&*image)
+                        .map(|png| base64::engine::general_purpose::STANDARD.encode(png))
+                        .ok_or_else(|| "the preview could not be encoded".to_string())
+                };
+                let _ = tx.send(result);
+            });
+            wk.takeSnapshotWithConfiguration_completionHandler(Some(&config), &handler);
+        })
+        .map_err(|e| e.to_string())?;
+    Ok(rx)
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn capture_png(
+    _webview: &Webview,
+    _width: f64,
+) -> Result<std::sync::mpsc::Receiver<Result<String, String>>, String> {
+    Err("render_preview is available on macOS only; render_html still works".to_string())
+}

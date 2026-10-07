@@ -97,6 +97,10 @@ pub fn browser_open(
         .initialization_script(crate::browser_agent::CONSOLE_SCRIPT)
         .initialization_script(crate::browser_agent::AGENT_SCRIPT)
         .on_navigation(move |url| {
+            // Agent pages are only ever framed by the app; a tab never loads one.
+            if url.scheme() == crate::html_render::SCHEME {
+                return false;
+            }
             if !url.as_str().starts_with(ANNOTATE_SCHEME) {
                 return true;
             }

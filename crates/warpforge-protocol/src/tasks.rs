@@ -277,6 +277,15 @@ pub enum SessionUpdate {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         cost: Option<SessionUsageCost>,
     },
+    /// An HTML page the agent published with `render_html`, shown inline.
+    /// The page itself is a file the desktop serves by `render_id`.
+    HtmlRender {
+        render_id: String,
+        title: String,
+        /// The frame height the agent asked for, reserved until the page
+        /// reports its own.
+        height: u32,
+    },
 }
 
 /// One concrete edit operation reported by ACP. Unlike `Hunk`, this is scoped

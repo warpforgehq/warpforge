@@ -36,3 +36,4 @@ stale and then misleads.
 | [0021](0021-agent-driven-browser.md) | Agents drive the in-app browser through a daemon → client request |
 | [0022](0022-advisor-mode.md) | An advisor is a hidden, read-only child session the executor consults |
 | [0024](0024-workflow-verify-stage.md) | Workflows verify a change in the running app before review |
+| [0025](0025-inline-html-renders.md) | Agents show HTML pages inline, framed and served by the desktop |

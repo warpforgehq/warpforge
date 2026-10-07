@@ -131,7 +131,10 @@ async fn a_foreign_origin_is_asked_about_on_the_task_and_always_is_remembered() 
         let (second, body) = client_request(requests.recv().await.unwrap());
         let wire::ClientRequestBody::Browser {
             allowed_origins, ..
-        } = body;
+        } = body
+        else {
+            panic!("a browser request");
+        };
         assert!(allowed_origins.contains(&"https://example.com".to_string()));
         let page = json!({ "origin": "https://example.com", "url": "https://example.com/", "tree": "- link \"x\" [e1]" });
         answer(&desktop, &tx, second, page);

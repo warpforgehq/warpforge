@@ -60,6 +60,7 @@ export function sessionUpdateKey(update: SessionUpdate, index: number): string {
   if (update.kind === "file_edit" && update.tool_call_id) return `edit:${update.tool_call_id}`;
   if (update.kind === "permission_request") return `perm:${update.request_id}`;
   if (update.kind === "permission_resolved") return `res:${update.request_id}`;
+  if (update.kind === "html_render") return `render:${update.render_id}`;
   return `i:${index}`;
 }
 

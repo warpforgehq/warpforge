@@ -7,6 +7,7 @@
 export * from "./envelope";
 export * from "./advisor";
 export * from "./browser";
+export * from "./htmlRender";
 export * from "./events";
 export * from "./runtime";
 export * from "./tasks";

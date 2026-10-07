@@ -57,4 +57,10 @@ describe("packaged app CSP", () => {
   it("still reaches the daemon over a local websocket", () => {
     expect(directive("connect-src")).toContain("ws://127.0.0.1:*");
   });
+
+  it("frames only agent HTML renders, through their own scheme", () => {
+    // Agent pages load in sandboxed iframes from wf-render:// (ADR 0025). A
+    // broader frame-src ('self', https:, *) would let anything else be framed.
+    expect(directive("frame-src")).toEqual(["wf-render:", "http://wf-render.localhost"]);
+  });
 });

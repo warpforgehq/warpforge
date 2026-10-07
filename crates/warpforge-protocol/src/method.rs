@@ -197,6 +197,27 @@ pub enum Method {
         task_id: String,
         action: crate::BrowserAction,
     },
+    /// Publish an agent's HTML page into `task_id`'s chat. Returns
+    /// `{ render_id, title, height }`.
+    #[serde(rename = "html.render")]
+    HtmlRender {
+        task_id: String,
+        html: String,
+        title: String,
+        height: f64,
+    },
+    /// Screenshot an agent's HTML page in the desktop app, themed as the
+    /// chat shows it. Returns the image, its heights and console problems.
+    #[serde(rename = "html.preview")]
+    HtmlPreview {
+        #[serde(default)]
+        task_id: String,
+        html: String,
+        #[serde(default)]
+        width: Option<i64>,
+        #[serde(default)]
+        appearance: Option<String>,
+    },
 
     // ── Tasks (agent sessions on the board) ──
     #[serde(rename = "task.create")]

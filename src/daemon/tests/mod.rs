@@ -91,6 +91,7 @@ async fn wait_for_parent(
 mod advisor;
 mod agent_health;
 mod browser;
+mod html_render;
 mod lifecycle;
 mod quota_gate;
 mod runner;
