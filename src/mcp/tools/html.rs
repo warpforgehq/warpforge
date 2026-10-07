@@ -10,12 +10,14 @@ const PAGE_RULES: &str = "Write one complete, self-contained HTML document with 
     or WebSocket, and no local files.";
 
 const LAYOUT_GUIDE: &str = "Layout: the frame is borderless on the chat's own background and as \
-    wide as the reply column (about 720px; it changes with the window). Leave html, body and the \
+    wide as the reply column (720px up to well over 1000px; it changes with the window, so \
+    preview at more than one width). Leave html, body and the \
     outermost element without a background color. Use a fluid width with no horizontal padding \
     on the outermost element, and no outer card, border or banner title: the page is part of \
     your reply. A box that needs its own background (a mock of one screen, a panel that must \
     stand apart) gets at least 16px of padding on every side and var(--radius) corners. Give \
-    charts fixed pixel heights. Let content set the page's height: no 100vh, and no height:100% \
+    charts fixed pixel heights. Never stretch an SVG with preserveAspectRatio=\"none\": it \
+    distorts text. Draw it at the container's clientWidth and redraw on resize. Let content set the page's height: no 100vh, and no height:100% \
     on html or body, since the frame grows to fit the page.";
 
 const THEME_GUIDE: &str = "Theme: Warpforge sets its theme as CSS custom properties on :root, \
