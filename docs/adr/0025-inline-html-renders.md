@@ -83,6 +83,9 @@ only when the frame has focus and the user has just interacted.
    `html-preview:<id>` label.** (`html_render/mod.rs` `route`)
 5. **Deleting a task removes `~/.warpforge/renders/<task>`.**
    (`actor/commands/task.rs` `DeleteTask`)
+6. **The preview's `data:` host page carries no inline script.** Tauri adds
+   the app CSP to `data:` pages, which blocks it; the host's script is a
+   main-frame-only initialization script. (`html_render/preview.rs`)
 
 ### Manual check
 

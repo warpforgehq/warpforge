@@ -23,9 +23,13 @@ const POLL: Duration = Duration::from_millis(100);
 /// Polls the reported height must hold for before it counts as settled.
 const STABLE_POLLS: u32 = 3;
 
-/// The host page; `{SRC}` is the framed page's URL. It records the frame's
-/// load, its last reported height and its console problems for `__wfPreview`.
-const HOST_PAGE: &str = r#"<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:transparent}iframe{display:block;border:0;width:100%;height:800px}</style></head><body><iframe id="f" sandbox="allow-scripts allow-forms" src="{SRC}"></iframe><script>(function(){var f=document.getElementById("f"),st={loaded:false,height:0,messages:[]};f.addEventListener("load",function(){st.loaded=true;});window.addEventListener("message",function(e){if(e.source!==f.contentWindow)return;var d=e.data,p=d&&d.params;if(!d||d.jsonrpc!=="2.0"||!p)return;if(d.method==="ui/notifications/size-changed"&&typeof p.height==="number"&&isFinite(p.height)&&p.height>0){st.height=Math.ceil(p.height);f.style.height=Math.min(st.height,4000)+"px";}else if(d.method==="notifications/message"&&st.messages.length<20){st.messages.push({level:String(p.level),text:String(p.data).slice(0,500)});}});window.__wfPreview=function(){return JSON.stringify(st);};})();</script></body></html>"#;
+/// The host page; `{SRC}` is the framed page's URL.
+const HOST_PAGE: &str = r#"<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:transparent}iframe{display:block;border:0;width:100%;height:800px}</style></head><body><iframe id="f" sandbox="allow-scripts allow-forms" src="{SRC}"></iframe></body></html>"#;
+
+/// Records the frame's load, its last reported height and its console
+/// problems for `__wfPreview`. Tauri adds the app CSP to `data:` pages, which
+/// blocks inline scripts, so this runs as a main-frame user script instead.
+const HOST_SCRIPT: &str = r#"(function(){var st={loaded:false,height:0,messages:[]};document.addEventListener("load",function(e){if(e.target&&e.target.id==="f")st.loaded=true;},true);window.addEventListener("message",function(e){var f=document.getElementById("f");if(!f||e.source!==f.contentWindow)return;var d=e.data,p=d&&d.params;if(!d||d.jsonrpc!=="2.0"||!p)return;if(d.method==="ui/notifications/size-changed"&&typeof p.height==="number"&&isFinite(p.height)&&p.height>0){st.height=Math.ceil(p.height);f.style.height=Math.min(st.height,4000)+"px";}else if(d.method==="notifications/message"&&st.messages.length<20){st.messages.push({level:String(p.level),text:String(p.data).slice(0,500)});}});window.__wfPreview=function(){return JSON.stringify(st);};})();"#;
 
 #[derive(serde::Deserialize, Default)]
 struct HostState {
@@ -206,6 +210,7 @@ pub async fn html_preview(
     let builder = WebviewBuilder::new(preview_label(&id), WebviewUrl::External(host))
         .incognito(true)
         .focused(false)
+        .initialization_script(HOST_SCRIPT)
         .on_navigation(may_navigate);
     // Outside the window's visible area but not hidden: a hidden view may
     // not render, and then the snapshot comes back empty.
@@ -250,6 +255,7 @@ mod tests {
         let page = host_page(&frame_src("p1", "#wf-theme=%7B%7D"));
         assert!(page.contains(r#"<iframe id="f" sandbox="allow-scripts allow-forms" src=""#));
         assert!(!page.contains("allow-same-origin"));
+        assert!(!page.contains("<script"));
         let expected = if cfg!(windows) {
             "http://wf-render.localhost/preview/p1#wf-theme=%7B%7D"
         } else {
