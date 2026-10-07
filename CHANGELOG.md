@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.25.0
+
+### Minor Changes
+
+- [`ec03b35`](https://github.com/warpforgehq/warpforge/commit/ec03b35c52b4c4b29689dfb3d39df88e5a878af9) Thanks [@ephor](https://github.com/ephor)! - Agents can now answer with visuals. Ask for a chart, a table, a diagram or a clickable mockup and it appears right in the task's chat, above the agent's reply, in your theme in light and dark. Pages run sandboxed, away from your files and sessions, and their links open in the in-app browser. On macOS, agents can preview a page in the desktop app before showing it.
+
+### Patch Changes
+
+- [`9999ffd`](https://github.com/warpforgehq/warpforge/commit/9999ffd6d1d32548f00df742eb351c35946786e4) Thanks [@ephor](https://github.com/ephor)! - Nested tasks in the sidebar now read as a clean tree. Each subtask steps in under its parent's arrow, the guide lines connect straight into every task's status icon, and the highlight for the task you have open runs as one unbroken line from the top of its group down to it, with no doubled bars.
+
 ## 0.24.0
 
 ### Minor Changes
