@@ -41,6 +41,98 @@ Every registered project gets a predictable 100-port range beginning at `4000` �
 
 For services with a configured port, the behaviour depends on whether the project declares a port range in its config. When it does, the declared port is a hard pin — the service binds exactly that port and fails rather than moving if it is taken. When it doesn't, Warpforge selects an available value in the project's range, sets `PORT`, and expands references such as `${app.port}` in environment variables. Either way, the resolved URLs become part of the live context handed to new agent sessions. You can switch projects and come back without stopping unrelated services, rewriting configuration, or chasing `address already in use`. The full picture — including the trap of an app that ignores `PORT` — is in [How ports work](/concepts/ports/).
 
+## A complete example
+
+This monorepo has five apps, gets its databases from a shared Kubernetes dev cluster, and commits a port range for the whole team. Each service gets its port a different way.
+
+```yaml
+# .warpforge/workspace.yaml
+name: acme-shop
+
+# Committed and identical on every machine, so the ports below can go into
+# .env files, Postman collections, and OAuth redirect URIs.
+ports:
+  range: "4200-4299"
+
+services:
+  # Reads PORT, the default path. Waits for the API and the database forward.
+  storefront:
+    command: cd apps/storefront && bun run dev
+    port: 4200
+    readyPattern: "Ready in"
+    dependsOn: [api, postgres]
+    env:
+      API_URL: http://localhost:${api.port}
+
+  # Reads PORT. Its dependencies are all port-forwards.
+  api:
+    command: cd apps/api && bun run dev
+    port: 4210
+    readyPattern: "api: listening"
+    dependsOn: [postgres, redis, clickhouse-http]
+    env:
+      DATABASE_URL: postgres://dev@localhost:5432/shop
+      REDIS_URL: redis://localhost:6379
+
+  # Reads its own variable instead of PORT, so hand it the port by name.
+  search:
+    command: cd apps/search && go run ./cmd/server
+    port: 4220
+    readyPattern: "http server listening"
+    dependsOn: [clickhouse-native, object-store]
+    env:
+      HTTP_PORT: "${search.port}"
+
+  # Vite ignores PORT, so pass the port as a flag.
+  admin:
+    command: cd apps/admin && bun run dev --port $PORT
+    port: 4230
+    readyPattern: "ready in"
+    dependsOn: [api]
+
+  # Same for Astro. ${docs.port} works in a command as well as $PORT.
+  docs:
+    command: cd apps/docs && bun run dev --port ${docs.port}
+    port: 4240
+    readyPattern: "ready in"
+
+portforwards:
+  - name: postgres
+    namespace: postgres
+    pod: postgres-pooler
+    localPort: 5432
+    remotePort: 5432
+  - name: redis
+    namespace: redis
+    pod: redis
+    localPort: 6379
+    remotePort: 6379
+  # One pod, two protocols: one forward each.
+  - name: clickhouse-http
+    namespace: clickhouse
+    pod: clickhouse-0
+    localPort: 8123
+    remotePort: 8123
+  # Native port moved to 9100 locally, since object-store already takes 9000.
+  - name: clickhouse-native
+    namespace: clickhouse
+    pod: clickhouse-0
+    localPort: 9100
+    remotePort: 9000
+  - name: object-store
+    namespace: minio
+    pod: minio
+    localPort: 9000
+    remotePort: 9000
+```
+
+- **Every service `port:` sits inside `ports.range`.** With a range declared, each one is pinned, and a service whose port is taken fails instead of moving. Give every service its own number, or one of the two will never start.
+- **Port-forwards sit outside the range.** The range doesn't apply to `localPort`. Use the port your apps already expect (`5432`, `6379`) so their connection strings work unchanged.
+- **Find out how each app picks its port before you pin it.** If it reads `PORT`, you're done (`storefront`, `api`). If it reads another variable, set that variable in `env` (`search`). If it only takes a flag, pass `$PORT` or `${<service>.port}` in `command` (`admin`, `docs`). Don't hardcode the number in the app's own config file, such as `vite.config.ts`, because sooner or later it stops matching `port:`. See [How ports work](/concepts/ports/#getting-the-port-into-the-app).
+- **`dependsOn` mixes services and forwards.** Starting `storefront` starts `api`, `postgres`, `redis`, and `clickhouse-http` first and waits until each one is ready. If something on your machine already answers on a forward's `localPort`, such as a local Postgres, Warpforge uses it and doesn't start the forward.
+- **`${api.port}` resolves only once `api` has a port**, so list `api` in `dependsOn` wherever you reference it.
+- **Personal differences go in [`workspace.local.yaml`](/reference/configuration/#personal-overrides-workspacelocalyaml)**, not in the shared file. That covers a different `dependsOn`, a forward on another `localPort`, or a service only you run.
+
 ### Agents see the runtime too
 
 The same services, logs, and controls are available to agents as [tools](/reference/mcp-tools/#runtime--see-and-drive-the-running-app) — `list_runtime` to discover what's up and on which port, `read_service_logs` to watch a restart, `service_restart` to bring something back. An agent that can read the failure it caused fixes it before handing you a diff.

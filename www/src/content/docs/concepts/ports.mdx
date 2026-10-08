@@ -32,7 +32,7 @@ Without a declared range, the number is only a marker that the service needs a p
 
 ## Getting the port into the app
 
-Three cases, most common first.
+Four cases, most common first.
 
 **1. The app reads `PORT`.** Nothing to do — this is the default path. Many Node, Go, and Python frameworks pick the port up from the environment automatically.
 
@@ -63,11 +63,26 @@ services:
       DATABASE_URL: postgres://localhost:${db.port}/app
 ```
 
-The two mechanisms do not mix: `${<service>.port}` substitution happens in `env` values only. Inside `command`, use the shell's own `$PORT`.
+`${<service>.port}` is substituted in `env` values, `command`, and `healthcheck.url`. It resolves only once that service has a port, so list it in `dependsOn`. Otherwise the dependent fails at start rather than receiving the literal placeholder.
+
+**4. The app reads a different variable.** Some apps take `HTTP_PORT`, `SERVER_PORT`, or similar instead of `PORT`. Set that variable from the service's own port:
+
+```yaml
+services:
+  search:
+    command: go run ./cmd/server
+    port: 4220
+    env:
+      HTTP_PORT: "${search.port}"
+```
+
+If the app loads a `.env` file at startup, make sure that file doesn't set the same variable, or check that the loader leaves already-set variables alone (most do, e.g. `dotenv`/`godotenv` without override).
+
+A worked example that combines all four cases with port-forwards and `dependsOn` is in [Projects and their runtime](/guides/projects-and-runtime/#a-complete-example).
 
 ## The sharp edge
 
-If an app ignores `PORT` and has its port hardcoded, Warpforge never finds out. It reports the port it chose, probes that port, and gets no answer. After the service's `readyTimeout` (five minutes by default) it is marked failed with `did not become ready within 5m: nothing accepted connections on port …`, while the app happily serves on its own port. The diagnostic signal: a service that failed this way, and whose logs say it started, almost always means the app is not reading `PORT`. Fix the app (case 1 or 2 above).
+If an app ignores `PORT` and has its port hardcoded, Warpforge never finds out. It reports the port it chose, probes that port, and gets no answer. After the service's `readyTimeout` (five minutes by default) it is marked failed with `did not become ready within 5m: nothing accepted connections on port …`, while the app happily serves on its own port. The diagnostic signal: a service that failed this way, and whose logs say it started, almost always means the app is not reading `PORT`. Fix the app (case 1, 2, or 4 above).
 
 Worse case, and it deserves its own warning: the port probe is not the only way to become Running. A log line that contains `readyPattern`, or a common "server started" message, marks the service Running too, whichever comes first. An app that ignores `PORT` is then marked Running while listening somewhere else entirely, and Warpforge displays a port number that nothing is bound to. If a service refuses to respond at its reported address, check what port the app actually bound in its logs.
 
