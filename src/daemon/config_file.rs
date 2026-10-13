@@ -50,9 +50,22 @@ pub(crate) fn update_section_at(
     key: &str,
     edit: impl FnOnce(&mut Mapping),
 ) -> Result<()> {
+    // A file we cannot parse is refused, not replaced: rewriting it from an
+    // empty mapping would silently drop every other section — including
+    // hand-written ones like `claude:` — over one typo.
     let mut root: Value = match std::fs::read_to_string(path) {
-        Ok(raw) => serde_yaml::from_str(&raw).unwrap_or_else(|_| Value::Mapping(Mapping::new())),
-        Err(_) => Value::Mapping(Mapping::new()),
+        Ok(raw) => match serde_yaml::from_str(&raw) {
+            Ok(Value::Null) => Value::Mapping(Mapping::new()),
+            Ok(root) => root,
+            Err(error) => anyhow::bail!(
+                "{} is not valid YAML, so it was left untouched — fix it and try again: {error}",
+                path.display()
+            ),
+        },
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            Value::Mapping(Mapping::new())
+        }
+        Err(error) => anyhow::bail!("reading {}: {error}", path.display()),
     };
     let root_map = root
         .as_mapping_mut()
@@ -139,6 +152,39 @@ mod tests {
             Section { days: 9 }
         );
         assert!(raw.contains("config_dir: ~/.claude-work"), "{raw}");
+    }
+
+    #[test]
+    fn an_unparsable_file_is_refused_not_replaced() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.yaml");
+        let broken = "claude:\n  config_dir: ~/.claude-work\n\thistory: [\n";
+        std::fs::write(&path, broken).unwrap();
+        let err = update_section_at(&path, "history", |s| {
+            s.insert("days".into(), 1.into());
+        })
+        .unwrap_err();
+        assert!(err.to_string().contains("not valid YAML"), "{err}");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), broken);
+    }
+
+    #[test]
+    fn an_empty_file_is_written_like_a_missing_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.yaml");
+        for initial in ["", "# just a comment\n", "~\n"] {
+            std::fs::write(&path, initial).unwrap();
+            update_section_at(&path, "history", |s| {
+                s.insert("days".into(), 2.into());
+            })
+            .unwrap();
+            let raw = std::fs::read_to_string(&path).unwrap();
+            assert_eq!(
+                parse_section::<Section>(&raw, "history"),
+                Section { days: 2 },
+                "{initial:?}"
+            );
+        }
     }
 
     #[test]
