@@ -146,6 +146,41 @@ pub(crate) fn resolve(
     (dir, ignored)
 }
 
+/// Warn when the agent's own command sets `CLAUDE_CONFIG_DIR` — the
+/// workaround from before this setting existed. A shell assignment in the
+/// command is applied after the environment we hand the process, so it beats
+/// both this setting and the dir a resumed session was started in: the
+/// resume then looks in the wrong place and the session is dropped as lost,
+/// while quota and login are read from the configured dir. The command is the
+/// user's, so it is reported rather than rewritten.
+pub fn warn_if_command_sets_dir(command: &str) {
+    if !command_sets_dir(command) {
+        return;
+    }
+    static LAST: Mutex<Option<String>> = Mutex::new(None);
+    let mut last = LAST.lock().unwrap_or_else(|e| e.into_inner());
+    if last.as_deref() != Some(command) {
+        eprintln!(
+            "[claude] the Claude agent command sets CLAUDE_CONFIG_DIR itself ({command:?}); \
+             it overrides claude.config_dir and each session's own dir — set the dir in \
+             config.yaml and remove it from the command"
+        );
+        *last = Some(command.to_string());
+    }
+}
+
+/// Whether `command` assigns `CLAUDE_CONFIG_DIR` (`VAR=…`, `export VAR=…`,
+/// `env VAR=…`), as opposed to merely containing a longer name ending in it.
+fn command_sets_dir(command: &str) -> bool {
+    const ASSIGN: &str = "CLAUDE_CONFIG_DIR=";
+    command.match_indices(ASSIGN).any(|(at, _)| {
+        command[..at]
+            .chars()
+            .next_back()
+            .is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_'))
+    })
+}
+
 /// Say once per bad value, not on every call: the directory is resolved on
 /// each quota poll and spawn, and a repeated line buries the log.
 fn warn_once(raw: &str) {
@@ -229,6 +264,25 @@ mod tests {
         assert_eq!(dir.path, PathBuf::from("/Users/tester/.claude"));
         assert_eq!(ignored.as_deref(), Some("/"));
         assert_eq!(resolve(Some("~/w"), None, Path::new(HOME)).1, None);
+    }
+
+    #[test]
+    fn a_command_assigning_the_dir_is_recognised() {
+        for command in [
+            "CLAUDE_CONFIG_DIR=$HOME/.claude-work claude-agent-acp --acp",
+            "export CLAUDE_CONFIG_DIR=/x; claude-agent-acp",
+            "env CLAUDE_CONFIG_DIR=/x claude-agent-acp",
+            "cd /tmp && CLAUDE_CONFIG_DIR=/x claude-agent-acp",
+        ] {
+            assert!(command_sets_dir(command), "{command}");
+        }
+        for command in [
+            "claude-agent-acp --acp",
+            "MY_CLAUDE_CONFIG_DIR=/x claude-agent-acp",
+            "echo $CLAUDE_CONFIG_DIR; claude-agent-acp",
+        ] {
+            assert!(!command_sets_dir(command), "{command}");
+        }
     }
 
     #[test]

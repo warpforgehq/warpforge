@@ -224,8 +224,10 @@ impl Daemon {
                 .unwrap_or_else(|| ".".to_string())
         };
         let command = self.resolve_agent_command(project, agent);
-        let claude_dir = (self.agent_id_of(agent) == "claude")
-            .then(|| self.claude_dir_for(task_id, resume.is_some()));
+        let claude_dir = (self.agent_id_of(agent) == "claude").then(|| {
+            crate::daemon::claude_config::warn_if_command_sets_dir(&command);
+            self.claude_dir_for(task_id, resume.is_some())
+        });
         let mut env =
             self.resolve_agent_env_in(agent, self.spawn_account(task_id), claude_dir.clone());
         // Bind the task to the account it is starting on, so a later resume goes
