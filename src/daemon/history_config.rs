@@ -14,11 +14,9 @@
 //! and each sweep that deleted or moved something announces it as an event,
 //! so pruning is never silent. `0` disables a stage.
 
-use std::path::PathBuf;
-
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use serde_yaml::{Mapping, Value};
+use serde_yaml::Value;
 
 fn default_retention_days() -> u32 {
     30
@@ -55,14 +53,7 @@ impl Default for HistoryConfig {
 
 impl HistoryConfig {
     pub fn load() -> Self {
-        let path = config_path();
-        match std::fs::read_to_string(&path) {
-            Ok(raw) => match serde_yaml::from_str::<RawConfig>(&raw) {
-                Ok(raw) => raw.history,
-                Err(_) => Self::default(),
-            },
-            Err(_) => Self::default(),
-        }
+        super::config_file::load_section("history")
     }
 }
 
@@ -70,52 +61,18 @@ impl HistoryConfig {
 /// any unrelated top-level keys. Best-effort for pruning, but the settings
 /// RPC surfaces failures.
 pub fn save(config: &HistoryConfig) -> Result<()> {
-    let path = config_path();
-    let mut root: Value = match std::fs::read_to_string(&path) {
-        Ok(raw) => serde_yaml::from_str(&raw).unwrap_or_else(|_| Value::Mapping(Mapping::new())),
-        Err(_) => Value::Mapping(Mapping::new()),
-    };
-    let root_map = root
-        .as_mapping_mut()
-        .ok_or_else(|| anyhow::anyhow!("config.yaml is not a mapping"))?;
-    if !root_map.contains_key("history") {
-        root_map.insert(
-            Value::String("history".into()),
-            Value::Mapping(Mapping::new()),
+    super::config_file::update_section("history", |history| {
+        history.insert(
+            Value::String("retention_days".into()),
+            Value::Number(config.retention_days.into()),
         );
-    }
-    let history = root_map
-        .get_mut("history")
-        .and_then(Value::as_mapping_mut)
-        .ok_or_else(|| anyhow::anyhow!("config.yaml 'history' is not a mapping"))?;
-    history.insert(
-        Value::String("retention_days".into()),
-        Value::Number(config.retention_days.into()),
-    );
-    history.insert(
-        Value::String("settle_ignored_after_days".into()),
-        Value::Number(config.settle_ignored_after_days.into()),
-    );
-    history.insert(
-        Value::String("delete_closed_after_days".into()),
-        Value::Number(config.delete_closed_after_days.into()),
-    );
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir).ok();
-    }
-    std::fs::write(&path, serde_yaml::to_string(&root)?)?;
-    Ok(())
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct RawConfig {
-    #[serde(default)]
-    history: HistoryConfig,
-}
-
-fn config_path() -> PathBuf {
-    dirs::home_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(".warpforge")
-        .join("config.yaml")
+        history.insert(
+            Value::String("settle_ignored_after_days".into()),
+            Value::Number(config.settle_ignored_after_days.into()),
+        );
+        history.insert(
+            Value::String("delete_closed_after_days".into()),
+            Value::Number(config.delete_closed_after_days.into()),
+        );
+    })
 }
