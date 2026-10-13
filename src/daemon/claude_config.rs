@@ -24,7 +24,7 @@
 //! nothing reports the mismatch: the quota widget simply shows another
 //! account's numbers. The one exception is a resume: a session's transcript
 //! lives in the dir it was started in, so a task records that dir and goes
-//! back to it ([`pinned`]) even after this setting changed.
+//! back to it ([`recorded`]) even after this setting changed.
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -90,12 +90,18 @@ pub fn config_dir() -> ClaudeDir {
     dir
 }
 
-/// A dir recorded earlier — the one a task's session was started in —
-/// classified the same way a configured one is.
-pub fn pinned(path: &str) -> ClaudeDir {
-    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+/// A dir recorded earlier — the one a task's session was started in. Its
+/// explicitness is recorded with it: `~/.claude` named by the daemon's own
+/// `CLAUDE_CONFIG_DIR` is explicit to the CLI (scoped keychain item,
+/// colocated `.claude.json`), so it cannot be re-derived from the path.
+/// `None` is a row written before that was stored, classified as a
+/// configured value would be.
+pub fn recorded(path: &str, explicit: Option<bool>) -> ClaudeDir {
     let path = PathBuf::from(path);
-    let explicit = path != home.join(".claude");
+    let explicit = explicit.unwrap_or_else(|| {
+        let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+        path != home.join(".claude")
+    });
     ClaudeDir { path, explicit }
 }
 

@@ -111,9 +111,9 @@ impl Daemon {
             .tasks
             .get(task_id)
             .filter(|_| resuming)
-            .and_then(|task| task.claude_config_dir.as_deref())
+            .and_then(|task| task.claude_config_dir.clone())
         {
-            Some(dir) => crate::daemon::claude_config::pinned(dir),
+            Some(dir) => dir,
             None => crate::daemon::claude_config::config_dir(),
         }
     }

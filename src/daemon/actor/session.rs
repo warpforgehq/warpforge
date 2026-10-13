@@ -224,24 +224,10 @@ impl Daemon {
                 .unwrap_or_else(|| ".".to_string())
         };
         let command = self.resolve_agent_command(project, agent);
-        let claude_dir = self.claude_dir_for(task_id, resume.is_some());
+        let claude_dir = (self.agent_id_of(agent) == "claude")
+            .then(|| self.claude_dir_for(task_id, resume.is_some()));
         let mut env =
-            self.resolve_agent_env_in(agent, self.spawn_account(task_id), Some(claude_dir.clone()));
-        // Likewise the Claude config dir: a new session's transcript is written
-        // there, so that is where every later resume has to look. A resume with
-        // nothing recorded (an external session, or one from before dirs were
-        // recorded) runs in the current dir, so that becomes its home too.
-        if self.agent_id_of(agent) == "claude" {
-            let dir = claude_dir.path.to_string_lossy().into_owned();
-            if let Some(task) = self.tasks.get_mut(task_id) {
-                let record = resume.is_none() || task.claude_config_dir.is_none();
-                if record && task.claude_config_dir.as_deref() != Some(dir.as_str()) {
-                    task.claude_config_dir = Some(dir);
-                    let updated = task.clone();
-                    self.persist(&updated);
-                }
-            }
-        }
+            self.resolve_agent_env_in(agent, self.spawn_account(task_id), claude_dir.clone());
         // Bind the task to the account it is starting on, so a later resume goes
         // back to the same home even after the active account changed. Recorded
         // before the session exists, because that is the only moment the answer
@@ -256,6 +242,20 @@ impl Daemon {
             if let Some(task) = self.tasks.get_mut(task_id) {
                 if task.account_id.as_deref() != Some(account.as_str()) {
                     task.account_id = Some(account);
+                    let updated = task.clone();
+                    self.persist(&updated);
+                }
+            }
+        }
+        // Likewise the Claude config dir: a new session's transcript is written
+        // there, so that is where every later resume has to look. A resume with
+        // nothing recorded (an external session, or one from before dirs were
+        // recorded) runs in the current dir, so that becomes its home too.
+        if let Some(dir) = claude_dir {
+            if let Some(task) = self.tasks.get_mut(task_id) {
+                let record = resume.is_none() || task.claude_config_dir.is_none();
+                if record && task.claude_config_dir.as_ref() != Some(&dir) {
+                    task.claude_config_dir = Some(dir);
                     let updated = task.clone();
                     self.persist(&updated);
                 }
