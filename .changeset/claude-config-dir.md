@@ -2,4 +2,4 @@
 "warpforge": minor
 ---
 
-Keep a separate Claude setup for work? Point Warpforge at it once and every Claude task runs there. Add `claude: { config_dir: ~/.claude-work }` to `~/.warpforge/config.yaml`, and Warpforge uses that sign-in, settings and session history no matter how you open the app — including the usage limits it shows and the past sessions you can resume.
+Keep separate Claude setups for work and personal use? Tell Warpforge which one to use in its config file, and your Claude tasks, the usage limits you see and the sessions you can resume all follow that setup, however you open the app. Tasks you already started keep picking up their conversation where it lives, and switching accounts never signs out a login Warpforge has no copy of.

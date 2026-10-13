@@ -77,6 +77,81 @@ async fn stale_handle_prompt_triggers_resume() {
     assert_eq!(user_messages, 1, "reconnect must persist the prompt once");
 }
 
+/// A Claude session's transcript lives in the config dir it was started in.
+/// Resuming must go back there even after the configured dir changed —
+/// anywhere else the agent finds nothing and the session is dropped as lost.
+#[tokio::test]
+async fn a_claude_resume_runs_in_the_dir_its_session_was_started_in() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("warpforge.db");
+    let log_path = dir.path().join("acp.log");
+    let env_out = dir.path().join("claude-config-dir");
+    let pinned = dir.path().join("claude-pinned");
+    let fixture = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/mock-acp-recovery.mjs"
+    );
+    let session_id = "pinned-session";
+    let store = Store::open_at(&db_path).unwrap();
+    store
+        .save_agents(&[warpforge_protocol::AgentConfig {
+            id: "claude".into(),
+            display_name: "Claude".into(),
+            acp_command: format!(
+                "printf '%s' \"$CLAUDE_CONFIG_DIR\" > {}; exec node {} {} {}",
+                env_out.display(),
+                fixture,
+                log_path.display(),
+                session_id
+            ),
+            enabled: false,
+            models: vec![],
+            last_model: None,
+        }])
+        .unwrap();
+    let mut persisted = Task::new("demo", "original prompt", "claude", vec![]);
+    persisted.attach_session(session_id.into());
+    persisted.claude_config_dir = Some(pinned.to_string_lossy().into_owned());
+    persisted.set_status(TaskStatus::Interrupted);
+    let task_id = persisted.id.clone();
+    store.upsert_task(&persisted).unwrap();
+
+    let daemon = Daemon::spawn(test_projects(), Some(store));
+    let mut events = daemon.subscribe();
+    daemon
+        .session_prompt(&task_id, "follow up", vec![])
+        .await
+        .unwrap();
+    timeout(Duration::from_secs(5), async {
+        loop {
+            if let Ok(Event::TaskUpdated(task)) = events.recv().await {
+                if task.id == task_id && task.status == TaskStatus::Waiting {
+                    break;
+                }
+            }
+        }
+    })
+    .await
+    .expect("resumed prompt should complete");
+
+    assert_eq!(
+        std::fs::read_to_string(&env_out).unwrap(),
+        pinned.to_string_lossy()
+    );
+    daemon.shutdown().await;
+    let reloaded = Store::open_at(&db_path)
+        .unwrap()
+        .load_tasks()
+        .unwrap()
+        .into_iter()
+        .find(|task| task.id == task_id)
+        .unwrap();
+    assert_eq!(
+        reloaded.claude_config_dir.as_deref(),
+        Some(pinned.to_string_lossy().as_ref())
+    );
+}
+
 /// An agent that has forgotten a saved session can never resume it. The
 /// daemon must say so in a form the client can act on, and must drop the
 /// dead id — keeping it made every later prompt fail the same way.

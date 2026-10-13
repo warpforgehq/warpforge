@@ -93,6 +93,11 @@ pub struct Task {
     /// and restart reuse the same account even after the active one changed.
     /// `None` = whatever account is active at spawn time.
     pub account_id: Option<String>,
+    /// Claude config dir this task's session was started in. A Claude session
+    /// is a transcript file under that dir; resuming against any other dir
+    /// finds nothing, and the session is then dropped as lost. `None` = a
+    /// session from before this was recorded, or no Claude session yet.
+    pub claude_config_dir: Option<String>,
     /// Id of the backlog item this task was started from, if any.
     pub backlog_item_id: Option<String>,
     /// What created this task, when it is not the board. `pr-review` marks the
@@ -145,6 +150,7 @@ impl Task {
             snoozed_until: None,
             snoozed_at: None,
             account_id: None,
+            claude_config_dir: None,
             backlog_item_id: None,
             origin: None,
             model: None,

@@ -22,7 +22,9 @@
 //! list — resolves the directory through [`config_dir`]. A caller that joins
 //! `~/.claude` itself reads a different account than the agents run as, and
 //! nothing reports the mismatch: the quota widget simply shows another
-//! account's numbers.
+//! account's numbers. The one exception is a resume: a session's transcript
+//! lives in the dir it was started in, so a task records that dir and goes
+//! back to it ([`pinned`]) even after this setting changed.
 
 use std::path::{Path, PathBuf};
 
@@ -62,6 +64,15 @@ pub fn config_dir() -> ClaudeDir {
         env.as_deref(),
         &home,
     )
+}
+
+/// A dir recorded earlier — the one a task's session was started in —
+/// classified the same way a configured one is.
+pub fn pinned(path: &str) -> ClaudeDir {
+    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    let path = PathBuf::from(path);
+    let explicit = path != home.join(".claude");
+    ClaudeDir { path, explicit }
 }
 
 pub(crate) fn resolve(configured: Option<&str>, env: Option<&str>, home: &Path) -> ClaudeDir {
@@ -158,6 +169,15 @@ mod tests {
     }
 
     #[test]
+    fn the_default_spelled_out_is_not_explicit() {
+        for value in ["~/.claude", "/Users/tester/.claude/"] {
+            let dir = resolved(Some(value), None);
+            assert_eq!(dir.path, PathBuf::from("/Users/tester/.claude"));
+            assert!(!dir.explicit, "{value}");
+        }
+    }
+
+    #[test]
     fn relative_setting_is_ignored() {
         let dir = resolved(Some(".claude-work"), None);
         assert_eq!(dir.path, PathBuf::from("/Users/tester/.claude"));
@@ -167,15 +187,6 @@ mod tests {
     fn trailing_slash_is_dropped() {
         let dir = resolved(Some("/opt/claude-work/"), None);
         assert_eq!(dir.path, PathBuf::from("/opt/claude-work"));
-    }
-
-    #[test]
-    fn the_default_spelled_out_is_not_explicit() {
-        for value in ["~/.claude", "/Users/tester/.claude/"] {
-            let dir = resolved(Some(value), None);
-            assert_eq!(dir.path, PathBuf::from("/Users/tester/.claude"));
-            assert!(!dir.explicit, "{value}");
-        }
     }
 
     #[test]
