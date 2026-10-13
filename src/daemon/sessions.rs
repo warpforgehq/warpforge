@@ -3,7 +3,7 @@
 //!
 //! Both agents keep their own session stores keyed (indirectly) by the working
 //! directory:
-//!   - Claude: `~/.claude/projects/<escaped-cwd>/<session-uuid>.jsonl`, one file
+//!   - Claude: `<config dir>/projects/<escaped-cwd>/<session-uuid>.jsonl`, one file
 //!     per session; the file stem is the ACP session id.
 //!   - Codex:  `~/.codex/sessions/YYYY/MM/DD/rollout-*-<uuid>.jsonl`, whose first
 //!     line is a `session_meta` frame carrying `payload.cwd` and `payload.id`.
@@ -77,11 +77,8 @@ fn claude_dir_name(project_path: &str) -> String {
 }
 
 fn claude_sessions(project_path: &str) -> Vec<wire::ExternalSession> {
-    let Some(home) = home() else {
-        return Vec::new();
-    };
-    let dir = home
-        .join(".claude")
+    let dir = super::claude_config::config_dir()
+        .path
         .join("projects")
         .join(claude_dir_name(project_path));
     let Ok(entries) = std::fs::read_dir(&dir) else {

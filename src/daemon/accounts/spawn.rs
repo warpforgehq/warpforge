@@ -81,8 +81,15 @@ pub(crate) fn select_for_spawn_under<'a>(
 /// Environment for an agent, given the selected account (if any).
 ///
 /// Codex selects its account by `CODEX_HOME`. Claude does not — its account is
-/// swapped in place — so it contributes only the strip list.
-pub fn env_for(agent_id: &str, account: Option<&StoredAccount>) -> AgentEnv {
+/// swapped in place — so it contributes the strip list, plus
+/// `CLAUDE_CONFIG_DIR` when the user chose a config dir (`claude_dir`). The
+/// agent has to run against the same directory the daemon reads credentials
+/// and quota from, or the two silently disagree about the account.
+pub fn env_for(
+    agent_id: &str,
+    account: Option<&StoredAccount>,
+    claude_dir: Option<&Path>,
+) -> AgentEnv {
     let mut env = AgentEnv::default();
     match agent_id {
         "codex" => {
@@ -92,6 +99,12 @@ pub fn env_for(agent_id: &str, account: Option<&StoredAccount>) -> AgentEnv {
             }
         }
         "claude" => {
+            if let Some(dir) = claude_dir {
+                env.set.insert(
+                    "CLAUDE_CONFIG_DIR".to_string(),
+                    dir.to_string_lossy().into_owned(),
+                );
+            }
             env.remove = super::super::claude_auth::CONFLICTING_AUTH_ENV
                 .iter()
                 .map(|v| v.to_string())

@@ -3,7 +3,8 @@
 //! Claude is not switched by environment. Its config directory holds skills,
 //! plugins, settings, MCP config and project history, so giving each account its
 //! own `CLAUDE_CONFIG_DIR` would fragment all of that. Instead there is one
-//! config dir and the *credentials inside it* are swapped.
+//! config dir and the *credentials inside it* are swapped. Which directory that
+//! is the user decides once, in `claude_config`.
 //!
 //! Two consequences follow, and both are load-bearing:
 //!
@@ -42,7 +43,7 @@ pub const OAUTH_ACCOUNT_FILE: &str = "oauth-account.json";
 /// tested without touching the real login keychain.
 #[derive(Debug, Clone)]
 pub struct ClaudeRuntime {
-    /// Claude's config dir (`CLAUDE_CONFIG_DIR`, else `~/.claude`).
+    /// Claude's config dir, as `claude_config::config_dir` resolves it.
     pub config_dir: PathBuf,
     /// The `.claude.json` the CLI actually reads: colocated in the config dir
     /// when one was set explicitly, else `~/.claude.json`.
@@ -56,13 +57,12 @@ pub struct ClaudeRuntime {
 impl ClaudeRuntime {
     pub fn detect() -> Self {
         let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-        let explicit = std::env::var("CLAUDE_CONFIG_DIR")
-            .ok()
-            .filter(|v| !v.trim().is_empty())
-            .map(PathBuf::from);
-        let config_dir = explicit.clone().unwrap_or_else(|| home.join(".claude"));
+        let super::claude_config::ClaudeDir {
+            path: config_dir,
+            explicit,
+        } = super::claude_config::config_dir();
         let colocated = config_dir.join(".claude.json");
-        let config_path = if explicit.is_some() || colocated.is_file() {
+        let config_path = if explicit || colocated.is_file() {
             colocated
         } else {
             home.join(".claude.json")

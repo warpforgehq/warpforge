@@ -111,7 +111,12 @@ impl Daemon {
                 }
             }
         }
-        crate::daemon::accounts::env_for(agent, selected)
+        let claude_dir = crate::daemon::claude_config::config_dir();
+        crate::daemon::accounts::env_for(
+            agent,
+            selected,
+            claude_dir.explicit.then_some(claude_dir.path.as_path()),
+        )
     }
 
     /// How the daemon reaches the Claude CLI's credential storage.

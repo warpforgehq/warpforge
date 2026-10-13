@@ -507,7 +507,7 @@ fn materialize_never_discards_a_colliding_file() {
 fn env_is_agent_specific() {
     let dir = tempfile::tempdir().unwrap();
     let codex = account("codex:personal", dir.path());
-    let env = env_for("codex", Some(&codex));
+    let env = env_for("codex", Some(&codex), None);
     assert_eq!(
         env.set.get("CODEX_HOME").map(String::as_str),
         Some(dir.path().to_string_lossy().as_ref())
@@ -515,7 +515,7 @@ fn env_is_agent_specific() {
     assert!(env.remove.is_empty());
 
     // Codex without a selected account contributes nothing at all.
-    assert!(env_for("codex", None).is_empty());
+    assert!(env_for("codex", None, None).is_empty());
 
     // Claude never sets a home — it is swapped in place — but always strips
     // the auth env that would override the selected account.
@@ -523,10 +523,22 @@ fn env_is_agent_specific() {
         agent_id: "claude".to_string(),
         ..account("claude:personal", dir.path())
     };
-    let env = env_for("claude", Some(&claude));
+    let env = env_for("claude", Some(&claude), None);
     assert!(env.set.is_empty());
     assert!(env.remove.contains(&"ANTHROPIC_API_KEY".to_string()));
     assert!(env.remove.contains(&"CLAUDE_CODE_OAUTH_TOKEN".to_string()));
+
+    // A chosen config dir reaches Claude, and only Claude.
+    let work = std::path::Path::new("/Users/tester/.claude-work");
+    let env = env_for("claude", Some(&claude), Some(work));
+    assert_eq!(
+        env.set.get("CLAUDE_CONFIG_DIR").map(String::as_str),
+        Some("/Users/tester/.claude-work")
+    );
+    assert!(env.remove.contains(&"ANTHROPIC_API_KEY".to_string()));
+    assert!(!env_for("codex", None, Some(work))
+        .set
+        .contains_key("CLAUDE_CONFIG_DIR"));
 }
 
 #[test]
@@ -640,7 +652,10 @@ fn a_display_name_agent_field_resolves_the_same_account_as_the_id() {
             select_for_spawn_under(root.path(), &accounts, agent_id, SpawnAccount::Active);
         (
             selected.map(|a| a.id.clone()),
-            env_for(agent_id, selected).set.get("CODEX_HOME").cloned(),
+            env_for(agent_id, selected, None)
+                .set
+                .get("CODEX_HOME")
+                .cloned(),
         )
     };
     assert_eq!(pick("Codex"), pick("codex"));
@@ -654,7 +669,7 @@ fn a_display_name_agent_field_resolves_the_same_account_as_the_id() {
     assert!(
         select_for_spawn_under(root.path(), &accounts, "Codex", SpawnAccount::Active).is_none()
     );
-    assert!(env_for("Codex", accounts.first()).is_empty());
+    assert!(env_for("Codex", accounts.first(), None).is_empty());
 }
 
 #[test]
