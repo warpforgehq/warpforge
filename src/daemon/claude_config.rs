@@ -67,11 +67,13 @@ pub fn config_dir() -> ClaudeDir {
 pub(crate) fn resolve(configured: Option<&str>, env: Option<&str>, home: &Path) -> ClaudeDir {
     if let Some(raw) = configured.map(str::trim).filter(|v| !v.is_empty()) {
         match expand(raw, home) {
+            // The default spelled out is still the default. Marking it explicit
+            // would hand agents `CLAUDE_CONFIG_DIR=~/.claude`, and the CLI would
+            // then look for a scoped keychain item and a colocated
+            // `.claude.json` — neither of which the user's own `claude` writes.
             Some(path) => {
-                return ClaudeDir {
-                    path,
-                    explicit: true,
-                }
+                let explicit = path != home.join(".claude");
+                return ClaudeDir { path, explicit };
             }
             None => eprintln!(
                 "[claude] ignoring claude.config_dir {raw:?}: use an absolute path or ~/…"
@@ -165,6 +167,15 @@ mod tests {
     fn trailing_slash_is_dropped() {
         let dir = resolved(Some("/opt/claude-work/"), None);
         assert_eq!(dir.path, PathBuf::from("/opt/claude-work"));
+    }
+
+    #[test]
+    fn the_default_spelled_out_is_not_explicit() {
+        for value in ["~/.claude", "/Users/tester/.claude/"] {
+            let dir = resolved(Some(value), None);
+            assert_eq!(dir.path, PathBuf::from("/Users/tester/.claude"));
+            assert!(!dir.explicit, "{value}");
+        }
     }
 
     #[test]

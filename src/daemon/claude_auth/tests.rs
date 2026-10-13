@@ -43,6 +43,7 @@ exit 1
         config_path: dir.join("config").join(".claude.json"),
         security_bin: Some(script),
         user: "tester".to_string(),
+        scoped_only: false,
     }
 }
 
@@ -53,6 +54,7 @@ fn scoped_service_matches_claude_2_1_scheme() {
         config_path: PathBuf::from("/Users/tester/.claude.json"),
         security_bin: None,
         user: "tester".into(),
+        scoped_only: false,
     };
     let service = runtime.scoped_service();
     assert!(service.starts_with("Claude Code-credentials-"), "{service}");
@@ -100,6 +102,51 @@ fn live_credentials_round_trip_through_keychain_and_file() {
     // …and no credentials file is invented next to a keychain-backed CLI:
     // nothing would keep it in step, and the CLI might read it later.
     assert!(!runtime.config_dir.join(CREDENTIALS_FILE).exists());
+}
+
+/// A chosen config dir owns only its scoped item. The unsuffixed one is the
+/// default `~/.claude` login: reading it would report that account as this
+/// dir's, and a switch writing it would replace the user's other login.
+#[cfg(unix)]
+#[test]
+fn a_chosen_dir_never_touches_the_default_dirs_item() {
+    let dir = tempfile::tempdir().unwrap();
+    let runtime = ClaudeRuntime {
+        scoped_only: true,
+        ..stub_runtime(dir.path())
+    };
+    runtime
+        .keychain_write(
+            ACTIVE_SERVICE,
+            &runtime.user,
+            r#"{"accessToken":"personal"}"#,
+        )
+        .unwrap();
+
+    // Not signed in here, whatever the default dir holds.
+    assert_eq!(runtime.read_live_credentials().unwrap(), None);
+
+    runtime
+        .write_live_credentials(r#"{"accessToken":"work"}"#)
+        .unwrap();
+    assert_eq!(
+        runtime
+            .keychain_read(&runtime.scoped_service(), &runtime.user)
+            .unwrap()
+            .as_deref(),
+        Some(r#"{"accessToken":"work"}"#)
+    );
+    assert_eq!(
+        runtime
+            .keychain_read(ACTIVE_SERVICE, &runtime.user)
+            .unwrap()
+            .as_deref(),
+        Some(r#"{"accessToken":"personal"}"#)
+    );
+    assert_eq!(
+        runtime.read_live_credentials().unwrap().as_deref(),
+        Some(r#"{"accessToken":"work"}"#)
+    );
 }
 
 #[cfg(unix)]

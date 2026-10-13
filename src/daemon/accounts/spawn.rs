@@ -99,16 +99,22 @@ pub fn env_for(
             }
         }
         "claude" => {
-            if let Some(dir) = claude_dir {
-                env.set.insert(
-                    "CLAUDE_CONFIG_DIR".to_string(),
-                    dir.to_string_lossy().into_owned(),
-                );
-            }
             env.remove = super::super::claude_auth::CONFLICTING_AUTH_ENV
                 .iter()
                 .map(|v| v.to_string())
                 .collect();
+            // Set or cleared, never inherited: a daemon started with its own
+            // `CLAUDE_CONFIG_DIR` must not leak it into an agent the user
+            // pointed at the default dir.
+            match claude_dir {
+                Some(dir) => {
+                    env.set.insert(
+                        "CLAUDE_CONFIG_DIR".to_string(),
+                        dir.to_string_lossy().into_owned(),
+                    );
+                }
+                None => env.remove.push("CLAUDE_CONFIG_DIR".to_string()),
+            }
             if std::env::var("ANTHROPIC_CUSTOM_HEADERS")
                 .is_ok_and(|value| super::super::claude_auth::headers_look_like_auth(&value))
             {

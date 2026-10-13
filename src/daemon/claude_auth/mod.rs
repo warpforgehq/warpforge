@@ -22,9 +22,12 @@
 //! On macOS the credentials live in the login keychain, not (only) on disk.
 //! Claude Code 2.1+ scopes the keychain item by config dir —
 //! `Claude Code-credentials-<first 8 hex of sha256(configDir)>` — while older
-//! builds and the default config dir use the unsuffixed service. Reads try the
-//! scoped item first and fall back; writes update the canonical item always and
-//! the scoped one only when it already exists (see `write_live_credentials`).
+//! builds and the default config dir use the unsuffixed service. For the
+//! default dir, reads try the scoped item first and fall back; writes update the
+//! canonical item always and the scoped one only when it already exists. For a
+//! dir the user chose (`scoped_only`), only the scoped item is this dir's: the
+//! unsuffixed one is the default dir's login, and is never touched (see
+//! `credentials`).
 
 use std::path::{Path, PathBuf};
 
@@ -52,6 +55,11 @@ pub struct ClaudeRuntime {
     pub security_bin: Option<PathBuf>,
     /// Keychain account name — the login user.
     pub user: String,
+    /// The CLI runs with `CLAUDE_CONFIG_DIR` set to `config_dir`, so it keeps
+    /// its login in the scoped keychain item only. The unsuffixed item then
+    /// belongs to the default `~/.claude` — someone else's login, which must be
+    /// neither read as this dir's nor overwritten by a switch.
+    pub scoped_only: bool,
 }
 
 impl ClaudeRuntime {
@@ -74,6 +82,7 @@ impl ClaudeRuntime {
             user: std::env::var("USER")
                 .or_else(|_| std::env::var("USERNAME"))
                 .unwrap_or_else(|_| "user".to_string()),
+            scoped_only: explicit,
         }
     }
 

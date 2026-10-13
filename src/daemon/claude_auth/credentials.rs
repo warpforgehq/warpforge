@@ -20,13 +20,19 @@ impl ClaudeRuntime {
         format!("{ACTIVE_SERVICE}-{hex}")
     }
 
-    /// Services to try when reading, newest scheme first.
+    /// Services to try when reading, newest scheme first. A chosen dir has
+    /// only its scoped item: falling back to the unsuffixed one would report
+    /// the default dir's login as this one's.
     pub(super) fn active_services(&self) -> Vec<String> {
+        if self.scoped_only {
+            return vec![self.scoped_service()];
+        }
         vec![self.scoped_service(), ACTIVE_SERVICE.to_string()]
     }
 
     /// The credentials the CLI would use right now: scoped keychain item, then
-    /// the legacy one, then the file. Returns `None` when not logged in.
+    /// (default dir only) the legacy one, then the file. Returns `None` when
+    /// not logged in.
     pub fn read_live_credentials(&self) -> Result<Option<String>> {
         for service in self.active_services() {
             if let Some(secret) = self.keychain_read(&service, &self.user)? {
@@ -49,6 +55,10 @@ impl ClaudeRuntime {
     /// from a terminal — handing back an old token on the next switch.
     /// Verified on this machine: with the default `~/.claude`, only the
     /// unsuffixed service exists.
+    ///
+    /// A chosen dir (`scoped_only`) is the reverse: the scoped item is the one
+    /// the CLI reads, so it is written even if absent, and the canonical item —
+    /// the default dir's login — is left alone.
     pub fn write_live_credentials(&self, credentials: &str) -> Result<()> {
         std::fs::create_dir_all(&self.config_dir)
             .with_context(|| format!("creating {}", self.config_dir.display()))?;
@@ -64,8 +74,11 @@ impl ClaudeRuntime {
         if file_exists || (!scoped_exists && self.security_bin.is_none()) {
             write_secret_file(&path, credentials)?;
         }
-        if scoped_exists {
+        if scoped_exists || self.scoped_only {
             self.keychain_write(&scoped, &self.user, credentials)?;
+        }
+        if self.scoped_only {
+            return Ok(());
         }
         self.keychain_write(ACTIVE_SERVICE, &self.user, credentials)
     }

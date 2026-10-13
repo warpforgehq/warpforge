@@ -256,6 +256,7 @@ fn failing_security(dir: &Path, code: i32) -> ClaudeRuntime {
         config_path: dir.join("config").join(".claude.json"),
         security_bin: Some(script),
         user: "tester".to_string(),
+        scoped_only: false,
     }
 }
 

@@ -527,6 +527,8 @@ fn env_is_agent_specific() {
     assert!(env.set.is_empty());
     assert!(env.remove.contains(&"ANTHROPIC_API_KEY".to_string()));
     assert!(env.remove.contains(&"CLAUDE_CODE_OAUTH_TOKEN".to_string()));
+    // The default dir: an inherited CLAUDE_CONFIG_DIR is dropped, not passed on.
+    assert!(env.remove.contains(&"CLAUDE_CONFIG_DIR".to_string()));
 
     // A chosen config dir reaches Claude, and only Claude.
     let work = std::path::Path::new("/Users/tester/.claude-work");
@@ -536,6 +538,7 @@ fn env_is_agent_specific() {
         Some("/Users/tester/.claude-work")
     );
     assert!(env.remove.contains(&"ANTHROPIC_API_KEY".to_string()));
+    assert!(!env.remove.contains(&"CLAUDE_CONFIG_DIR".to_string()));
     assert!(!env_for("codex", None, Some(work))
         .set
         .contains_key("CLAUDE_CONFIG_DIR"));
