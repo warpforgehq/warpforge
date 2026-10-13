@@ -197,8 +197,15 @@ fn activation_captures_the_outgoing_account_before_overwriting_it() {
         .write_live_credentials(r#"{"accessToken":"personal-v2"}"#)
         .unwrap();
 
-    activate_claude_account_under(root.path(), &mut capture, &runtime, Some(&personal), &work)
-        .unwrap();
+    activate_claude_account_under(
+        root.path(),
+        &mut capture,
+        &runtime,
+        &[personal.clone(), work.clone()],
+        Some(&personal),
+        &work,
+    )
+    .unwrap();
 
     // The rotated token was captured, not thrown away…
     assert_eq!(
@@ -212,8 +219,15 @@ fn activation_captures_the_outgoing_account_before_overwriting_it() {
     );
 
     // Switching back restores the captured token, not the stale one.
-    activate_claude_account_under(root.path(), &mut capture, &runtime, Some(&work), &personal)
-        .unwrap();
+    activate_claude_account_under(
+        root.path(),
+        &mut capture,
+        &runtime,
+        &[personal.clone(), work.clone()],
+        Some(&work),
+        &personal,
+    )
+    .unwrap();
     assert_eq!(
         runtime.read_live_credentials().unwrap(),
         Some(r#"{"accessToken":"personal-v2"}"#.to_string())
@@ -244,8 +258,15 @@ fn activation_moves_identity_and_credentials_together() {
     )
     .unwrap();
 
-    activate_claude_account_under(root.path(), &mut capture, &runtime, Some(&work), &personal)
-        .unwrap();
+    activate_claude_account_under(
+        root.path(),
+        &mut capture,
+        &runtime,
+        &[personal.clone(), work.clone()],
+        Some(&work),
+        &personal,
+    )
+    .unwrap();
 
     // Leaving the config on the previous account is what produced
     // "OAuth session expired and could not be refreshed" in the field: the
@@ -300,14 +321,48 @@ fn write_back_is_skipped_when_the_live_login_is_a_different_account() {
         .write_live_credentials(r#"{"accessToken":"stranger-token"}"#)
         .unwrap();
 
-    activate_claude_account_under(root.path(), &mut capture, &runtime, Some(&personal), &work)
-        .unwrap();
+    let err = activate_claude_account_under(
+        root.path(),
+        &mut capture,
+        &runtime,
+        &[personal.clone(), work.clone()],
+        Some(&personal),
+        &work,
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("stranger@example.com"), "{err}");
 
     // `personal` keeps its own credentials instead of adopting the
-    // stranger's session under its label.
+    // stranger's session under its label…
     assert_eq!(
         runtime.read_managed_credentials(&personal.id).unwrap(),
         Some(r#"{"accessToken":"personal-v1"}"#.to_string())
+    );
+    // …and the stranger's login, which nothing else holds a copy of, is not
+    // overwritten by the switch.
+    assert_eq!(
+        runtime.read_live_credentials().unwrap().as_deref(),
+        Some(r#"{"accessToken":"stranger-token"}"#)
+    );
+
+    // Once that login is saved as an account of its own, the switch goes ahead.
+    let stranger = StoredAccount {
+        agent_id: "claude".to_string(),
+        email: Some("stranger@example.com".into()),
+        ..account("claude:stranger", root.path())
+    };
+    activate_claude_account_under(
+        root.path(),
+        &mut capture,
+        &runtime,
+        &[personal.clone(), work.clone(), stranger],
+        Some(&personal),
+        &work,
+    )
+    .unwrap();
+    assert_eq!(
+        runtime.read_live_credentials().unwrap().as_deref(),
+        Some(r#"{"accessToken":"work-v1"}"#)
     );
 }
 
@@ -329,8 +384,15 @@ fn activation_discards_an_empty_read_back_and_refuses_a_broken_target() {
     runtime
         .write_live_credentials(r#"{"accessToken":""}"#)
         .unwrap();
-    activate_claude_account_under(root.path(), &mut capture, &runtime, Some(&personal), &work)
-        .unwrap();
+    activate_claude_account_under(
+        root.path(),
+        &mut capture,
+        &runtime,
+        &[personal.clone(), work.clone()],
+        Some(&personal),
+        &work,
+    )
+    .unwrap();
     assert_eq!(
         runtime.read_managed_credentials(&personal.id).unwrap(),
         Some(r#"{"accessToken":"personal-v1"}"#.to_string()),
@@ -345,8 +407,9 @@ fn activation_discards_an_empty_read_back_and_refuses_a_broken_target() {
         Path::new(&unknown.home_dir).join(super::super::claude_auth::CREDENTIALS_FILE),
     )
     .ok();
-    let err = activate_claude_account_under(root.path(), &mut capture, &runtime2, None, &unknown)
-        .unwrap_err();
+    let err =
+        activate_claude_account_under(root.path(), &mut capture, &runtime2, &[], None, &unknown)
+            .unwrap_err();
     assert!(err.to_string().contains("re-import"), "{err}");
 }
 

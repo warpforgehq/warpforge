@@ -343,7 +343,7 @@ fn attribute_claude(
 
 /// Every account of an agent that owns a vault. The synthesized `:live` row
 /// stands for the agent's own home and has nothing to store.
-fn managed<'a>(
+pub(crate) fn managed<'a>(
     accounts: &'a [StoredAccount],
     agent_id: &'a str,
 ) -> impl Iterator<Item = &'a StoredAccount> {
@@ -383,7 +383,7 @@ fn claude_target(root: &Path, runtime: &ClaudeRuntime, account: &StoredAccount) 
 
 /// The email a Claude account answers to: what the switcher recorded, else the
 /// identity stored alongside its credentials.
-fn claude_account_email(root: &Path, account: &StoredAccount) -> Option<String> {
+pub(crate) fn claude_account_email(root: &Path, account: &StoredAccount) -> Option<String> {
     if let Some(email) = account.email.as_deref().filter(|e| !e.trim().is_empty()) {
         return Some(email.to_string());
     }

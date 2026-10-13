@@ -35,10 +35,51 @@ fn claude_config_json(home: &Path) -> Result<String> {
 pub fn activate_claude_account(
     capture: &mut super::super::credential_capture::CredentialCapture,
     runtime: &super::super::claude_auth::ClaudeRuntime,
+    saved: &[StoredAccount],
     outgoing: Option<&StoredAccount>,
     target: &StoredAccount,
 ) -> Result<()> {
-    activate_claude_account_under(&accounts_root(), capture, runtime, outgoing, target)
+    activate_claude_account_under(&accounts_root(), capture, runtime, saved, outgoing, target)
+}
+
+/// Refuse a switch that would overwrite a login nobody has a copy of.
+///
+/// Capturing the outgoing account files the live credentials only when they
+/// are that account's. When they belong to someone else — signed in from a
+/// terminal, or a config dir that was just repointed at another setup — the
+/// capture rightly declines, and the overwrite that follows would then destroy
+/// that login's only refresh token. Unknown identity is let through: there is
+/// nothing to compare, and blocking every switch on it would strand the user.
+fn ensure_live_login_is_saved(
+    root: &Path,
+    runtime: &super::super::claude_auth::ClaudeRuntime,
+    saved: &[StoredAccount],
+) -> Result<()> {
+    use super::super::credential_capture::{claude_account_email, managed};
+    let Some(live) = runtime.read_live_credentials()? else {
+        return Ok(());
+    };
+    if !super::super::claude_auth::credentials_are_usable(&live) {
+        return Ok(());
+    }
+    let Some(email) = runtime
+        .read_live_oauth_account()
+        .and_then(|account| super::claude_identity(&account.to_string()).email)
+        .filter(|email| !email.trim().is_empty())
+    else {
+        return Ok(());
+    };
+    let is_saved = managed(saved, "claude").any(|account| {
+        claude_account_email(root, account)
+            .is_some_and(|stored| stored.trim().eq_ignore_ascii_case(email.trim()))
+    });
+    if !is_saved {
+        bail!(
+            "Claude is signed in as {email}, which is not saved in Warpforge — \
+             add that account first, or switching would sign it out"
+        );
+    }
+    Ok(())
 }
 
 /// The `oauthAccount` block out of a stored identity file.
@@ -58,6 +99,7 @@ pub(crate) fn activate_claude_account_under(
     root: &Path,
     capture: &mut super::super::credential_capture::CredentialCapture,
     runtime: &super::super::claude_auth::ClaudeRuntime,
+    saved: &[StoredAccount],
     outgoing: Option<&StoredAccount>,
     target: &StoredAccount,
 ) -> Result<()> {
@@ -69,6 +111,7 @@ pub(crate) fn activate_claude_account_under(
             Some(outgoing),
         );
     }
+    ensure_live_login_is_saved(root, runtime, saved)?;
 
     let vault = verify_vault_under(root, Path::new(&target.home_dir), &target.id)?;
     // Keychain first: on macOS it is what the CLI actually reads, so it is the

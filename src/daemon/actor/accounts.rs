@@ -268,6 +268,7 @@ impl Daemon {
             crate::daemon::accounts::activate_claude_account(
                 &mut capture,
                 &self.claude_runtime(),
+                &self.accounts,
                 outgoing.as_ref(),
                 &target,
             )
