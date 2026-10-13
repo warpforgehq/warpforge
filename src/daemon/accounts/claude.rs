@@ -42,18 +42,24 @@ pub fn activate_claude_account(
     activate_claude_account_under(&accounts_root(), capture, runtime, saved, outgoing, target)
 }
 
-/// Refuse a switch that would overwrite a login nobody has a copy of.
+/// Make sure the login a switch is about to overwrite has a current copy.
 ///
 /// Capturing the outgoing account files the live credentials only when they
 /// are that account's. When they belong to someone else — signed in from a
-/// terminal, or a config dir that was just repointed at another setup — the
-/// capture rightly declines, and the overwrite that follows would then destroy
-/// that login's only refresh token. Unknown identity is let through: there is
-/// nothing to compare, and blocking every switch on it would strand the user.
-fn ensure_live_login_is_saved(
+/// terminal, or a config dir that was just repointed at another setup — that
+/// capture rightly declines, and the overwrite that follows would destroy the
+/// login's newest refresh token. So the live login is matched against every
+/// saved account: one match is captured under that account first (it may have
+/// rotated since we last saw it), and no match refuses the switch. Unknown
+/// identity, or more than one account claiming it, is let through as before:
+/// there is nothing to file it under, and blocking every switch on it would
+/// strand the user.
+fn file_live_login(
     root: &Path,
+    capture: &mut super::super::credential_capture::CredentialCapture,
     runtime: &super::super::claude_auth::ClaudeRuntime,
     saved: &[StoredAccount],
+    already_captured: Option<&str>,
 ) -> Result<()> {
     use super::super::credential_capture::{claude_account_email, managed};
     let Some(live) = runtime.read_live_credentials()? else {
@@ -69,15 +75,21 @@ fn ensure_live_login_is_saved(
     else {
         return Ok(());
     };
-    let is_saved = managed(saved, "claude").any(|account| {
-        claude_account_email(root, account)
-            .is_some_and(|stored| stored.trim().eq_ignore_ascii_case(email.trim()))
-    });
-    if !is_saved {
-        bail!(
+    let owners: Vec<&StoredAccount> = managed(saved, "claude")
+        .filter(|account| {
+            claude_account_email(root, account)
+                .is_some_and(|stored| stored.trim().eq_ignore_ascii_case(email.trim()))
+        })
+        .collect();
+    match owners.as_slice() {
+        [] => bail!(
             "Claude is signed in as {email}, which is not saved in Warpforge — \
              add that account first, or switching would sign it out"
-        );
+        ),
+        [owner] if Some(owner.id.as_str()) != already_captured => {
+            capture.capture_claude_under(root, runtime, std::slice::from_ref(*owner), Some(*owner));
+        }
+        _ => {}
     }
     Ok(())
 }
@@ -103,7 +115,8 @@ pub(crate) fn activate_claude_account_under(
     outgoing: Option<&StoredAccount>,
     target: &StoredAccount,
 ) -> Result<()> {
-    if let Some(outgoing) = outgoing.filter(|outgoing| outgoing.id != target.id) {
+    let outgoing = outgoing.filter(|outgoing| outgoing.id != target.id);
+    if let Some(outgoing) = outgoing {
         capture.capture_claude_under(
             root,
             runtime,
@@ -111,7 +124,13 @@ pub(crate) fn activate_claude_account_under(
             Some(outgoing),
         );
     }
-    ensure_live_login_is_saved(root, runtime, saved)?;
+    file_live_login(
+        root,
+        capture,
+        runtime,
+        saved,
+        outgoing.map(|outgoing| outgoing.id.as_str()),
+    )?;
 
     let vault = verify_vault_under(root, Path::new(&target.home_dir), &target.id)?;
     // Keychain first: on macOS it is what the CLI actually reads, so it is the

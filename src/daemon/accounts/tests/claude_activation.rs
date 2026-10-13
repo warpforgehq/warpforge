@@ -279,3 +279,63 @@ fn activation_discards_an_empty_read_back_and_refuses_a_broken_target() {
             .unwrap_err();
     assert!(err.to_string().contains("re-import"), "{err}");
 }
+
+/// The live login is a saved account other than the outgoing one — signed in
+/// from a terminal, where its CLI has since rotated the token. The outgoing
+/// capture declines it, so the switch must file it under its own account
+/// before overwriting it: the vault copy is pre-rotation and no longer works.
+#[cfg(unix)]
+#[test]
+fn a_live_login_of_another_saved_account_is_captured_before_the_switch() {
+    let root = tempfile::tempdir().unwrap();
+    let (runtime, mut personal, mut work) = claude_fixture(root.path());
+    let mut capture = crate::daemon::credential_capture::CredentialCapture::default();
+    personal.email = Some("me@example.com".into());
+    personal.active = true;
+    work.email = Some("me@corp.com".into());
+    let stale = r#"{"claudeAiOauth":{"accessToken":"work-v1","expiresAt":100}}"#;
+    let rotated = r#"{"claudeAiOauth":{"accessToken":"work-v2","expiresAt":200}}"#;
+    runtime
+        .write_managed_credentials(&personal.id, r#"{"accessToken":"personal-v1"}"#)
+        .unwrap();
+    runtime.write_managed_credentials(&work.id, stale).unwrap();
+    std::fs::create_dir_all(&runtime.config_dir).unwrap();
+    std::fs::write(
+        &runtime.config_path,
+        r#"{"oauthAccount":{"emailAddress":"me@corp.com"}}"#,
+    )
+    .unwrap();
+    runtime.write_live_credentials(rotated).unwrap();
+
+    activate_claude_account_under(
+        root.path(),
+        &mut capture,
+        &runtime,
+        &[personal.clone(), work.clone()],
+        Some(&personal),
+        &work,
+    )
+    .unwrap();
+
+    assert_eq!(
+        runtime
+            .read_managed_credentials(&work.id)
+            .unwrap()
+            .as_deref(),
+        Some(rotated),
+        "the rotated token is filed under its own account"
+    );
+    assert_eq!(
+        runtime.read_live_credentials().unwrap().as_deref(),
+        Some(rotated),
+        "and the switch makes that fresh copy live, not the stale vault one"
+    );
+    assert_eq!(
+        runtime
+            .read_managed_credentials(&personal.id)
+            .unwrap()
+            .as_deref(),
+        Some(r#"{"accessToken":"personal-v1"}"#),
+        "the outgoing account does not adopt someone else's login"
+    );
+}
