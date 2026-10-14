@@ -141,215 +141,6 @@ fn codex_identity_tolerates_garbage() {
     );
 }
 
-/// Build two Claude accounts inside a temp accounts-root, with a stubbed
-/// keychain, so activation can be exercised end to end.
-#[cfg(unix)]
-fn claude_fixture(
-    root: &Path,
-) -> (
-    super::super::claude_auth::ClaudeRuntime,
-    StoredAccount,
-    StoredAccount,
-) {
-    let runtime = super::super::claude_auth::tests::stub_runtime(root);
-    let make = |slug: &str| {
-        let id = account_id("claude", slug);
-        let vault = root.join("claude").join(slug);
-        std::fs::create_dir_all(&vault).unwrap();
-        std::fs::write(vault.join(OWNERSHIP_MARKER), format!("{id}\n")).unwrap();
-        StoredAccount {
-            id,
-            agent_id: "claude".to_string(),
-            label: slug.to_string(),
-            email: None,
-            plan: None,
-            home_dir: vault.to_string_lossy().into_owned(),
-            created_at: 0,
-            active: false,
-        }
-    };
-    (runtime, make("personal"), make("work"))
-}
-
-#[cfg(unix)]
-#[test]
-fn activation_captures_the_outgoing_account_before_overwriting_it() {
-    let root = tempfile::tempdir().unwrap();
-    let (runtime, mut personal, work) = claude_fixture(root.path());
-    let mut capture = super::super::credential_capture::CredentialCapture::default();
-    personal.active = true;
-
-    // Both accounts were imported at some point.
-    runtime
-        .write_managed_credentials(&personal.id, r#"{"accessToken":"personal-v1"}"#)
-        .unwrap();
-    runtime
-        .write_managed_credentials(&work.id, r#"{"accessToken":"work-v1"}"#)
-        .unwrap();
-    runtime
-        .write_live_credentials(r#"{"accessToken":"personal-v1"}"#)
-        .unwrap();
-
-    // The live CLI refreshes and rotates its token: the stored copy for
-    // `personal` is now stale, and it is the only thing that can log that
-    // account back in.
-    runtime
-        .write_live_credentials(r#"{"accessToken":"personal-v2"}"#)
-        .unwrap();
-
-    activate_claude_account_under(root.path(), &mut capture, &runtime, Some(&personal), &work)
-        .unwrap();
-
-    // The rotated token was captured, not thrown away…
-    assert_eq!(
-        runtime.read_managed_credentials(&personal.id).unwrap(),
-        Some(r#"{"accessToken":"personal-v2"}"#.to_string())
-    );
-    // …and the CLI now runs as the target account.
-    assert_eq!(
-        runtime.read_live_credentials().unwrap(),
-        Some(r#"{"accessToken":"work-v1"}"#.to_string())
-    );
-
-    // Switching back restores the captured token, not the stale one.
-    activate_claude_account_under(root.path(), &mut capture, &runtime, Some(&work), &personal)
-        .unwrap();
-    assert_eq!(
-        runtime.read_live_credentials().unwrap(),
-        Some(r#"{"accessToken":"personal-v2"}"#.to_string())
-    );
-}
-
-#[cfg(unix)]
-#[test]
-fn activation_moves_identity_and_credentials_together() {
-    let root = tempfile::tempdir().unwrap();
-    let (runtime, personal, work) = claude_fixture(root.path());
-    let mut capture = super::super::credential_capture::CredentialCapture::default();
-    for (account, email) in [(&personal, "me@example.com"), (&work, "me@corp.com")] {
-        runtime
-            .write_managed_credentials(&account.id, r#"{"accessToken":"t"}"#)
-            .unwrap();
-        write_vault_file(
-            Path::new(&account.home_dir),
-            super::super::claude_auth::OAUTH_ACCOUNT_FILE,
-            &format!("{{\"emailAddress\":\"{email}\"}}"),
-        )
-        .unwrap();
-    }
-    std::fs::create_dir_all(&runtime.config_dir).unwrap();
-    std::fs::write(
-        &runtime.config_path,
-        r#"{"oauthAccount":{"emailAddress":"me@corp.com"}}"#,
-    )
-    .unwrap();
-
-    activate_claude_account_under(root.path(), &mut capture, &runtime, Some(&work), &personal)
-        .unwrap();
-
-    // Leaving the config on the previous account is what produced
-    // "OAuth session expired and could not be refreshed" in the field: the
-    // CLI had one account's token and another account's identity.
-    assert_eq!(
-        runtime.read_live_oauth_account().unwrap()["emailAddress"],
-        "me@example.com"
-    );
-}
-
-#[test]
-fn a_whole_claude_json_stored_by_an_older_build_is_unwrapped() {
-    let stored = serde_json::json!({
-        "oauthAccount": { "emailAddress": "me@example.com" },
-        "projects": { "/a": { "history": [1, 2] } },
-    });
-    // Written back verbatim, this would bury the entire config — history and
-    // all — inside `oauthAccount`.
-    assert_eq!(
-        stored_oauth_account(stored)["emailAddress"],
-        "me@example.com"
-    );
-    // A bare block (what current imports store) passes through untouched.
-    let bare = serde_json::json!({ "emailAddress": "me@example.com" });
-    assert_eq!(stored_oauth_account(bare.clone()), bare);
-}
-
-#[cfg(unix)]
-#[test]
-fn write_back_is_skipped_when_the_live_login_is_a_different_account() {
-    let root = tempfile::tempdir().unwrap();
-    let (runtime, mut personal, work) = claude_fixture(root.path());
-    let mut capture = super::super::credential_capture::CredentialCapture::default();
-    personal.email = Some("personal@example.com".into());
-    personal.active = true;
-    runtime
-        .write_managed_credentials(&personal.id, r#"{"accessToken":"personal-v1"}"#)
-        .unwrap();
-    runtime
-        .write_managed_credentials(&work.id, r#"{"accessToken":"work-v1"}"#)
-        .unwrap();
-
-    // The user signed in as somebody else from a terminal since the last
-    // switch, so the live credentials are not `personal`'s.
-    std::fs::create_dir_all(&runtime.config_dir).unwrap();
-    std::fs::write(
-        runtime.config_dir.join(".claude.json"),
-        r#"{"oauthAccount":{"emailAddress":"stranger@example.com"}}"#,
-    )
-    .unwrap();
-    runtime
-        .write_live_credentials(r#"{"accessToken":"stranger-token"}"#)
-        .unwrap();
-
-    activate_claude_account_under(root.path(), &mut capture, &runtime, Some(&personal), &work)
-        .unwrap();
-
-    // `personal` keeps its own credentials instead of adopting the
-    // stranger's session under its label.
-    assert_eq!(
-        runtime.read_managed_credentials(&personal.id).unwrap(),
-        Some(r#"{"accessToken":"personal-v1"}"#.to_string())
-    );
-}
-
-#[cfg(unix)]
-#[test]
-fn activation_discards_an_empty_read_back_and_refuses_a_broken_target() {
-    let root = tempfile::tempdir().unwrap();
-    let (runtime, personal, work) = claude_fixture(root.path());
-    let mut capture = super::super::credential_capture::CredentialCapture::default();
-    runtime
-        .write_managed_credentials(&personal.id, r#"{"accessToken":"personal-v1"}"#)
-        .unwrap();
-    runtime
-        .write_managed_credentials(&work.id, r#"{"accessToken":"work-v1"}"#)
-        .unwrap();
-
-    // A live CLI that lost a refresh race wrote an empty blob. Persisting it
-    // would log `personal` out permanently.
-    runtime
-        .write_live_credentials(r#"{"accessToken":""}"#)
-        .unwrap();
-    activate_claude_account_under(root.path(), &mut capture, &runtime, Some(&personal), &work)
-        .unwrap();
-    assert_eq!(
-        runtime.read_managed_credentials(&personal.id).unwrap(),
-        Some(r#"{"accessToken":"personal-v1"}"#.to_string()),
-        "an unusable read-back must not overwrite a good stored token"
-    );
-
-    // A target with nothing stored fails loudly instead of leaving the CLI
-    // authenticated as the previous account while the UI claims otherwise.
-    let (runtime2, _, unknown) = claude_fixture(root.path());
-    runtime2.delete_managed_credentials(&unknown.id).unwrap();
-    std::fs::remove_file(
-        Path::new(&unknown.home_dir).join(super::super::claude_auth::CREDENTIALS_FILE),
-    )
-    .ok();
-    let err = activate_claude_account_under(root.path(), &mut capture, &runtime2, None, &unknown)
-        .unwrap_err();
-    assert!(err.to_string().contains("re-import"), "{err}");
-}
-
 #[test]
 fn claude_identity_reads_oauth_account() {
     let config = r#"{"oauthAccount":{"emailAddress":"dev@example.com","seatTier":"max"}}"#;
@@ -507,7 +298,7 @@ fn materialize_never_discards_a_colliding_file() {
 fn env_is_agent_specific() {
     let dir = tempfile::tempdir().unwrap();
     let codex = account("codex:personal", dir.path());
-    let env = env_for("codex", Some(&codex));
+    let env = env_for("codex", Some(&codex), None);
     assert_eq!(
         env.set.get("CODEX_HOME").map(String::as_str),
         Some(dir.path().to_string_lossy().as_ref())
@@ -515,7 +306,7 @@ fn env_is_agent_specific() {
     assert!(env.remove.is_empty());
 
     // Codex without a selected account contributes nothing at all.
-    assert!(env_for("codex", None).is_empty());
+    assert!(env_for("codex", None, None).is_empty());
 
     // Claude never sets a home — it is swapped in place — but always strips
     // the auth env that would override the selected account.
@@ -523,10 +314,25 @@ fn env_is_agent_specific() {
         agent_id: "claude".to_string(),
         ..account("claude:personal", dir.path())
     };
-    let env = env_for("claude", Some(&claude));
+    let env = env_for("claude", Some(&claude), None);
     assert!(env.set.is_empty());
     assert!(env.remove.contains(&"ANTHROPIC_API_KEY".to_string()));
     assert!(env.remove.contains(&"CLAUDE_CODE_OAUTH_TOKEN".to_string()));
+    // The default dir: an inherited CLAUDE_CONFIG_DIR is dropped, not passed on.
+    assert!(env.remove.contains(&"CLAUDE_CONFIG_DIR".to_string()));
+
+    // A chosen config dir reaches Claude, and only Claude.
+    let work = std::path::Path::new("/Users/tester/.claude-work");
+    let env = env_for("claude", Some(&claude), Some(work));
+    assert_eq!(
+        env.set.get("CLAUDE_CONFIG_DIR").map(String::as_str),
+        Some("/Users/tester/.claude-work")
+    );
+    assert!(env.remove.contains(&"ANTHROPIC_API_KEY".to_string()));
+    assert!(!env.remove.contains(&"CLAUDE_CONFIG_DIR".to_string()));
+    assert!(!env_for("codex", None, Some(work))
+        .set
+        .contains_key("CLAUDE_CONFIG_DIR"));
 }
 
 #[test]
@@ -640,7 +446,10 @@ fn a_display_name_agent_field_resolves_the_same_account_as_the_id() {
             select_for_spawn_under(root.path(), &accounts, agent_id, SpawnAccount::Active);
         (
             selected.map(|a| a.id.clone()),
-            env_for(agent_id, selected).set.get("CODEX_HOME").cloned(),
+            env_for(agent_id, selected, None)
+                .set
+                .get("CODEX_HOME")
+                .cloned(),
         )
     };
     assert_eq!(pick("Codex"), pick("codex"));
@@ -654,7 +463,7 @@ fn a_display_name_agent_field_resolves_the_same_account_as_the_id() {
     assert!(
         select_for_spawn_under(root.path(), &accounts, "Codex", SpawnAccount::Active).is_none()
     );
-    assert!(env_for("Codex", accounts.first()).is_empty());
+    assert!(env_for("Codex", accounts.first(), None).is_empty());
 }
 
 #[test]
@@ -687,3 +496,5 @@ fn spawn_drops_an_account_whose_vault_stopped_verifying() {
         );
     }
 }
+
+mod claude_activation;

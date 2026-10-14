@@ -81,8 +81,15 @@ pub(crate) fn select_for_spawn_under<'a>(
 /// Environment for an agent, given the selected account (if any).
 ///
 /// Codex selects its account by `CODEX_HOME`. Claude does not — its account is
-/// swapped in place — so it contributes only the strip list.
-pub fn env_for(agent_id: &str, account: Option<&StoredAccount>) -> AgentEnv {
+/// swapped in place — so it contributes the strip list, plus
+/// `CLAUDE_CONFIG_DIR` when the user chose a config dir (`claude_dir`). The
+/// agent has to run against the same directory the daemon reads credentials
+/// and quota from, or the two silently disagree about the account.
+pub fn env_for(
+    agent_id: &str,
+    account: Option<&StoredAccount>,
+    claude_dir: Option<&Path>,
+) -> AgentEnv {
     let mut env = AgentEnv::default();
     match agent_id {
         "codex" => {
@@ -96,6 +103,18 @@ pub fn env_for(agent_id: &str, account: Option<&StoredAccount>) -> AgentEnv {
                 .iter()
                 .map(|v| v.to_string())
                 .collect();
+            // Set or cleared, never inherited: a daemon started with its own
+            // `CLAUDE_CONFIG_DIR` must not leak it into an agent the user
+            // pointed at the default dir.
+            match claude_dir {
+                Some(dir) => {
+                    env.set.insert(
+                        "CLAUDE_CONFIG_DIR".to_string(),
+                        dir.to_string_lossy().into_owned(),
+                    );
+                }
+                None => env.remove.push("CLAUDE_CONFIG_DIR".to_string()),
+            }
             if std::env::var("ANTHROPIC_CUSTOM_HEADERS")
                 .is_ok_and(|value| super::super::claude_auth::headers_look_like_auth(&value))
             {

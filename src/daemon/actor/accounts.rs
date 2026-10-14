@@ -94,6 +94,38 @@ impl Daemon {
         agent: &str,
         choice: crate::daemon::accounts::SpawnAccount<'_>,
     ) -> crate::daemon::accounts::AgentEnv {
+        self.resolve_agent_env_in(agent, choice, None)
+    }
+
+    /// The Claude config dir a task's agent runs against. A resume goes back to
+    /// the dir its session was started in — the transcript exists there and
+    /// nowhere else, and loading it from another dir drops the session as lost.
+    /// A fresh session, or one recorded before dirs were, uses the configured
+    /// dir.
+    pub(crate) fn claude_dir_for(
+        &self,
+        task_id: &str,
+        resuming: bool,
+    ) -> crate::daemon::claude_config::ClaudeDir {
+        match self
+            .tasks
+            .get(task_id)
+            .filter(|_| resuming)
+            .and_then(|task| task.claude_config_dir.clone())
+        {
+            Some(dir) => dir,
+            None => crate::daemon::claude_config::config_dir(),
+        }
+    }
+
+    /// `resolve_agent_env` with the Claude config dir chosen by the caller;
+    /// `None` = the configured one.
+    pub(crate) fn resolve_agent_env_in(
+        &self,
+        agent: &str,
+        choice: crate::daemon::accounts::SpawnAccount<'_>,
+        claude_dir: Option<crate::daemon::claude_config::ClaudeDir>,
+    ) -> crate::daemon::accounts::AgentEnv {
         let agent = self.agent_id_of(agent);
         let selected = crate::daemon::accounts::select_for_spawn(&self.accounts, agent, choice);
         // Re-link the shared home before every spawn, not just at import: the
@@ -111,7 +143,14 @@ impl Daemon {
                 }
             }
         }
-        crate::daemon::accounts::env_for(agent, selected)
+        let claude_dir = (agent == "claude")
+            .then(|| claude_dir.unwrap_or_else(crate::daemon::claude_config::config_dir))
+            .filter(|dir| dir.explicit);
+        crate::daemon::accounts::env_for(
+            agent,
+            selected,
+            claude_dir.as_ref().map(|dir| dir.path.as_path()),
+        )
     }
 
     /// How the daemon reaches the Claude CLI's credential storage.
@@ -263,6 +302,7 @@ impl Daemon {
             crate::daemon::accounts::activate_claude_account(
                 &mut capture,
                 &self.claude_runtime(),
+                &self.accounts,
                 outgoing.as_ref(),
                 &target,
             )

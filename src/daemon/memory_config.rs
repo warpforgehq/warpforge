@@ -2,11 +2,9 @@
 //! Loaded once at daemon start; the dreaming subsection is parsed and stored
 //! but never executed in v1.
 
-use std::path::PathBuf;
-
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use serde_yaml::{Mapping, Value};
+use serde_yaml::Value;
 
 fn default_true() -> bool {
     true
@@ -69,14 +67,7 @@ impl Default for MemoryConfig {
 
 impl MemoryConfig {
     pub fn load() -> Self {
-        let path = config_path();
-        match std::fs::read_to_string(&path) {
-            Ok(raw) => match serde_yaml::from_str::<RawConfig>(&raw) {
-                Ok(raw) => raw.memory,
-                Err(_) => Self::default(),
-            },
-            Err(_) => Self::default(),
-        }
+        super::config_file::load_section("memory")
     }
 
     /// Whether embeddings are requested (`embedding: "fastembed"`).
@@ -88,46 +79,12 @@ impl MemoryConfig {
 /// Persist the embedding mode to `~/.warpforge/config.yaml`, preserving any
 /// unrelated top-level keys. Best-effort: callers treat failure as non-fatal.
 pub fn save_embedding(mode: &str) -> Result<()> {
-    let path = config_path();
-    let mut root: Value = match std::fs::read_to_string(&path) {
-        Ok(raw) => serde_yaml::from_str(&raw).unwrap_or_else(|_| Value::Mapping(Mapping::new())),
-        Err(_) => Value::Mapping(Mapping::new()),
-    };
-    let root_map = root
-        .as_mapping_mut()
-        .ok_or_else(|| anyhow::anyhow!("config.yaml is not a mapping"))?;
-    if !root_map.contains_key("memory") {
-        root_map.insert(
-            Value::String("memory".into()),
-            Value::Mapping(Mapping::new()),
+    super::config_file::update_section("memory", |memory| {
+        memory.insert(
+            Value::String("embedding".into()),
+            Value::String(mode.into()),
         );
-    }
-    let memory = root_map
-        .get_mut("memory")
-        .and_then(Value::as_mapping_mut)
-        .ok_or_else(|| anyhow::anyhow!("config.yaml 'memory' is not a mapping"))?;
-    memory.insert(
-        Value::String("embedding".into()),
-        Value::String(mode.into()),
-    );
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir).ok();
-    }
-    std::fs::write(&path, serde_yaml::to_string(&root)?)?;
-    Ok(())
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct RawConfig {
-    #[serde(default)]
-    memory: MemoryConfig,
-}
-
-fn config_path() -> PathBuf {
-    dirs::home_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(".warpforge")
-        .join("config.yaml")
+    })
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

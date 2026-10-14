@@ -201,5 +201,11 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
     );
     // Migration: the advisor a task consults, as JSON (ADR 0022).
     let _ = conn.execute("ALTER TABLE tasks ADD COLUMN advisor TEXT", []);
+    // Migration: the Claude config dir a task's session lives in.
+    let _ = conn.execute("ALTER TABLE tasks ADD COLUMN claude_config_dir TEXT", []);
+    let _ = conn.execute(
+        "ALTER TABLE tasks ADD COLUMN claude_config_explicit INTEGER",
+        [],
+    );
     super::runner::init(conn)
 }

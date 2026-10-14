@@ -22,8 +22,9 @@ impl Store {
                 (id, session_id, project, prompt, agent, status, tags, title,
                  created_at, updated_at, files_changed, blocked_reason, config_options, worktree,
                  base_branch, parent_task_id, settled_override, settled_at, snoozed_until,
-                 snoozed_at, account_id, backlog_item_id, blocked_kind, model, origin, advisor)
-            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26)
+                 snoozed_at, account_id, backlog_item_id, blocked_kind, model, origin, advisor,
+                 claude_config_dir, claude_config_explicit)
+            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28)
             ON CONFLICT(id) DO UPDATE SET
                 session_id=excluded.session_id,
                 status=excluded.status,
@@ -43,7 +44,9 @@ impl Store {
                 backlog_item_id=excluded.backlog_item_id,
                 blocked_kind=excluded.blocked_kind,
                 model=excluded.model,
-                advisor=excluded.advisor
+                advisor=excluded.advisor,
+                claude_config_dir=excluded.claude_config_dir,
+                claude_config_explicit=excluded.claude_config_explicit
             "#,
             rusqlite::params![
                 task.id,
@@ -72,6 +75,10 @@ impl Store {
                 task.model,
                 task.origin,
                 advisor,
+                task.claude_config_dir
+                    .as_ref()
+                    .map(|dir| dir.path.to_string_lossy().into_owned()),
+                task.claude_config_dir.as_ref().map(|dir| dir.explicit),
             ],
         )?;
         Ok(())
@@ -86,7 +93,8 @@ impl Store {
             "SELECT id, session_id, project, prompt, agent, status, tags, \
              created_at, updated_at, files_changed, blocked_reason, config_options, worktree, \
              parent_task_id, title, settled_override, settled_at, snoozed_until, snoozed_at, \
-             account_id, backlog_item_id, blocked_kind, model, origin, base_branch, advisor \
+             account_id, backlog_item_id, blocked_kind, model, origin, base_branch, advisor, \
+             claude_config_dir, claude_config_explicit \
              FROM tasks",
         )?;
         let rows = stmt.query_map([], |row| {
@@ -123,6 +131,9 @@ impl Store {
                 snoozed_until: row.get::<_, Option<u64>>(17)?,
                 snoozed_at: row.get::<_, Option<u64>>(18)?,
                 account_id: row.get(19)?,
+                claude_config_dir: row.get::<_, Option<String>>(26)?.map(|path| {
+                    crate::daemon::claude_config::recorded(&path, row.get(27).ok().flatten())
+                }),
                 backlog_item_id: row.get(20)?,
                 origin: row.get(23)?,
                 model: row.get(22)?,

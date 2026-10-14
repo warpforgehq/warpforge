@@ -159,7 +159,7 @@ pub fn agent_home(agent_id: &str) -> Option<PathBuf> {
     let home = dirs::home_dir()?;
     match agent_id {
         "codex" => Some(home.join(".codex")),
-        "claude" => Some(home.join(".claude")),
+        "claude" => Some(super::super::claude_config::config_dir().path),
         _ => None,
     }
 }
