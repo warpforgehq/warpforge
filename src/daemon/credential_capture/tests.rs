@@ -244,13 +244,10 @@ fn a_symlinked_destination_is_refused() {
 #[cfg(unix)]
 fn failing_security(dir: &Path, code: i32) -> ClaudeRuntime {
     let script = dir.join("security");
-    std::fs::write(
+    crate::daemon::test_util::write_stub(
         &script,
-        format!("#!/bin/sh\n[ \"$1\" = find-generic-password ] && exit {code}\nexit 0\n"),
-    )
-    .unwrap();
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        &format!("#!/bin/sh\n[ \"$1\" = find-generic-password ] && exit {code}\nexit 0\n"),
+    );
     ClaudeRuntime {
         config_dir: dir.join("config"),
         config_path: dir.join("config").join(".claude.json"),
