@@ -83,6 +83,22 @@ export interface GitBranchList {
   branches: string[];
   /** Remote-tracking refs, e.g. `origin/main`. */
   remotes?: string[];
+  /** Local branches checked out in another worktree of this repository; the
+   * current branch is never listed. */
+  worktrees?: BranchWorktree[];
+}
+
+/** A local branch held by another worktree. */
+export interface BranchWorktree {
+  branch: string;
+  /** Absolute path of the worktree that has it checked out. */
+  path: string;
+  /** The repository's main worktree (the project folder). */
+  primary?: boolean;
+  /** Lives under `.warpforge/worktrees` or the legacy `.worktrees`. */
+  managed?: boolean;
+  /** The task that owns the worktree, when one does. */
+  taskId?: string | null;
 }
 
 /** One git checkout under a project (its own root, or a nested repo found

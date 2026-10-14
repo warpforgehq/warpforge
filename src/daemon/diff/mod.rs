@@ -18,6 +18,7 @@ use tokio::process::Command;
 use warpforge_protocol as wire;
 
 mod branch;
+mod branch_worktrees;
 mod commit;
 mod files;
 mod listing;

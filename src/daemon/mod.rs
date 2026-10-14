@@ -54,4 +54,6 @@ pub use store::Store;
 pub use task::{Task, TaskStatus};
 
 #[cfg(test)]
+mod test_util;
+#[cfg(test)]
 mod tests;

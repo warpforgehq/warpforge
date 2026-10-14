@@ -54,6 +54,11 @@ export function TaskMethods<TBase extends Constructor<CoreClient>>(Base: TBase) 
       await this.request("task.setTitle", { task_id: taskId, title });
     }
 
+    /** Turn a surface-owned task (the PR Assistant's) into a board task. */
+    async adoptTask(taskId: string) {
+      await this.request("task.adopt", { task_id: taskId });
+    }
+
     /**
      * Merge a task's worktree branch back into its base branch. When
      * `removeWorktree` is true the checkout and branch are removed afterwards.

@@ -47,7 +47,6 @@ mod tests;
 pub use detached::{create_branched_detached, default_remover, remove_detached};
 #[cfg(test)]
 pub use detached::{create_detached, RemoveFn};
-#[cfg(test)]
 pub use discover::parse_worktree_list;
 pub use inventory::{list_managed, same_path, Listed};
 pub use merge::merge_detached;

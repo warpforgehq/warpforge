@@ -79,7 +79,7 @@ export function AssistantThreadItem({ pr }: { pr: PullRequestSummary }) {
     <DropdownMenuItem
       className="flex-col items-start gap-0.5 px-2 py-1.5"
       disabled={!task}
-      onSelect={() => task && openTask(task.id)}
+      onSelect={() => task && void daemon.adoptTask(task.id).then(() => openTask(task.id))}
     >
       <span className="text-sm">Continue in a task</span>
       <span className="text-[11px] text-muted-foreground">

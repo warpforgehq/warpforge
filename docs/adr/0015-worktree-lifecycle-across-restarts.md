@@ -160,3 +160,7 @@ task branch, so checking out one existing branch run after run cannot work.
    pull request branch is never deleted with its task.
 10. **`base_branch` is a local branch name.** An origin base records the
     default branch's local name, not the remote-tracking ref.
+11. **The branch picker never checks out a branch held by another worktree.**
+    It opens the owning task, or names the worktree path; `git.switchBranch`
+    refuses the same case. No force, no `--ignore-other-worktrees`, no
+    auto-detach.

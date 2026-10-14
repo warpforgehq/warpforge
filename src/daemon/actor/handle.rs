@@ -172,6 +172,10 @@ impl DaemonHandle {
         .await;
     }
 
+    pub async fn adopt_task(&self, id: &str) {
+        self.send(Command::AdoptTask { id: id.to_string() }).await;
+    }
+
     pub async fn read_inbox(&self, parent_task_id: &str) -> Vec<ChildResult> {
         let (tx, rx) = oneshot::channel();
         self.send(Command::ReadInbox {

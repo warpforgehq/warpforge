@@ -7,20 +7,20 @@ pub(crate) fn stub_runtime(dir: &Path) -> ClaudeRuntime {
     let store = dir.join("keychain");
     std::fs::create_dir_all(&store).unwrap();
     let script = dir.join("security");
-    std::fs::write(
+    crate::daemon::test_util::write_stub(
         &script,
-        format!(
+        &format!(
             r#"#!/bin/sh
 store='{}'
 cmd="$1"; shift
 service=""; account=""; secret=""; want_w=0
 while [ $# -gt 0 ]; do
   case "$1" in
--s) service="$2"; shift 2;;
--a) account="$2"; shift 2;;
--w) if [ "$cmd" = "add-generic-password" ]; then secret="$2"; shift 2; else want_w=1; shift; fi;;
--U) shift;;
-*) shift;;
+    -s) service="$2"; shift 2;;
+    -a) account="$2"; shift 2;;
+    -w) if [ "$cmd" = "add-generic-password" ]; then secret="$2"; shift 2; else want_w=1; shift; fi;;
+    -U) shift;;
+    *) shift;;
   esac
 done
 key=$(printf '%s' "$service/$account" | tr -c 'A-Za-z0-9' '_')
@@ -33,10 +33,7 @@ exit 1
 "#,
             store.display()
         ),
-    )
-    .unwrap();
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+    );
 
     ClaudeRuntime {
         config_dir: dir.join("config"),

@@ -7,7 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PullComment, PullRequestDetails, PullRequestSummary, PullThread } from "@/protocol";
 import { useUi } from "@/store/ui";
 
-const { pullDetails, pullThread, pullDiff, pullReview } = vi.hoisted(() => ({
+const { adoptTask, pullDetails, pullThread, pullDiff, pullReview } = vi.hoisted(() => ({
+  adoptTask: vi.fn<(taskId: string) => Promise<void>>(async () => {}),
   pullDetails: vi.fn<(project: string, number: number) => Promise<PullRequestDetails>>(),
   pullThread: vi.fn<(project: string, number: number) => Promise<PullThread>>(),
   pullDiff: vi.fn<(project: string, number: number) => Promise<never>>(),
@@ -33,6 +34,7 @@ const { daemonState } = vi.hoisted(() => ({
 
 vi.mock("@/daemon", () => ({
   daemon: {
+    adoptTask,
     getState: () => daemonState,
     pullDetails,
     pullDiff,
@@ -267,7 +269,7 @@ describe("PullRequestDetail send to agent", () => {
     expect(screen.getByText("Ask the Assistant something first")).toBeTruthy();
   });
 
-  it("opens the Assistant's thread as a task once there is one", async () => {
+  it("moves the Assistant's thread onto the board, then opens it", async () => {
     const user = userEvent.setup();
     daemonState.snapshot.tasks = [
       { id: "t1", createdAt: 1, origin: "pr-review", tags: ["pr-review", "pr:acme/widgets#7"] },
@@ -280,6 +282,7 @@ describe("PullRequestDetail send to agent", () => {
     await user.click(screen.getByTitle("Start a task from this pull request"));
     await user.click(screen.getByText("Continue in a task"));
 
-    expect(openTask).toHaveBeenCalledWith("t1");
+    expect(adoptTask).toHaveBeenCalledWith("t1");
+    await waitFor(() => expect(openTask).toHaveBeenCalledWith("t1"));
   });
 });
