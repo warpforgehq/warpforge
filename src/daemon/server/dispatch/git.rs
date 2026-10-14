@@ -1,6 +1,9 @@
 //! Server dispatcher topic: git.
 
+use std::path::Path;
+
 use crate::daemon::actor::DaemonHandle;
+use crate::daemon::worktree::same_path;
 use serde_json::json;
 use warpforge_protocol as wire;
 
@@ -38,7 +41,20 @@ pub(super) async fn git_branches(
     task_id: Option<String>,
     project: Option<String>,
 ) -> Result<serde_json::Value, wire::RpcError> {
-    let list = handle.git_branches(task_id, project).await;
+    let mut list = handle.git_branches(task_id, project).await;
+    if !list.worktrees.is_empty() {
+        let tasks = handle.tasks().await;
+        for held in &mut list.worktrees {
+            held.task_id = tasks
+                .iter()
+                .find(|t| {
+                    t.worktree
+                        .as_deref()
+                        .is_some_and(|w| same_path(Path::new(w), Path::new(&held.path)))
+                })
+                .map(|t| t.id.clone());
+        }
+    }
     serde_json::to_value(list).map_err(|e| wire::RpcError {
         code: wire::ErrorCode::Internal,
         message: e.to_string(),

@@ -8,6 +8,7 @@ const { request } = vi.hoisted(() => ({
 
 vi.mock("../../daemon", () => ({ daemon: { request } }));
 
+import { useUi } from "../../store/ui";
 import { GitWorkspaceControls } from "./GitWorkspaceControls";
 
 function renderControls() {
@@ -39,5 +40,41 @@ describe("GitWorkspaceControls branch popover", () => {
     // silent: no sentence, and no skeleton stood in for the list.
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
     expect(container.querySelector("[aria-busy]")).toBeNull();
+  });
+
+  it("opens the owning task instead of checking out a branch its worktree holds", async () => {
+    useUi.setState({ openTaskId: null });
+    request.mockImplementation((method) =>
+      Promise.resolve(
+        method === "git.branches"
+          ? {
+              current: "main",
+              branches: ["main", "warpforge/task/t_9"],
+              worktrees: [
+                {
+                  branch: "warpforge/task/t_9",
+                  path: "/repo/.warpforge/worktrees/t_9",
+                  managed: true,
+                  taskId: "t_9",
+                },
+              ],
+            }
+          : null,
+      ),
+    );
+
+    renderControls();
+    fireEvent.click(screen.getByTitle("Branches and Git actions"));
+    fireEvent.change(screen.getByPlaceholderText("Search branches and actions"), {
+      target: { value: "t_9" },
+    });
+    const row = await screen.findByLabelText("Open in a task's worktree");
+    fireEvent.contextMenu(row.closest("[data-branch]")!);
+    const openTask = await screen.findByRole("menuitem", { name: "Open task" });
+    expect(screen.queryByRole("menuitem", { name: "Checkout and Update" })).toBeNull();
+    fireEvent.click(openTask);
+
+    expect(useUi.getState().openTaskId).toBe("t_9");
+    expect(request).not.toHaveBeenCalledWith("git.switchBranch", expect.anything());
   });
 });

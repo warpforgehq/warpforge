@@ -5,6 +5,7 @@
 use anyhow::{bail, Result};
 use warpforge_protocol as wire;
 
+use super::branch_worktrees::{held_branches, held_elsewhere, held_message};
 use super::working::current_branch;
 use super::{errline, git, is_dirty, op_conflict, op_error, unmerged_files};
 
@@ -29,10 +30,18 @@ pub async fn list_branches(repo: &str) -> Result<wire::GitBranchList> {
     } else {
         Vec::new()
     };
+    let current = current_branch(repo).await;
+    let wt_out = git(repo, &["worktree", "list", "--porcelain"]).await?;
+    let worktrees = if wt_out.status.success() {
+        held_branches(&String::from_utf8_lossy(&wt_out.stdout), current.as_deref())
+    } else {
+        Vec::new()
+    };
     Ok(wire::GitBranchList {
-        current: current_branch(repo).await,
+        current,
         branches,
         remotes,
+        worktrees,
     })
 }
 
@@ -68,6 +77,9 @@ pub async fn switch_branch(repo: &str, target: &str) -> Result<wire::GitOpResult
     .await?;
     if !verify.status.success() {
         return Ok(op_error(format!("no local branch '{target}'")));
+    }
+    if let Some(holder) = held_elsewhere(repo, target).await {
+        return Ok(op_error(held_message(target, &holder)));
     }
 
     let dirty = is_dirty(repo).await?;
