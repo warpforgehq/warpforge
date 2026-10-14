@@ -320,6 +320,10 @@ pub enum Method {
     /// Override a task's title (e.g. after async title generation completes).
     #[serde(rename = "task.setTitle")]
     TaskSetTitle { task_id: String, title: String },
+    /// Clear a surface-owned task's `origin` so it becomes a board task — the
+    /// PR Assistant's "Continue in a task".
+    #[serde(rename = "task.adopt")]
+    TaskAdopt { task_id: String },
     /// Merge a task's worktree branch back into its base branch. When
     /// `remove_worktree` (default true) the checkout and branch are removed
     /// after a successful merge. Errors if the task has no worktree.

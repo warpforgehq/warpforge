@@ -226,6 +226,14 @@ pub(super) async fn task_set_title(
     Ok(json!(null))
 }
 
+pub(super) async fn task_adopt(
+    handle: &DaemonHandle,
+    task_id: String,
+) -> Result<serde_json::Value, wire::RpcError> {
+    handle.adopt_task(&task_id).await;
+    Ok(json!(null))
+}
+
 pub(super) async fn task_merge_worktree(
     handle: &DaemonHandle,
     task_id: String,

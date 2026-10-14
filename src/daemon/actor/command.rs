@@ -343,6 +343,10 @@ pub enum Command {
         id: String,
         title: String,
     },
+    /// Clear a task's `origin`, persist, and emit TaskUpdated.
+    AdoptTask {
+        id: String,
+    },
     /// Merge a task's worktree branch back into its base branch. When
     /// `remove_worktree` is true, remove the checkout and delete the branch
     /// after a successful merge.
