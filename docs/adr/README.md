@@ -37,3 +37,4 @@ stale and then misleads.
 | [0022](0022-advisor-mode.md) | An advisor is a hidden, read-only child session the executor consults |
 | [0024](0024-workflow-verify-stage.md) | Workflows verify a change in the running app before review |
 | [0025](0025-inline-html-renders.md) | Agents show HTML pages inline, framed and served by the desktop |
+| [0026](0026-claude-account-profiles.md) | Claude accounts as profiles: one config directory per account (proposed) |
