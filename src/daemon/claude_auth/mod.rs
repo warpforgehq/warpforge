@@ -48,8 +48,7 @@ pub const OAUTH_ACCOUNT_FILE: &str = "oauth-account.json";
 pub struct ClaudeRuntime {
     /// Claude's config dir, as `claude_config::config_dir` resolves it.
     pub config_dir: PathBuf,
-    /// The `.claude.json` the CLI actually reads: colocated in the config dir
-    /// when one was set explicitly, else `~/.claude.json`.
+    /// The global config file the CLI actually reads; see [`cli_config_path`].
     pub config_path: PathBuf,
     /// `security` binary. `None` disables keychain access (non-macOS, tests).
     pub security_bin: Option<PathBuf>,
@@ -69,12 +68,7 @@ impl ClaudeRuntime {
             path: config_dir,
             explicit,
         } = super::claude_config::config_dir();
-        let colocated = config_dir.join(".claude.json");
-        let config_path = if explicit || colocated.is_file() {
-            colocated
-        } else {
-            home.join(".claude.json")
-        };
+        let config_path = cli_config_path(&config_dir, explicit, &home);
         Self {
             config_dir,
             config_path,
@@ -113,6 +107,28 @@ impl ClaudeRuntime {
         object.insert("oauthAccount".to_string(), account.clone());
         let serialized = serde_json::to_string(&config)?;
         write_config_file(&self.config_path, &serialized)
+    }
+}
+
+/// The global config file (`oauthAccount`, user MCP servers, project state)
+/// the CLI reads for `config_dir`, by its own rule: a legacy
+/// `<dir>/.config.json` if one exists, else `.claude.json` in the chosen dir
+/// when it was set explicitly, else `~/.claude.json`.
+///
+/// A `~/.claude/.claude.json` lying around for the default dir is *not* it.
+/// Preferring such a file because it exists — as this once did — reads the
+/// identity from a file the CLI ignores, and a switch then writes
+/// `oauthAccount` there: the CLI keeps one account's identity next to
+/// another's token, which it reports as "OAuth session expired".
+pub(crate) fn cli_config_path(config_dir: &Path, explicit: bool, home: &Path) -> PathBuf {
+    let legacy = config_dir.join(".config.json");
+    if legacy.is_file() {
+        return legacy;
+    }
+    if explicit {
+        config_dir.join(".claude.json")
+    } else {
+        home.join(".claude.json")
     }
 }
 

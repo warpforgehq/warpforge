@@ -277,3 +277,31 @@ fn auth_like_headers_are_detected() {
     assert!(headers_look_like_auth("x-api-key: abc"));
     assert!(!headers_look_like_auth("X-Trace-Id: 42"));
 }
+
+#[test]
+fn the_cli_config_file_follows_the_clis_own_rule() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path();
+    let default_dir = home.join(".claude");
+    let chosen = home.join(".claude-work");
+    std::fs::create_dir_all(&default_dir).unwrap();
+    std::fs::create_dir_all(&chosen).unwrap();
+
+    // A stray colocated file in the default dir is not what the CLI reads.
+    std::fs::write(default_dir.join(".claude.json"), "{}").unwrap();
+    assert_eq!(
+        cli_config_path(&default_dir, false, home),
+        home.join(".claude.json")
+    );
+    // A chosen dir keeps its config inside, whether or not it exists yet.
+    assert_eq!(
+        cli_config_path(&chosen, true, home),
+        chosen.join(".claude.json")
+    );
+    // The legacy file wins wherever it is present.
+    std::fs::write(default_dir.join(".config.json"), "{}").unwrap();
+    assert_eq!(
+        cli_config_path(&default_dir, false, home),
+        default_dir.join(".config.json")
+    );
+}
