@@ -17,6 +17,7 @@ import type { GitBranchList, GitOpResult, TaskInfo } from "../../protocol";
 import { daemonQuery } from "../../query";
 import { useUi } from "../../store/ui";
 import { BranchActionsDialog, type BranchAction } from "./BranchActionsDialog";
+import { holdersByBranch } from "./branchCheckout";
 import { BranchList } from "./BranchList";
 import {
   buildBranchTree,
@@ -26,6 +27,7 @@ import {
 } from "./branchTree";
 import { GitMenuAction, handleGitOpError, handleGitOpResult, invalidateAll } from "./gitMenu";
 import { MergeWorktreeDialog } from "./MergeWorktreeDialog";
+import { useBranchMenu } from "./useBranchMenu";
 
 export function GitWorkspaceControls({
   taskId,
@@ -120,136 +122,33 @@ export function GitWorkspaceControls({
   const busy = Boolean(repositoryOperation) || updating || switchMut.isPending;
 
   const [action, setAction] = useState<BranchAction | null>(null);
-  const actionRef = useRef<{ branch: string; remote: boolean }>(null);
 
   const remoteBranches = useMemo(() => branchData?.remotes ?? [], [branchData]);
+  const holders = useMemo(() => holdersByBranch(branchData?.worktrees), [branchData]);
 
   const openActionDialog = (a: BranchAction) => {
     setOpen(false);
     setAction(a);
   };
 
-  const switchToRef = useRef<(target: string) => void>(() => {});
-  const openActionDialogRef = useRef(openActionDialog);
-  openActionDialogRef.current = openActionDialog;
-
-  const menuHandlers = new Map<string, () => void>([
-    [
-      "new-branch",
-      () => {
-        if (branch) openActionDialogRef.current({ kind: "create", from: branch });
-      },
-    ],
-    ["checkout", () => switchToRef.current(actionRef.current?.branch ?? "")],
-    [
-      "checkout-as-remote",
-      () => {
-        const t = actionRef.current;
-        if (!t) return;
-        const localName = t.branch.split("/").slice(1).join("/") || "new-branch";
-        openActionDialogRef.current({ kind: "create", from: t.branch, defaultName: localName });
-      },
-    ],
-    [
-      "create",
-      () => {
-        const t = actionRef.current;
-        if (!t) return;
-        openActionDialogRef.current({ kind: "create", from: t.branch });
-      },
-    ],
-    [
-      "checkout-update",
-      () => {
-        const t = actionRef.current;
-        if (!t) return;
-        openActionDialogRef.current({ kind: "checkout-update", branch: t.branch });
-      },
-    ],
-    [
-      "rebase",
-      () => {
-        const t = actionRef.current;
-        if (t) openActionDialogRef.current({ kind: "rebase", branch: t.branch });
-      },
-    ],
-    [
-      "rebase-remote",
-      () => {
-        const t = actionRef.current;
-        if (t && branch) {
-          openActionDialogRef.current({ kind: "rebase", branch, target: t.branch });
-        }
-      },
-    ],
-    [
-      "rebase-main",
-      () => {
-        const t = actionRef.current;
-        if (t) openActionDialogRef.current({ kind: "rebase", branch: t.branch, target: "main" });
-      },
-    ],
-    ["merge", () => openActionDialogRef.current({ kind: "merge" })],
-    ["merge-main", () => openActionDialogRef.current({ kind: "merge", target: "main" })],
-    [
-      "merge-remote",
-      () => {
-        const t = actionRef.current;
-        if (t) openActionDialogRef.current({ kind: "merge", target: t.branch });
-      },
-    ],
-    [
-      "pull-rebase",
-      () => {
-        const t = actionRef.current;
-        if (t && branch) {
-          openActionDialogRef.current({ kind: "rebase", branch, target: t.branch });
-        }
-      },
-    ],
-    [
-      "pull-merge",
-      () => {
-        const t = actionRef.current;
-        if (t) openActionDialogRef.current({ kind: "merge", target: t.branch });
-      },
-    ],
-    ["update", () => updateMut.mutate()],
-    [
-      "push",
-      () => {
-        setOpen(false);
-        onOpenPush();
-      },
-    ],
-    [
-      "merge-worktree",
-      () => {
-        setOpen(false);
-        setMergeOpen(true);
-      },
-    ],
-    [
-      "rename",
-      () => {
-        const t = actionRef.current;
-        if (!t) return;
-        openActionDialogRef.current({ kind: "rename", branch: t.branch });
-      },
-    ],
-    [
-      "delete",
-      () => {
-        const t = actionRef.current;
-        if (!t) return;
-        openActionDialogRef.current({ kind: "delete", branch: t.branch });
-      },
-    ],
-  ]);
-  const handleBranchAction = (actionId: string, item: string, remote: boolean) => {
-    actionRef.current = { branch: item, remote };
-    menuHandlers.get(actionId)?.();
+  const switchTo = (target: string) => {
+    setOpen(false);
+    if (busy || target === branch) {
+      return;
+    }
+    switchMut.mutate(target);
   };
+
+  const handleBranchAction = useBranchMenu({
+    branch,
+    holders,
+    close: () => setOpen(false),
+    openActionDialog,
+    switchTo,
+    update: () => updateMut.mutate(),
+    openPush: onOpenPush,
+    openMerge: () => setMergeOpen(true),
+  });
 
   const localTree = useMemo(() => buildBranchTree(branches), [branches]);
   const remoteTree = useMemo(() => buildBranchTree(remoteBranches), [remoteBranches]);
@@ -311,15 +210,6 @@ export function GitWorkspaceControls({
     }
     return out;
   }, [searching, filteredLocal, filteredRemote]);
-
-  const switchTo = (target: string) => {
-    setOpen(false);
-    if (busy || target === branch) {
-      return;
-    }
-    switchMut.mutate(target);
-  };
-  switchToRef.current = switchTo;
 
   return (
     <span className="flex min-w-0 items-center">
@@ -431,6 +321,7 @@ export function GitWorkspaceControls({
                   searchRows={searchRows}
                   openFolders={openFolders}
                   current={branch}
+                  holders={holders}
                   onAction={handleBranchAction}
                   onToggleFolder={toggleFolder}
                 />

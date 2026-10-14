@@ -24,6 +24,7 @@ describe("BranchList", () => {
         searchRows={[]}
         openFolders={new Set()}
         current="main"
+        holders={new Map()}
         onAction={noop}
         onToggleFolder={noop}
       />,
@@ -50,6 +51,7 @@ describe("BranchList", () => {
         searchRows={[]}
         openFolders={new Set()}
         current="main"
+        holders={new Map()}
         onAction={noop}
         onToggleFolder={noop}
       />,
@@ -59,5 +61,35 @@ describe("BranchList", () => {
     const remote = container.querySelector<HTMLElement>('[data-branch="origin/main"]')!;
     expect(remote.querySelector("svg.lucide-check")).toBeNull();
     expect(remote.querySelector("svg.lucide-git-branch")).not.toBeNull();
+  });
+
+  it("marks a branch held by another worktree, and only that one", () => {
+    const holders = new Map([
+      [
+        "warpforge/task/t_9",
+        { branch: "warpforge/task/t_9", path: "/repo/.warpforge/worktrees/t_9", taskId: "t_9" },
+      ],
+    ]);
+    const { container } = render(
+      <BranchList
+        localRows={[]}
+        remoteRows={[]}
+        searching
+        searchRows={[
+          { branch: "warpforge/task/t_9", depth: 0, key: "t9", label: "t_9" },
+          { branch: "release", depth: 0, key: "release", label: "release" },
+        ]}
+        openFolders={new Set()}
+        current="main"
+        holders={holders}
+        onAction={noop}
+        onToggleFolder={noop}
+      />,
+    );
+
+    const held = container.querySelector('[data-branch="warpforge/task/t_9"]')!;
+    expect(held.querySelector("svg.lucide-folder-git-2")).not.toBeNull();
+    expect(held.querySelector('[aria-label="Open in a task\'s worktree"]')).not.toBeNull();
+    expect(container.querySelector('[data-branch="release"] svg.lucide-folder-git-2')).toBeNull();
   });
 });
