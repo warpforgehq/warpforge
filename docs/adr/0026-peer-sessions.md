@@ -25,14 +25,12 @@ and dissolve with it; the project is only the visibility boundary. A "crew per
 goal" — a backlog item claimed by several peers — is future work that builds
 on the directory and feed here.
 
-### Related, out of scope
-
 `message_agent` (`src/mcp/handle/agents.rs`) does not check that its target is
 the caller's child: it calls `session.prompt` with whatever `task_id` it is
 given. `stop_agent` and `cleanup_agents` do check, through
-`list_owned_agents`. The message also arrives as a `User` turn, because
-`session.prompt` always assigns `User` (`DaemonHandle::session_prompt`). Both
-are a separate fix.
+`list_owned_agents`. Routing `message_agent` through the daemon (below) closes
+that gap. The child's turn still arrives as `User`, because that path keeps
+today's behaviour; giving it its own initiator is a separate fix.
 
 ## Decisions
 
@@ -40,7 +38,8 @@ are a separate fix.
 handled by one exhaustive `match` in the actor's peers module, the shape of
 `Command::Runner(RunnerCommand)`. The actor's command chain ends in a
 fall-through, so a variant added to `Command` itself would compile and do
-nothing (CLAUDE.md, module layout). RPC `peers.list`, tool `list_peers`.
+nothing (CLAUDE.md, module layout). RPC `peers.list`, served through
+`list_agents` (below).
 Visibility is one function, `is_peer_visible(&Task)`:
 
 - `origin.is_none()` (advisor, PR review and other hidden tasks);
@@ -87,15 +86,45 @@ actor loop (ADR 0002). On startup, `queued` records are marked `refused`
 (`daemon restarted`): session queues are not persisted (ADR 0011), so nothing
 is waiting to deliver them.
 
-**A direct message is a turn.** `message_peer(peer, text)` → RPC
-`peers.message` → the existing `Command::SessionPrompt` with a new
-`TurnInitiator::Peer`. It needs its own RPC because `session.prompt` does not
-accept an initiator (ADR 0011 invariant 5). The receiver's session driver
+**The existing agent tools grow a peer half; only one tool is new.**
+
+- `list_agents` returns the caller's children and its peers, each entry with
+  `relation: child | peer`. The children section is unchanged, from
+  `orchestrator.listAgents`; peers follow, from `peers.list`. A session that is
+  not an orchestrator has no children and sees only peers.
+- `message_agent(task_id | "team", message)` goes to a new RPC,
+  `session.message`, and the daemon resolves the relation from the caller's
+  task: a child (`parent_task_id` = caller) gets today's follow-up; a visible
+  peer takes the peer path — guard, framing, `TurnInitiator::Peer`, feed
+  record; `"team"` is a channel post; anything else is refused. The parameter
+  keeps its current name, `message`.
+- `stop_agent` and `cleanup_agents` stay child-only and orchestrator-only.
+- `set_status_note` is the only new tool.
+
+Both descriptions say they cover Warpforge sessions across every harness, by
+task title, so an agent does not confuse them with its harness's own built-in
+agent listing.
+
+The split is in two places. `tool_defs(is_orchestrator)`
+(`src/mcp/tools/mod.rs`) appends `orchestrator::defs()` — one array holding all
+twelve orchestrator tools, `list_agents` and `message_agent` among them — only
+for an orchestrator. Those two definitions move out of `orchestrator.rs` into
+`src/mcp/tools/peers.rs`, appended for every session next to
+`set_status_note`; the orchestrator array keeps the other ten. In
+`src/mcp/handle/mod.rs` the seven-name arm to `agents::dispatch` sits below the
+`_ if !is_orchestrator` gate; `list_agents` and `message_agent` leave it for an
+arm above the gate that dispatches to `src/mcp/handle/peers.rs`, and the other
+five stay below.
+
+**A direct message is a turn.** The peer path of `session.message` is the
+existing `Command::SessionPrompt` with a new `TurnInitiator::Peer`. It needs its
+own RPC because `session.prompt` does not accept an initiator (ADR 0011
+invariant 5), and because only the daemon can tell a child from a peer. The receiver's session driver
 queues it behind the running turn like any prompt. A blocked peer, or one with
 no session, is refused, not woken. The record id rides on the queued prompt and
 comes back on `TurnStarted`, which sets `delivered_at` and `status: delivered`.
 
-**A channel post never starts a turn.** `post_to_team(text)` writes a record
+**A channel post never starts a turn.** `message_agent("team", …)` writes a record
 with `to_task` null and wakes nobody. Each visible peer receives unseen posts
 passively: when the actor prepares that peer's next prompt
 (`Command::SessionPrompt`, and the opening prompt in `start_session`), it
@@ -135,10 +164,11 @@ user message is an ordinary prompt with initiator `User`; it is recorded in
 the feed and echoed in the chat as a `UserMessage`, and its turn resets that
 session's pair counters like any `User` turn. The view also offers two
 controls, persisted so a restart does not silently undo them: **mute a
-session** — its peer tools return a refusal, and messages addressed to it are
-refused with the same reason — and **pause the project**, which refuses every
-agent's peer tools in it. The user's own posts and messages are unaffected by
-either.
+session** — its peer messages, channel posts and status note are refused, and
+messages addressed to it by peers are refused with the same reason — and
+**pause the project**, which refuses every agent's peer messages and posts in
+it. Messages between an orchestrator and its own children are not peer
+messaging and are unaffected, as are the user's own posts and messages.
 
 **Delivered text is framed as a peer's, not the user's.** The prompt wraps a
 direct message or a digest in a tagged block naming each sender, saying it is
@@ -185,13 +215,13 @@ only.
 files, the daemon posts a note to both. The file sets come from git on demand,
 at most once per check interval; `peers.list` never runs git.
 
-**Tools exist in Single, Advised and Orchestrator sessions, never in an
-Advisor.** `list_peers`, `set_status_note`, `message_peer`, `post_to_team`.
-The advisor's bridge serves only `READ_ONLY_TOOLS` (`src/mcp/tools/advisor.rs`)
-and the peer tools are not on it. In `src/mcp/handle/mod.rs` their arms sit
-above the `_ if !is_orchestrator` gate.
+**`list_agents`, `message_agent` and `set_status_note` exist in Single,
+Advised and Orchestrator sessions, never in an Advisor.** The advisor's bridge
+serves only `READ_ONLY_TOOLS` (`src/mcp/tools/advisor.rs`) and none of the
+three is on it.
 
-**New topic files.** `src/mcp/tools/peers.rs`, `src/mcp/handle/peers.rs`,
+**New topic files.** `src/mcp/tools/peers.rs` (the three always-on
+definitions), `src/mcp/handle/peers.rs`,
 `src/daemon/actor/peers/`, `src/daemon/server/dispatch/peers.rs`,
 `src/daemon/store/peers.rs`, and `desktop/src/views/Team.tsx` with
 `desktop/src/views/team/`. Nothing grows `src/mcp/handle/agents.rs`,
@@ -200,6 +230,9 @@ above the `_ if !is_orchestrator` gate.
 
 ### Rejected
 
+- **Separate peer tools** (`list_peers`, `message_peer`, `post_to_team`). More
+  tool surface in every session's context, and two tools answering "who can I
+  talk to".
 - **Reusing `orchestrator_inbox` / `read_inbox`.** The inbox is keyed by
   parent, drained only by orchestrator tools, and exists to carry a child's
   *result*. Peers would need a second addressing model inside it and a polling
@@ -225,7 +258,7 @@ above the `_ if !is_orchestrator` gate.
 ## Invariants
 
 1. **One visibility filter.** (`actor/peers/` `is_peer_visible`) `peers.list`,
-   `peers.message`, digest delivery and the overlap hint all call it. Settled
+   the peer path of `session.message`, digest delivery and the overlap hint all call it. Settled
    tasks are out, snoozed ones in. A message to a task the list would not
    show — an advisor, a stage, an automation run, a settled task — is refused.
 2. **The record is written before delivery.** (`actor/peers/`) The record is
@@ -260,8 +293,16 @@ above the `_ if !is_orchestrator` gate.
 12. **Mute and pause are enforced in the daemon.** (`actor/peers/`) A view
     that hides a muted session's messages while its tools still work is not a
     mute.
-13. **Advisor bridges never serve peer tools.** (`src/mcp/serve.rs`,
-    `READ_ONLY_TOOLS`)
+13. **Advisor bridges never serve `list_agents`, `message_agent` or
+    `set_status_note`.** (`src/mcp/serve.rs`, `READ_ONLY_TOOLS`) `list_agents`
+    only reads, but it names other sessions; it does not go on the list.
+14. **The daemon resolves `message_agent`'s target, not the bridge.**
+    (`session.message`) A bridge-side check is the gap this closes. The
+    ownership check is as strong as the caller's self-reported task id
+    (invariant 8), no stronger.
+15. **`stop_agent` and `cleanup_agents` never reach a peer.**
+    (`src/mcp/handle/agents.rs`) They stay behind the orchestrator gate and
+    `list_owned_agents`; a peer is not anyone's to stop.
 
 ## Consequences
 
@@ -286,7 +327,7 @@ above the `_ if !is_orchestrator` gate.
    entries, loop guard and its alert, the Team view with mute and pause, and channel
    posts with their digest. The feed is the observability for the whole
    feature, so it ships with it. The digest ships too: without it
-   `post_to_team` is a tool whose output no agent reads, and agents would learn
+   a `"team"` post is a message no agent reads, and agents would learn
    to use direct messages instead — the path that wakes peers and costs turns.
    It is small: a prefix at prompt preparation and a cursor moved at
    `TurnStarted`.
