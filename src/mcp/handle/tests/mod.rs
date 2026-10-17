@@ -4,6 +4,7 @@ use super::handle_tool_call;
 use crate::mcp::daemon_client::fake::FakeDaemon;
 use crate::mcp::daemon_client::DaemonClient;
 
+mod assignee;
 mod backlog_tracker;
 mod peer_self;
 mod peers;

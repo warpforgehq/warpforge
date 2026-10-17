@@ -2,6 +2,7 @@
 //! the one exhaustive match over `SmithCommand`. Identity files are written
 //! off the loop (`daemon/smiths/identity.rs`); results come back as commands.
 
+mod assign;
 mod command;
 mod directory;
 mod journal;
