@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PeerMessage, TaskInfo } from "@/protocol";
+import { smithFixture } from "@/test/smiths";
 
 import {
   applyMention,
@@ -9,6 +10,7 @@ import {
   mentionAtCaret,
   mentionCandidates,
   mentionText,
+  peerLabel,
   peerAlertReasons,
   rankCandidates,
   unreadCount,
@@ -150,5 +152,33 @@ describe("user threads", () => {
     expect(userThread("demo", "t_b").key).toBe(thread!.key);
     expect(userWritesIn(thread!)).toBe(true);
     expect(userWritesIn(buildConversations([record(2)])[0]!)).toBe(false);
+  });
+});
+
+describe("Smiths in mentions and labels", () => {
+  const ada = smithFixture({ allowedProjects: ["demo"], homeProject: "demo" });
+
+  it("names a Smith's thread by its name and its work as Name · title", () => {
+    const smiths = { sm_1: ada };
+    expect(peerLabel(task("t_thread", "thread", { smithId: "sm_1" }), smiths)).toBe("Ada");
+    expect(peerLabel(task("t_w", "Fix flake", { smithId: "sm_1" }), smiths)).toBe(
+      "Ada · Fix flake",
+    );
+    expect(peerLabel(task("t_x", "Plain"), smiths)).toBe("Plain");
+  });
+
+  it("offers a Smith by name where it may work, and a session named like it by id only", () => {
+    const tasks = [
+      task("t_thread", "thread", { origin: "smith", smithId: "sm_1" }),
+      task("t_w", "Fix flake", { smithId: "sm_1" }),
+      task("t_same", "ada"),
+    ];
+    const candidates = mentionCandidates(tasks, "demo", [ada]);
+    expect(candidates).toStrictEqual([
+      { id: "t_same", label: "" },
+      { id: "t_thread", label: "Ada", smith: true },
+      { id: "t_w", label: "Ada · Fix flake" },
+    ]);
+    expect(mentionCandidates(tasks, "other", [ada]).some((c) => c.smith)).toBe(false);
   });
 });
