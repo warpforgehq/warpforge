@@ -1531,4 +1531,43 @@ pub enum Method {
         #[serde(default)]
         limit: Option<u32>,
     },
+
+    // ── Peer sessions (ADR 0026) ────────────────────────────────────────────
+    /// The sessions `task_id` can see in its project, never itself. Returns
+    /// `{ peers: PeerInfo[] }`.
+    #[serde(rename = "peers.list")]
+    PeersList { task_id: String },
+    /// Feed records, newest first, older than `before` when given. Returns
+    /// `{ messages: PeerMessage[] }`.
+    #[serde(rename = "peers.feed")]
+    PeersFeed {
+        #[serde(default)]
+        project: Option<String>,
+        #[serde(default)]
+        before: Option<u64>,
+        #[serde(default)]
+        limit: Option<u32>,
+    },
+    /// Returns [`crate::PeerControls`].
+    #[serde(rename = "peers.controls")]
+    PeersControls {},
+    /// Mute or unmute one session. Returns [`crate::PeerControls`].
+    #[serde(rename = "peers.setMuted")]
+    PeersSetMuted { task_id: String, muted: bool },
+    /// Pause or resume peer messaging in a project. Returns
+    /// [`crate::PeerControls`].
+    #[serde(rename = "peers.setPaused")]
+    PeersSetPaused { project: String, paused: bool },
+    /// Set what `task_id` says it is doing; empty text clears it.
+    #[serde(rename = "peers.setStatusNote")]
+    PeersSetStatusNote { task_id: String, text: String },
+    /// Send `message` from the session `from_task_id` to `to`: its own
+    /// sub-agent, a visible peer, or `"team"` for the project channel.
+    /// Anything else is refused. Returns [`crate::PeerSendResult`].
+    #[serde(rename = "session.message")]
+    SessionMessage {
+        from_task_id: String,
+        to: String,
+        message: String,
+    },
 }

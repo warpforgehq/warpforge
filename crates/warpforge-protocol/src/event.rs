@@ -6,9 +6,9 @@
 
 use crate::{
     AccountInfo, AgentAccountLimits, AgentBrokenInstall, AgentConfig, Automation, AutomationRun,
-    DetectedAgent, ItemRun, PortForwardInfo, PortForwardStatus, PortRangeSource, PortWarning,
-    ProjectConfigState, RunnerStatus, ServiceInfo, ServiceStatus, SessionUpdate, TaskInfo,
-    TaskPullRequest, TerminalInfo, TerminalScreen,
+    DetectedAgent, ItemRun, PeerMessage, PortForwardInfo, PortForwardStatus, PortRangeSource,
+    PortWarning, ProjectConfigState, RunnerStatus, ServiceInfo, ServiceStatus, SessionUpdate,
+    TaskInfo, TaskPullRequest, TerminalInfo, TerminalScreen,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -101,6 +101,10 @@ pub enum Event {
     /// A runner attempt was written or its outcome changed.
     #[serde(rename = "runner.runUpdated")]
     RunnerRunUpdated(ItemRun),
+
+    /// A peer message record was written or its status changed.
+    #[serde(rename = "peer.messageUpdated")]
+    PeerMessageUpdated(PeerMessage),
 
     /// Structured ACP session update for a task: tool calls, agent text,
     /// file edits, permission requests. Mirrors ACP `session/update`.

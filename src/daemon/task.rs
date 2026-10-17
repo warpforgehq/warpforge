@@ -108,6 +108,9 @@ pub struct Task {
     /// The agent this task consults through `ask_advisor`, and the hidden
     /// task its advice runs in once started (ADR 0022).
     pub advisor: Option<warpforge_protocol::TaskAdvisor>,
+    /// What the session says it is doing, for its peers (ADR 0026). Live
+    /// state, like `queued_prompts`, so it is never persisted.
+    pub status_note: Option<String>,
 }
 
 /// A fresh task id, for a caller that has to name the task before it exists.
@@ -150,6 +153,7 @@ impl Task {
             model: None,
             queued_prompts: Vec::new(),
             advisor: None,
+            status_note: None,
         }
     }
 

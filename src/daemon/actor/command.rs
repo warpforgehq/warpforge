@@ -1094,4 +1094,6 @@ pub enum Command {
     },
     /// The backlog runner's commands, matched exhaustively in `actor/runner/`.
     Runner(crate::daemon::actor::runner::RunnerCommand),
+    /// Peer sessions' commands, matched exhaustively in `actor/peers/`.
+    Peers(crate::daemon::actor::peers::PeerCommand),
 }

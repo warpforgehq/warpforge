@@ -128,6 +128,7 @@ impl Store {
                 model: row.get(22)?,
                 queued_prompts: Vec::new(),
                 advisor: advisor_json.and_then(|json| serde_json::from_str(&json).ok()),
+                status_note: None,
             })
         })?;
         Ok(rows.filter_map(|r| r.ok()).collect())
