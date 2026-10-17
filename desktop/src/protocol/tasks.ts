@@ -50,6 +50,8 @@ export interface TaskInfo {
   orchestrationGraph?: OrchGraphInfo | null;
   /** Live pipeline state when this task is a workflow parent. */
   workflowRun?: WorkflowRunInfo | null;
+  /** The Smith the task runs as: its thread, or one of its work sessions. */
+  smithId?: string | null;
   /** Task that spawned this sub-agent through the orchestrator MCP. */
   parentTaskId?: string | null;
   /** Explicit settle override (true = settled, false = not settled). */
