@@ -101,3 +101,24 @@ describe("TeamComposer mention hints", () => {
     expect(screen.getByRole("status").textContent).toContain("more than one session");
   });
 });
+
+describe("TeamComposer with teammates", () => {
+  beforeEach(() => postToTeam.mockClear());
+
+  it("offers a teammate by name and inserts @Name", async () => {
+    render(
+      <TeamComposer
+        project="demo"
+        candidates={[...candidates, { id: "t_thread", label: "Ada", smith: true }]}
+        onStartSession={vi.fn<(text: string) => void>()}
+      />,
+    );
+    const box = screen.getByRole("textbox", { name: "Post to the team" });
+    await userEvent.type(box, "@ad");
+    const option = screen.getByRole("option", { name: /Ada/ });
+    expect(option.textContent).toContain("teammate");
+    await userEvent.keyboard("{Enter}");
+    await userEvent.type(box, "check CI{Enter}");
+    expect(postToTeam).toHaveBeenCalledWith("demo", "@Ada check CI");
+  });
+});

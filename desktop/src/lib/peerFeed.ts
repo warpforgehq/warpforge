@@ -1,4 +1,4 @@
-import type { PeerMessage, TaskInfo } from "../protocol";
+import type { PeerMessage, Smith, TaskInfo } from "../protocol";
 import { startsMention } from "./peerMentions";
 import { taskLabel } from "./taskLabel";
 
@@ -151,6 +151,8 @@ export function peerAlertReasons(
 export interface MentionCandidate {
   id: string;
   label: string;
+  /** A teammate (Smith): `@Name` reaches its thread. */
+  smith?: boolean;
 }
 
 /**
@@ -158,11 +160,38 @@ export interface MentionCandidate {
  * @param project the project whose channel is being written to
  * @returns the sessions a mention can name, by label
  */
-export function mentionCandidates(tasks: TaskInfo[], project: string): MentionCandidate[] {
-  return tasks
+export function mentionCandidates(
+  tasks: TaskInfo[],
+  project: string,
+  smiths: Smith[] = [],
+): MentionCandidate[] {
+  const byId = Object.fromEntries(smiths.map((smith) => [smith.id, smith]));
+  const teammates: MentionCandidate[] = smiths
+    .filter((smith) => smith.allowedProjects.includes(project))
+    .map((smith) => ({ id: smith.threadTaskId, label: smith.name, smith: true }));
+  const names = new Set(teammates.map((t) => t.label.toLowerCase()));
+  const sessions = tasks
     .filter((task) => task.project === project && isPeerVisible(task))
-    .map((task) => ({ id: task.id, label: taskLabel(task).split("\n")[0]!.trim() }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .map((task) => {
+      const label = peerLabel(task, byId);
+      // A Smith's name always means the Smith; such a session goes by its id.
+      return { id: task.id, label: names.has(label.toLowerCase()) ? "" : label };
+    });
+  return [...teammates, ...sessions].sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/**
+ * The daemon's `peer_label`: a Smith's thread by the Smith's name, its work
+ * sessions as `Name · title`, any other task by its title.
+ * @param task the task
+ * @param smiths the Smiths by id
+ * @returns the label
+ */
+export function peerLabel(task: TaskInfo, smiths: Readonly<Record<string, Smith>>): string {
+  const title = taskLabel(task).split("\n")[0]!.trim();
+  const smith = task.smithId ? smiths[task.smithId] : undefined;
+  if (!smith) return title;
+  return task.id === smith.threadTaskId ? smith.name : `${smith.name} · ${title}`;
 }
 
 /** The `@` being typed at the caret: where it starts and what follows it. */

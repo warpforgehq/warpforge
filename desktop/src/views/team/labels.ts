@@ -1,7 +1,6 @@
 import type { BadgeProps } from "@/lib/badgeVariants";
-import { USER_LABEL } from "@/lib/peerFeed";
-import { taskLabel } from "@/lib/taskLabel";
-import type { PeerMessage, PeerMessageStatus, TaskInfo } from "@/protocol";
+import { USER_LABEL, peerLabel } from "@/lib/peerFeed";
+import type { PeerMessage, PeerMessageStatus, Smith, TaskInfo } from "@/protocol";
 
 export const STATUS_META: Record<
   PeerMessageStatus,
@@ -19,13 +18,18 @@ export const HELD_HINT = "The session is not running; it reads this when it is n
 
 /**
  * @param tasks the snapshot's tasks by id
- * @returns names a task id, falling back to the id once the task is gone
+ * @param smiths the Smiths by id
+ * @returns names a task id as every surface does, falling back to the id once
+ *   the task is gone
  */
-export function labeller(tasks: ReadonlyMap<string, TaskInfo>) {
+export function labeller(
+  tasks: ReadonlyMap<string, TaskInfo>,
+  smiths: Readonly<Record<string, Smith>> = {},
+) {
   return (id: string | null | undefined): string => {
     if (!id) return USER_LABEL;
     const task = tasks.get(id);
-    return task ? taskLabel(task).split("\n")[0]!.trim() : id;
+    return task ? peerLabel(task, smiths) : id;
   };
 }
 
