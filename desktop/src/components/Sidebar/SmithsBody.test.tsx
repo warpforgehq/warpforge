@@ -8,6 +8,10 @@ import { useUi } from "@/store/ui";
 import { setSmiths, smithFixture } from "@/test/smiths";
 
 const unread = vi.hoisted(() => ({ value: 0 }));
+const { createChannel } = vi.hoisted(() => ({
+  createChannel: vi.fn<(project: string, name: string) => Promise<unknown>>(),
+}));
+vi.mock("@/daemon", () => ({ daemon: { createChannel } }));
 vi.mock("@/hooks/useSmiths", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/hooks/useSmiths")>()),
   useSmithUnread: () => unread.value,
@@ -33,7 +37,7 @@ describe("SmithsBody", () => {
   beforeEach(() => {
     unread.value = 0;
     setSmiths([]);
-    usePeersStore.setState({ records: {} });
+    usePeersStore.setState({ channels: {}, records: {} });
     useUi.setState({ openTaskId: null, teamSelection: null, view: "control" });
   });
 
@@ -60,7 +64,6 @@ describe("SmithsBody", () => {
     expect(screen.getByRole("img", { name: "idle" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "held: paused" })).toBeInTheDocument();
     expect(screen.getAllByLabelText("2 unread")).toHaveLength(2);
-    expect(screen.queryByRole("button", { name: /New channel/ })).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: /Grace/ }));
     expect(useUi.getState().teamSelection).toStrictEqual({ id: "sm_2", kind: "teammate" });
@@ -83,5 +86,46 @@ describe("SmithsBody", () => {
     useUi.setState({ view: "team" });
     rerender(<SmithsBody projects={["demo"]} tasks={[]} />);
     expect(screen.getByRole("button", { name: /Ada/ })).toHaveAttribute("aria-current", "true");
+  });
+
+  it("lists named channels after #general, with unread, and creates one", async () => {
+    setSmiths([smithFixture()]);
+    usePeersStore.setState({
+      channels: {
+        c1: { createdAt: 1, id: "c1", members: [], name: "release", project: "demo" },
+        c2: { createdAt: 1, id: "c2", members: [], name: "ci", project: "demo" },
+      },
+      records: {
+        7: { ...dmRecord, channelId: "c2", createdAt: 500, id: 7, toTask: undefined },
+      },
+    });
+    useUi.setState({ teamChannelSeenAt: {}, teamSeenAt: 100 });
+    show();
+    const names = screen
+      .getAllByRole("button", { name: /^(general|ci|release)/ })
+      .slice(0, 3)
+      .map((b) => b.textContent?.replace(/\d+$/, ""));
+    expect(names).toStrictEqual(["general", "ci", "release"]);
+    expect(screen.getByLabelText("1 unread")).toBeInTheDocument();
+
+    createChannel.mockResolvedValue({
+      createdAt: 2,
+      id: "c3",
+      members: [],
+      name: "ops",
+      project: "demo",
+    });
+    await userEvent.click(screen.getAllByRole("button", { name: "New channel" })[0]!);
+    await userEvent.type(screen.getByRole("textbox", { name: "Channel name" }), "ci");
+    await userEvent.click(screen.getByRole("button", { name: "Create channel" }));
+    expect(screen.getByRole("alert").textContent).toContain("already exists");
+    await userEvent.clear(screen.getByRole("textbox", { name: "Channel name" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Channel name" }), "ops");
+    await userEvent.click(screen.getByRole("button", { name: "Create channel" }));
+    expect(createChannel).toHaveBeenCalledWith("demo", "ops");
+    expect(useUi.getState().teamSelection).toStrictEqual({
+      key: "demo::ch::c3",
+      kind: "conversation",
+    });
   });
 });

@@ -1,16 +1,18 @@
 import { Hash, PauseCircle, Plus } from "lucide-react";
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { daemon } from "@/daemon";
 import { useSmithUnread, useSmiths } from "@/hooks/useSmiths";
 import { buildConversations } from "@/lib/peerFeed";
 import { smithStatus } from "@/lib/smiths";
-import { NAMED_CHANNELS, projectChannels } from "@/lib/teamChannels";
+import { channelKey, channelUnread, projectChannels } from "@/lib/teamChannels";
 import { cn } from "@/lib/utils";
 import type { Smith, TaskInfo } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
 import { useSmithsStore } from "@/store/smiths";
 import { type TeamSelection, useUi } from "@/store/ui";
+import { ChannelNameDialog } from "@/views/team/channels/ChannelNameDialog";
 import { labeller } from "@/views/team/labels";
 
 interface Props {
@@ -103,6 +105,10 @@ export function SmithsBody({ projects, tasks }: Props) {
     () => buildConversations(Object.values(records)).filter((c) => c.kind === "dm"),
     [records],
   );
+  const channels = usePeersStore((state) => state.channels);
+  const channelSeenAt = useUi((state) => state.teamChannelSeenAt);
+  const teamSeenAt = useUi((state) => state.teamSeenAt);
+  const [creating, setCreating] = useState<string | null>(null);
   const isConversation = (key: string) =>
     selection?.kind === "conversation" && selection.key === key;
 
@@ -154,24 +160,46 @@ export function SmithsBody({ projects, tasks }: Props) {
                 <PauseCircle aria-label="Paused" className="size-3 shrink-0 text-warn" />
               )}
             </div>
-            {projectChannels(project).map((channel) => (
-              <button
-                key={channel.key}
-                type="button"
-                aria-current={isConversation(channel.key) ? "true" : undefined}
-                onClick={() => openTeam({ key: channel.key, kind: "conversation" })}
-                className={cn(ROW, "pl-4", isConversation(channel.key) && "bg-accent")}
-              >
-                <Hash aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="truncate">{channel.name}</span>
-              </button>
-            ))}
-            {NAMED_CHANNELS && (
-              <button type="button" className={cn(ROW, "pl-4 text-muted-foreground")}>
-                <Plus aria-hidden className="size-3.5 shrink-0" />
-                New channel
-              </button>
-            )}
+            {projectChannels(project, Object.values(channels)).map((channel) => {
+              const unread = channelUnread(
+                Object.values(records),
+                channel.key,
+                channelSeenAt[channel.key] ?? teamSeenAt,
+              );
+              return (
+                <button
+                  key={channel.key}
+                  type="button"
+                  aria-current={isConversation(channel.key) ? "true" : undefined}
+                  onClick={() => openTeam({ key: channel.key, kind: "conversation" })}
+                  className={cn(
+                    ROW,
+                    "pl-4",
+                    isConversation(channel.key) && "bg-accent",
+                    unread > 0 && "font-semibold",
+                  )}
+                >
+                  <Hash aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{channel.name}</span>
+                  {unread > 0 && !isConversation(channel.key) && (
+                    <span
+                      aria-label={`${unread} unread`}
+                      className="tnum ml-auto shrink-0 text-[11px] text-muted-foreground"
+                    >
+                      {unread}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setCreating(project)}
+              className={cn(ROW, "pl-4 text-muted-foreground")}
+            >
+              <Plus aria-hidden className="size-3.5 shrink-0" />
+              New channel
+            </button>
           </div>
         ))}
       </Section>
@@ -195,6 +223,20 @@ export function SmithsBody({ projects, tasks }: Props) {
             </button>
           ))}
         </Section>
+      )}
+      {creating && (
+        <ChannelNameDialog
+          project={creating}
+          taken={Object.values(channels)
+            .filter((c) => c.project === creating)
+            .map((c) => c.name)}
+          onOpenChange={(open) => !open && setCreating(null)}
+          onSave={async (name) => {
+            const channel = await daemon.createChannel(creating, name);
+            usePeersStore.getState().upsertChannel(channel);
+            openTeam({ key: channelKey(creating, channel.id), kind: "conversation" });
+          }}
+        />
       )}
     </nav>
   );

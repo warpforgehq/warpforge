@@ -12,7 +12,7 @@ import {
   userThread,
 } from "@/lib/peerFeed";
 import { projectChannels } from "@/lib/teamChannels";
-import type { Snapshot } from "@/protocol";
+import type { Channel, Snapshot } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
 import { useSmithsStore } from "@/store/smiths";
 import { type TeamSelection, useUi } from "@/store/ui";
@@ -39,13 +39,30 @@ const USER_THREAD = /^(.*)::dm::\|(.+)$/;
 /**
  * @param key a conversation key the sidebar picked
  * @param projects the registered projects
+ * @param channels the named channels
  * @returns the empty thread it names, before anything was said in it
  */
-function emptyConversation(key: string, projects: string[]): Conversation | null {
+function emptyConversation(
+  key: string,
+  projects: string[],
+  channels: Channel[],
+): Conversation | null {
   const user = USER_THREAD.exec(key);
   if (user) return userThread(user[1]!, user[2]!);
-  const project = projects.find((p) => projectChannels(p).some((ch) => ch.key === key));
-  return project ? { key, kind: "team", lastAt: 0, parties: null, project, records: [] } : null;
+  for (const project of projects) {
+    const found = projectChannels(project, channels).find((ch) => ch.key === key);
+    if (!found) continue;
+    return {
+      key,
+      kind: "team",
+      lastAt: 0,
+      parties: null,
+      project,
+      records: [],
+      ...(found.channel ? { channelId: found.channel.id } : {}),
+    };
+  }
+  return null;
 }
 
 /**
@@ -56,6 +73,8 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   const records = usePeersStore((state) => state.records);
   const loaded = usePeersStore((state) => state.loaded);
   const markTeamSeen = useUi((state) => state.markTeamSeen);
+  const markChannelSeen = useUi((state) => state.markChannelSeen);
+  const channels = usePeersStore((state) => state.channels);
   const stored = useUi((state) => state.teamSelection);
   const openTeam = useUi((state) => state.openTeam);
 
@@ -77,17 +96,19 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
     if (selection?.kind !== "conversation") return null;
     return (
       buildConversations(Object.values(records)).find((c) => c.key === selection.key) ??
-      emptyConversation(selection.key, projects)
+      emptyConversation(selection.key, projects, Object.values(channels))
     );
-  }, [projects, records, selection]);
+  }, [channels, projects, records, selection]);
   const candidates = useMemo(
     () => (conversation ? mentionCandidates(snapshot.tasks, conversation.project, smiths) : []),
     [conversation, smiths, snapshot.tasks],
   );
 
   useEffect(() => {
-    markTeamSeen(Math.floor(Date.now() / 1000));
-  }, [markTeamSeen, records]);
+    const now = Math.floor(Date.now() / 1000);
+    markTeamSeen(now);
+    if (conversation?.kind === "team") markChannelSeen(conversation.key, now);
+  }, [conversation?.key, conversation?.kind, markChannelSeen, markTeamSeen, records]);
 
   const openUserThread = useCallback(
     (project: string, taskId: string) =>

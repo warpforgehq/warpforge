@@ -182,3 +182,16 @@ describe("Smiths in mentions and labels", () => {
     expect(mentionCandidates(tasks, "other", [ada]).some((c) => c.smith)).toBe(false);
   });
 });
+
+describe("named channels", () => {
+  it("gives each channel its own thread, #general the project's", () => {
+    const threads = buildConversations([
+      record(1, { channelId: "c1", status: "posted", toTask: undefined }),
+      record(2, { status: "posted", toTask: undefined }),
+    ]);
+    expect(threads.map((t) => [t.key, t.channelId])).toStrictEqual([
+      ["demo::team", undefined],
+      ["demo::ch::c1", "c1"],
+    ]);
+  });
+});
