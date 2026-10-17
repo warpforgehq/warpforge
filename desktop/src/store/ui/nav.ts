@@ -10,8 +10,10 @@ import {
   type ProjectSurface,
   type RepositoryOperation,
   type RightPanel,
+  type SidebarMode,
   type TaskOpenNav,
   type TaskSurface,
+  type TeamSelection,
   type UiSlice,
   type View,
 } from "./types";
@@ -56,6 +58,10 @@ export interface NavState {
   /** Unix seconds the Team view last showed the feed; newer records count as
    *  unread on its nav item. */
   teamSeenAt: number;
+  /** The sidebar body's mode. Persisted: the app reopens on the same body. */
+  sidebarMode: SidebarMode;
+  /** The channel, direct thread or Smith the Smiths area shows. Transient. */
+  teamSelection: TeamSelection | null;
   /** Unix seconds each teammate's page was last open, by Smith id. */
   teamSmithSeenAt: Record<string, number>;
 
@@ -86,6 +92,9 @@ export interface NavState {
   /** Forget every per-project memory — for a project that was removed. */
   clearProjectState: (project: string) => void;
   markTeamSeen: (at: number) => void;
+  setSidebarMode: (mode: SidebarMode) => void;
+  /** Show a channel, thread or Smith in the Smiths area, and go there. */
+  openTeam: (selection: TeamSelection | null) => void;
   markSmithSeen: (id: string, at: number) => void;
 }
 
@@ -106,6 +115,8 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   projectSurfaceByProject: {},
   backlogParamsByProject: {},
   teamSeenAt: 0,
+  sidebarMode: "tasks",
+  teamSelection: null,
   teamSmithSeenAt: {},
 
   setView: (view) => set({ openTaskId: null, openTaskNav: null, view }),
@@ -145,6 +156,9 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
     }),
   clearOpenTaskNav: () => set({ openTaskNav: null }),
   markSmithSeen: (id, at) => set((s) => ({ teamSmithSeenAt: { ...s.teamSmithSeenAt, [id]: at } })),
+  setSidebarMode: (sidebarMode) => set({ sidebarMode }),
+  openTeam: (teamSelection) =>
+    set({ openTaskId: null, openTaskNav: null, teamSelection, view: "team" }),
   markTeamSeen: (at) => set((s) => (at > s.teamSeenAt ? { teamSeenAt: at } : {})),
   focusAttentionTask: (attentionTargetId) =>
     set((s) => ({
