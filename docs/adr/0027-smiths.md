@@ -188,8 +188,9 @@ itself, however it is worded. What the thread can do, all P1:
 - **answer** — read-only investigation of the code, runtime, memory and board;
 - **create board items** — `create_backlog_task`, which gains an optional
   `assignee`;
-- **assign board items** to itself or another Smith — `update_backlog_task`
-  gains `assignee`. Assignment records intent and starts nothing;
+- **assign board items** to itself or another Smith — `create_backlog_task`
+  and `update_backlog_task` take `assignee`, where `@Name` becomes the Smith's
+  `smith:<id>`. Assignment records intent and starts nothing;
 - **start work** — `start_work(smith | "self", project, brief, item?)` creates a
   work session that *is* that Smith, optionally linked to a board item;
 - **talk** — the peer tools of ADR 0026 (`list_agents`, `message_agent`,
@@ -217,9 +218,12 @@ and in the directory.
 
 **Work reports back to where it was asked.** A work session records its
 origin: the thread (DM or the channel post's project) that started it, or none
-when the user started it from New Task. When it settles, the daemon posts one
-short report there — title, outcome, diff stats, PR link, plus the session's
-closing message clipped — as a message from the Smith. Questions in between go
+when the user started it from New Task. A session `start_work` started records
+the task that called it (`Task.smith.report_to`); when it settles or is
+archived, the daemon sends that task one report — title, outcome, files
+changed, the closing message clipped — as a direct message from the session,
+past the guard and held for the asker's next prompt, so it is in the feed at
+once and wakes nobody. A `reported` flag keeps it to one. Questions in between go
 through ordinary peer messaging: the work session messages its thread or the
 user, under ADR 0026's guard.
 
@@ -283,7 +287,10 @@ starting Smith's persona. The daemon enforces on `start_work` and on an
 assignment to another Smith: the project is in the target's allowed list;
 start depth ≤ 2 (a session started by `start_work` from a session started by
 `start_work` cannot start more); at most 3 open work sessions per Smith (to
-tune); the target is not held; the target's budget, not the starter's.
+tune); the target is not held; the target's budget, not the starter's; and
+`dispatch_refusal` on the target's agent and account. `start_work` is served to
+the thread and to work sessions (`WF_MODE=work`), which is what makes the
+second hop possible.
 Orchestrator children (`spawn_agent`) from a work session stay plain
 sub-agents.
 
@@ -311,7 +318,9 @@ quiet, task created, refused: budget / quota / held). This is the "why did it
 wake" view and the audit trail.
 
 **Budget is enforced at dispatch and pauses hard (P2).** Per Smith: USD per day
-and turns per day. Spend is summed from cost reports the way the advisor's is
+and turns per day. P1 already refuses `start_work` past either limit, counted in
+memory over the last 24 hours (so a restart forgets it); the hard pause, the
+meter and `held: budget` are P2. Spend is summed from cost reports the way the advisor's is
 (rise in the session's running cost, ADR 0022). Past the budget the Smith is
 `held: budget` until the window resets or the user raises it: habits are
 skipped as `SkippedBudget`, `start_work` is refused, a running turn finishes. A
