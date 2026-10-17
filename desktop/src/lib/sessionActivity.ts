@@ -75,7 +75,7 @@ export function sessionActivity(
     case "peer_message":
       return last.direction === "sent"
         ? { detail: "waiting for the next update", label: "working", tone: "working" }
-        : { detail: "reading a teammate's message", label: "thinking", tone: "thinking" };
+        : { detail: "reading another session's message", label: "thinking", tone: "thinking" };
     case "permission_request":
       return null;
     default:

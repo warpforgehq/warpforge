@@ -96,7 +96,7 @@ export function SmithForm({ snapshot, editing, initial, smiths, onSaved, onCance
         onSaved(await daemon.createSmith(smithInputFrom(values)));
       }
     } catch (error) {
-      toast.error(editing ? "Teammate not saved" : "Teammate not created", {
+      toast.error(editing ? "Smith not saved" : "Smith not created", {
         description: error instanceof Error ? error.message : String(error),
       });
     } finally {
@@ -106,22 +106,25 @@ export function SmithForm({ snapshot, editing, initial, smiths, onSaved, onCance
 
   return (
     <form
-      aria-label={editing ? `Edit ${editing.name}` : "New teammate"}
+      aria-label={editing ? `Edit ${editing.name}` : "New smith"}
       className="min-h-0 flex-1 space-y-5 overflow-y-auto rounded-md border border-border p-4"
       onSubmit={(event) => {
         event.preventDefault();
         void save();
       }}
     >
-      <h2 className="text-base font-semibold">
-        {editing ? `Edit ${editing.name}` : "New teammate"}
-      </h2>
+      <div className="space-y-1">
+        <h2 className="text-base font-semibold">
+          {editing ? `Edit ${editing.name}` : "New smith"}
+        </h2>
+        {!editing && (
+          <p className="text-[13px] text-muted-foreground">
+            A persistent agent with its own name, memory and rules.
+          </p>
+        )}
+      </div>
 
-      <Field
-        label="Name"
-        error={errors.name}
-        hint="One word — it is how you @mention this teammate."
-      >
+      <Field label="Name" error={errors.name} hint="One word — it is how you @mention this smith.">
         <Input
           aria-label="Name"
           value={values.name}
@@ -187,7 +190,7 @@ export function SmithForm({ snapshot, editing, initial, smiths, onSaved, onCance
             agent={values.agent}
             agents={agents}
             label="Agent"
-            title="The agent this teammate runs on"
+            title="The agent this smith runs on"
             onChange={(next) =>
               setValues((current) => ({ ...current, accountId: null, agent: next, model: null }))
             }
@@ -311,7 +314,7 @@ export function SmithForm({ snapshot, editing, initial, smiths, onSaved, onCance
           Cancel
         </Button>
         <Button type="submit" size="sm" disabled={saving}>
-          {editing ? "Save" : "Create teammate"}
+          {editing ? "Save" : "Create smith"}
         </Button>
       </div>
     </form>

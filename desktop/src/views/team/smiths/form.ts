@@ -77,7 +77,7 @@ export function validateSmithForm(values: SmithFormValues, others: Smith[]): Smi
   const errors: SmithFormErrors = {};
   const name = smithNameError(values.name.trim(), others);
   if (name) errors.name = name;
-  if (!values.homeProject) errors.homeProject = "Pick the teammate's home project.";
+  if (!values.homeProject) errors.homeProject = "Pick the smith's home project.";
   if (!values.agent) errors.agent = "Pick an agent.";
   if (values.usdPerDay.trim() && !(Number(values.usdPerDay) > 0)) {
     errors.usdPerDay = "A daily spend limit is a positive amount, or empty for none.";

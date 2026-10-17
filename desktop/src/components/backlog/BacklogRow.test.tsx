@@ -43,9 +43,9 @@ describe("BacklogRow", () => {
     expect(screen.queryByText("smith:sm_1")).not.toBeInTheDocument();
   });
 
-  it("shows a deleted Smith as a removed teammate", () => {
+  it("shows a deleted Smith as a removed smith", () => {
     renderRow("smith:sm_gone");
-    expect(screen.getByText("Removed teammate")).toBeInTheDocument();
+    expect(screen.getByText("Removed smith")).toBeInTheDocument();
   });
 
   it("shows a person as written", () => {

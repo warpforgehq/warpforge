@@ -36,7 +36,7 @@ describe("TeamComposer", () => {
         onStartSession={vi.fn<(text: string) => void>()}
       />,
     );
-    const box = screen.getByRole("textbox", { name: "Post to the team" });
+    const box = screen.getByRole("textbox", { name: "Post to the channel" });
     await userEvent.type(box, "@fix");
     expect(screen.getByRole("option", { name: /Fix login/ })).toBeTruthy();
     await userEvent.keyboard("{Enter}");
@@ -79,7 +79,7 @@ describe("TeamComposer mention hints", () => {
         onStartSession={vi.fn<(text: string) => void>()}
       />,
     );
-    const box = screen.getByRole("textbox", { name: "Post to the team" });
+    const box = screen.getByRole("textbox", { name: "Post to the channel" });
     await userEvent.type(box, "ask @Docz now{Enter}");
     expect(postToTeam).not.toHaveBeenCalled();
     expect(screen.getByRole("status").textContent).toContain("@Docz matches no session");
@@ -95,17 +95,17 @@ describe("TeamComposer mention hints", () => {
         onStartSession={vi.fn<(text: string) => void>()}
       />,
     );
-    const box = screen.getByRole("textbox", { name: "Post to the team" });
+    const box = screen.getByRole("textbox", { name: "Post to the channel" });
     await userEvent.type(box, "x (@Docs){Escape}{Enter}{Enter}");
     expect(postToTeam).not.toHaveBeenCalled();
     expect(screen.getByRole("status").textContent).toContain("more than one session");
   });
 });
 
-describe("TeamComposer with teammates", () => {
+describe("TeamComposer with smiths", () => {
   beforeEach(() => postToTeam.mockClear());
 
-  it("offers a teammate by name and inserts @Name", async () => {
+  it("offers a smith by name and inserts @Name", async () => {
     render(
       <TeamComposer
         project="demo"
@@ -113,10 +113,10 @@ describe("TeamComposer with teammates", () => {
         onStartSession={vi.fn<(text: string) => void>()}
       />,
     );
-    const box = screen.getByRole("textbox", { name: "Post to the team" });
+    const box = screen.getByRole("textbox", { name: "Post to the channel" });
     await userEvent.type(box, "@ad");
     const option = screen.getByRole("option", { name: /Ada/ });
-    expect(option.textContent).toContain("teammate");
+    expect(option.textContent).toContain("smith");
     await userEvent.keyboard("{Enter}");
     await userEvent.type(box, "check CI{Enter}");
     expect(postToTeam).toHaveBeenCalledWith("demo", "@Ada check CI");

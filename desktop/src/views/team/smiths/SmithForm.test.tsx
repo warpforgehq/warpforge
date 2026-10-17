@@ -60,16 +60,16 @@ describe("SmithForm", () => {
   it("refuses a name that is not one word, or is taken, without calling the daemon", async () => {
     renderForm();
     await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "Grace Hopper");
-    await userEvent.click(screen.getByRole("button", { name: "Create teammate" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create smith" }));
     expect(screen.getByRole("alert").textContent).toContain("one word");
     await userEvent.clear(screen.getByRole("textbox", { name: "Name" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "ADA");
-    await userEvent.click(screen.getByRole("button", { name: "Create teammate" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create smith" }));
     expect(screen.getByRole("alert").textContent).toContain("already");
     expect(createSmith).not.toHaveBeenCalled();
   });
 
-  it("creates a teammate with its projects, limits and permissions", async () => {
+  it("creates a smith with its projects, limits and permissions", async () => {
     const detail: SmithDetail = { charter: "", smith: smithFixture({ name: "Grace" }), soul: "" };
     createSmith.mockResolvedValue(detail);
     const { onSaved } = renderForm();
@@ -77,7 +77,7 @@ describe("SmithForm", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: "api" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Daily turn limit" }), "30");
     await userEvent.click(screen.getByRole("checkbox", { name: "May open pull requests" }));
-    await userEvent.click(screen.getByRole("button", { name: "Create teammate" }));
+    await userEvent.click(screen.getByRole("button", { name: "Create smith" }));
     expect(createSmith).toHaveBeenCalledWith(
       expect.objectContaining({
         allowedProjects: ["demo", "api"],

@@ -143,7 +143,7 @@ export function TeamComposer({ project, candidates, targets, onStartSession }: P
             >
               <span className="min-w-0 flex-1 truncate">{candidate.label || candidate.id}</span>
               {candidate.smith ? (
-                <span className="shrink-0 text-[11px] text-muted-foreground">teammate</span>
+                <span className="shrink-0 text-[11px] text-muted-foreground">smith</span>
               ) : (
                 <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
                   {candidate.id}
@@ -178,11 +178,11 @@ export function TeamComposer({ project, candidates, targets, onStartSession }: P
         ref={ref}
         value={text}
         rows={3}
-        aria-label={direct ? "Message" : "Post to the team"}
+        aria-label={direct ? "Message" : "Post to the channel"}
         placeholder={
           direct
             ? `Message ${to?.label ?? "the session"} — it arrives as your prompt`
-            : "Post to the team. @mention a session to hand it the work."
+            : "Post to the channel. @mention a session or a smith to hand it the work."
         }
         onChange={(event) => {
           setText(event.target.value);

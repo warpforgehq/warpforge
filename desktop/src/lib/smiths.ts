@@ -14,7 +14,7 @@ const NAME_MAX = 32;
  */
 export function smithNameError(name: string, others: Pick<Smith, "name">[] = []): string | null {
   const chars = Array.from(name);
-  if (chars.length === 0) return "A teammate needs a name.";
+  if (chars.length === 0) return "A smith needs a name.";
   if (!/^\p{Alphabetic}$/u.test(chars[0]!)) return "Start the name with a letter.";
   if (chars.length > NAME_MAX) return `Keep the name to ${NAME_MAX} characters.`;
   if (!chars.every((c) => /^[\p{Alphabetic}\p{N}_-]$/u.test(c))) {
@@ -22,7 +22,7 @@ export function smithNameError(name: string, others: Pick<Smith, "name">[] = [])
   }
   const lower = name.toLowerCase();
   if (others.some((other) => other.name.toLowerCase() === lower)) {
-    return `There is already a teammate called ${name}.`;
+    return `There is already a smith called ${name}.`;
   }
   return null;
 }
@@ -57,7 +57,7 @@ export function assigneeLabel(
   if (!assignee) return null;
   const id = smithIdFromAssignee(assignee);
   if (id === null) return assignee;
-  return smiths[id]?.name ?? "Removed teammate";
+  return smiths[id]?.name ?? "Removed smith";
 }
 
 export const HOLD_LABEL: Record<SmithHold, string> = {

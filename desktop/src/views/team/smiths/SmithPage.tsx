@@ -167,9 +167,9 @@ export function SmithPage({ smith, snapshot, onOpenTask, onEdit, onDeleted }: Pr
       )}
       <ConfirmDialog
         open={confirmDelete}
-        title={`Delete ${smith.name}?`}
+        title="Delete this smith?"
         description={DELETE_EXPLAINED}
-        confirmLabel="Delete teammate"
+        confirmLabel="Delete smith"
         onCancel={() => setConfirmDelete(false)}
         onConfirm={async () => {
           await run("Could not delete", async () => {
