@@ -258,6 +258,13 @@
 
   --ok: 137 47% 67%;
   --warn: 39 72% 67%;
+  /* Categorical palette (themes.ts `chart`); the forge theme's values. */
+  --chart-1: 18 60% 68%;
+  --chart-2: 205 60% 68%;
+  --chart-3: 140 60% 68%;
+  --chart-4: 275 60% 68%;
+  --chart-5: 45 60% 68%;
+  --chart-6: 330 60% 68%;
   --info: 172 48% 63%;
 
   --radius: 0.375rem;
