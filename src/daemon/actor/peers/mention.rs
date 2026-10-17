@@ -4,7 +4,6 @@
 
 use warpforge_protocol as wire;
 
-use super::directory::{is_peer_visible, peer_info};
 use crate::daemon::actor::Daemon;
 use crate::daemon::task::now_secs;
 
@@ -122,11 +121,11 @@ impl Daemon {
         let now = now_secs();
         self.tasks
             .values()
-            .filter(|task| task.project == project && Some(task.id.as_str()) != except)
-            .filter(|task| is_peer_visible(task))
+            .filter(|task| Some(task.id.as_str()) != except)
+            .filter(|task| self.peer_visible(task, project))
             .map(|task| Candidate {
                 id: task.id.clone(),
-                label: wire::peer_label(&peer_info(task, now)),
+                label: wire::peer_label(&self.peer_entry(task, now)),
             })
             .collect()
     }

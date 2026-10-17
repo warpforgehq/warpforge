@@ -76,7 +76,7 @@ impl Daemon {
             Some(id) => self
                 .tasks
                 .get(id)
-                .map(|task| wire::peer_label(&peer_info(task, now_secs())))
+                .map(|task| wire::peer_label(&self.peer_entry(task, now_secs())))
                 .unwrap_or_else(|| id.to_string()),
         }
     }
@@ -88,17 +88,17 @@ impl Daemon {
             .tasks
             .get(task_id)
             .ok_or_else(|| format!("unknown task {task_id}"))?;
-        if !is_peer_visible(caller) {
+        if !self.peer_visible(caller, &caller.project) {
             return Ok(Vec::new());
         }
         let now = now_secs();
         let mut peers: Vec<wire::PeerInfo> = self
             .tasks
             .values()
-            .filter(|task| task.id != caller.id && task.project == caller.project)
-            .filter(|task| is_peer_visible(task))
+            .filter(|task| task.id != caller.id)
+            .filter(|task| self.peer_visible(task, &caller.project))
             .map(|task| {
-                let mut info = peer_info(task, now);
+                let mut info = self.peer_entry(task, now);
                 if self.peers.muted.contains(&task.id) {
                     info.note = None;
                 }
@@ -119,12 +119,14 @@ impl Daemon {
         }
         let task = self
             .tasks
-            .get_mut(task_id)
+            .get(task_id)
             .ok_or_else(|| format!("unknown task {task_id}"))?;
-        if !is_peer_visible(task) {
+        if !self.peer_visible(task, &task.project) {
             return Err(super::HIDDEN_SELF.into());
         }
-        task.status_note = clip_note(text);
+        if let Some(task) = self.tasks.get_mut(task_id) {
+            task.status_note = clip_note(text);
+        }
         Ok(())
     }
 }

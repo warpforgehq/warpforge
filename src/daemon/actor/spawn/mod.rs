@@ -41,6 +41,22 @@ impl Daemon {
         store: Option<Store>,
         port_range_sink: crate::daemon::actor::ports::PortRangeSink,
     ) -> DaemonHandle {
+        Self::spawn_with_smiths_root(
+            projects,
+            store,
+            port_range_sink,
+            crate::daemon::actor::smiths::default_root(),
+        )
+    }
+
+    /// Like [`Daemon::spawn_with_sink`], with the directory Smith identity
+    /// repos live in; a test reuses one across a restart.
+    pub(crate) fn spawn_with_smiths_root(
+        projects: Vec<ProjectEntry>,
+        store: Option<Store>,
+        port_range_sink: crate::daemon::actor::ports::PortRangeSink,
+        smiths_root: std::path::PathBuf,
+    ) -> DaemonHandle {
         // Entries without a stored range at boot predate port persistence and
         // get the one-time positional migration. Everything added later — at
         // runtime or on a subsequent boot — falls through to a fresh scan.
@@ -207,6 +223,7 @@ impl Daemon {
         let (runner_watch_tx, runner_watch_rx) = mpsc::unbounded_channel();
         runner.set_watch(runner_watch_tx);
         let peers = crate::daemon::actor::peers::load_state(store.as_ref());
+        let smiths = crate::daemon::actor::smiths::load_state(store.as_ref(), smiths_root);
         let daemon = Daemon {
             agent_limits,
             projects,
@@ -262,6 +279,7 @@ impl Daemon {
             advisors: Default::default(),
             runner,
             peers,
+            smiths,
         };
 
         let handle = DaemonHandle {

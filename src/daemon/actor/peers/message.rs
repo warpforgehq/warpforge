@@ -8,7 +8,6 @@ use tokio::sync::oneshot;
 
 use warpforge_protocol as wire;
 
-use super::directory::is_peer_visible;
 use super::guard::{check_length, MAX_TEXT_CHARS};
 use super::{HIDDEN_SELF, MUTED_SELF, PAUSED};
 use crate::daemon::actor::{Command, Daemon};
@@ -115,7 +114,7 @@ impl Daemon {
             && self
                 .tasks
                 .get(to)
-                .is_some_and(|task| task.project == project);
+                .is_some_and(|task| task.project == project || self.peer_visible(task, project));
         if !addressable {
             return Err(format!(
                 "{to} is not a session in this project; list_agents names the ones you can message"
@@ -161,7 +160,11 @@ impl Daemon {
     /// The rules on the sender, shared by direct messages and posts.
     fn peers_sender_refusal(&self, from: &str, project: &str, text: &str) -> Result<(), Refused> {
         check_length(text).map_err(|refusal| refusal.to_string())?;
-        if !self.tasks.get(from).is_some_and(is_peer_visible) {
+        if !self
+            .tasks
+            .get(from)
+            .is_some_and(|task| self.peer_visible(task, project))
+        {
             return Err(HIDDEN_SELF.into());
         }
         if self.peers.muted.contains(from) {
@@ -184,10 +187,13 @@ impl Daemon {
         let target = self
             .tasks
             .get(to)
-            .filter(|task| is_peer_visible(task))
+            .filter(|task| self.peer_visible(task, project))
             .ok_or_else(|| {
                 format!("{to} is not this session's sub-agent or a peer in its project")
             })?;
+        if let Some(refusal) = self.smith_thread_refusal(to) {
+            return Err(refusal.into());
+        }
         if self.peers.muted.contains(to) {
             return Err(format!("the user muted peer messages for {to}").into());
         }

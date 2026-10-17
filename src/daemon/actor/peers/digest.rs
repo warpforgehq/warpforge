@@ -4,7 +4,6 @@
 
 use warpforge_protocol as wire;
 
-use super::directory::is_peer_visible;
 use crate::daemon::acp::TurnInitiator;
 use crate::daemon::actor::Daemon;
 use crate::daemon::prompt::{PeerDelivery, PreparedPrompt, PromptContent};
@@ -132,7 +131,7 @@ impl Daemon {
     /// delivering them changes; reserves them for this prompt.
     fn peers_digest(&mut self, task_id: &str) -> Option<(String, PeerDelivery)> {
         let task = self.tasks.get(task_id)?;
-        if !is_peer_visible(task) || self.peers.muted.contains(task_id) {
+        if !self.peer_visible(task, &task.project) || self.peers.muted.contains(task_id) {
             return None;
         }
         let (project, created_at) = (task.project.clone(), task.created_at);
