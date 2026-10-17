@@ -28,7 +28,7 @@ enum Delivery {
 }
 
 /// A refusal's text, and whether it raises the user's alert.
-struct Refused {
+pub(super) struct Refused {
     reason: String,
     alert: bool,
 }
@@ -61,7 +61,7 @@ impl Daemon {
             return;
         };
         if to == TEAM {
-            let _ = reply.send(self.peers_post(&from, &project, text));
+            let _ = reply.send(self.peers_agent_post(&from, &project, text).await);
             return;
         }
         let child = self
@@ -72,7 +72,7 @@ impl Daemon {
             self.peers_message_child(to, text, reply).await;
             return;
         }
-        let result = self.peers_direct(&from, &project, &to, text).await;
+        let result = self.peers_direct(&from, &project, &to, text, None).await;
         let _ = reply.send(result);
     }
 
@@ -102,12 +102,14 @@ impl Daemon {
         });
     }
 
-    async fn peers_direct(
+    /// @param source_id the post whose @mention this message is
+    pub(super) async fn peers_direct(
         &mut self,
         from: &str,
         project: &str,
         to: &str,
         text: String,
+        source_id: Option<u64>,
     ) -> Result<wire::PeerSendResult, String> {
         let addressable = to != from
             && self
@@ -122,6 +124,7 @@ impl Daemon {
         let verdict = self.peers_admit(from, project, to, &text);
         let mut record =
             self.peers_new_record(project, Some(from), Some(to), text, verdict.as_ref().err());
+        record.source_id = source_id;
         let held = matches!(verdict, Ok(Delivery::Hold));
         if held {
             record.status = wire::PeerMessageStatus::Held;
@@ -209,17 +212,21 @@ impl Daemon {
 
     /// A channel post wakes nobody (ADR 0026 invariant 3): it is recorded and
     /// rides on each peer's next prompt.
-    fn peers_post(
+    /// @param mentions the peers the post names, which do not get it in their
+    /// digest
+    pub(super) fn peers_post(
         &mut self,
         from: &str,
         project: &str,
         text: String,
+        mentions: Vec<String>,
     ) -> Result<wire::PeerSendResult, String> {
         let verdict = self.peers_sender_refusal(from, project, &text);
         let mut record =
             self.peers_new_record(project, Some(from), None, text, verdict.as_ref().err());
         if verdict.is_ok() {
             record.status = wire::PeerMessageStatus::Posted;
+            record.mentions = mentions;
         }
         self.peers_record(&record);
         verdict.map_err(|refused| refused.reason)?;
@@ -233,7 +240,7 @@ impl Daemon {
         })
     }
 
-    fn peers_new_record(
+    pub(super) fn peers_new_record(
         &mut self,
         project: &str,
         from: Option<&str>,
@@ -256,6 +263,9 @@ impl Daemon {
             reason: refused.map(|r| r.reason.clone()),
             alert: refused.is_some_and(|r| r.alert),
             alert_cleared_at: None,
+            mentions: Vec::new(),
+            source_id: None,
+            started_task: None,
         }
     }
 }

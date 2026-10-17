@@ -7,6 +7,7 @@ use warpforge_protocol as wire;
 mod controls;
 mod delivery;
 mod held;
+mod mention;
 
 use super::PeerCommand;
 use crate::daemon::actor::{Command, Daemon, DaemonHandle, Event};
@@ -265,6 +266,9 @@ async fn records_still_queued_at_startup_are_refused() {
             reason: None,
             alert: true,
             alert_cleared_at: None,
+            mentions: Vec::new(),
+            source_id: None,
+            started_task: None,
         })
         .unwrap();
     let daemon = seeded(store);

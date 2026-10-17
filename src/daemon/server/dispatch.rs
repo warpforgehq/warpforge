@@ -50,7 +50,7 @@ pub(super) async fn dispatch(
         StateSubscribe { .. } => system::state_subscribe().await,
         AutomationList { .. } | AutomationShow { .. } | AutomationCreate { .. } | AutomationUpdate { .. } | AutomationDelete { .. } | AutomationRunNow { .. } | AutomationRuns { .. } => automations::automations(handle, method).await,
         RunnerStatus { .. } | RunnerEnqueue { .. } | RunnerDequeue { .. } | RunnerReorder { .. } | RunnerStartNow { .. } | RunnerRetry { .. } | RunnerRetryCheckout { .. } | RunnerBrief { .. } | RunnerUpdateSettings { .. } | RunnerStop { .. } | RunnerRuns { .. } => runner::runner(handle, method).await,
-        PeersList { .. } | PeersFeed { .. } | PeersControls {} | PeersSetMuted { .. } | PeersSetPaused { .. } | PeersSetStatusNote { .. } | SessionMessage { .. } => peers::peers(handle, method).await,
+        PeersList { .. } | PeersFeed { .. } | PeersControls {} | PeersSetMuted { .. } | PeersSetPaused { .. } | PeersSetStatusNote { .. } | SessionMessage { .. } | PeersUserPost { .. } | PeersUserMessage { .. } | PeersUserStarted { .. } => peers::peers(handle, method).await,
         RuntimeStopAll {} => runtime::runtime_stop_all(handle).await,
         LspStart { task_id, language, project, } => lsp::lsp_start(handle, task_id, language, project).await,
         LspSend { server_id, payload } => lsp::lsp_send(handle, server_id, payload).await,
