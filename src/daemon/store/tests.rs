@@ -805,3 +805,46 @@ fn retention_counts_from_settled_at_and_falls_back_to_updated_at() {
     assert!(expired.contains(&legacy.id));
     assert!(!expired.contains(&closed_recently.id));
 }
+
+#[test]
+fn a_smith_assignee_filter_is_exact_and_a_login_filter_a_substring() {
+    let store = Store::open_at(std::path::Path::new(":memory:")).unwrap();
+    let mut items = Vec::new();
+    for (n, assignee) in [(1, "smith:sm_1"), (2, "smith:sm_12"), (3, "octocat")] {
+        let mut it = item(&format!("b{n}"), n, "t", "todo", "none");
+        it.assignee = Some(assignee.into());
+        store.upsert_backlog_item(&it).unwrap();
+        items.push(it);
+    }
+    let filtered = |assignee: &str| {
+        let mut q = query(0);
+        q.page_size = 10;
+        q.assignee = Some(assignee.into());
+        let from_store: Vec<String> = store
+            .list_backlog("p", &q)
+            .unwrap()
+            .items
+            .into_iter()
+            .map(|i| i.id)
+            .collect();
+        let from_yaml: Vec<String> = crate::daemon::backlog::page(items.clone(), &q)
+            .items
+            .into_iter()
+            .map(|i| i.id)
+            .collect();
+        let mut sorted = from_store.clone();
+        sorted.sort();
+        let mut yaml_sorted = from_yaml;
+        yaml_sorted.sort();
+        assert_eq!(sorted, yaml_sorted, "SQLite and YAML agree for {assignee}");
+        sorted
+    };
+    assert_eq!(filtered("smith:sm_1"), vec!["b1"]);
+    assert_eq!(filtered("smith:sm_12"), vec!["b2"]);
+    assert_eq!(filtered("octo"), vec!["b3"]);
+    assert_eq!(
+        filtered("sm_1"),
+        vec!["b1", "b2"],
+        "a bare substring still matches both"
+    );
+}
