@@ -27,6 +27,8 @@ struct Item {
     /// The sending task; `None` for the user.
     task: Option<String>,
     channel: bool,
+    /// The named channel of a post; `None` for `#general`.
+    room: Option<String>,
     text: String,
 }
 
@@ -100,6 +102,7 @@ impl Daemon {
                     .as_deref()
                     .map(|task| (from.as_str(), task)),
                 channel: false,
+                room: None,
                 text: &record.text,
             };
             prompt.content = vec![PromptContent::Context(peer_messages(&[item], 0))];
@@ -143,12 +146,16 @@ impl Daemon {
                 && cursor.map_or(post.created_at >= created_at, |c| post.id > c)
                 && !reserved.is_some_and(|r| r.contains(&post.id))
         };
+        let rooms = self.channels_of(task_id);
         let posts: Vec<wire::PeerMessage> = self
             .peers
             .posts
-            .get(&project)
-            .into_iter()
-            .flatten()
+            .iter()
+            .filter(|((p, channel), _)| match channel {
+                None => *p == project,
+                Some(id) => rooms.contains_key(id),
+            })
+            .flat_map(|(_, posts)| posts)
             .filter(unseen_post)
             .cloned()
             .collect();
@@ -169,10 +176,12 @@ impl Daemon {
             from: self.peers_label(m.from_task.as_deref()),
             task: m.from_task.clone(),
             channel: m.to_task.is_none(),
+            room: m.channel_id.as_ref().and_then(|id| rooms.get(id)).cloned(),
             text: m.text.clone(),
         };
         let held_kept = take_held(held.iter().map(item).collect());
-        let (posts_kept, omitted) = fit_posts(posts.iter().map(item).collect());
+        let (mut posts_kept, omitted) = fit_posts(posts.iter().map(item).collect());
+        posts_kept.sort_by(|a, b| (&a.room, a.id).cmp(&(&b.room, b.id)));
         let kept: Vec<Item> = held_kept.into_iter().chain(posts_kept).collect();
         let mut delivery = PeerDelivery {
             held: kept.iter().filter(|i| !i.channel).map(|i| i.id).collect(),
@@ -181,7 +190,10 @@ impl Daemon {
         };
         let lines: Vec<String> = kept
             .iter()
-            .map(|i| format!("{}: {}", i.from, i.text))
+            .map(|i| match &i.room {
+                Some(room) => format!("#{room} {}: {}", i.from, i.text),
+                None => format!("{}: {}", i.from, i.text),
+            })
             .collect();
         delivery.transcript.push(wire::SessionUpdate::PeerMessage {
             message_ids: kept.iter().map(|i| i.id).collect(),
@@ -197,6 +209,7 @@ impl Daemon {
             .map(|i| PeerItem {
                 from: i.task.as_deref().map(|task| (i.from.as_str(), task)),
                 channel: i.channel,
+                room: i.room.as_deref(),
                 text: &i.text,
             })
             .collect();
@@ -225,6 +238,7 @@ mod tests {
             from: "peer".into(),
             task: Some("t_p".into()),
             channel,
+            room: None,
             text: text.into(),
         }
     }

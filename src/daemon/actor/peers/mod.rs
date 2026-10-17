@@ -2,6 +2,7 @@
 //! records, the loop guard, and the user's mutes and pauses. Every
 //! `PeerCommand` is matched here, in one place.
 
+mod channels;
 mod command;
 mod controls;
 mod delivery;
@@ -22,7 +23,7 @@ use warpforge_protocol as wire;
 
 use crate::daemon::actor::{Daemon, Event};
 use crate::daemon::runtime::Write as PersistWrite;
-use crate::daemon::store::{PeerControl, Store};
+use crate::daemon::store::{PeerControl, Store, StoredChannel};
 use crate::daemon::task::now_secs;
 
 pub use command::PeerCommand;
@@ -48,8 +49,11 @@ pub(crate) struct PeersState {
     in_flight: HashMap<u64, wire::PeerMessage>,
     /// Direct messages waiting for their receiver's next prompt, oldest first.
     held: Vec<wire::PeerMessage>,
-    /// The newest channel posts per project, oldest first.
-    posts: HashMap<String, VecDeque<wire::PeerMessage>>,
+    /// The newest posts per project and channel (`None` = `#general`),
+    /// oldest first.
+    posts: HashMap<(String, Option<String>), VecDeque<wire::PeerMessage>>,
+    /// Named channels, by id.
+    channels: HashMap<String, StoredChannel>,
     /// Records already carried by a prompt whose turn has not started, per
     /// receiving task, so a second queued prompt does not repeat them.
     reserved: HashMap<String, HashSet<u64>>,
@@ -72,6 +76,7 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>) -> PeersState {
         in_flight: HashMap::new(),
         held: Vec::new(),
         posts: HashMap::new(),
+        channels: HashMap::new(),
         reserved: HashMap::new(),
         removing: HashSet::new(),
     };
@@ -96,6 +101,12 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>) -> PeersState {
         .unwrap_or_default()
         .into_iter()
         .collect();
+    state.channels = store
+        .load_channels()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|c| (c.id.clone(), c))
+        .collect();
     state.held = store
         .load_peer_messages_with_status(wire::PeerMessageStatus::Held)
         .unwrap_or_default();
@@ -110,7 +121,8 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>) -> PeersState {
 
 impl PeersState {
     pub(super) fn remember_post(&mut self, post: wire::PeerMessage) {
-        let posts = self.posts.entry(post.project.clone()).or_default();
+        let key = (post.project.clone(), post.channel_id.clone());
+        let posts = self.posts.entry(key).or_default();
         posts.push_back(post);
         while posts.len() > digest::POSTS_KEPT {
             posts.pop_front();
@@ -128,8 +140,9 @@ impl Daemon {
                 project,
                 before,
                 limit,
+                channel,
                 reply,
-            } => self.peers_feed(project, before, limit, reply),
+            } => self.peers_feed(project, before, limit, channel, reply),
             PeerCommand::Alerts { reply } => {
                 let mut alerts: Vec<_> = self.peers.alerts.values().cloned().collect();
                 alerts.sort_by_key(|record| record.id);
@@ -168,9 +181,10 @@ impl Daemon {
             PeerCommand::UserPost {
                 project,
                 text,
+                channel_id,
                 reply,
             } => {
-                let _ = reply.send(self.peers_user_post(&project, text).await);
+                let _ = reply.send(self.peers_user_post(&project, text, channel_id).await);
             }
             PeerCommand::UserMessage {
                 task_id,
@@ -185,6 +199,36 @@ impl Daemon {
                 reply,
             } => {
                 let _ = reply.send(self.peers_user_started(&task_id, source_id));
+            }
+            PeerCommand::ChannelsList {
+                project,
+                task_id,
+                reply,
+            } => {
+                let _ = reply.send(Ok(
+                    self.channels_list(project.as_deref(), task_id.as_deref())
+                ));
+            }
+            PeerCommand::ChannelsCreate {
+                project,
+                name,
+                reply,
+            } => {
+                let _ = reply.send(self.channel_create(&project, &name));
+            }
+            PeerCommand::ChannelsRename { id, name, reply } => {
+                let _ = reply.send(self.channel_rename(&id, &name));
+            }
+            PeerCommand::ChannelsDelete { id, reply } => {
+                let _ = reply.send(self.channel_delete(&id));
+            }
+            PeerCommand::ChannelsSetMember {
+                id,
+                smith_id,
+                member,
+                reply,
+            } => {
+                let _ = reply.send(self.channel_set_member(&id, &smith_id, member));
             }
             PeerCommand::Tick => {
                 self.peers.guard.expire(Instant::now());

@@ -153,10 +153,11 @@ impl Daemon {
         from: &str,
         project: &str,
         text: String,
+        channel: Option<String>,
     ) -> Result<wire::PeerSendResult, String> {
         let candidates = self.peers_mention_candidates(project, Some(from));
         let mentions = resolve_mentions(&text, &candidates)?;
-        let mut result = self.peers_post(from, project, text.clone(), mentions.clone())?;
+        let mut result = self.peers_post(from, project, text.clone(), mentions.clone(), channel)?;
         if mentions.is_empty() {
             return Ok(result);
         }
@@ -195,7 +196,7 @@ impl Daemon {
         if let Some(kept) = self
             .peers
             .posts
-            .get_mut(&post.project)
+            .get_mut(&(post.project.clone(), post.channel_id.clone()))
             .and_then(|posts| posts.iter_mut().find(|p| p.id == post.id))
         {
             kept.mentions = post.mentions.clone();

@@ -36,11 +36,13 @@ pub(super) async fn peers(
             project,
             before,
             limit,
+            channel,
         } => {
             let messages = ask(handle, |reply| PeerCommand::Feed {
                 project,
                 before,
                 limit,
+                channel,
                 reply,
             })
             .await?;
@@ -92,15 +94,18 @@ pub(super) async fn peers(
         })
         .await
         .map(|result| json!(result)),
-        wire::Method::PeersUserPost { project, text } => {
-            ask(handle, |reply| PeerCommand::UserPost {
-                project,
-                text,
-                reply,
-            })
-            .await
-            .map(|result| json!(result))
-        }
+        wire::Method::PeersUserPost {
+            project,
+            text,
+            channel_id,
+        } => ask(handle, |reply| PeerCommand::UserPost {
+            project,
+            text,
+            channel_id,
+            reply,
+        })
+        .await
+        .map(|result| json!(result)),
         wire::Method::PeersUserMessage { task_id, text } => {
             ask(handle, |reply| PeerCommand::UserMessage {
                 task_id,
@@ -118,6 +123,54 @@ pub(super) async fn peers(
             })
             .await
             .map(|record| json!(record))
+        }
+        wire::Method::ChannelsList { project, task_id } => {
+            let channels = ask(handle, |reply| PeerCommand::ChannelsList {
+                project,
+                task_id,
+                reply,
+            })
+            .await?;
+            Ok(json!({ "channels": channels }))
+        }
+        wire::Method::ChannelsCreate { project, name } => {
+            ask(handle, |reply| PeerCommand::ChannelsCreate {
+                project,
+                name,
+                reply,
+            })
+            .await
+            .map(|channel| json!(channel))
+        }
+        wire::Method::ChannelsRename { id, name } => ask(handle, |reply| {
+            PeerCommand::ChannelsRename { id, name, reply }
+        })
+        .await
+        .map(|channel| json!(channel)),
+        wire::Method::ChannelsDelete { id } => {
+            ask(handle, |reply| PeerCommand::ChannelsDelete { id, reply })
+                .await
+                .map(|()| json!(null))
+        }
+        wire::Method::ChannelsAddMember { id, smith_id } => {
+            ask(handle, |reply| PeerCommand::ChannelsSetMember {
+                id,
+                smith_id,
+                member: true,
+                reply,
+            })
+            .await
+            .map(|channel| json!(channel))
+        }
+        wire::Method::ChannelsRemoveMember { id, smith_id } => {
+            ask(handle, |reply| PeerCommand::ChannelsSetMember {
+                id,
+                smith_id,
+                member: false,
+                reply,
+            })
+            .await
+            .map(|channel| json!(channel))
         }
         _ => Err(wire::RpcError {
             code: wire::ErrorCode::InvalidRequest,

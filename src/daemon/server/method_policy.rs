@@ -71,6 +71,7 @@ pub(super) fn method_runs_concurrently(method: &wire::Method) -> bool {
             | PeersList { .. }
             | PeersFeed { .. }
             | PeersControls {}
+            | ChannelsList { .. }
             | SmithsList {}
             | SmithsGet { .. }
             | TrackerPullsList { .. }
@@ -131,6 +132,7 @@ pub(super) fn method_is_mutation(method: &wire::Method) -> bool {
             | PeersList { .. }
             | PeersFeed { .. }
             | PeersControls {}
+            | ChannelsList { .. }
             | SmithsList {}
             | SmithsGet { .. }
             | TrackerPullsList { .. }
@@ -155,6 +157,11 @@ pub(super) fn method_is_user_only(method: &wire::Method) -> bool {
             | SmithsAcceptIdentity { .. }
             | SmithsRevertIdentity { .. }
             | SmithsStartWork { .. }
+            | ChannelsCreate { .. }
+            | ChannelsRename { .. }
+            | ChannelsDelete { .. }
+            | ChannelsAddMember { .. }
+            | ChannelsRemoveMember { .. }
     )
 }
 
@@ -163,7 +170,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_smith_edit_is_user_only_and_reads_are_not() {
+    fn every_smith_and_channel_edit_is_user_only_and_reads_are_not() {
         let id = || "sm_1".to_string();
         for method in [
             wire::Method::SmithsUpdate {
@@ -177,6 +184,23 @@ mod tests {
             wire::Method::SmithsDelete { id: id() },
             wire::Method::SmithsAcceptIdentity { id: id() },
             wire::Method::SmithsRevertIdentity { id: id() },
+            wire::Method::ChannelsCreate {
+                project: "demo".into(),
+                name: "design".into(),
+            },
+            wire::Method::ChannelsRename {
+                id: id(),
+                name: "ux".into(),
+            },
+            wire::Method::ChannelsDelete { id: id() },
+            wire::Method::ChannelsAddMember {
+                id: id(),
+                smith_id: id(),
+            },
+            wire::Method::ChannelsRemoveMember {
+                id: id(),
+                smith_id: id(),
+            },
         ] {
             assert!(method_is_user_only(&method), "{method:?}");
             assert!(method_is_mutation(&method), "{method:?}");
@@ -184,6 +208,10 @@ mod tests {
         for method in [
             wire::Method::SmithsList {},
             wire::Method::SmithsGet { id: id() },
+            wire::Method::ChannelsList {
+                project: None,
+                task_id: None,
+            },
         ] {
             assert!(!method_is_user_only(&method), "{method:?}");
             assert!(method_runs_concurrently(&method), "{method:?}");

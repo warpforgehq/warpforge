@@ -33,6 +33,9 @@ pub use backlog::*;
 pub mod browser;
 pub use browser::*;
 
+pub mod channels;
+pub use channels::*;
+
 pub mod event;
 pub use event::*;
 

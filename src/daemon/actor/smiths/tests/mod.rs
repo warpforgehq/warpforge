@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use warpforge_protocol as wire;
 
 mod assign;
+mod channels;
 mod journal;
 mod readonly;
 mod sessions;
@@ -122,6 +123,7 @@ async fn flush(daemon: &DaemonHandle) {
             project: None,
             before: None,
             limit: None,
+            channel: None,
             reply: tx,
         }))
         .await;

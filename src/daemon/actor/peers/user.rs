@@ -18,16 +18,28 @@ impl Daemon {
         &mut self,
         project: &str,
         text: String,
+        channel: Option<String>,
     ) -> Result<wire::PeerSendResult, String> {
         check_length(&text).map_err(|refusal| refusal.to_string())?;
         if self.project_path(project).is_none() {
             return Err(format!("unknown project {project}"));
+        }
+        if let Some(id) = channel.as_deref() {
+            let known = self
+                .peers
+                .channels
+                .get(id)
+                .is_some_and(|c| c.project == project);
+            if !known {
+                return Err(format!("no channel {id} in {project}"));
+            }
         }
         let candidates = self.peers_mention_candidates(project, None);
         let mentions = resolve_mentions(&text, &candidates)?;
         let mut record = self.peers_new_record(project, None, None, text.clone(), None);
         record.status = wire::PeerMessageStatus::Posted;
         record.mentions = mentions.clone();
+        record.channel_id = channel;
         self.peers_record(&record);
         self.peers.remember_post(record.clone());
 
