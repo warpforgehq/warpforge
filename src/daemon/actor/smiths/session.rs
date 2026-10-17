@@ -46,7 +46,7 @@ fn journal_block(entries: &[crate::daemon::memory_types::Memory]) -> String {
 }
 
 /// Whether the agent command is the Claude ACP adapter.
-fn is_claude_adapter(command: &str) -> bool {
+pub(crate) fn is_claude_adapter(command: &str) -> bool {
     command
         .split_whitespace()
         .next()

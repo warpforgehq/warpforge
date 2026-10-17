@@ -14,6 +14,16 @@ pub enum SmithHold {
     Budget,
 }
 
+/// How a Smith's sessions are given its constitution and soul.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SmithInjection {
+    /// As the Claude adapter's `_meta.systemPrompt`.
+    SystemPrompt,
+    /// As a prefix on each session's opening prompt.
+    Prefix,
+}
+
 /// What a Smith's work sessions may do beyond reading.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -67,6 +77,10 @@ pub struct Smith {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub held: Vec<SmithHold>,
     pub created_at: u64,
+    /// How its next new session will be given its identity; set by the
+    /// daemon when it sends a Smith, never stored.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub injection: Option<SmithInjection>,
 }
 
 /// A Smith with its identity files, for the Smith's page.
@@ -145,6 +159,7 @@ mod tests {
             charter_rev: "abc".into(),
             held: vec![SmithHold::IdentityChanged],
             created_at: 1,
+            injection: None,
         };
         let json = serde_json::to_value(&smith).unwrap();
         assert!(json.get("role").is_none());
