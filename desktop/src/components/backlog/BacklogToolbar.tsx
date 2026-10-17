@@ -10,8 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { assigneeLabel } from "@/lib/smiths";
 import { cn } from "@/lib/utils";
+import { useSmithsStore } from "@/store/smiths";
 
+import { useSmithAssigneeOptions } from "./assignee";
 import { PRIORITY_LABEL, SOURCE_LABEL, STATUS_META } from "./labels";
 import { LinearTeamPicker } from "./LinearTeamPicker";
 import {
@@ -77,6 +80,7 @@ export function BacklogToolbar({
         onChange={(priority) => onChange({ priority })}
       />
       <AssigneeFilter
+        project={project}
         value={params.assignee}
         assignees={assignees}
         onChange={(assignee) => onChange({ assignee })}
@@ -142,18 +146,25 @@ export function BacklogToolbar({
  * rather than falling out of the view entirely.
  */
 function AssigneeFilter({
+  project,
   value,
   assignees,
   onChange,
 }: {
+  project: string;
   value: string | null;
   assignees: string[];
   onChange: (value: string | null) => void;
 }) {
   const me = useMe();
-  const others = assignees.filter((name) => name !== me);
-  // Nothing to choose from: no identity, and no assignee on any row so far.
-  if (!me && others.length === 0) return null;
+  const smiths = useSmithsStore((state) => state.smiths);
+  const smithOptions = useSmithAssigneeOptions(project);
+  const offered = new Set(smithOptions.map((option) => option.value));
+  const others = assignees
+    .filter((name) => name !== me && !offered.has(name))
+    .map((name) => ({ value: name, label: assigneeLabel(name, smiths) ?? name }));
+  // Nothing to choose from: no identity, no Smith, and no assignee on any row so far.
+  if (!me && smithOptions.length === 0 && others.length === 0) return null;
 
   return (
     <Select value={value ?? ALL} onValueChange={(next) => onChange(next === ALL ? null : next)}>
@@ -173,9 +184,9 @@ function AssigneeFilter({
             </span>
           </SelectItem>
         )}
-        {others.map((name) => (
-          <SelectItem key={name} value={name}>
-            {name}
+        {[...smithOptions, ...others].map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
           </SelectItem>
         ))}
       </SelectContent>

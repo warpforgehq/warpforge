@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Flag, Pencil, Trash2, UserRound, X } from "lucide-react";
+import { ExternalLink, Flag, Pencil, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -13,6 +13,7 @@ import { inlineHtmlImages } from "@/lib/trackerMarkdown";
 import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 
+import { AssigneeIcon, UNASSIGNED, useAssigneeLabel, useSmithAssigneeOptions } from "./assignee";
 import { FieldChip } from "./FieldChip";
 import { PRIORITY_LABEL, SOURCE_LABEL, SourceDot, STATUS_META } from "./labels";
 import { LinkedTaskSummary } from "./LinkedTaskSummary";
@@ -26,9 +27,6 @@ import {
 } from "./types";
 import { useMe } from "./use-tracker";
 import { WorkItemFooter } from "./WorkItemFooter";
-
-/** Radix Select forbids an empty item value, so "nobody" needs a sentinel. */
-const UNASSIGNED = "__unassigned__";
 
 export interface WorkItemDrawerProps {
   item: WorkItem | null;
@@ -125,6 +123,8 @@ function WorkItemDetails({
   const [bodyDraft, setBodyDraft] = React.useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
   const me = useMe();
+  const smithOptions = useSmithAssigneeOptions(item.project);
+  const assigneeText = useAssigneeLabel(assignee) ?? "Unassigned";
   // Only a local item's words are ours to rewrite: a tracker's title and body
   // are a mirror, and an edit here would quietly disagree with the issue it
   // came from — nothing pushes it back, and nothing pulls the original in.
@@ -349,24 +349,25 @@ function WorkItemDetails({
 
           {/* A tracker owns who its issues are on — a sync would overwrite an
               edit made here — so only a local item gets the control. */}
-          {item.source === "local" && me ? (
+          {item.source === "local" && (me || smithOptions.length > 0) ? (
             <FieldChip
               ariaLabel="Assignee"
               value={assignee ?? UNASSIGNED}
               options={[
-                { value: me, label: me },
+                ...(me ? [{ value: me, label: me }] : []),
+                ...smithOptions,
                 { value: UNASSIGNED, label: "Unassigned" },
               ]}
               onValueChange={(next) => void save({ assignee: next === UNASSIGNED ? "" : next })}
               triggerClassName="border-transparent bg-transparent text-muted-foreground hover:bg-secondary"
             >
-              <UserRound className="size-3.5 shrink-0" />
-              <span className="truncate">{assignee ?? "Unassigned"}</span>
+              <AssigneeIcon assignee={assignee} className="size-3.5 shrink-0" />
+              <span className="truncate">{assigneeText}</span>
             </FieldChip>
           ) : (
             <span className="inline-flex h-7 items-center gap-1.5 px-1 text-[13px] text-muted-foreground">
-              <UserRound className="size-3.5" />
-              {item.assignee || "Unassigned"}
+              <AssigneeIcon assignee={assignee} className="size-3.5" />
+              {assigneeText}
             </span>
           )}
         </div>

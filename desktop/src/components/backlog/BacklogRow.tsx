@@ -1,4 +1,4 @@
-import { ExternalLink, Factory, Flag, Play, UserRound } from "lucide-react";
+import { ExternalLink, Factory, Flag, Play } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { openExternalLink } from "@/lib/externalLinks";
 import { cn } from "@/lib/utils";
 import type { RunnerEntry } from "@/protocol";
 
+import { AssigneeIcon, useAssigneeLabel } from "./assignee";
 import { PRIORITY_LABEL, priorityTone, SOURCE_LABEL, SourceDot, STATUS_META } from "./labels";
 import type { WorkItem } from "./types";
 
@@ -74,6 +75,7 @@ export const BacklogRow = React.memo(function BacklogRow({
   const selected = actions.selected?.has(item.id) ?? false;
   const selecting = (actions.selected?.size ?? 0) > 0;
   const inFactory = actions.factory?.get(item.id) ?? null;
+  const assignee = useAssigneeLabel(item.assignee);
 
   return (
     <div className="group flex h-9 min-w-0 items-center border-b border-rule pr-2 hover:bg-secondary/40">
@@ -129,8 +131,8 @@ export const BacklogRow = React.memo(function BacklogRow({
         </span>
 
         <span className="hidden w-28 shrink-0 items-center gap-1 text-[11px] text-muted-foreground md:inline-flex">
-          <UserRound className="size-3 shrink-0" />
-          <span className="truncate">{item.assignee || "Unassigned"}</span>
+          <AssigneeIcon assignee={item.assignee} className="size-3 shrink-0" />
+          <span className="truncate">{assignee ?? "Unassigned"}</span>
         </span>
 
         <span
