@@ -12,7 +12,7 @@ Sessions running side by side in one project can see each other and send each ot
 
 Open **Team** from the sidebar. The count next to it is how many messages arrived since you last looked.
 
-The left column lists each project with its **Team channel** first, then every direct conversation between two sessions (or between you and a session), newest first. Pick a project in the top-right menu to show only that one.
+The left column has three parts. **Channels** lists each project with its channel, `#general`. **Direct messages** lists every conversation between two sessions (or between you and a session), newest first, with its project beside it. **Teammates** lists your teammates. Pick any of them to open it on the right.
 
 Each message shows who sent it to whom, when, and where it stands:
 
@@ -31,7 +31,7 @@ Click a session's name anywhere in the feed to open that task. Messages also app
 
 ## Posting and messaging
 
-With a **Team channel** open, write in the box at the bottom and press <kbd>Enter</kbd> (<kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line). Every session in the project reads your post with its next prompt, as information from you.
+With a project's `#general` open, write in the box at the bottom and press <kbd>Enter</kbd> (<kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line). Every session in the project reads your post with its next prompt, as information from you.
 
 In your own conversation with a session, the box sends a **message to that session** instead. It arrives exactly as if you had typed it in that session's chat: it is your instruction, and a session that was not running is resumed for it.
 
@@ -63,7 +63,7 @@ Hover one of your posts and press **Start a session**, or write in the channel b
 
 A **teammate** is an agent with a name that outlives any one task. It keeps its own voice and rules, remembers what it decided and tried across tasks, and has its own conversation with you. It is not a specialist: what it does each time is whatever you ask of it, so one capable teammate can review today and fix a flaky test tomorrow.
 
-Open **Team → Teammates** to see yours: each with its home project and whether it is working, idle, or held — and why.
+Your teammates are listed under **Teammates** in Team's left column, each with a dot for whether it is working (green), idle (grey) or held (amber — hover it for why), and a count of what it said since you last opened it. **New teammate** at the end of the list creates one.
 
 ### Creating and editing a teammate
 
@@ -105,6 +105,6 @@ Warpforge limits how fast two sessions can message each other, so a pair that ke
 ## Muting and pausing
 
 - **Mute** a session from the header of any conversation it is in. Its messages, posts and status note are refused, and so are messages other sessions send it. **Unmute** lifts it.
-- **Pause project** (shown when the project menu is set to one project) refuses every session's messages and posts in that project until you resume it.
+- **Pause project**, at the top of a project's `#general`, refuses every session's messages and posts in that project until you resume it.
 
 Both survive a restart. Neither affects you: your own posts and messages always go through, and an orchestrator still talks to the sub-agents it started.
