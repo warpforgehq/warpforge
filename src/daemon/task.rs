@@ -130,7 +130,7 @@ pub struct TaskSmith {
     /// The soul commit the session has heard last.
     #[serde(default)]
     pub soul_rev: Option<String>,
-    /// `created_at` of the newest journal entry the session has been given.
+    /// Row id of the newest journal entry the session has been given.
     #[serde(default)]
     pub journal_seen: u64,
     /// The daemon's settle entry was written to the journal.

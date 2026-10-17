@@ -148,3 +148,39 @@ async fn a_settled_work_session_leaves_one_journal_entry() {
         .contains("Work session \"work of t_work\" (t_work)"));
     assert_eq!(entries[0]["createdBy"], "daemon");
 }
+
+/// Invariant 6 of ADR 0026, for the Smith's half: a turn start with no live
+/// session records no delivery.
+#[tokio::test]
+async fn a_turn_start_with_no_session_moves_no_smith_cursor() {
+    let home = home();
+    let daemon = spawn(&home, &[]);
+    let ada = create(&daemon, ada()).await.unwrap().smith;
+    flush(&daemon).await;
+    let daemon = spawn(&home, &[work_task("t_work", &ada.id)]);
+    daemon
+        .send(Command::InjectAcpUpdate {
+            task_id: "t_work".into(),
+            update: crate::daemon::acp::AcpUpdate::TurnStarted {
+                run_id: 0,
+                initiator: crate::daemon::acp::TurnInitiator::User,
+                echo: None,
+                peer: Default::default(),
+                smith: Some(crate::daemon::prompt::SmithDelivery {
+                    soul_rev: "moved".into(),
+                    journal_seen: 99,
+                }),
+            },
+        })
+        .await;
+    let record = daemon
+        .tasks()
+        .await
+        .into_iter()
+        .find(|t| t.id == "t_work")
+        .unwrap()
+        .smith
+        .unwrap();
+    assert_eq!(record.soul_rev, None);
+    assert_eq!(record.journal_seen, 0);
+}

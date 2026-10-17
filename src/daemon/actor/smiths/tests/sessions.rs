@@ -298,3 +298,76 @@ async fn a_bare_mention_of_a_smiths_name_reaches_its_thread() {
         vec![smith.thread_task_id.clone()]
     );
 }
+
+/// Without `_meta`, a restarted session hears its constitution and soul
+/// again from its opening prompt.
+#[tokio::test]
+async fn a_prefix_session_hears_its_soul_again_after_a_restart() {
+    let home = home();
+    let agent = agent(home._dir.path(), false);
+    let daemon = spawn(&home, &[]);
+    let smith = create(&daemon, ada_on(&agent)).await.unwrap().smith;
+    let work = start_work(&daemon, &smith.id, "demo", "fix the login flake")
+        .await
+        .unwrap();
+    let log = agent.log.clone();
+    wait("the opening prompt", || prompt_texts(&log).len() == 1).await;
+    wait_idle(&daemon, &work).await;
+    daemon.cancel_task(&work).await.unwrap();
+    daemon.session_prompt(&work, "go on", vec![]).await.unwrap();
+    wait("the resumed prompt", || prompt_texts(&log).len() == 2).await;
+    let resumed = &prompt_texts(&agent.log)[1];
+    let constitution = resumed
+        .find("<smith_constitution>")
+        .expect("the constitution");
+    let soul = resumed.find("Never guesses.").expect("the soul");
+    assert!(constitution < soul, "{resumed}");
+}
+
+/// Two journal entries in one second are two entries: the cursor is the row,
+/// not the timestamp.
+#[tokio::test]
+async fn a_journal_entry_in_the_same_second_is_still_delivered() {
+    let home = home();
+    let agent = agent(home._dir.path(), false);
+    let daemon = spawn(&home, &[]);
+    daemon
+        .send(Command::Smiths(SmithCommand::UseMemory {
+            path: home.root.with_file_name("memory.db"),
+        }))
+        .await;
+    let smith = create(&daemon, ada_on(&agent)).await.unwrap().smith;
+    let journal = format!("smith:{}", smith.id);
+    let note = |content: &'static str| {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let cmd = Command::MemoryStore {
+            content: content.into(),
+            scope: Some(journal.clone()),
+            kind: None,
+            tags: None,
+            project_id: None,
+            created_by: Some(smith.thread_task_id.clone()),
+            reply: tx,
+        };
+        (cmd, rx)
+    };
+    let (first, written) = note("first entry");
+    daemon.send(first).await;
+    written.await.unwrap().unwrap();
+    let work = start_work(&daemon, &smith.id, "demo", "fix the login flake")
+        .await
+        .unwrap();
+    let log = agent.log.clone();
+    wait("the opening prompt", || prompt_texts(&log).len() == 1).await;
+    assert!(prompt_texts(&agent.log)[0].contains("first entry"));
+    wait_idle(&daemon, &work).await;
+
+    let (second, written) = note("second entry");
+    daemon.send(second).await;
+    written.await.unwrap().unwrap();
+    daemon.session_prompt(&work, "next", vec![]).await.unwrap();
+    wait("the next prompt", || prompt_texts(&log).len() == 2).await;
+    let next = &prompt_texts(&agent.log)[1];
+    assert!(next.contains("second entry"), "{next}");
+    assert!(!next.contains("first entry"), "{next}");
+}
