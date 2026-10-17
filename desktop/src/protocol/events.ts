@@ -7,6 +7,7 @@ import type {
 } from "./agents";
 import type { Automation, AutomationRun } from "./automations";
 import type { ClientRequestBody } from "./browser";
+import type { Channel } from "./channels";
 import type { PeerMessage } from "./peers";
 import type { TaskPullRequest } from "./pulls";
 import type { ItemRun, RunnerStatus } from "./runner";
@@ -121,6 +122,8 @@ export type DaemonEvent =
   | { event: "automation.runUpdated"; data: AutomationRun }
   // ── Peer sessions ──
   | { event: "peer.messageUpdated"; data: PeerMessage }
+  | { event: "channel.updated"; data: Channel }
+  | { event: "channel.removed"; data: { id: string } }
   // ── Smiths ──
   | { event: "smith.updated"; data: Smith }
   | { event: "smith.removed"; data: { id: string } }

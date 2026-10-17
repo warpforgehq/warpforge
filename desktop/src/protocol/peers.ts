@@ -26,6 +26,8 @@ export interface PeerMessage {
   sourceId?: number;
   /** Set on the line recording a session the user started from a post. */
   startedTask?: string;
+  /** The named channel a post went to; absent is `#general`. */
+  channelId?: string;
 }
 
 export interface PeerControls {

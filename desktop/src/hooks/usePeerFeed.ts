@@ -3,7 +3,7 @@ import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { daemon } from "@/daemon";
 import { peerAlertReasons, unreadCount } from "@/lib/peerFeed";
 import { taskLabel } from "@/lib/taskLabel";
-import type { DaemonEvent, PeerMessage, TaskInfo } from "@/protocol";
+import type { Channel, DaemonEvent, PeerMessage, TaskInfo } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
 import { useUi } from "@/store/ui";
 
@@ -42,6 +42,45 @@ export function usePeerFeedSync() {
       .catch(() => {
         if (!cancelled) usePeersStore.setState({ loaded: true });
       })
+      .finally(() => {
+        pending = null;
+      });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [connection]);
+}
+
+/** Load the named channels on every connect, then follow `channel.updated`
+ *  and `channel.removed`. Separate from the feed so a daemon without channels
+ *  still loads its feed. */
+export function useChannelsSync() {
+  const connection = useSyncExternalStore(daemon.subscribe, getConnection);
+  useEffect(() => {
+    if (connection !== "connected") return;
+    let cancelled = false;
+    let pending: Map<string, Channel | null> | null = new Map();
+    const unsubscribe = daemon.subscribeEvents((event: DaemonEvent) => {
+      if (event.event === "channel.updated") {
+        pending?.set(event.data.id, event.data);
+        usePeersStore.getState().upsertChannel(event.data);
+      } else if (event.event === "channel.removed") {
+        pending?.set(event.data.id, null);
+        usePeersStore.getState().removeChannel(event.data.id);
+      }
+    });
+    daemon
+      .listChannels()
+      .then((channels) => {
+        if (cancelled) return;
+        const merged = new Map(channels.map((c) => [c.id, c as Channel | null]));
+        for (const [id, channel] of pending ?? []) merged.set(id, channel);
+        usePeersStore
+          .getState()
+          .setChannels([...merged.values()].filter((c): c is Channel => c !== null));
+      })
+      .catch(() => {})
       .finally(() => {
         pending = null;
       });

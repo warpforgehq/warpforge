@@ -22,4 +22,5 @@ export * from "./automations";
 export * from "./runner";
 export * from "./memory";
 export * from "./peers";
+export * from "./channels";
 export * from "./smiths";
