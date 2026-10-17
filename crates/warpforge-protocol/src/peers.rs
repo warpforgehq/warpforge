@@ -123,6 +123,10 @@ pub struct PeerMessage {
     /// about once.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub alert: bool,
+    /// When the alert's window ended, by time, a `User` or `Automation` turn,
+    /// a deleted task or a restart. An alert is live while this is `None`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alert_cleared_at: Option<u64>,
 }
 
 /// How the daemon resolved a `session.message` target.

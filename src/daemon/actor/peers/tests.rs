@@ -270,13 +270,18 @@ async fn records_still_queued_at_startup_are_refused() {
             delivered_at: None,
             status: wire::PeerMessageStatus::Queued,
             reason: None,
-            alert: false,
+            alert: true,
+            alert_cleared_at: None,
         })
         .unwrap();
     let daemon = seeded(store);
     let records = feed(&daemon).await;
     assert_eq!(records[0].status, wire::PeerMessageStatus::Refused);
     assert_eq!(records[0].reason.as_deref(), Some(RESTART_REASON));
+    assert!(
+        records[0].alert_cleared_at.is_some(),
+        "a restart ends every alert"
+    );
 
     let post = send(&daemon, "t_a", "team", "after").await.unwrap();
     assert_eq!(post.message.unwrap().id, 8);

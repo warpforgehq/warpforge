@@ -12,6 +12,7 @@ mod tests;
 
 use std::collections::{BTreeSet, HashMap};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use warpforge_protocol as wire;
 
@@ -19,6 +20,7 @@ use crate::daemon::acp::TurnInitiator;
 use crate::daemon::actor::{Daemon, Event};
 use crate::daemon::runtime::Write as PersistWrite;
 use crate::daemon::store::{PeerControl, Store};
+use crate::daemon::task::now_secs;
 
 pub use command::PeerCommand;
 
@@ -36,6 +38,8 @@ pub(crate) struct PeersState {
     cursors: HashMap<String, u64>,
     muted: BTreeSet<String>,
     paused: BTreeSet<String>,
+    /// Each live alert's record, by pair, to rewrite when its window ends.
+    alerts: HashMap<guard::Pair, wire::PeerMessage>,
 }
 
 /// Refuse what the previous daemon left queued, then read the peer rows once,
@@ -49,11 +53,13 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>) -> PeersState {
         cursors: HashMap::new(),
         muted: BTreeSet::new(),
         paused: BTreeSet::new(),
+        alerts: HashMap::new(),
     };
     let Some(Ok(store)) = store.map(|s| s.lock()) else {
         return state;
     };
     let _ = store.refuse_queued_peer_messages();
+    let _ = store.clear_peer_alerts(now_secs());
     state.next_id = store.max_peer_message_id().unwrap_or(0) + 1;
     state.cursors = store
         .load_peer_cursors()
@@ -115,6 +121,10 @@ impl Daemon {
                 message,
                 reply,
             } => self.peers_message(from_task_id, to, message, reply).await,
+            PeerCommand::Tick => {
+                self.peers.guard.expire(Instant::now());
+                self.peers_end_alerts();
+            }
         }
     }
 
@@ -125,6 +135,19 @@ impl Daemon {
     pub(crate) fn peers_turn_started(&mut self, task_id: &str, initiator: TurnInitiator) {
         if matches!(initiator, TurnInitiator::User | TurnInitiator::Automation) {
             self.peers.guard.reset_for(task_id);
+            self.peers_end_alerts();
+        }
+    }
+
+    /// Stamp the record of every alert whose window ended and announce it,
+    /// so a client can clear the attention item without a new message.
+    fn peers_end_alerts(&mut self) {
+        let now = now_secs();
+        for pair in self.peers.guard.take_cleared() {
+            if let Some(mut record) = self.peers.alerts.remove(&pair) {
+                record.alert_cleared_at = Some(now);
+                self.peers_record(&record);
+            }
         }
     }
 

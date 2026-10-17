@@ -110,6 +110,12 @@ impl Daemon {
         let record =
             self.peers_new_record(project, Some(from), Some(to), text, verdict.as_ref().err());
         self.peers_record(&record);
+        self.peers_end_alerts();
+        if record.alert {
+            self.peers
+                .alerts
+                .insert(super::guard::pair(from, to), record.clone());
+        }
         if let Err(refused) = verdict {
             return Err(refused.reason);
         }
@@ -218,6 +224,7 @@ impl Daemon {
             },
             reason: refused.map(|r| r.reason.clone()),
             alert: refused.is_some_and(|r| r.alert),
+            alert_cleared_at: None,
         }
     }
 }

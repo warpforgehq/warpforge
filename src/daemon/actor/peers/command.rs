@@ -42,4 +42,6 @@ pub enum PeerCommand {
         message: String,
         reply: Reply<wire::PeerSendResult>,
     },
+    /// The minute timer: let lapsed guard limits go and end their alerts.
+    Tick,
 }

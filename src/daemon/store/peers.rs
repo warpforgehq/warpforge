@@ -26,7 +26,8 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
             delivered_at INTEGER,
             status       TEXT NOT NULL,
             reason       TEXT,
-            alert        INTEGER NOT NULL DEFAULT 0
+            alert        INTEGER NOT NULL DEFAULT 0,
+            alert_cleared_at INTEGER
         );
         CREATE INDEX IF NOT EXISTS peer_messages_project_idx ON peer_messages(project, id);
         CREATE TABLE IF NOT EXISTS peer_cursors (
@@ -40,6 +41,10 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
         );
         "#,
     )?;
+    let _ = conn.execute(
+        "ALTER TABLE peer_messages ADD COLUMN alert_cleared_at INTEGER",
+        [],
+    );
     Ok(())
 }
 
@@ -61,8 +66,8 @@ impl PeerControl {
     }
 }
 
-const MESSAGE_COLUMNS: &str =
-    "id, project, from_task, to_task, text, created_at, delivered_at, status, reason, alert";
+const MESSAGE_COLUMNS: &str = "id, project, from_task, to_task, text, created_at, delivered_at, \
+     status, reason, alert, alert_cleared_at";
 
 fn message_from_row(row: &Row<'_>) -> rusqlite::Result<wire::PeerMessage> {
     Ok(wire::PeerMessage {
@@ -76,6 +81,7 @@ fn message_from_row(row: &Row<'_>) -> rusqlite::Result<wire::PeerMessage> {
         status: wire::PeerMessageStatus::parse(&row.get::<_, String>(7)?),
         reason: row.get(8)?,
         alert: row.get::<_, i64>(9)? != 0,
+        alert_cleared_at: row.get::<_, Option<i64>>(10)?.map(|t| t as u64),
     })
 }
 
@@ -84,7 +90,7 @@ impl Store {
         self.conn.execute(
             &format!(
                 "INSERT OR REPLACE INTO peer_messages ({MESSAGE_COLUMNS}) \
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
             ),
             params![
                 message.id as i64,
@@ -97,6 +103,7 @@ impl Store {
                 message.status.as_str(),
                 message.reason,
                 message.alert as i64,
+                message.alert_cleared_at.map(|t| t as i64),
             ],
         )?;
         Ok(())
@@ -141,6 +148,18 @@ impl Store {
         Ok(self.conn.execute(
             "UPDATE peer_messages SET status = 'refused', reason = ?1 WHERE status = 'queued'",
             params![RESTART_REASON],
+        )?)
+    }
+
+    /// End every alert still live: the guard's windows do not survive a
+    /// restart.
+    /// @param now unix seconds
+    /// @returns how many alerts were cleared
+    pub fn clear_peer_alerts(&self, now: u64) -> Result<usize> {
+        Ok(self.conn.execute(
+            "UPDATE peer_messages SET alert_cleared_at = ?1 \
+             WHERE alert = 1 AND alert_cleared_at IS NULL",
+            params![now as i64],
         )?)
     }
 
@@ -213,6 +232,7 @@ mod tests {
             status,
             reason: None,
             alert: false,
+            alert_cleared_at: None,
         }
     }
 
@@ -306,5 +326,30 @@ mod tests {
             .load_peer_controls(PeerControl::Mute)
             .unwrap()
             .is_empty());
+    }
+
+    #[test]
+    fn restart_clears_live_alerts_only() {
+        let store = store();
+        let mut live = record(1, "demo", wire::PeerMessageStatus::Refused);
+        live.alert = true;
+        let mut ended = record(2, "demo", wire::PeerMessageStatus::Refused);
+        ended.alert = true;
+        ended.alert_cleared_at = Some(50);
+        for message in [
+            &live,
+            &ended,
+            &record(3, "demo", wire::PeerMessageStatus::Refused),
+        ] {
+            store.upsert_peer_message(message).unwrap();
+        }
+        assert_eq!(store.clear_peer_alerts(900).unwrap(), 1);
+        let cleared: Vec<_> = store
+            .load_peer_messages(None, None, 10)
+            .unwrap()
+            .into_iter()
+            .map(|m| m.alert_cleared_at)
+            .collect();
+        assert_eq!(cleared, vec![None, Some(50), Some(900)]);
     }
 }
