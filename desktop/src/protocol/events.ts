@@ -21,6 +21,7 @@ import type {
   TerminalInfo,
   TerminalScreen,
 } from "./runtime";
+import type { Smith } from "./smiths";
 import type { SessionUpdate, TaskInfo } from "./tasks";
 
 // ── Events ──────────────────────────────────────────────────────────────────
@@ -120,6 +121,9 @@ export type DaemonEvent =
   | { event: "automation.runUpdated"; data: AutomationRun }
   // ── Peer sessions ──
   | { event: "peer.messageUpdated"; data: PeerMessage }
+  // ── Smiths ──
+  | { event: "smith.updated"; data: Smith }
+  | { event: "smith.removed"; data: { id: string } }
   // ── Backlog runner ──
   | { event: "runner.updated"; data: RunnerStatus }
   | { event: "runner.runUpdated"; data: ItemRun }

@@ -22,6 +22,7 @@ import { PullMethods } from "./pulls";
 import { RunnerMethods } from "./runner";
 import { RuntimeMethods } from "./runtime";
 import { SessionMethods } from "./sessions";
+import { SmithMethods } from "./smiths";
 import { TaskMethods } from "./tasks";
 import { TerminalMethods } from "./terminals";
 import { TextMethods } from "./text";
@@ -34,20 +35,22 @@ export { DaemonRpcError } from "./rpcError";
 export { DAEMON_PROTOCOL_VERSION } from "./types";
 export type { ConnectionState, DaemonState, TerminalDataListener } from "./types";
 
-const ComposedClient = PeerMethods(
-  TerminalMethods(
-    RunnerMethods(
-      AutomationMethods(
-        OrchestrationMethods(
-          ProjectMethods(
-            RuntimeMethods(
-              TaskMethods(
-                MemoryMethods(
-                  BacklogMethods(
-                    WorkItemMethods(
-                      PullMethods(
-                        TrackerMethods(
-                          TextMethods(AgentMethods(SessionMethods(WorktreeMethods(CoreClient)))),
+const ComposedClient = SmithMethods(
+  PeerMethods(
+    TerminalMethods(
+      RunnerMethods(
+        AutomationMethods(
+          OrchestrationMethods(
+            ProjectMethods(
+              RuntimeMethods(
+                TaskMethods(
+                  MemoryMethods(
+                    BacklogMethods(
+                      WorkItemMethods(
+                        PullMethods(
+                          TrackerMethods(
+                            TextMethods(AgentMethods(SessionMethods(WorktreeMethods(CoreClient)))),
+                          ),
                         ),
                       ),
                     ),

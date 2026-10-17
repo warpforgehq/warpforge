@@ -31,6 +31,7 @@ vi.mock("./daemon", () => {
       request: vi.fn<() => Promise<unknown>>(),
       peerFeed: vi.fn<() => Promise<unknown[]>>(() => Promise.resolve([])),
       peerAlerts: vi.fn<() => Promise<unknown[]>>(() => Promise.resolve([])),
+      listSmiths: vi.fn<() => Promise<unknown[]>>(() => Promise.resolve([])),
       peerControls: vi.fn<() => Promise<unknown>>(() =>
         Promise.resolve({ mutedTasks: [], pausedProjects: [] }),
       ),

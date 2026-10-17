@@ -11,6 +11,7 @@ import {
 } from "@/hooks/useAgentUpdates";
 import { usePeerFeedSync } from "@/hooks/usePeerFeed";
 import { usePrAssistantLifecycle } from "@/hooks/usePrAssistantLifecycle";
+import { useSmithsSync } from "@/hooks/useSmiths";
 import { runOnIdle } from "@/lib/idle";
 
 export const getSnapshot = () => daemon.getState().snapshot;
@@ -49,6 +50,12 @@ export function AgentUpdatesHost() {
  *  needs-you rail's message-limit alerts. */
 export function PeerFeedHost() {
   usePeerFeedSync();
+  return null;
+}
+
+/** Keeps the Smiths live app-wide, for Team, the feed and the board. */
+export function SmithsHost() {
+  useSmithsSync();
   return null;
 }
 

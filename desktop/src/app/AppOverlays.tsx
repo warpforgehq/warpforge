@@ -13,6 +13,7 @@ import {
   getPendingAgentSetup,
   AgentUpdatesHost,
   PeerFeedHost,
+  SmithsHost,
   PrAssistantLifecycleHost,
   SettingsPrefetchHost,
 } from "./hosts";
@@ -64,6 +65,7 @@ export function AppOverlays({
       <PrAssistantLifecycleHost projects={projects} />
       <AgentUpdatesHost />
       <PeerFeedHost />
+      <SmithsHost />
       <SettingsPrefetchHost />
       {addProjectOpen && (
         <AddProjectDialog
