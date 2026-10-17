@@ -287,6 +287,8 @@ pub fn to_wire(ev: &Event) -> Option<wire::Event> {
         }
         Event::SmithUpdated(smith) => Some(wire::Event::SmithUpdated((**smith).clone())),
         Event::SmithRemoved { id } => Some(wire::Event::SmithRemoved { id: id.clone() }),
+        Event::ChannelUpdated(channel) => Some(wire::Event::ChannelUpdated((**channel).clone())),
+        Event::ChannelRemoved { id } => Some(wire::Event::ChannelRemoved { id: id.clone() }),
         Event::ProjectAdded(info) => Some(wire::Event::ProjectAdded(info.clone())),
         Event::ProjectRemoved { name } => Some(wire::Event::ProjectRemoved { name: name.clone() }),
         Event::ProjectConfigChanged(state) => {

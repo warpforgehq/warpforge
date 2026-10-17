@@ -1564,6 +1564,10 @@ pub enum Method {
         before: Option<u64>,
         #[serde(default)]
         limit: Option<u32>,
+        /// Only this channel's records: a channel id, or `"general"` for the
+        /// project channel. Absent means every record.
+        #[serde(default)]
+        channel: Option<String>,
     },
     /// Every record whose message-limit alert is still live, however old.
     /// Returns `{ messages: PeerMessage[] }`.
@@ -1594,7 +1598,13 @@ pub enum Method {
     /// The user posts to `project`'s channel; each @mentioned session gets
     /// the post as a user prompt. Returns [`crate::PeerSendResult`].
     #[serde(rename = "peers.userPost")]
-    PeersUserPost { project: String, text: String },
+    PeersUserPost {
+        project: String,
+        text: String,
+        /// A named channel's id; absent posts to `#general`.
+        #[serde(default)]
+        channel_id: Option<String>,
+    },
     /// The user messages one session: a user prompt with a feed record.
     /// Returns [`crate::PeerSendResult`].
     #[serde(rename = "peers.userMessage")]
@@ -1662,4 +1672,31 @@ pub enum Method {
         #[serde(default = "default_true")]
         worktree: bool,
     },
+
+    // ── Named channels (ADR 0026 addendum) ──────────────────────────────────
+    /// Named channels; `#general` is implicit and not listed.
+    /// Returns `{ channels: Channel[] }`.
+    #[serde(rename = "channels.list")]
+    ChannelsList {
+        #[serde(default)]
+        project: Option<String>,
+        /// Only the channels this task reads and posts to.
+        #[serde(default)]
+        task_id: Option<String>,
+    },
+    /// Returns [`crate::Channel`].
+    #[serde(rename = "channels.create")]
+    ChannelsCreate { project: String, name: String },
+    /// Returns [`crate::Channel`].
+    #[serde(rename = "channels.rename")]
+    ChannelsRename { id: String, name: String },
+    /// Its records stay in the feed and reach no digest.
+    #[serde(rename = "channels.delete")]
+    ChannelsDelete { id: String },
+    /// Returns [`crate::Channel`].
+    #[serde(rename = "channels.addMember")]
+    ChannelsAddMember { id: String, smith_id: String },
+    /// Returns [`crate::Channel`].
+    #[serde(rename = "channels.removeMember")]
+    ChannelsRemoveMember { id: String, smith_id: String },
 }

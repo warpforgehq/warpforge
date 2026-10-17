@@ -6,9 +6,9 @@
 
 use crate::{
     AccountInfo, AgentAccountLimits, AgentBrokenInstall, AgentConfig, Automation, AutomationRun,
-    DetectedAgent, ItemRun, PeerMessage, PortForwardInfo, PortForwardStatus, PortRangeSource,
-    PortWarning, ProjectConfigState, RunnerStatus, ServiceInfo, ServiceStatus, SessionUpdate,
-    Smith, TaskInfo, TaskPullRequest, TerminalInfo, TerminalScreen,
+    Channel, DetectedAgent, ItemRun, PeerMessage, PortForwardInfo, PortForwardStatus,
+    PortRangeSource, PortWarning, ProjectConfigState, RunnerStatus, ServiceInfo, ServiceStatus,
+    SessionUpdate, Smith, TaskInfo, TaskPullRequest, TerminalInfo, TerminalScreen,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -111,6 +111,12 @@ pub enum Event {
     SmithUpdated(Smith),
     #[serde(rename = "smith.removed")]
     SmithRemoved { id: String },
+
+    /// A named channel was created, renamed or its members changed.
+    #[serde(rename = "channel.updated")]
+    ChannelUpdated(Channel),
+    #[serde(rename = "channel.removed")]
+    ChannelRemoved { id: String },
 
     /// Structured ACP session update for a task: tool calls, agent text,
     /// file edits, permission requests. Mirrors ACP `session/update`.

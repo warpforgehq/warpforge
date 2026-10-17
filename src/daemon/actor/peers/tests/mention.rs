@@ -73,6 +73,7 @@ async fn user_post(daemon: &DaemonHandle, text: &str) -> Result<wire::PeerSendRe
     ask(daemon, |reply| PeerCommand::UserPost {
         project: "demo".into(),
         text: text.into(),
+        channel_id: None,
         reply,
     })
     .await

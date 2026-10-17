@@ -166,6 +166,11 @@ pub enum Event {
     SmithRemoved {
         id: String,
     },
+    /// A named channel was created or changed (ADR 0026 addendum).
+    ChannelUpdated(Box<wire::Channel>),
+    ChannelRemoved {
+        id: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

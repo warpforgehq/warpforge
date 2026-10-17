@@ -88,6 +88,7 @@ async fn feed(daemon: &DaemonHandle) -> Vec<wire::PeerMessage> {
         project: None,
         before: None,
         limit: None,
+        channel: None,
         reply,
     })
     .await

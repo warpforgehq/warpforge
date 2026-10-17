@@ -138,6 +138,7 @@ async fn a_settled_work_session_reports_back_to_the_asker_once() {
             project: None,
             before: None,
             limit: None,
+            channel: None,
             reply: tx,
         }))
         .await;

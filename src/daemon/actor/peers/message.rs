@@ -60,7 +60,17 @@ impl Daemon {
             return;
         };
         if to == TEAM {
-            let _ = reply.send(self.peers_agent_post(&from, &project, text).await);
+            let _ = reply.send(self.peers_agent_post(&from, &project, text, None).await);
+            return;
+        }
+        if let Some(spec) = to.strip_prefix('#') {
+            let result = match self.channel_for_post(&from, &project, spec) {
+                Ok((project, channel)) => {
+                    self.peers_agent_post(&from, &project, text, channel).await
+                }
+                Err(error) => Err(error),
+            };
+            let _ = reply.send(result);
             return;
         }
         let child = self
@@ -220,16 +230,19 @@ impl Daemon {
     /// rides on each peer's next prompt.
     /// @param mentions the peers the post names, which do not get it in their
     /// digest
+    /// @param channel the named channel, `None` for `#general`
     pub(super) fn peers_post(
         &mut self,
         from: &str,
         project: &str,
         text: String,
         mentions: Vec<String>,
+        channel: Option<String>,
     ) -> Result<wire::PeerSendResult, String> {
         let verdict = self.peers_sender_refusal(from, project, &text);
         let mut record =
             self.peers_new_record(project, Some(from), None, text, verdict.as_ref().err());
+        record.channel_id = channel;
         if verdict.is_ok() {
             record.status = wire::PeerMessageStatus::Posted;
             record.mentions = mentions;

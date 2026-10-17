@@ -73,6 +73,7 @@ impl Daemon {
         project: Option<String>,
         before: Option<u64>,
         limit: Option<u32>,
+        channel: Option<String>,
         reply: oneshot::Sender<Result<Vec<wire::PeerMessage>, String>>,
     ) {
         let limit = limit.unwrap_or(FEED_PAGE).clamp(1, FEED_PAGE_MAX);
@@ -82,7 +83,7 @@ impl Daemon {
             persist.flush().await;
             let result = crate::daemon::runtime::store_read(store, move |store| {
                 store
-                    .load_peer_messages(project.as_deref(), before, limit, None)
+                    .load_peer_messages(project.as_deref(), before, limit, channel.as_deref())
                     .map_err(|e| format!("{e:#}"))
             })
             .await

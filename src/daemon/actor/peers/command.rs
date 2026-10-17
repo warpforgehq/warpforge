@@ -15,6 +15,8 @@ pub enum PeerCommand {
         project: Option<String>,
         before: Option<u64>,
         limit: Option<u32>,
+        /// A channel id, or `general`; every channel when absent.
+        channel: Option<String>,
         reply: Reply<Vec<wire::PeerMessage>>,
     },
     /// The records whose alert is live, from actor memory.
@@ -50,6 +52,8 @@ pub enum PeerCommand {
     UserPost {
         project: String,
         text: String,
+        /// A named channel; `#general` when absent.
+        channel_id: Option<String>,
         reply: Reply<wire::PeerSendResult>,
     },
     /// The user messages one session from the Team view.
@@ -63,6 +67,32 @@ pub enum PeerCommand {
         task_id: String,
         source_id: Option<u64>,
         reply: Reply<wire::PeerMessage>,
+    },
+    ChannelsList {
+        project: Option<String>,
+        task_id: Option<String>,
+        reply: Reply<Vec<wire::Channel>>,
+    },
+    ChannelsCreate {
+        project: String,
+        name: String,
+        reply: Reply<wire::Channel>,
+    },
+    ChannelsRename {
+        id: String,
+        name: String,
+        reply: Reply<wire::Channel>,
+    },
+    ChannelsDelete {
+        id: String,
+        reply: Reply<()>,
+    },
+    /// Add (`member`) or remove a Smith.
+    ChannelsSetMember {
+        id: String,
+        smith_id: String,
+        member: bool,
+        reply: Reply<wire::Channel>,
     },
     /// The minute timer: let lapsed guard limits go and end their alerts.
     Tick,
