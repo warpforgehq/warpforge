@@ -135,7 +135,7 @@ async fn an_unknown_caller_is_an_error_without_a_record() {
 }
 
 #[tokio::test]
-async fn a_team_post_is_recorded_as_delivered() {
+async fn a_team_post_is_recorded_as_posted_not_delivered() {
     let daemon = seeded(memory_store());
     let sent = send(&daemon, "t_a", "team", "fyi: main is red")
         .await
@@ -143,7 +143,8 @@ async fn a_team_post_is_recorded_as_delivered() {
     assert_eq!(sent.relation, wire::PeerRelation::Team);
     let record = sent.message.unwrap();
     assert_eq!(record.to_task, None);
-    assert_eq!(record.status, wire::PeerMessageStatus::Delivered);
+    assert_eq!(record.status, wire::PeerMessageStatus::Posted);
+    assert_eq!(record.delivered_at, None);
     assert_eq!(feed(&daemon).await, vec![record]);
 }
 

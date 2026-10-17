@@ -222,9 +222,8 @@ mod tests {
         let mut refused = record(1, "demo", wire::PeerMessageStatus::Refused);
         refused.reason = Some("pair window".into());
         refused.alert = true;
-        let mut post = record(2, "demo", wire::PeerMessageStatus::Delivered);
+        let mut post = record(2, "demo", wire::PeerMessageStatus::Posted);
         post.to_task = None;
-        post.delivered_at = Some(102);
         for message in [
             &refused,
             &post,

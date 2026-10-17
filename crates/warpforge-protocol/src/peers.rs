@@ -67,8 +67,10 @@ pub fn peer_label(peer: &PeerInfo) -> String {
 pub enum PeerMessageStatus {
     /// Accepted, waiting for the receiver's turn to start.
     Queued,
-    /// The receiver's turn started with it, or a channel post was accepted.
+    /// The receiver's turn started with it.
     Delivered,
+    /// A channel post, accepted; peers read it with their next prompt.
+    Posted,
     /// Refused; `reason` names the rule.
     Refused,
 }
@@ -79,6 +81,7 @@ impl PeerMessageStatus {
         match self {
             Self::Queued => "queued",
             Self::Delivered => "delivered",
+            Self::Posted => "posted",
             Self::Refused => "refused",
         }
     }
@@ -89,6 +92,7 @@ impl PeerMessageStatus {
         match value {
             "queued" => Self::Queued,
             "delivered" => Self::Delivered,
+            "posted" => Self::Posted,
             _ => Self::Refused,
         }
     }
