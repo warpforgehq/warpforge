@@ -79,14 +79,25 @@ impl Daemon {
                     });
                 let _ = reply.send(result);
             }
-            Command::MemoryUpdate { id, content, reply } => {
-                let result = self.memory.update(&id, &content).and_then(|m| {
-                    serde_json::to_value(m).map_err(crate::daemon::memory::MemoryError::from)
-                });
+            Command::MemoryUpdate {
+                id,
+                content,
+                task_id,
+                reply,
+            } => {
+                let result = self
+                    .memory_owner_check(task_id.as_deref(), &id)
+                    .and_then(|()| self.memory.update(&id, &content))
+                    .and_then(|m| {
+                        serde_json::to_value(m).map_err(crate::daemon::memory::MemoryError::from)
+                    });
                 let _ = reply.send(result);
             }
-            Command::MemoryDelete { id, reply } => {
-                let _ = reply.send(self.memory.delete(&id));
+            Command::MemoryDelete { id, task_id, reply } => {
+                let result = self
+                    .memory_owner_check(task_id.as_deref(), &id)
+                    .and_then(|()| self.memory.delete(&id));
+                let _ = reply.send(result);
             }
             Command::MemoryStats { reply } => {
                 let result = self.memory.stats().and_then(|s| {

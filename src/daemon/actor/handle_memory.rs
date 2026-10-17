@@ -91,21 +91,28 @@ impl DaemonHandle {
         &self,
         id: &str,
         content: &str,
+        task_id: Option<String>,
     ) -> Result<serde_json::Value, crate::daemon::memory::MemoryError> {
         let (tx, rx) = oneshot::channel();
         self.send(Command::MemoryUpdate {
             id: id.to_string(),
             content: content.to_string(),
+            task_id,
             reply: tx,
         })
         .await;
         rx.await.map_err(|_| memory_dropped())?
     }
 
-    pub async fn memory_delete(&self, id: &str) -> Result<(), crate::daemon::memory::MemoryError> {
+    pub async fn memory_delete(
+        &self,
+        id: &str,
+        task_id: Option<String>,
+    ) -> Result<(), crate::daemon::memory::MemoryError> {
         let (tx, rx) = oneshot::channel();
         self.send(Command::MemoryDelete {
             id: id.to_string(),
+            task_id,
             reply: tx,
         })
         .await;

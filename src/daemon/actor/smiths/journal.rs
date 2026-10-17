@@ -62,6 +62,32 @@ impl Daemon {
         }
     }
 
+    /// A session may change or delete a journal entry only of its own Smith;
+    /// the user (no task) may change any.
+    pub(crate) fn memory_owner_check(
+        &self,
+        task_id: Option<&str>,
+        id: &str,
+    ) -> Result<(), MemoryError> {
+        let Some(task_id) = task_id else {
+            return Ok(());
+        };
+        let Some(journal) = self
+            .memory
+            .scope_of(id)
+            .and_then(|scope| scope.strip_prefix(SMITH_SCOPE_PREFIX).map(str::to_string))
+        else {
+            return Ok(());
+        };
+        if self.task_smith_id(task_id).as_deref() == Some(journal.as_str()) {
+            Ok(())
+        } else {
+            Err(MemoryError::Scope(
+                "a Smith's journal is changed only by that Smith's own sessions".into(),
+            ))
+        }
+    }
+
     /// Drop every journal entry the reading session may not see.
     pub(crate) fn memory_visible_to(
         &self,

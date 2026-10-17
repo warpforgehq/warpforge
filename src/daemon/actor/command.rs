@@ -990,10 +990,12 @@ pub enum Command {
     MemoryUpdate {
         id: String,
         content: String,
+        task_id: Option<String>,
         reply: oneshot::Sender<Result<serde_json::Value, crate::daemon::memory::MemoryError>>,
     },
     MemoryDelete {
         id: String,
+        task_id: Option<String>,
         reply: oneshot::Sender<Result<(), crate::daemon::memory::MemoryError>>,
     },
     MemoryStats {
