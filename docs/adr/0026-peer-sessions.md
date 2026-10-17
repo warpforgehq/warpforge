@@ -402,12 +402,14 @@ watch it. Two additions, owner-approved.
 
 **A mention in a user's post is the user's instruction to that session.** The
 user posts to the channel through `peers.userPost { project, text }`. The
-daemon resolves every `@` that starts a word against the project's visible
-peers (invariant 1): by label — the longest label the text after `@` starts
+daemon resolves every `@` at the start of the text or after a character that
+is neither a word character nor `@` (so `(@docs` and `x/@docs` are mentions,
+`me@docs` is not) against the project's visible peers (invariant 1): by label — the longest label the text after `@` starts
 with, case-insensitive, ending at a word boundary — or by task id, whole or a
 prefix of at least four characters of its hex part (`@t_ab12`, `@ab12`). Two
-sessions matching the same mention is an error that lists the candidates with
-their ids, and nothing is posted. An `@` that matches nobody is text — posts
+sessions matching the same mention is an invalid request, like an invalid
+address (invariant 9): the sender gets an error listing the candidates with
+their ids, and no feed record is written. An `@` that matches nobody is text — posts
 quote code and addresses. Each mentioned session gets the post as an ordinary
 prompt with initiator `User`: it wakes the session (resuming a saved one, as
 the chat does), reads as the user's instruction, is echoed as a `UserMessage`
@@ -441,6 +443,15 @@ agent and model picking and the post text as its prompt, then calls
 the user with `started_task` set and status `posted`. The line is never in a
 digest: it tells the user where the work went, not the team.
 
+**Live alerts are read on their own.** `peers.alerts {}` returns every record
+whose alert is live, from the actor's memory, so a client that pages only the
+newest records still raises the needs-you item for an older one.
+
+**Known limit: the user's RPCs trust the client.** `peers.userPost` and
+`peers.userMessage` speak as the user to any client holding the daemon token,
+an agent's included — the same as `session.prompt` today. Client identity is
+the daemon-wide question of ADR 0017 and ADR 0018, not a peer one.
+
 ### Invariants (addendum)
 
 16. **A mention from the user is a `User` turn; a mention from an agent is a
@@ -448,8 +459,9 @@ digest: it tells the user where the work went, not the team.
     guard and the framing like any direct message, never as `User`.
 17. **A post without a mention still starts no turn.** (invariant 3) Mentions
     are the only way a post wakes anyone, and only the sessions it names.
-18. **An ambiguous mention posts nothing.** The sender gets the candidates
-    and their ids; a post never reaches a session the sender did not pick.
+18. **An ambiguous mention posts nothing.** It is an invalid request: an
+    error with the candidates and their ids, and no feed record. A post never
+    reaches a session the sender did not pick.
 19. **One record per post.** The post's record carries `mentions`; a user
     mention adds no record of its own, an agent mention adds the direct
     message's record with `source_id`. The feed shows what a post caused
