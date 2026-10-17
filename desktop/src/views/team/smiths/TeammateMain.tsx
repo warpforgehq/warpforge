@@ -5,8 +5,8 @@ import { useMemo } from "react";
 import { useSmiths } from "@/hooks/useSmiths";
 import type { SmithDetail, Snapshot } from "@/protocol";
 import { useSmithsStore } from "@/store/smiths";
+import type { TeamSelection } from "@/store/ui";
 
-import type { TeamSelection } from "../selection";
 import { emptySmithForm, smithFormFrom } from "./form";
 import { smithDetailKey, useSmithDetail } from "./queries";
 import { SmithForm } from "./SmithForm";
@@ -35,7 +35,7 @@ function EditSmith({
     return (
       <div className="flex flex-1 items-center justify-center gap-2 text-[13px] text-muted-foreground">
         <Loader2 aria-hidden className="size-3.5 animate-spin" />
-        Loading the teammate…
+        Loading the smith…
       </div>
     );
   }
@@ -87,7 +87,7 @@ export function TeammateMain({ selection, snapshot, onSelect, onOpenTask }: Prop
   if (!smith) {
     return (
       <div className="flex flex-1 items-center justify-center text-[13px] text-muted-foreground">
-        This teammate is gone.
+        This smith is gone.
       </div>
     );
   }

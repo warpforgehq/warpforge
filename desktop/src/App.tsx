@@ -8,6 +8,7 @@ import { daemon } from "@/daemon";
 import { HAS_NATIVE_GLASS, IS_MAC } from "@/lib/platform";
 import {
   type GlobalView,
+  type SidebarMode,
   SIDEBAR_WIDTH_DEFAULT,
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_MIN,
@@ -45,6 +46,8 @@ export default function App() {
   const setOpenTaskId = useUi((s) => s.openTask);
   const lastTaskId = useUi((s) => s.lastTaskId);
   const selectTasksSegment = useUi((s) => s.selectTasksSegment);
+  const sidebarMode = useUi((s) => s.sidebarMode);
+  const setSidebarMode = useUi((s) => s.setSidebarMode);
   const sidebarWidth = useUi((s) => s.sidebarWidth);
   const setSidebarWidth = useUi((s) => s.setSidebarWidth);
   const sidebarCollapsed = useUi((s) => s.sidebarCollapsed);
@@ -91,6 +94,12 @@ export default function App() {
     selectTasksSegment(remembered);
   };
 
+  const handleSelectMode = (mode: SidebarMode) => {
+    setSidebarMode(mode);
+    if (mode === "tasks") handleSelectTasksSegment();
+    else handleSelectView(mode);
+  };
+
   const handleOpenProject = (name: string) => {
     setNewTaskOpen(false);
     openProject(name);
@@ -129,7 +138,7 @@ export default function App() {
   );
   usePullShortcut(snapshot.tasks);
   usePushShortcut(snapshot.tasks, setPushOpen);
-  useShellShortcuts(startNewTask, toggleSidebarCollapsed);
+  useShellShortcuts(startNewTask, toggleSidebarCollapsed, handleSelectMode);
 
   const sidebarProps = {
     collapsed: sidebarCollapsed,
@@ -141,12 +150,13 @@ export default function App() {
     onDeleteSettledShelf: deleteSettledShelf,
     onOpenTask: handleOpenTask,
     onSelectView: handleSelectView,
-    onSelectTasksSegment: handleSelectTasksSegment,
+    onSelectMode: handleSelectMode,
     onOpenProject: handleOpenProject,
     onAddProject: () => setAddProjectOpen(true),
     onToggleCollapsed: toggleSidebarCollapsed,
     openTaskId,
     view,
+    mode: sidebarMode,
   };
 
   return (

@@ -8,12 +8,12 @@ import { taskLabel } from "@/lib/taskLabel";
 import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 import { useUi } from "@/store/ui";
-import type { GlobalView, View } from "@/store/ui";
+import type { GlobalView, SidebarMode, View } from "@/store/ui";
 
 import { SIDEBAR_STATE_META, type SidebarTaskState } from "./logic";
+import { SIDEBAR_MODES } from "./modes";
 import { NAV } from "./nav";
 import { RailButton } from "./RailButton";
-import { SEGMENTS, type SidebarSegment } from "./segments";
 
 export interface LiveLaneItem {
   task: TaskInfo;
@@ -35,10 +35,11 @@ export function CollapsedRail({
   agentUpdates,
   liveLane,
   navCount,
-  segment,
+  modeCount,
+  mode,
   onToggleCollapsed,
   onSelectView,
-  onSelectSegment,
+  onSelectMode,
   onNewTask,
   onOpenTask,
   onOpenSettings,
@@ -50,10 +51,11 @@ export function CollapsedRail({
   agentUpdates: number;
   liveLane: { tasks: LiveLaneItem[]; overflow: number };
   navCount: (id: GlobalView) => number;
-  segment: SidebarSegment;
+  modeCount: (mode: SidebarMode) => number;
+  mode: SidebarMode;
   onToggleCollapsed: () => void;
   onSelectView: (view: GlobalView) => void;
-  onSelectSegment: (segment: SidebarSegment) => void;
+  onSelectMode: (mode: SidebarMode) => void;
   onNewTask: () => void;
   onOpenTask: (id: string) => void;
   onOpenSettings: () => void;
@@ -131,23 +133,25 @@ export function CollapsedRail({
           onClick={onNewTask}
           {...roving("new-task")}
         />
+        {SIDEBAR_MODES.map((item) => (
+          <RailButton
+            key={item.id}
+            icon={item.icon}
+            label={item.label}
+            tooltip={item.id === "team" ? "Smiths — AI teammates" : undefined}
+            shortcut={`⌥⌘${item.key}`}
+            active={mode === item.id}
+            count={modeCount(item.id)}
+            hot={modeCount(item.id) > 0}
+            onClick={() => onSelectMode(item.id)}
+            {...roving(`mode:${item.id}`)}
+          />
+        ))}
       </div>
 
       <Rule />
 
       <div className="flex w-14 shrink-0 flex-col items-center gap-1 px-2">
-        {SEGMENTS.map((item) => (
-          <RailButton
-            key={item.id}
-            icon={item.icon}
-            label={item.label}
-            active={segment === item.id}
-            count={item.id === "inbox" ? navCount("inbox") : undefined}
-            hot={item.id === "inbox" && navCount("inbox") > 0}
-            onClick={() => onSelectSegment(item.id)}
-            {...roving(`segment:${item.id}`)}
-          />
-        ))}
         {NAV.map((item) => (
           <RailButton
             key={item.id}

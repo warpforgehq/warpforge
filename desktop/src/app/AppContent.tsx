@@ -8,7 +8,7 @@ import type { ConnectionState } from "@/daemon/types";
 import { useTaskPullRequestSync } from "@/hooks/useTaskPullRequest";
 import { runOnIdle } from "@/lib/idle";
 import type { Snapshot, TaskInfo } from "@/protocol";
-import type { View } from "@/store/ui";
+import { type View, useUi } from "@/store/ui";
 
 import type { NewTaskOptions } from "./dialogs";
 import {
@@ -96,6 +96,7 @@ export function AppContent({
     return runOnIdle(prefetchRouteChunks);
   }, [connection]);
   useTaskPullRequestSync(connection);
+  const sidebarMode = useUi((state) => state.sidebarMode);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -162,7 +163,7 @@ export function AppContent({
                 projects={projectNames}
                 onSendToAgent={(project, prompt) => onNewTask(project, prompt)}
                 onAddProject={onAddProject}
-                listInSidebar={showPersistent}
+                listInSidebar={showPersistent && sidebarMode === "inbox"}
               />
             ) : view === "automations" ? (
               <Automations snapshot={snapshot} onOpenTask={onOpenTask} />

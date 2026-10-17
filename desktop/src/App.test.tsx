@@ -91,10 +91,13 @@ vi.mock("./views/BootstrapWizard", () => ({
   default: vi.fn<() => React.ReactNode>(() => <div data-testid="bootstrap-wizard" />),
 }));
 vi.mock("./components/Sidebar", () => ({
-  default: ({ onSelectTasksSegment }: { onSelectTasksSegment: () => void }) => (
+  default: ({ onSelectMode }: { onSelectMode: (mode: "tasks" | "inbox" | "team") => void }) => (
     <div data-testid="app-sidebar">
-      <button type="button" onClick={onSelectTasksSegment}>
-        Tasks segment
+      <button type="button" onClick={() => onSelectMode("tasks")}>
+        Tasks mode
+      </button>
+      <button type="button" onClick={() => onSelectMode("inbox")}>
+        Inbox mode
       </button>
     </div>
   ),
@@ -299,7 +302,7 @@ describe("App view branches", () => {
   });
 });
 
-describe("Tasks segment", () => {
+describe("Sidebar modes", () => {
   it("does not resurrect a remembered task the daemon no longer has", async () => {
     // Persisted across a restart in which the task was deleted: the offer has
     // to be checked against the snapshot, not taken on trust.
@@ -307,11 +310,32 @@ describe("Tasks segment", () => {
     render(<App />);
     await screen.findByTestId("inbox", undefined, { timeout: 5_000 });
 
-    fireEvent.click(screen.getByRole("button", { name: "Tasks segment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tasks mode" }));
 
     expect(useUi.getState().openTaskId).toBeNull();
     expect(useUi.getState().lastTaskId).toBeNull();
     expect(useUi.getState().view).toBe("control");
+    expect(useUi.getState().sidebarMode).toBe("tasks");
+  });
+
+  it("switches body and main area together when a mode is picked", async () => {
+    useUi.setState({ sidebarMode: "tasks", view: "control" });
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Inbox mode" }));
+    expect(useUi.getState()).toMatchObject({ sidebarMode: "inbox", view: "inbox" });
+  });
+
+  it("picks the modes with ⌥⌘1–3, by physical key", async () => {
+    useUi.setState({ sidebarMode: "tasks", view: "control" });
+    render(<App />);
+    await screen.findByTestId("app-sidebar");
+    fireEvent.keyDown(window, { altKey: true, code: "Digit3", key: "£", metaKey: true });
+    expect(useUi.getState()).toMatchObject({ sidebarMode: "team", view: "team" });
+    fireEvent.keyDown(window, { altKey: true, code: "Digit2", key: "™", metaKey: true });
+    expect(useUi.getState()).toMatchObject({ sidebarMode: "inbox", view: "inbox" });
+    // Plain ⌘1 stays the task workspace's.
+    fireEvent.keyDown(window, { code: "Digit1", key: "1", metaKey: true });
+    expect(useUi.getState().sidebarMode).toBe("inbox");
   });
 });
 
