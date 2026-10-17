@@ -11,6 +11,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
   useQuery: () => ({ data: [], isLoading: false }),
   useQueryClient: () => ({ setQueryData: vi.fn<() => void>() }),
 }));
+vi.mock("@/hooks/useSmiths", () => ({ useMarkSmithSeen: vi.fn<() => void>() }));
 vi.mock("./queries", () => ({
   smithDetailKey: (id: string) => ["smith", id],
   useSmithItems: () => ({ items: [], loading: false }),

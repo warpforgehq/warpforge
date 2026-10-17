@@ -1,4 +1,4 @@
-import { Hash, Volume2, VolumeX } from "lucide-react";
+import { Hash, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 import { toast } from "sonner";
 
@@ -45,6 +45,7 @@ export function Thread({
   onMessageSession,
 }: Props) {
   const controls = usePeersStore((state) => state.controls);
+  const projectPaused = controls.pausedProjects.includes(conversation.project);
   const listRef = useRef<HTMLOListElement>(null);
   const following = useRef(true);
   const shownKey = useRef<string | null>(null);
@@ -82,7 +83,8 @@ export function Thread({
         {conversation.kind === "team" ? (
           <>
             <Hash aria-hidden className="size-4 text-muted-foreground" />
-            <h2 className="text-sm font-medium">{project} · Team channel</h2>
+            <h2 className="text-sm font-medium">general</h2>
+            <span className="text-xs text-muted-foreground">{project}</span>
           </>
         ) : (
           <h2 className="min-w-0 truncate text-sm font-medium">
@@ -90,6 +92,25 @@ export function Thread({
           </h2>
         )}
         <div className="ml-auto flex flex-wrap gap-1">
+          {conversation.kind === "team" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              title={
+                projectPaused
+                  ? "Let this project's sessions message each other again"
+                  : "Refuse every agent's peer messages and posts in this project"
+              }
+              onClick={() =>
+                void changeControls(() => daemon.setPeerPaused(project, !projectPaused))
+              }
+            >
+              {projectPaused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
+              {projectPaused ? "Resume project" : "Pause project"}
+            </Button>
+          )}
           {sessions.map((id) => {
             const muted = controls.mutedTasks.includes(id);
             return (
