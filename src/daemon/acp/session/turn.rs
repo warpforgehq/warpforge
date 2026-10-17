@@ -10,7 +10,7 @@ use crate::daemon::acp::model::parse_config_options;
 use crate::daemon::acp::process::acp_error_detail;
 use crate::daemon::acp::prompt::{send_prompt, Turn};
 use crate::daemon::acp::rpc::rpc;
-use crate::daemon::acp::{AcpCommand, AcpUpdate, PromptEcho, TurnInitiator};
+use crate::daemon::acp::{AcpCommand, AcpUpdate, TurnInitiator};
 use crate::daemon::prompt::PreparedPrompt;
 use warpforge_protocol as wire;
 
@@ -95,22 +95,6 @@ pub(super) async fn run(
     let dispatch = |prompt: PreparedPrompt, initiator: TurnInitiator| {
         let interrupted = Arc::new(AtomicBool::new(false));
         let ended = Arc::new(AtomicBool::new(false));
-        // A message enters the transcript when the agent is given it, so the
-        // chat holds what the agent heard and nothing it has not. Turns nobody
-        // typed into the chat are not echoed at all.
-        let echo =
-            matches!(initiator, TurnInitiator::User | TurnInitiator::Automation).then(|| {
-                PromptEcho {
-                    text: prompt.text.clone(),
-                    attachments: prompt.summaries.clone(),
-                }
-            });
-        let peer = prompt.peer.clone();
-        update(AcpUpdate::TurnStarted {
-            initiator,
-            echo,
-            peer,
-        });
         Active {
             handle: send_prompt(
                 &session.out_tx,
