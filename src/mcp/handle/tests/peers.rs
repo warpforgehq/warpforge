@@ -99,6 +99,14 @@ async fn message_agent_lets_the_daemon_resolve_the_target_for_every_session() {
             json!({ "relation": "team" }),
             "Posted to the team channel",
         ),
+        (
+            false,
+            json!({ "relation": "team",
+                    "message": { "id": 3, "project": "demo", "text": "hi", "createdAt": 1,
+                                 "status": "posted", "mentions": ["t_b"] },
+                    "notice": "@Docs: the user muted peer messages for t_c" }),
+            "sent as a direct message to t_b",
+        ),
     ] {
         let daemon = FakeDaemon::at("ws://a");
         script(&daemon, "session.message", result);
