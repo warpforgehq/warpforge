@@ -1623,6 +1623,14 @@ pub enum Method {
     /// Returns `{ smiths: Smith[] }`.
     #[serde(rename = "smiths.list")]
     SmithsList {},
+    /// The soul and charter a new Smith starts from, and the voice presets.
+    /// Read-only. Returns [`crate::SmithDefaults`].
+    #[serde(rename = "smiths.defaults")]
+    SmithsDefaults {
+        /// The name to put in the soul; a placeholder when absent.
+        #[serde(default)]
+        name: Option<String>,
+    },
     /// Returns [`crate::SmithDetail`].
     #[serde(rename = "smiths.get")]
     SmithsGet { id: String },

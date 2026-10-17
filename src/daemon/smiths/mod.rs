@@ -2,6 +2,7 @@
 //! and the rules a Smith's fields must satisfy.
 
 pub mod identity;
+pub mod presets;
 
 /// The first Claude adapter release that reads `_meta.systemPrompt` on
 /// `session/new` and `session/load`.
