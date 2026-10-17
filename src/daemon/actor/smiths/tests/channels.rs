@@ -301,3 +301,24 @@ async fn a_project_taken_from_a_smith_takes_its_memberships_there() {
     assert!(members_in(&restarted, "other").await.is_empty());
     assert_eq!(members_in(&restarted, "demo").await.len(), 1);
 }
+
+#[tokio::test]
+async fn a_deleted_channel_takes_its_kept_posts_with_it() {
+    let home = home();
+    let daemon = spawn(&home, &[]);
+    let design = channel(&daemon, "demo", "design").await.unwrap();
+    post(&daemon, "demo", Some(&design.id), "draft").await;
+    post(&daemon, "demo", None, "general").await;
+    peers(&daemon, |reply| PeerCommand::ChannelsDelete {
+        id: design.id.clone(),
+        reply,
+    })
+    .await
+    .unwrap();
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    daemon
+        .send(Command::Peers(PeerCommand::PostKeys { reply: tx }))
+        .await;
+    assert_eq!(rx.await.unwrap(), vec![("demo".to_string(), None)]);
+    assert_eq!(feed(&daemon, None).await.len(), 2, "the records stay");
+}
