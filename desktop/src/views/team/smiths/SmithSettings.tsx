@@ -15,12 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { smithColorIndex } from "@/lib/smithColors";
 import { injectionNote } from "@/lib/smiths";
 import { applyName, applyVoice, voiceOf } from "@/lib/soulText";
 import { cn } from "@/lib/utils";
 import type { SmithDetail, Snapshot } from "@/protocol";
-import { useUi } from "@/store/ui";
 
 import { HarnessChip } from "../../NewTaskDialog/chips";
 import { modelOption } from "../../NewTaskDialog/useTaskCreation";
@@ -33,9 +31,7 @@ import { FieldError, SettingsCard, useCardForm } from "./SettingsCard";
 const DEFAULT = "__default__";
 
 function IdentityCard({ detail }: { detail: SmithDetail }) {
-  const form = useCardForm(detail, ["name"]);
-  const color = useUi((state) => smithColorIndex(detail.smith.id, state.smithColors));
-  const setSmithColor = useUi((state) => state.setSmithColor);
+  const form = useCardForm(detail, ["name", "color"]);
   return (
     <SettingsCard title="Identity" description="How you see and @mention it." form={form}>
       <div className="flex flex-wrap items-start gap-6">
@@ -52,9 +48,9 @@ function IdentityCard({ detail }: { detail: SmithDetail }) {
         <div className="space-y-1.5">
           <span className="text-xs text-muted-foreground">Colour</span>
           <ColorPicker
-            value={color}
+            value={form.values.color}
             name={form.values.name}
-            onChange={(index) => setSmithColor(detail.smith.id, index)}
+            onChange={(index) => form.set("color", index)}
           />
         </div>
       </div>

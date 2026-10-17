@@ -66,9 +66,6 @@ export interface NavState {
   teamSmithSeenAt: Record<string, number>;
   /** Unix seconds each channel was last open, by its feed key. */
   teamChannelSeenAt: Record<string, number>;
-  /** The palette index each Smith's colour uses, by Smith id. Per device: the
-   *  daemon does not store a colour. */
-  smithColors: Record<string, number>;
   /** The project the Smiths sidebar shows; null follows the open project. */
   smithsProject: string | null;
 
@@ -104,7 +101,6 @@ export interface NavState {
   openTeam: (selection: TeamSelection | null) => void;
   markSmithSeen: (id: string, at: number) => void;
   markChannelSeen: (key: string, at: number) => void;
-  setSmithColor: (id: string, index: number) => void;
   setSmithsProject: (project: string | null) => void;
   /** Whether the New smith dialog is open. Transient. */
   newSmithOpen: boolean;
@@ -133,7 +129,6 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   teamSelection: null,
   teamSmithSeenAt: {},
   teamChannelSeenAt: {},
-  smithColors: {},
   smithsProject: null,
   newSmithOpen: false,
 
@@ -173,7 +168,6 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       lastTaskId: openTaskId,
     }),
   clearOpenTaskNav: () => set({ openTaskNav: null }),
-  setSmithColor: (id, index) => set((s) => ({ smithColors: { ...s.smithColors, [id]: index } })),
   setSmithsProject: (smithsProject) => set({ smithsProject }),
   openNewSmith: () => set({ newSmithOpen: true }),
   closeNewSmith: () => set({ newSmithOpen: false }),

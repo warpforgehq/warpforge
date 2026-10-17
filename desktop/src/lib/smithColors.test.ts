@@ -10,11 +10,21 @@ describe("Smith colours", () => {
     expect(smithColor(7)).toBe("hsl(var(--chart-2))");
   });
 
-  it("use the picked index, else a stable one for the id", () => {
-    expect(smithColorIndex("sm_1", { sm_1: 3 })).toBe(3);
-    expect(smithColorIndex("sm_1", { sm_1: 99 })).toBe(defaultSmithColor("sm_1"));
-    expect(smithColorIndex("sm_2", {})).toBe(defaultSmithColor("sm_2"));
-    expect(defaultSmithColor("sm_2")).toBe(defaultSmithColor("sm_2"));
+  it("use the stored index, else a stable one for the id", () => {
+    expect(smithColorIndex({ color: 3, id: "sm_1" })).toBe(3);
+    expect(smithColorIndex({ color: 99, id: "sm_1" })).toBe(defaultSmithColor("sm_1"));
+    expect(smithColorIndex({ id: "sm_2" })).toBe(defaultSmithColor("sm_2"));
+  });
+
+  it("derive the same default as the daemon", () => {
+    // src/daemon/smiths/mod.rs `default_color`, for the same ids.
+    expect(["sm_1", "sm_abcd1234", "sm_ff00"].map(defaultSmithColor)).toStrictEqual(
+      ["sm_1", "sm_abcd1234", "sm_ff00"].map((id) => {
+        let hash = 0;
+        for (const char of id) hash = (Math.imul(hash, 31) + char.charCodeAt(0)) >>> 0;
+        return hash % 6;
+      }),
+    );
   });
 
   it.each(THEMES.map((theme) => [theme.id, theme] as const))(

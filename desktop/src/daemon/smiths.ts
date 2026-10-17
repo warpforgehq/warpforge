@@ -10,6 +10,7 @@ function wireFields(input: SmithPatch & { homeProject?: string }) {
     agent: input.agent,
     allowed_projects: input.allowedProjects,
     budget: input.budget,
+    color: input.color,
     charter: input.charter,
     home_project: input.homeProject,
     model: input.model,

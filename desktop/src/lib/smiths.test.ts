@@ -9,6 +9,7 @@ import {
   smithAssignee,
   smithIdFromAssignee,
   smithNameError,
+  smithOwnNote,
   smithStatus,
   smithUnread,
   smithWorkSessions,
@@ -160,5 +161,19 @@ describe("smithUnread", () => {
         { kind: "turn_ended", stop_reason: "end_turn" },
       ]),
     ).toBe(2);
+  });
+});
+
+describe("smithOwnNote", () => {
+  it("prefers the thread's note, then a running session's, else none", () => {
+    const tasks = [
+      task("t_thread", { smithId: "sm_1", statusNote: "triaging the queue" }),
+      task("t_fix", { smithId: "sm_1", status: "running", statusNote: "fixing CI" }),
+    ];
+    expect(smithOwnNote(smith(), tasks)).toBe("triaging the queue");
+    expect(smithOwnNote(smith(), tasks.slice(1))).toBe("fixing CI");
+    expect(
+      smithOwnNote(smith(), [task("t_thread", { smithId: "sm_1", statusNote: " " })]),
+    ).toBeNull();
   });
 });

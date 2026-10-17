@@ -64,7 +64,6 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
   const smiths = useSmiths();
   const defaults = useSmithDefaults();
   const openTeam = useUi((state) => state.openTeam);
-  const setSmithColor = useUi((state) => state.setSmithColor);
   const agents = (snapshot.agents ?? []).filter((agent) => agent.enabled);
   const projects = snapshot.projects.map((p) => p.name);
 
@@ -107,13 +106,13 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
         allowedProjects: [home],
         budget: {},
         charter,
+        color,
         homeProject: home,
         model,
         name: name.trim(),
         permissions: { createPr: false, push: false, writePaths: [] },
         soul,
       });
-      setSmithColor(detail.smith.id, color);
       useSmithsStore.getState().upsert(detail.smith);
       openTeam({ id: detail.smith.id, kind: "teammate" });
       onClose();

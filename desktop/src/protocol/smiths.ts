@@ -35,6 +35,9 @@ export interface Smith {
   /** Empty when it may start sessions. */
   held?: SmithHold[];
   createdAt: number;
+  /** A palette index into the theme's `chart-*` colours; absent from daemons
+   *  older than the field. */
+  color?: number;
   /** How its next new session gets its identity; absent from older daemons. */
   injection?: "system_prompt" | "prefix";
 }
@@ -75,6 +78,7 @@ export interface SmithInput {
   charter?: string;
   permissions: SmithPermissions;
   budget: SmithBudget;
+  color?: number;
 }
 
 /** `smiths.update`: only the fields given change; `""` clears model or account. */

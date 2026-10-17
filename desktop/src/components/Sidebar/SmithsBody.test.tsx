@@ -131,6 +131,13 @@ describe("SmithsBody", () => {
     expect(screen.getByText("fixing CI")).toBeInTheDocument();
     unmount();
 
+    const noted = show([
+      task("t_thread", { smithId: "sm_1", statusNote: "watching the PR queue" }),
+      task("t_fix", { smithId: "sm_1", status: "running", title: "fixing CI" }),
+    ]);
+    expect(screen.getByText("watching the PR queue")).toBeInTheDocument();
+    noted.unmount();
+
     unread.value = 2;
     show();
     expect(screen.getByLabelText("2 unread")).toBeInTheDocument();

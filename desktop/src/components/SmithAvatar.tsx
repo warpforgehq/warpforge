@@ -1,7 +1,7 @@
 import { smithColor, smithColorIndex } from "@/lib/smithColors";
 import type { SmithStatus } from "@/lib/smiths";
 import { cn } from "@/lib/utils";
-import { useUi } from "@/store/ui";
+import { useSmithsStore } from "@/store/smiths";
 
 const STATUS_DOT: Record<SmithStatus["kind"], string> = {
   held: "bg-warn",
@@ -20,7 +20,7 @@ const STATUS_TEXT: Record<SmithStatus["kind"], string> = {
 /**
  * A Smith's initial in its colour (a theme palette token), with an optional
  * status dot.
- * @param props.smith the Smith's id and name
+ * @param props.smith the Smith's id, name and colour
  * @param props.status its status, for the dot
  * @param props.size the circle's size class
  * @returns the avatar
@@ -31,12 +31,14 @@ export function SmithAvatar({
   size = "size-6",
   className,
 }: {
-  smith: { id: string; name: string };
+  smith: { id: string; name: string; color?: number };
   status?: SmithStatus;
   size?: string;
   className?: string;
 }) {
-  const index = useUi((state) => smithColorIndex(smith.id, state.smithColors));
+  // A member chip carries only the id and name; the store has the colour.
+  const stored = useSmithsStore((state) => state.smiths[smith.id]?.color);
+  const index = smithColorIndex({ color: smith.color ?? stored, id: smith.id });
   const label = status ? `${smith.name}, ${STATUS_TEXT[status.kind]}` : smith.name;
   return (
     <span role="img" aria-label={label} className={cn("relative inline-flex shrink-0", className)}>

@@ -165,3 +165,18 @@ export function endedTurns(updates: readonly SessionUpdate[]): number {
   for (const update of updates) if (update.kind === "turn_ended") count += 1;
   return count;
 }
+
+/**
+ * What a Smith says it is doing: its thread's status note, else a running
+ * work session's.
+ * @param smith the Smith
+ * @param tasks the snapshot's tasks
+ * @returns the note, or null when none is set
+ */
+export function smithOwnNote(smith: Smith, tasks: TaskInfo[]): string | null {
+  const own = tasks.filter((t) => t.smithId === smith.id && !isSettledTask(t));
+  const thread = own.find((t) => t.id === smith.threadTaskId)?.statusNote?.trim();
+  if (thread) return thread;
+  const working = own.find((t) => t.status === "running" && t.statusNote?.trim());
+  return working?.statusNote?.trim() ?? null;
+}

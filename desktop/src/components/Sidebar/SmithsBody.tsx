@@ -19,7 +19,7 @@ import {
 import { daemon } from "@/daemon";
 import { useSmithUnread, useSmiths } from "@/hooks/useSmiths";
 import { buildConversations, mentionCandidates, userThread } from "@/lib/peerFeed";
-import { smithStatus } from "@/lib/smiths";
+import { smithOwnNote, smithStatus } from "@/lib/smiths";
 import { resolveSmithsProject } from "@/lib/smithsProject";
 import { channelKey, channelUnread, projectChannels } from "@/lib/teamChannels";
 import { cn } from "@/lib/utils";
@@ -98,12 +98,13 @@ function SmithRow({
 }) {
   const status = smithStatus(smith, tasks);
   const unread = useSmithUnread(smith, tasks);
+  // What it needs from you outranks what it says it is doing.
   const note =
     status.kind === "held"
       ? `held: ${status.reasons[0]}`
-      : status.kind === "waiting" || status.kind === "working"
+      : status.kind === "waiting"
         ? status.note
-        : null;
+        : (smithOwnNote(smith, tasks) ?? (status.kind === "working" ? status.note : null));
   return (
     <button
       type="button"

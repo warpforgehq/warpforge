@@ -1,3 +1,4 @@
+import { smithColorIndex } from "@/lib/smithColors";
 import { smithNameError } from "@/lib/smiths";
 import type { Smith, SmithDetail, SmithInput, SmithPatch } from "@/protocol";
 
@@ -15,6 +16,8 @@ export interface SmithFormValues {
   writePaths: string;
   push: boolean;
   createPr: boolean;
+  /** A palette index. */
+  color: number;
   soul: string;
   charter: string;
 }
@@ -31,6 +34,7 @@ export function emptySmithForm(defaults: { project: string; agent: string }): Sm
     agent: defaults.agent,
     allowedProjects: defaults.project ? [defaults.project] : [],
     charter: "",
+    color: 0,
     createPr: false,
     homeProject: defaults.project,
     model: null,
@@ -54,6 +58,7 @@ export function smithFormFrom(detail: SmithDetail): SmithFormValues {
     agent: smith.agent,
     allowedProjects: smith.allowedProjects,
     charter: detail.charter,
+    color: smithColorIndex(smith),
     createPr: smith.permissions.createPr,
     homeProject: smith.homeProject,
     model: smith.model ?? null,
@@ -127,6 +132,7 @@ export function smithInputFrom(values: SmithFormValues): SmithInput {
     allowedProjects: allowed(values),
     budget: budget(values),
     charter: values.charter.trim() ? values.charter : undefined,
+    color: values.color,
     homeProject: values.homeProject,
     model: values.model,
     name: values.name.trim(),
@@ -148,6 +154,7 @@ export function smithPatchFrom(values: SmithFormValues, original: SmithFormValue
   if (values.model !== original.model) patch.model = values.model ?? "";
   if (values.accountId !== original.accountId) patch.accountId = values.accountId ?? "";
   if (values.soul !== original.soul) patch.soul = values.soul;
+  if (values.color !== original.color) patch.color = values.color;
   if (values.charter !== original.charter) patch.charter = values.charter;
   const nextAllowed = allowed(values);
   if (nextAllowed.join("\n") !== allowed(original).join("\n")) patch.allowedProjects = nextAllowed;

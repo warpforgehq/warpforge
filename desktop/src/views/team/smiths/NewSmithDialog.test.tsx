@@ -67,7 +67,7 @@ describe("NewSmithDialog", () => {
     daemonMock.smithDefaults.mockResolvedValue(DEFAULTS);
     daemonMock.createSmith.mockReset();
     setSmiths([smithFixture()]);
-    useUi.setState({ smithColors: {}, teamSelection: null });
+    useUi.setState({ teamSelection: null });
   });
 
   it("shows the daemon's real soul, with the name and the picked voice in it", async () => {
@@ -109,13 +109,13 @@ describe("NewSmithDialog", () => {
         allowedProjects: ["api"],
         budget: {},
         charter: DEFAULTS.charter,
+        color: 2,
         homeProject: "api",
         name: "Grace",
         permissions: { createPr: false, push: false, writePaths: [] },
       }),
     );
     expect(daemonMock.createSmith.mock.calls[0]![0].soul).toContain("Careful and thorough.");
-    expect(useUi.getState().smithColors).toStrictEqual({ sm_9: 2 });
     expect(useUi.getState().teamSelection).toStrictEqual({ id: "sm_9", kind: "teammate" });
     expect(onClose).toHaveBeenCalled();
   });
