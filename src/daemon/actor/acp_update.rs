@@ -1,6 +1,6 @@
 use warpforge_protocol as wire;
 
-use crate::daemon::acp::{AcpUpdate, TurnInitiator};
+use crate::daemon::acp::AcpUpdate;
 use crate::daemon::actor::transcript::StageText;
 use crate::daemon::actor::{Daemon, Event};
 use crate::daemon::task::TaskStatus;
@@ -241,7 +241,7 @@ impl Daemon {
                 // A scheduled run is closed by its turn ending, so a turn cut
                 // short has to close it too — otherwise the run stays Running
                 // forever. A person's own turn in that task is not the run's.
-                if interrupted && initiator != TurnInitiator::User {
+                if interrupted && initiator.feeds_automation() {
                     self.automation_task_interrupted(&task_id);
                 }
                 // If we are an orchestrator whose sub-agents finished mid-turn,

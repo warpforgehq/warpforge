@@ -745,6 +745,8 @@ pub enum Command {
         text: String,
         attachments: Vec<wire::PromptAttachment>,
         initiator: crate::daemon::acp::TurnInitiator,
+        /// The feed record a `Peer` turn delivers (ADR 0026).
+        peer_message: Option<u64>,
         reply: oneshot::Sender<Result<(), String>>,
     },
     /// Force-send: end the running turn and deliver the session's queued

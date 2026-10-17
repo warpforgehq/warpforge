@@ -84,6 +84,7 @@ impl Daemon {
             text,
             attachments: Vec::new(),
             initiator: crate::daemon::acp::TurnInitiator::User,
+            peer_message: None,
             reply: tx,
         })
         .await;

@@ -59,6 +59,18 @@ pub enum TurnInitiator {
     System,
     /// A scheduled automation run dispatched into an existing session.
     Automation,
+    /// A direct message from a peer session (ADR 0026).
+    Peer,
+}
+
+impl TurnInitiator {
+    /// Only a scheduled run's own turns close it: its opening prompt in a task
+    /// it created, or its prompt into a reused session. A person's or a
+    /// peer's turn in that task is not the run's (ADR 0026 invariant 5).
+    /// @returns whether this turn's end may finish an automation run
+    pub fn feeds_automation(self) -> bool {
+        matches!(self, Self::Automation | Self::Initial)
+    }
 }
 
 /// A dispatched prompt as the transcript records it. Built when the prompt
