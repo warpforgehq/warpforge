@@ -121,6 +121,9 @@ impl Daemon {
             .tasks
             .get_mut(task_id)
             .ok_or_else(|| format!("unknown task {task_id}"))?;
+        if !is_peer_visible(task) {
+            return Err(super::HIDDEN_SELF.into());
+        }
         task.status_note = clip_note(text);
         Ok(())
     }
