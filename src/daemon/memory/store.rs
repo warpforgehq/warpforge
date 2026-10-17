@@ -9,7 +9,39 @@ use crate::daemon::memory_embed::{f32_to_blob, EmbedEngine};
 use crate::daemon::memory_types::{Memory, MemoryError};
 use crate::daemon::task::now_secs;
 
+/// A Smith's journal is the scope `smith:<id>` (ADR 0027).
+pub const SMITH_SCOPE_PREFIX: &str = "smith:";
+
 impl MemoryStore {
+    /// Write to a Smith's journal. The caller has checked the writing task
+    /// runs as that Smith (ADR 0027 invariant 7); `store` refuses the scope.
+    /// @param smith_id the Smith
+    /// @param content the entry
+    /// @param kind the memory kind
+    /// @param tags its tags
+    /// @param created_by the task that wrote it
+    /// @returns the stored entry
+    pub fn store_journal(
+        &self,
+        smith_id: &str,
+        content: &str,
+        kind: Option<&str>,
+        tags: Option<&[String]>,
+        created_by: Option<&str>,
+    ) -> Result<Memory, MemoryError> {
+        let conn = self.guard()?;
+        Self::store_on_conn(
+            conn,
+            &self.embed,
+            None,
+            format!("{SMITH_SCOPE_PREFIX}{smith_id}"),
+            content,
+            kind,
+            tags,
+            created_by,
+        )
+    }
+
     fn resolve_write_scope(
         &self,
         scope: Option<&str>,
@@ -21,6 +53,11 @@ impl MemoryStore {
                     return Err(MemoryError::Scope("global memory is disabled".into()));
                 }
                 return Ok("global".into());
+            }
+            if s.starts_with(SMITH_SCOPE_PREFIX) {
+                return Err(MemoryError::Scope(
+                    "a Smith's journal is written only by that Smith's own sessions".into(),
+                ));
             }
             if s.starts_with("session") {
                 return Err(MemoryError::Scope(
@@ -46,6 +83,13 @@ impl MemoryStore {
     /// an explicit `"global"`/`"project"` whose scope is disabled is an error
     /// rather than silently coercing to the other scope.
     pub(super) fn scope_predicate(&self, scope: Option<&str>) -> Result<String, MemoryError> {
+        if let Some(smith) = scope.and_then(|s| s.strip_prefix(SMITH_SCOPE_PREFIX)) {
+            let valid = !smith.is_empty() && smith.chars().all(|c| c.is_alphanumeric() || c == '_');
+            if !valid {
+                return Err(MemoryError::Scope("invalid Smith journal scope".into()));
+            }
+            return Ok(format!("m.scope = '{SMITH_SCOPE_PREFIX}{smith}'"));
+        }
         let (want_global, want_project) = match scope {
             Some("global") => (true, false),
             Some("project") => (false, true),

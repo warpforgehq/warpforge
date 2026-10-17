@@ -303,6 +303,7 @@ impl Daemon {
                         origin: None,
                         start: true,
                         advisor: None,
+                        smith_id: None,
                         reply: tx,
                     })
                     .await

@@ -37,6 +37,12 @@ impl Daemon {
             info.kind = wire::PeerKind::Smith;
             info.name = Some(smith.name.clone());
             info.title = smith.name.clone();
+        } else if let Some(smith) = task
+            .smith
+            .as_ref()
+            .and_then(|record| self.smiths.smiths.get(&record.smith_id))
+        {
+            info.name = Some(smith.name.clone());
         }
         info
     }

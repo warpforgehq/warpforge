@@ -33,9 +33,10 @@ pub(super) async fn memory_search(
     scope: Option<String>,
     limit: Option<u32>,
     mode: Option<String>,
+    task_id: Option<String>,
 ) -> Result<serde_json::Value, wire::RpcError> {
     handle
-        .memory_search(&query, scope.as_deref(), limit, mode.as_deref())
+        .memory_search(&query, scope.as_deref(), limit, mode.as_deref(), task_id)
         .await
         .map_err(memory_error)
 }
@@ -46,9 +47,10 @@ pub(super) async fn memory_list(
     kind: Option<String>,
     limit: Option<u32>,
     offset: Option<u32>,
+    task_id: Option<String>,
 ) -> Result<serde_json::Value, wire::RpcError> {
     handle
-        .memory_list(scope.as_deref(), kind.as_deref(), limit, offset)
+        .memory_list(scope.as_deref(), kind.as_deref(), limit, offset, task_id)
         .await
         .map_err(memory_error)
 }

@@ -140,6 +140,8 @@ pub enum AcpUpdate {
         echo: Option<PromptEcho>,
         /// The peer messages the turn delivers; marked delivered only now.
         peer: crate::daemon::prompt::PeerDelivery,
+        /// A Smith update the turn carries; recorded only now.
+        smith: Option<crate::daemon::prompt::SmithDelivery>,
     },
     TurnEnded {
         run_id: u64,
@@ -235,6 +237,7 @@ pub async fn generate_text(
         has_images: false,
         text: prompt,
         peer: Default::default(),
+        smith: None,
     };
     let (tx, mut rx) = mpsc::unbounded_channel();
     let handle = spawn_acp_session(
@@ -249,6 +252,7 @@ pub async fn generate_text(
         model,
         HashMap::new(),
         env,
+        None,
     )
     .map_err(|e| format!("failed to start agent: {e}"))?;
 

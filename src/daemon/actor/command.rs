@@ -202,6 +202,8 @@ pub enum Command {
         start: bool,
         /// The agent this task may consult through `ask_advisor`.
         advisor: Option<wire::AdvisorPick>,
+        /// The Smith the task runs as (ADR 0027).
+        smith_id: Option<String>,
         reply: oneshot::Sender<String>,
     },
     /// Create a workflow-pipeline parent task and start its first stage.
@@ -973,6 +975,8 @@ pub enum Command {
         scope: Option<String>,
         limit: Option<u32>,
         mode: Option<String>,
+        /// The session asking, `None` for the user.
+        task_id: Option<String>,
         reply: oneshot::Sender<Result<serde_json::Value, crate::daemon::memory::MemoryError>>,
     },
     MemoryList {
@@ -980,6 +984,7 @@ pub enum Command {
         kind: Option<String>,
         limit: Option<u32>,
         offset: Option<u32>,
+        task_id: Option<String>,
         reply: oneshot::Sender<Result<serde_json::Value, crate::daemon::memory::MemoryError>>,
     },
     MemoryUpdate {

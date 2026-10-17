@@ -224,6 +224,21 @@ impl Daemon {
                 .unwrap_or_else(|| ".".to_string())
         };
         let command = self.resolve_agent_command(project, agent);
+        if let Some(reason) = self.smith_start_refusal(task_id) {
+            self.drop_session(task_id);
+            if let Some(task) = self.tasks.get_mut(task_id) {
+                task.blocked_reason = Some(reason);
+                task.set_status(TaskStatus::Blocked);
+                let updated = task.clone();
+                self.persist(&updated);
+                self.emit(Event::TaskUpdated(updated));
+            }
+            return;
+        }
+        let (smith_meta, smith_prefix, smith_delivery) = self
+            .smith_session_start(task_id, &command, !prompt.is_empty())
+            .map(|start| (start.meta, start.prefix, start.delivery))
+            .unwrap_or_default();
         let mut env = self.resolve_agent_env(agent, self.spawn_account(task_id));
         // Bind the task to the account it is starting on, so a later resume goes
         // back to the same home even after the active account changed. Recorded
@@ -313,15 +328,21 @@ impl Daemon {
             Some(ctx) => format!("{ctx}\n\n{base_prompt}"),
             None => base_prompt,
         };
+        let full_prompt = format!("{smith_prefix}{full_prompt}");
         let prepared_prompt = match crate::daemon::prompt::prepare_prompt(
             std::path::Path::new(&cwd),
             full_prompt,
             &attachments,
         ) {
-            Ok(prepared) if !prompt.is_empty() => {
-                self.peers_prepare(task_id, TurnInitiator::Initial, None, prepared)
+            Ok(prepared) => {
+                let mut prepared = if prompt.is_empty() {
+                    prepared
+                } else {
+                    self.peers_prepare(task_id, TurnInitiator::Initial, None, prepared)
+                };
+                prepared.smith = smith_delivery;
+                prepared
             }
-            Ok(prompt) => prompt,
             Err(error) => {
                 if let Some(task) = self.tasks.get_mut(task_id) {
                     task.blocked_reason = Some(error);
@@ -354,6 +375,7 @@ impl Daemon {
             default_model,
             config_overrides,
             env,
+            smith_meta,
         ) {
             Ok(handle) => {
                 self.sessions.insert(task_id.to_string(), handle);

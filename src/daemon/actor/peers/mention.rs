@@ -112,20 +112,36 @@ pub(crate) fn resolve_mentions(
 
 impl Daemon {
     /// The visible sessions of `project` a mention may name, `except` the
-    /// sender.
+    /// sender. A Smith's name comes before any label (ADR 0027): a session
+    /// whose label is a Smith's name is mentionable by its id only.
     pub(super) fn peers_mention_candidates(
         &self,
         project: &str,
         except: Option<&str>,
     ) -> Vec<Candidate> {
         let now = now_secs();
-        self.tasks
+        let entries: Vec<wire::PeerInfo> = self
+            .tasks
             .values()
             .filter(|task| Some(task.id.as_str()) != except)
             .filter(|task| self.peer_visible(task, project))
-            .map(|task| Candidate {
-                id: task.id.clone(),
-                label: wire::peer_label(&self.peer_entry(task, now)),
+            .map(|task| self.peer_entry(task, now))
+            .collect();
+        let smith_names: Vec<String> = entries
+            .iter()
+            .filter(|entry| entry.kind == wire::PeerKind::Smith)
+            .map(|entry| wire::peer_label(entry).to_lowercase())
+            .collect();
+        entries
+            .iter()
+            .map(|entry| {
+                let label = wire::peer_label(entry);
+                let shadowed = entry.kind != wire::PeerKind::Smith
+                    && smith_names.contains(&label.to_lowercase());
+                Candidate {
+                    id: entry.id.clone(),
+                    label: if shadowed { String::new() } else { label },
+                }
             })
             .collect()
     }

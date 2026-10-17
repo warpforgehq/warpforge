@@ -93,6 +93,15 @@ pub struct PreparedPrompt {
     pub text: String,
     /// The peer messages this prompt delivers when its turn starts.
     pub peer: PeerDelivery,
+    /// The Smith soul and journal a `<smith_update>` in it carries (ADR 0027).
+    pub smith: Option<SmithDelivery>,
+}
+
+/// What a `<smith_update>` told the session, recorded when its turn starts.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SmithDelivery {
+    pub soul_rev: String,
+    pub journal_seen: u64,
 }
 
 impl PreparedPrompt {
@@ -110,6 +119,9 @@ impl PreparedPrompt {
             merged.summaries.extend(part.summaries);
             merged.has_images |= part.has_images;
             merged.peer.absorb(part.peer);
+            if part.smith.is_some() {
+                merged.smith = part.smith;
+            }
             if !part.text.is_empty() {
                 texts.push(part.text);
             }
@@ -211,5 +223,6 @@ pub fn prepare_prompt(
         has_images: image_count > 0,
         text,
         peer: PeerDelivery::default(),
+        smith: None,
     })
 }

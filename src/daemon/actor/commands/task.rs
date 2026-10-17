@@ -24,6 +24,7 @@ impl Daemon {
                 origin,
                 start,
                 advisor,
+                smith_id,
                 reply,
             } => {
                 // Conversation branches tag the source task they were forked
@@ -36,6 +37,10 @@ impl Daemon {
                 task.parent_task_id = parent_task_id;
                 task.backlog_item_id = backlog_item_id;
                 task.origin = origin.clone();
+                if let Some(smith) = smith_id.and_then(|id| self.smiths_get(&id)) {
+                    task.account_id = smith.account_id.clone();
+                    task.smith = Some(crate::daemon::task::TaskSmith::new(&smith.id));
+                }
                 task.advisor = advisor.map(|pick| warpforge_protocol::TaskAdvisor {
                     agent: pick.agent,
                     model: pick.model,
@@ -253,6 +258,7 @@ impl Daemon {
                     self.persist(&updated);
                     self.emit(Event::TaskUpdated(updated));
                 }
+                self.smith_task_settled(&id);
 
                 // Archive every direct child so the whole group moves to history.
                 // A child can itself be a live workflow pipeline (spawned via

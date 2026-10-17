@@ -444,6 +444,7 @@ async fn a_turn_start_from_a_replaced_session_delivers_nothing() {
                     held: vec![held.id],
                     ..Default::default()
                 },
+                smith: None,
             },
         })
         .await;

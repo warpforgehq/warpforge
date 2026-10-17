@@ -154,6 +154,7 @@ pub(super) fn method_is_user_only(method: &wire::Method) -> bool {
             | SmithsDelete { .. }
             | SmithsAcceptIdentity { .. }
             | SmithsRevertIdentity { .. }
+            | SmithsStartWork { .. }
     )
 }
 

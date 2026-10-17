@@ -283,6 +283,7 @@ impl Daemon {
                 has_images: false,
                 text: nudge,
                 peer: Default::default(),
+                smith: None,
             },
             TurnInitiator::System,
         );

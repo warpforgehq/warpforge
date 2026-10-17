@@ -77,6 +77,7 @@ impl DaemonHandle {
             origin: None,
             start: true,
             advisor: None,
+            smith_id: None,
             reply: tx,
         })
         .await;
@@ -115,6 +116,7 @@ impl DaemonHandle {
             origin: None,
             start: false,
             advisor: None,
+            smith_id: None,
             reply: tx,
         })
         .await;

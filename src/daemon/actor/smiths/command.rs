@@ -43,6 +43,25 @@ pub enum SmithCommand {
         id: String,
         reply: Reply<wire::SmithDetail>,
     },
+    /// A work session as the Smith, from the user (ADR 0027).
+    StartWork {
+        id: String,
+        project: String,
+        brief: String,
+        backlog_item_id: Option<String>,
+        worktree: bool,
+        reply: Reply<String>,
+    },
+    /// Test-only: give the daemon a throwaway memory store.
+    #[cfg(test)]
+    UseMemory {
+        path: std::path::PathBuf,
+    },
+    /// Test-only: say whether the Claude adapter reads `_meta.systemPrompt`.
+    #[cfg(test)]
+    SetClaudeMeta {
+        on: bool,
+    },
     /// A new Smith's identity repo was written, or could not be.
     Created {
         smith: Box<wire::Smith>,

@@ -10,7 +10,7 @@ use crate::daemon::actor::{Command, Daemon, Event};
 use crate::daemon::runtime::Write as PersistWrite;
 use crate::daemon::smiths::identity::{self, Identity, Revs};
 use crate::daemon::smiths::{check_charter, check_name, soul_template, CHARTER_TEMPLATE};
-use crate::daemon::task::{now_secs, Task, TaskStatus};
+use crate::daemon::task::{now_secs, Task, TaskSmith, TaskStatus};
 
 type Reply<T> = oneshot::Sender<Result<T, String>>;
 
@@ -168,6 +168,7 @@ impl Daemon {
         thread.origin = Some(SMITH_ORIGIN.to_string());
         thread.model = smith.model.clone();
         thread.account_id = smith.account_id.clone();
+        thread.smith = Some(TaskSmith::new(&smith.id));
         thread.set_status(TaskStatus::Waiting);
         smith.thread_task_id = thread.id.clone();
         smith.soul_rev = revs.soul;
@@ -175,6 +176,9 @@ impl Daemon {
         self.tasks.insert(thread.id.clone(), thread.clone());
         self.persist(&thread);
         self.emit(Event::TaskCreated(thread));
+        self.smiths
+            .souls
+            .insert(smith.id.clone(), files.soul.clone());
         self.smith_put(smith.clone());
         let _ = reply.send(Ok(detail(smith, files)));
     }
@@ -253,6 +257,7 @@ impl Daemon {
         };
         smith.soul_rev = revs.soul;
         smith.charter_rev = revs.charter;
+        self.smiths.souls.insert(id.to_string(), files.soul.clone());
         match patch {
             Some(patch) => apply(&mut smith, patch),
             None => set_hold(&mut smith, wire::SmithHold::IdentityChanged, false),
@@ -293,6 +298,7 @@ impl Daemon {
             .smiths
             .remove(id)
             .ok_or_else(|| format!("unknown Smith {id}"))?;
+        self.smiths.souls.remove(id);
         self.persist
             .write(PersistWrite::DeleteSmith(id.to_string()));
         self.persist

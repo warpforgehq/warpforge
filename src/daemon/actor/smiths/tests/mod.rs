@@ -2,6 +2,9 @@ use std::path::{Path, PathBuf};
 
 use warpforge_protocol as wire;
 
+mod journal;
+mod sessions;
+
 use super::{SmithCommand, SMITH_ORIGIN};
 use crate::daemon::actor::{Command, Daemon, DaemonHandle, PeerCommand};
 use crate::daemon::smiths::identity;

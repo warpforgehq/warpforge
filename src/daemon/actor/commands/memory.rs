@@ -13,19 +13,30 @@ impl Daemon {
                 created_by,
                 reply,
             } => {
-                let result = self
-                    .memory
-                    .store(
+                let journal = scope
+                    .as_deref()
+                    .and_then(|s| s.strip_prefix(crate::daemon::memory::SMITH_SCOPE_PREFIX))
+                    .map(str::to_string);
+                let result = match journal {
+                    Some(smith_id) => self.memory_journal_write(
+                        &smith_id,
+                        &content,
+                        kind.as_deref(),
+                        tags.as_deref(),
+                        created_by.as_deref(),
+                    ),
+                    None => self.memory.store(
                         &content,
                         scope.as_deref(),
                         kind.as_deref(),
                         tags.as_deref(),
                         project_id.as_deref(),
                         created_by.as_deref(),
-                    )
-                    .and_then(|m| {
-                        serde_json::to_value(m).map_err(crate::daemon::memory::MemoryError::from)
-                    });
+                    ),
+                };
+                let result = result.and_then(|m| {
+                    serde_json::to_value(m).map_err(crate::daemon::memory::MemoryError::from)
+                });
                 let _ = reply.send(result);
             }
             Command::MemorySearch {
@@ -33,11 +44,16 @@ impl Daemon {
                 scope,
                 limit,
                 mode,
+                task_id,
                 reply,
             } => {
                 let result = self
-                    .memory
-                    .search(&query, scope.as_deref(), limit, mode.as_deref())
+                    .memory_reader_check(task_id.as_deref(), scope.as_deref())
+                    .and_then(|()| {
+                        self.memory
+                            .search(&query, scope.as_deref(), limit, mode.as_deref())
+                    })
+                    .map(|found| self.memory_visible_to(task_id.as_deref(), found))
                     .and_then(|v| {
                         serde_json::to_value(v).map_err(crate::daemon::memory::MemoryError::from)
                     });
@@ -48,11 +64,16 @@ impl Daemon {
                 kind,
                 limit,
                 offset,
+                task_id,
                 reply,
             } => {
                 let result = self
-                    .memory
-                    .list(scope.as_deref(), kind.as_deref(), limit, offset)
+                    .memory_reader_check(task_id.as_deref(), scope.as_deref())
+                    .and_then(|()| {
+                        self.memory
+                            .list(scope.as_deref(), kind.as_deref(), limit, offset)
+                    })
+                    .map(|found| self.memory_visible_to(task_id.as_deref(), found))
                     .and_then(|v| {
                         serde_json::to_value(v).map_err(crate::daemon::memory::MemoryError::from)
                     });

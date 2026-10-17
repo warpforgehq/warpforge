@@ -3,6 +3,42 @@
 
 pub mod identity;
 
+/// The first Claude adapter release that reads `_meta.systemPrompt` on
+/// `session/new` and `session/load`.
+const META_SINCE: (u64, u64, u64) = (0, 91, 0);
+
+/// Whether the `claude-agent-acp` on `PATH` takes `_meta.systemPrompt`: its
+/// package version is at least [`META_SINCE`]. Blocks on the filesystem.
+/// @returns false when it cannot tell
+pub fn claude_adapter_reads_meta() -> bool {
+    let Some(path) = std::env::var_os("PATH") else {
+        return false;
+    };
+    std::env::split_paths(&path)
+        .map(|dir| dir.join("claude-agent-acp"))
+        .find(|bin| bin.exists())
+        .and_then(|bin| std::fs::canonicalize(bin).ok())
+        .and_then(|bin| adapter_version(&bin))
+        .is_some_and(|version| version >= META_SINCE)
+}
+
+/// The version in the nearest `package.json` above the adapter's script.
+fn adapter_version(script: &std::path::Path) -> Option<(u64, u64, u64)> {
+    script.ancestors().skip(1).find_map(|dir| {
+        let text = std::fs::read_to_string(dir.join("package.json")).ok()?;
+        let manifest: serde_json::Value = serde_json::from_str(&text).ok()?;
+        if manifest["name"] != "@agentclientprotocol/claude-agent-acp" {
+            return None;
+        }
+        parse_version(manifest["version"].as_str()?)
+    })
+}
+
+fn parse_version(text: &str) -> Option<(u64, u64, u64)> {
+    let mut parts = text.split(['.', '-']).map(|p| p.parse::<u64>().ok());
+    Some((parts.next()??, parts.next()??, parts.next()??))
+}
+
 /// Where a deleted Smith's identity repo is moved, under the smiths root.
 pub const DELETED_DIR: &str = ".deleted";
 
@@ -61,6 +97,21 @@ mod tests {
         for bad in ["", "2pac", "Ada Lovelace", "a·b", "@Ada", &"x".repeat(33)] {
             assert!(check_name(bad).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn the_adapter_version_is_read_from_its_package() {
+        let dir = tempfile::tempdir().unwrap();
+        let dist = dir.path().join("dist");
+        std::fs::create_dir_all(&dist).unwrap();
+        let manifest = |version: &str| {
+            format!(r#"{{"name":"@agentclientprotocol/claude-agent-acp","version":"{version}"}}"#)
+        };
+        std::fs::write(dir.path().join("package.json"), manifest("0.91.0")).unwrap();
+        assert_eq!(adapter_version(&dist.join("index.js")), Some((0, 91, 0)));
+        std::fs::write(dir.path().join("package.json"), manifest("0.90.3-beta")).unwrap();
+        assert!(adapter_version(&dist.join("index.js")).unwrap() < META_SINCE);
+        assert_eq!(parse_version("1.2"), None);
     }
 
     #[test]
