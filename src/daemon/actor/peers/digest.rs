@@ -25,6 +25,8 @@ const DIGEST_LABEL: &str = "Team digest";
 struct Item {
     id: u64,
     from: String,
+    /// The sending task; `None` for the user.
+    task: Option<String>,
     channel: bool,
     text: String,
 }
@@ -90,7 +92,10 @@ impl Daemon {
         if let Some(record) = direct {
             let from = self.peers_label(record.from_task.as_deref());
             let item = PeerItem {
-                from: &from,
+                from: record
+                    .from_task
+                    .as_deref()
+                    .map(|task| (from.as_str(), task)),
                 channel: false,
                 text: &record.text,
             };
@@ -158,6 +163,7 @@ impl Daemon {
         let item = |m: &wire::PeerMessage| Item {
             id: m.id,
             from: self.peers_label(m.from_task.as_deref()),
+            task: m.from_task.clone(),
             channel: m.to_task.is_none(),
             text: m.text.clone(),
         };
@@ -185,7 +191,7 @@ impl Daemon {
         let framed: Vec<PeerItem<'_>> = kept
             .iter()
             .map(|i| PeerItem {
-                from: &i.from,
+                from: i.task.as_deref().map(|task| (i.from.as_str(), task)),
                 channel: i.channel,
                 text: &i.text,
             })
@@ -213,6 +219,7 @@ mod tests {
         Item {
             id,
             from: "peer".into(),
+            task: Some("t_p".into()),
             channel,
             text: text.into(),
         }
