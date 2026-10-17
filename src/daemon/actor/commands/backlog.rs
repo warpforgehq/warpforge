@@ -133,6 +133,13 @@ impl Daemon {
                             updated_at: now,
                             task_id: None,
                         };
+                        if let Some(refusal) = self.smith_assignee_refusal(
+                            &item.source,
+                            &item.project,
+                            item.assignee.as_deref(),
+                        ) {
+                            anyhow::bail!(refusal);
+                        }
                         if let Some(path) = yaml_path {
                             crate::daemon::backlog::write(&path, &item)?;
                         } else {
@@ -165,6 +172,13 @@ impl Daemon {
                             None => store.get_backlog_item(&patch.item_id)?,
                         }
                         .ok_or_else(|| anyhow::anyhow!("backlog item not found"))?;
+                        if let Some(refusal) = self.smith_assignee_refusal(
+                            &item.source,
+                            &item.project,
+                            patch.assignee.as_deref(),
+                        ) {
+                            anyhow::bail!(refusal);
+                        }
                         patch.apply(&mut item);
                         item.updated_at = crate::daemon::task::now_secs();
                         match &path {

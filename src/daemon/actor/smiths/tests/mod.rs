@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use warpforge_protocol as wire;
 
+mod assign;
 mod journal;
 mod sessions;
 

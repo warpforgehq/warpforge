@@ -30,6 +30,7 @@ pub(super) async fn dispatch(
             let proj = project_of(args, project)?;
             let tracker = choice(args, "tracker", &TRACKERS)?;
             let body = args.get("body").and_then(Value::as_str).unwrap_or_default();
+            let assignee = assignee_of(client, args).await?;
             let result = client
                 .request(
                     "backlog.create",
@@ -39,7 +40,8 @@ pub(super) async fn dispatch(
                         "body": body,
                         "priority": args.get("priority").and_then(Value::as_str).unwrap_or_default(),
                         "status": args.get("status").and_then(Value::as_str).unwrap_or_default(),
-                        "source": tracker.unwrap_or("local")
+                        "source": tracker.unwrap_or("local"),
+                        "assignee": assignee,
                     }),
                 )
                 .await?;
@@ -85,12 +87,15 @@ pub(super) async fn dispatch(
             if let Some(priority) = choice(args, "priority", &PRIORITIES)? {
                 patch.insert("priority".into(), priority.into());
             }
+            if let Some(assignee) = assignee_of(client, args).await? {
+                patch.insert("assignee".into(), assignee.into());
+            }
             if text(args, "title").is_none() && patch.contains_key("title") {
                 return Err(anyhow!("'title' cannot be empty"));
             }
             if patch.is_empty() {
                 return Err(anyhow!(
-                    "nothing to update: give title, body, status or priority"
+                    "nothing to update: give title, body, status, priority or assignee"
                 ));
             }
             let item = find(client, &proj, args).await?;
@@ -300,4 +305,28 @@ fn detail(item: &Value) -> String {
     lines.push(String::new());
     lines.push(if body.is_empty() { "(no body)" } else { body }.to_string());
     lines.join("\n")
+}
+
+/// The `assignee` argument as the daemon stores it: `@Name` becomes the
+/// Smith's `smith:<id>`, so a rename never orphans the assignment.
+async fn assignee_of(client: &mut DaemonClient, args: &Value) -> Result<Option<String>> {
+    let Some(raw) = args.get("assignee").and_then(Value::as_str).map(str::trim) else {
+        return Ok(None);
+    };
+    let Some(name) = raw.strip_prefix('@') else {
+        return Ok(Some(raw.to_string()));
+    };
+    let listed = client.request("smiths.list", json!({})).await?;
+    listed["smiths"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|smith| {
+            smith["name"]
+                .as_str()
+                .is_some_and(|n| n.eq_ignore_ascii_case(name))
+        })
+        .and_then(|smith| smith["id"].as_str())
+        .map(|id| Some(format!("smith:{id}")))
+        .ok_or_else(|| anyhow!("no Smith is called {name}"))
 }

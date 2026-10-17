@@ -2,6 +2,10 @@ use serde_json::{json, Value};
 
 use crate::mcp::handle::{PRIORITIES, STATUSES, TRACKERS};
 
+const ASSIGNEE: &str =
+    "Who the item is for: @Name for a Smith (local items only; assigning starts \
+    nothing), a person's login, or empty to clear it.";
+
 pub(super) fn defs() -> Vec<Value> {
     vec![
         json!({
@@ -38,6 +42,10 @@ pub(super) fn defs() -> Vec<Value> {
                     "status": {
                         "type": "string",
                         "description": "Optional backlog status. Defaults to todo."
+                    },
+                    "assignee": {
+                        "type": "string",
+                        "description": ASSIGNEE
                     }
                 }
             }
@@ -98,7 +106,8 @@ pub(super) fn defs() -> Vec<Value> {
                     "title": { "type": "string", "description": "New title." },
                     "body": { "type": "string", "description": "New body. Replaces the whole body." },
                     "status": { "type": "string", "enum": STATUSES, "description": "New status." },
-                    "priority": { "type": "string", "enum": PRIORITIES, "description": "New priority." }
+                    "priority": { "type": "string", "enum": PRIORITIES, "description": "New priority." },
+                    "assignee": { "type": "string", "description": ASSIGNEE }
                 }
             }
         }),
