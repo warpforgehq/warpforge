@@ -1,6 +1,7 @@
 import type { PeerMessage, Smith, TaskInfo } from "../protocol";
 import { startsMention } from "./peerMentions";
 import { taskLabel } from "./taskLabel";
+import { channelKey } from "./teamChannels";
 
 /** How the feed names the user as a sender. */
 export const USER_LABEL = "You";
@@ -33,6 +34,8 @@ export interface Conversation {
   parties: [string | null, string | null] | null;
   records: PeerMessage[];
   lastAt: number;
+  /** The named channel of a channel thread; absent for `#general`. */
+  channelId?: string;
 }
 
 /**
@@ -40,7 +43,7 @@ export interface Conversation {
  * @returns the key of the thread it belongs to
  */
 export function conversationKey(record: PeerMessage): string {
-  if (!record.toTask) return `${record.project}::team`;
+  if (!record.toTask) return channelKey(record.project, record.channelId);
   const [a, b] = [record.fromTask ?? "", record.toTask].sort();
   return `${record.project}::dm::${a}|${b}`;
 }
@@ -97,6 +100,7 @@ export function buildConversations(
         parties,
         project: record.project,
         records: [],
+        ...(!record.toTask && record.channelId ? { channelId: record.channelId } : {}),
       };
       byKey.set(key, conversation);
     }

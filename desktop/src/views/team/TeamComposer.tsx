@@ -14,11 +14,14 @@ import {
 } from "@/lib/peerFeed";
 import { resolveMentions } from "@/lib/peerMentions";
 import { cn } from "@/lib/utils";
+import type { Channel } from "@/protocol";
 
 const MENU_LIMIT = 8;
 
 interface Props {
   project: string;
+  /** The named channel a post goes to; null for `#general`. */
+  channel?: Channel | null;
   /** The sessions a channel post can @mention. */
   candidates: MentionCandidate[];
   /** Set for a direct thread: the sessions the user can message in it. */
@@ -30,7 +33,7 @@ interface Props {
  * Writes to the team: a channel post (each @mention is handed the post as the
  * user's prompt), or a direct message to one session of a thread.
  */
-export function TeamComposer({ project, candidates, targets, onStartSession }: Props) {
+export function TeamComposer({ project, channel, candidates, targets, onStartSession }: Props) {
   const [text, setText] = useState("");
   const [caret, setCaret] = useState(0);
   const [active, setActive] = useState(0);
@@ -86,7 +89,7 @@ export function TeamComposer({ project, candidates, targets, onStartSession }: P
     try {
       const result = to
         ? await daemon.messageSession(to.id, body)
-        : await daemon.postToTeam(project, body);
+        : await daemon.postToTeam(project, body, channel?.id);
       setText("");
       setCaret(0);
       if (result.notice) toast(result.notice);
@@ -182,7 +185,7 @@ export function TeamComposer({ project, candidates, targets, onStartSession }: P
         placeholder={
           direct
             ? `Message ${to?.label ?? "the session"} — it arrives as your prompt`
-            : "Post to the channel. @mention a session or a smith to hand it the work."
+            : `Post to #${channel?.name ?? "general"}. @mention a session or a smith to hand it the work.`
         }
         onChange={(event) => {
           setText(event.target.value);

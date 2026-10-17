@@ -8,6 +8,7 @@ import { type Conversation, type MentionCandidate, userWritesIn } from "@/lib/pe
 import type { PeerControls, PeerMessage } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
 
+import { ChannelControls } from "./channels/ChannelControls";
 import { FeedItem } from "./FeedItem";
 import { TeamComposer } from "./TeamComposer";
 
@@ -46,6 +47,9 @@ export function Thread({
 }: Props) {
   const controls = usePeersStore((state) => state.controls);
   const projectPaused = controls.pausedProjects.includes(conversation.project);
+  const channel = usePeersStore((state) =>
+    conversation.channelId ? state.channels[conversation.channelId] : undefined,
+  );
   const listRef = useRef<HTMLOListElement>(null);
   const following = useRef(true);
   const shownKey = useRef<string | null>(null);
@@ -83,7 +87,7 @@ export function Thread({
         {conversation.kind === "team" ? (
           <>
             <Hash aria-hidden className="size-4 text-muted-foreground" />
-            <h2 className="text-sm font-medium">general</h2>
+            <h2 className="text-sm font-medium">{channel?.name ?? "general"}</h2>
             <span className="text-xs text-muted-foreground">{project}</span>
           </>
         ) : (
@@ -92,7 +96,7 @@ export function Thread({
           </h2>
         )}
         <div className="ml-auto flex flex-wrap gap-1">
-          {conversation.kind === "team" && (
+          {conversation.kind === "team" && !conversation.channelId && (
             <Button
               type="button"
               variant="ghost"
@@ -133,6 +137,7 @@ export function Thread({
             );
           })}
         </div>
+        {channel && <ChannelControls channel={channel} />}
       </header>
       <ol
         ref={listRef}
@@ -160,6 +165,7 @@ export function Thread({
         <TeamComposer
           key={conversation.key}
           project={project}
+          channel={conversation.kind === "team" ? (channel ?? null) : undefined}
           candidates={candidates}
           targets={
             conversation.kind === "dm"

@@ -64,6 +64,8 @@ export interface NavState {
   teamSelection: TeamSelection | null;
   /** Unix seconds each teammate's page was last open, by Smith id. */
   teamSmithSeenAt: Record<string, number>;
+  /** Unix seconds each channel was last open, by its feed key. */
+  teamChannelSeenAt: Record<string, number>;
 
   setView: (v: GlobalView) => void;
   /** Land on the Tasks half of the sidebar: `validTaskId` if the caller found
@@ -96,6 +98,7 @@ export interface NavState {
   /** Show a channel, thread or Smith in the Smiths area, and go there. */
   openTeam: (selection: TeamSelection | null) => void;
   markSmithSeen: (id: string, at: number) => void;
+  markChannelSeen: (key: string, at: number) => void;
 }
 
 export const createNavSlice: UiSlice<NavState> = (set) => ({
@@ -118,6 +121,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   sidebarMode: "tasks",
   teamSelection: null,
   teamSmithSeenAt: {},
+  teamChannelSeenAt: {},
 
   setView: (view) => set({ openTaskId: null, openTaskNav: null, view }),
   selectTasksSegment: (validTaskId) =>
@@ -155,6 +159,8 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       lastTaskId: openTaskId,
     }),
   clearOpenTaskNav: () => set({ openTaskNav: null }),
+  markChannelSeen: (key, at) =>
+    set((s) => ({ teamChannelSeenAt: { ...s.teamChannelSeenAt, [key]: at } })),
   markSmithSeen: (id, at) => set((s) => ({ teamSmithSeenAt: { ...s.teamSmithSeenAt, [id]: at } })),
   setSidebarMode: (sidebarMode) => set({ sidebarMode }),
   openTeam: (teamSelection) =>

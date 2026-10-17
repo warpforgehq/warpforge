@@ -6,9 +6,11 @@ const { postToTeam, messageSession } = vi.hoisted(() => ({
   messageSession: vi.fn<(taskId: string, text: string) => Promise<unknown>>(async () => ({
     relation: "peer",
   })),
-  postToTeam: vi.fn<(project: string, text: string) => Promise<unknown>>(async () => ({
-    relation: "team",
-  })),
+  postToTeam: vi.fn<(project: string, text: string, channelId?: string) => Promise<unknown>>(
+    async () => ({
+      relation: "team",
+    }),
+  ),
 }));
 vi.mock("@/daemon", () => ({ daemon: { messageSession, postToTeam } }));
 vi.mock("sonner", () => ({
@@ -41,7 +43,7 @@ describe("TeamComposer", () => {
     expect(screen.getByRole("option", { name: /Fix login/ })).toBeTruthy();
     await userEvent.keyboard("{Enter}");
     await userEvent.type(box, "take the bug{Enter}");
-    expect(postToTeam).toHaveBeenCalledWith("demo", "@Fix login take the bug");
+    expect(postToTeam).toHaveBeenCalledWith("demo", "@Fix login take the bug", undefined);
   });
 
   it("messages the picked session of a direct thread", async () => {
@@ -84,7 +86,7 @@ describe("TeamComposer mention hints", () => {
     expect(postToTeam).not.toHaveBeenCalled();
     expect(screen.getByRole("status").textContent).toContain("@Docz matches no session");
     await userEvent.keyboard("{Enter}");
-    expect(postToTeam).toHaveBeenCalledWith("demo", "ask @Docz now");
+    expect(postToTeam).toHaveBeenCalledWith("demo", "ask @Docz now", undefined);
   });
 
   it("does not send a mention two sessions share", async () => {
@@ -119,6 +121,25 @@ describe("TeamComposer with smiths", () => {
     expect(option.textContent).toContain("smith");
     await userEvent.keyboard("{Enter}");
     await userEvent.type(box, "check CI{Enter}");
-    expect(postToTeam).toHaveBeenCalledWith("demo", "@Ada check CI");
+    expect(postToTeam).toHaveBeenCalledWith("demo", "@Ada check CI", undefined);
+  });
+});
+
+describe("TeamComposer in a named channel", () => {
+  beforeEach(() => postToTeam.mockClear());
+
+  it("posts to that channel", async () => {
+    render(
+      <TeamComposer
+        project="demo"
+        channel={{ createdAt: 1, id: "c1", members: [], name: "ci", project: "demo" }}
+        candidates={candidates}
+        onStartSession={vi.fn<(text: string) => void>()}
+      />,
+    );
+    const box = screen.getByRole("textbox", { name: "Post to the channel" });
+    expect(box.getAttribute("placeholder")).toContain("#ci");
+    await userEvent.type(box, "main is red{Enter}");
+    expect(postToTeam).toHaveBeenCalledWith("demo", "main is red", "c1");
   });
 });
