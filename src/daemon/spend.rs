@@ -195,6 +195,7 @@ mod tests {
             pending_permission: false,
             queued_prompts: Vec::new(),
             advisor: None,
+            smith_id: None,
         }
     }
 

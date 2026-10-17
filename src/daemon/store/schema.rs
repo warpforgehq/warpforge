@@ -201,6 +201,8 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
     );
     // Migration: the advisor a task consults, as JSON (ADR 0022).
     let _ = conn.execute("ALTER TABLE tasks ADD COLUMN advisor TEXT", []);
+    // Migration: the Smith a task runs as, and what its sessions were given (ADR 0027).
+    let _ = conn.execute("ALTER TABLE tasks ADD COLUMN smith TEXT", []);
     super::runner::init(conn)?;
     super::peers::init(conn)?;
     super::smiths::init(conn)
