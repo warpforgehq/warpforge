@@ -359,6 +359,7 @@ impl Daemon {
                 self.sessions.insert(task_id.to_string(), handle);
             }
             Err(e) => {
+                self.peers_session_gone(task_id);
                 if let Some(task) = self.tasks.get_mut(task_id) {
                     task.blocked_reason = Some(format!("failed to start agent: {e}"));
                     task.set_status(TaskStatus::Blocked);
@@ -368,6 +369,16 @@ impl Daemon {
                 }
             }
         }
+    }
+
+    /// Forget a task's session handle. Every teardown and failure goes
+    /// through here, so peer state is reconciled with it (ADR 0026).
+    /// @param task_id the task whose session is gone
+    /// @returns the handle, for a caller that still has to stop it
+    pub(crate) fn drop_session(&mut self, task_id: &str) -> Option<crate::daemon::acp::AcpHandle> {
+        let handle = self.sessions.remove(task_id);
+        self.peers_session_gone(task_id);
+        handle
     }
 
     pub(crate) fn emit_acp_session(&mut self, task_id: &str, update: wire::SessionUpdate) {

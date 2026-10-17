@@ -68,7 +68,7 @@ impl Daemon {
         let active: Vec<String> = run.active_children.keys().cloned().collect();
         let mut handles = Vec::new();
         for child_id in run.all_children() {
-            if let Some(handle) = self.sessions.remove(&child_id) {
+            if let Some(handle) = self.drop_session(&child_id) {
                 handle.cancel();
                 handles.push(handle);
             }

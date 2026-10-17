@@ -7,7 +7,9 @@ fn exchange(guard: &mut PeerGuard, start: Instant, count: u32) -> Instant {
     let mut now = start;
     for i in 0..count {
         let (from, to) = if i % 2 == 0 { ("a", "b") } else { ("b", "a") };
-        guard.admit(from, to, "hi", now).expect("within the window");
+        guard
+            .admit(from, to, "hi", true, now)
+            .expect("within the window");
         guard.release(from, to);
         now += COOLDOWN;
     }
@@ -18,12 +20,12 @@ fn exchange(guard: &mut PeerGuard, start: Instant, count: u32) -> Instant {
 fn pair_window_trips_after_twelve_and_alerts_once() {
     let mut guard = PeerGuard::default();
     let now = exchange(&mut guard, Instant::now(), PAIR_WINDOW_MESSAGES);
-    let first = guard.admit("a", "b", "hi", now).unwrap_err();
+    let first = guard.admit("a", "b", "hi", true, now).unwrap_err();
     assert_eq!(first, GuardRefusal::PairWindow { alert: true });
     assert!(first.alert());
-    let again = guard.admit("b", "a", "hi", now + SEC).unwrap_err();
+    let again = guard.admit("b", "a", "hi", true, now + SEC).unwrap_err();
     assert_eq!(again, GuardRefusal::PairWindow { alert: false });
-    assert!(guard.admit("a", "c", "hi", now).is_ok());
+    assert!(guard.admit("a", "c", "hi", true, now).is_ok());
 }
 
 #[test]
@@ -32,9 +34,9 @@ fn pair_window_resets_after_ten_quiet_minutes() {
     let now = exchange(&mut guard, Instant::now(), PAIR_WINDOW_MESSAGES);
     let last = now - COOLDOWN;
     assert!(guard
-        .admit("a", "b", "hi", last + PAIR_QUIET - SEC)
+        .admit("a", "b", "hi", true, last + PAIR_QUIET - SEC)
         .is_err());
-    assert!(guard.admit("a", "b", "hi", last + PAIR_QUIET).is_ok());
+    assert!(guard.admit("a", "b", "hi", true, last + PAIR_QUIET).is_ok());
 }
 
 #[test]
@@ -44,47 +46,47 @@ fn refused_retries_do_not_keep_the_window_alive() {
     let last = now - COOLDOWN;
     for minute in 1..10 {
         let at = last + Duration::from_secs(minute * 60);
-        assert!(guard.admit("a", "b", "hi", at).is_err());
+        assert!(guard.admit("a", "b", "hi", true, at).is_err());
     }
-    assert!(guard.admit("a", "b", "hi", last + PAIR_QUIET).is_ok());
+    assert!(guard.admit("a", "b", "hi", true, last + PAIR_QUIET).is_ok());
 }
 
 #[test]
 fn a_user_turn_resets_the_window_early_and_rearms_the_alert() {
     let mut guard = PeerGuard::default();
     let now = exchange(&mut guard, Instant::now(), PAIR_WINDOW_MESSAGES);
-    assert!(guard.admit("a", "b", "hi", now).unwrap_err().alert());
+    assert!(guard.admit("a", "b", "hi", true, now).unwrap_err().alert());
     guard.reset_for("b");
     let now = exchange(&mut guard, now, PAIR_WINDOW_MESSAGES);
-    assert!(guard.admit("a", "b", "hi", now).unwrap_err().alert());
+    assert!(guard.admit("a", "b", "hi", true, now).unwrap_err().alert());
 }
 
 #[test]
 fn cooldown_holds_one_direction_for_five_seconds() {
     let mut guard = PeerGuard::default();
     let start = Instant::now();
-    guard.admit("a", "b", "hi", start).unwrap();
+    guard.admit("a", "b", "hi", true, start).unwrap();
     guard.release("a", "b");
     assert_eq!(
-        guard.admit("a", "b", "hi", start + COOLDOWN - SEC),
+        guard.admit("a", "b", "hi", true, start + COOLDOWN - SEC),
         Err(GuardRefusal::Cooldown)
     );
-    assert!(guard.admit("b", "a", "answer", start + SEC).is_ok());
-    assert!(guard.admit("a", "b", "hi", start + COOLDOWN).is_ok());
+    assert!(guard.admit("b", "a", "answer", true, start + SEC).is_ok());
+    assert!(guard.admit("a", "b", "hi", true, start + COOLDOWN).is_ok());
 }
 
 #[test]
 fn one_queued_message_per_sender_per_receiver() {
     let mut guard = PeerGuard::default();
     let start = Instant::now();
-    guard.admit("a", "b", "hi", start).unwrap();
+    guard.admit("a", "b", "hi", true, start).unwrap();
     assert_eq!(
-        guard.admit("a", "b", "hi", start + COOLDOWN),
+        guard.admit("a", "b", "hi", true, start + COOLDOWN),
         Err(GuardRefusal::AlreadyQueued)
     );
-    assert!(guard.admit("c", "b", "hi", start + COOLDOWN).is_ok());
+    assert!(guard.admit("c", "b", "hi", true, start + COOLDOWN).is_ok());
     guard.release("a", "b");
-    assert!(guard.admit("a", "b", "hi", start + COOLDOWN).is_ok());
+    assert!(guard.admit("a", "b", "hi", true, start + COOLDOWN).is_ok());
 }
 
 #[test]
@@ -93,15 +95,15 @@ fn receiver_takes_thirty_peer_messages_per_hour() {
     let start = Instant::now();
     for i in 0..RECEIVER_TURNS_PER_HOUR {
         let from = format!("s{i}");
-        guard.admit(&from, "r", "hi", start).unwrap();
+        guard.admit(&from, "r", "hi", true, start).unwrap();
         guard.release(&from, "r");
         guard.note_delivered("r", start);
     }
     assert_eq!(
-        guard.admit("late", "r", "hi", start + SEC),
+        guard.admit("late", "r", "hi", true, start + SEC),
         Err(GuardRefusal::ReceiverHourly)
     );
-    assert!(guard.admit("late", "r", "hi", start + HOUR).is_ok());
+    assert!(guard.admit("late", "r", "hi", true, start + HOUR).is_ok());
 }
 
 #[test]
@@ -109,7 +111,7 @@ fn text_over_four_thousand_characters_is_refused() {
     let mut guard = PeerGuard::default();
     let long = "é".repeat(MAX_TEXT_CHARS + 1);
     assert_eq!(
-        guard.admit("a", "b", &long, Instant::now()),
+        guard.admit("a", "b", &long, true, Instant::now()),
         Err(GuardRefusal::TooLong {
             chars: MAX_TEXT_CHARS + 1
         })
@@ -121,19 +123,21 @@ fn text_over_four_thousand_characters_is_refused() {
 fn an_undelivered_reservation_lapses_after_thirty_minutes() {
     let mut guard = PeerGuard::default();
     let start = Instant::now();
-    guard.admit("a", "b", "hi", start).unwrap();
+    guard.admit("a", "b", "hi", true, start).unwrap();
     assert_eq!(
-        guard.admit("a", "b", "hi", start + QUEUED_TTL - SEC),
+        guard.admit("a", "b", "hi", true, start + QUEUED_TTL - SEC),
         Err(GuardRefusal::AlreadyQueued)
     );
-    assert!(guard.admit("a", "b", "hi", start + QUEUED_TTL).is_ok());
+    assert!(guard
+        .admit("a", "b", "hi", true, start + QUEUED_TTL)
+        .is_ok());
 }
 
 #[test]
 fn an_alerted_window_reports_its_end_once() {
     let mut guard = PeerGuard::default();
     let now = exchange(&mut guard, Instant::now(), PAIR_WINDOW_MESSAGES);
-    assert!(guard.admit("b", "a", "hi", now).unwrap_err().alert());
+    assert!(guard.admit("b", "a", "hi", true, now).unwrap_err().alert());
     let last = now - COOLDOWN;
     guard.expire(last + PAIR_QUIET - SEC);
     assert!(guard.take_cleared().is_empty());
@@ -147,25 +151,43 @@ fn an_alerted_window_reports_its_end_once() {
 fn a_reset_or_a_deleted_task_reports_the_alert_ended() {
     let mut guard = PeerGuard::default();
     let now = exchange(&mut guard, Instant::now(), PAIR_WINDOW_MESSAGES);
-    guard.admit("a", "b", "hi", now).unwrap_err();
+    guard.admit("a", "b", "hi", true, now).unwrap_err();
     guard.reset_for("a");
     assert_eq!(guard.take_cleared(), vec![pair("a", "b")]);
 
     let now = exchange(&mut guard, now + COOLDOWN, PAIR_WINDOW_MESSAGES);
-    guard.admit("a", "b", "hi", now).unwrap_err();
-    guard.admit("c", "b", "hi", now).unwrap();
+    guard.admit("a", "b", "hi", true, now).unwrap_err();
+    guard.admit("c", "b", "hi", true, now).unwrap();
     guard.forget("b");
     assert_eq!(guard.take_cleared(), vec![pair("a", "b")]);
-    assert!(guard.admit("c", "b", "hi", now + SEC).is_ok());
+    assert!(guard.admit("c", "b", "hi", true, now + SEC).is_ok());
 }
 
 #[test]
-fn accepted_but_undelivered_messages_do_not_count_against_the_hour() {
+fn released_reservations_do_not_count_against_the_hour() {
     let mut guard = PeerGuard::default();
     let start = Instant::now();
     for i in 0..RECEIVER_TURNS_PER_HOUR + 5 {
         let from = format!("s{i}");
-        guard.admit(&from, "r", "hi", start).unwrap();
+        guard.admit(&from, "r", "hi", true, start).unwrap();
         guard.release(&from, "r");
     }
+}
+
+#[test]
+fn queued_turns_hold_a_share_of_the_hourly_cap_and_held_messages_none() {
+    let mut guard = PeerGuard::default();
+    let start = Instant::now();
+    for i in 0..RECEIVER_TURNS_PER_HOUR {
+        guard
+            .admit(&format!("s{i}"), "r", "hi", true, start)
+            .unwrap();
+    }
+    assert_eq!(
+        guard.admit("late", "r", "hi", true, start),
+        Err(GuardRefusal::ReceiverHourly)
+    );
+    assert!(guard.admit("late", "r", "held", false, start).is_ok());
+    guard.release("s0", "r");
+    assert!(guard.admit("next", "r", "hi", true, start + SEC).is_ok());
 }

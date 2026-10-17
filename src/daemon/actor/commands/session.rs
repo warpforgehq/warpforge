@@ -75,6 +75,7 @@ impl Daemon {
                 queued_id,
                 reply,
             } => {
+                self.peers_removing(&task_id, &queued_id);
                 // The queue lives in the session driver, so it decides whether
                 // that message is still waiting. Off the loop, like interrupt.
                 match self.sessions.get(&task_id).cloned() {
@@ -153,8 +154,7 @@ impl Daemon {
                         // A closed command channel is a stale handle. Remove it
                         // before reconnecting so its last process guard can
                         // terminate/reap the old child.
-                        self.sessions.remove(&task_id);
-                        self.peers_session_gone(&task_id);
+                        self.drop_session(&task_id);
                         // A peer's message never resumes a session; it is held.
                         if initiator == crate::daemon::acp::TurnInitiator::Peer {
                             let _ = reply.send(Err("the receiver has no live session".into()));

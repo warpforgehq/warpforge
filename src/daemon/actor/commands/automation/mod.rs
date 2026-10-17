@@ -124,7 +124,7 @@ impl Daemon {
                 .collect();
             for task_id in task_ids {
                 self.automation_run_tasks.remove(&task_id);
-                if let Some(handle) = self.sessions.remove(&task_id) {
+                if let Some(handle) = self.drop_session(&task_id) {
                     tokio::spawn(async move {
                         let _ = handle.cancel_and_wait().await;
                     });

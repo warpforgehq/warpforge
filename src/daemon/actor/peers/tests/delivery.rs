@@ -96,6 +96,24 @@ async fn wait_for_status(daemon: &DaemonHandle, id: u64, status: wire::PeerMessa
     .unwrap_or_else(|_| panic!("record {id} never became {status:?}"));
 }
 
+/// Until the daemon has processed the task's turn end with nothing queued:
+/// the agent's own log says the turn ended before the actor knows it.
+async fn wait_idle(daemon: &DaemonHandle, task_id: &str) {
+    timeout(Duration::from_secs(10), async {
+        loop {
+            let idle = daemon.tasks().await.iter().any(|t| {
+                t.id == task_id && t.status == TaskStatus::Waiting && t.queued_prompts.is_empty()
+            });
+            if idle {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    })
+    .await
+    .expect("the task goes idle");
+}
+
 /// The receiver's waiting messages, once there are any.
 async fn queued_prompts(daemon: &DaemonHandle, task_id: &str) -> Vec<wire::QueuedPrompt> {
     timeout(Duration::from_secs(10), async {
@@ -214,11 +232,8 @@ async fn a_team_post_starts_no_turn_and_rides_the_next_prompt_once() {
     let daemon = seeded(memory_store());
     let (entries, _) = record_peer_events(&daemon);
     let receiver = start(&daemon, &agent).await;
+    wait_idle(&daemon, &receiver).await;
     let log = agent.log.clone();
-    eventually("the first turn ends", || {
-        lines(&log).iter().any(|l| l["end"] == true)
-    })
-    .await;
 
     send(&daemon, "t_a", "team", "main is red").await.unwrap();
     tokio::time::sleep(Duration::from_millis(300)).await;
@@ -240,10 +255,7 @@ async fn a_team_post_starts_no_turn_and_rides_the_next_prompt_once() {
     })
     .await;
 
-    eventually("the second turn ends", || {
-        lines(&log).iter().filter(|l| l["end"] == true).count() == 2
-    })
-    .await;
+    wait_idle(&daemon, &receiver).await;
     daemon
         .session_prompt(&receiver, "again", vec![])
         .await
@@ -274,11 +286,7 @@ async fn a_digest_whose_prompt_never_started_is_given_again() {
         .unwrap();
     std::fs::write(&agent.gate, "go").unwrap();
     let log = agent.log.clone();
-    eventually("the first turn ends", || {
-        lines(&log).iter().any(|l| l["end"] == true)
-    })
-    .await;
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    wait_idle(&daemon, &receiver).await;
 
     daemon
         .session_prompt(&receiver, "later", vec![])
@@ -359,4 +367,30 @@ async fn a_held_message_is_delivered_when_the_peer_is_resumed() {
     let text = resumed_prompt().unwrap()["params"]["prompt"].to_string();
     assert!(text.contains("read this when you are back"), "{text}");
     assert!(text.contains("resume please"));
+}
+
+#[tokio::test]
+async fn a_lost_session_holds_its_queued_peer_message_and_frees_the_slot() {
+    let dir = tempfile::tempdir().unwrap();
+    let agent = peer_agent(&dir, true);
+    let daemon = seeded(memory_store());
+    let receiver = start(&daemon, &agent).await;
+    let id = send(&daemon, "t_a", &receiver, "hello")
+        .await
+        .unwrap()
+        .message
+        .unwrap()
+        .id;
+    queued_prompts(&daemon, &receiver).await;
+
+    daemon.cancel_task(&receiver).await.unwrap();
+    wait_for_status(&daemon, id, wire::PeerMessageStatus::Held).await;
+    assert_eq!(record(&daemon, id).await.delivered_at, None);
+    let again = send(&daemon, "t_a", &receiver, "hello again")
+        .await
+        .unwrap_err();
+    assert!(
+        again.contains("seconds to the same peer"),
+        "the slot is free: {again}"
+    );
 }

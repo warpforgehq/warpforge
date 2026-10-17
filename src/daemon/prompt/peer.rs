@@ -9,8 +9,6 @@ pub struct PeerDelivery {
     pub direct: Option<u64>,
     /// Held direct messages carried in the digest.
     pub held: Vec<u64>,
-    /// Held direct messages the digest had no room for.
-    pub omitted_held: Vec<u64>,
     /// The newest channel post the digest covered, omitted ones included.
     pub cursor: Option<u64>,
     /// The receiver's chat entries for this turn.
@@ -20,10 +18,7 @@ pub struct PeerDelivery {
 impl PeerDelivery {
     /// @returns whether the prompt delivers nothing to the feed
     pub fn is_empty(&self) -> bool {
-        self.direct.is_none()
-            && self.held.is_empty()
-            && self.omitted_held.is_empty()
-            && self.cursor.is_none()
+        self.direct.is_none() && self.held.is_empty() && self.cursor.is_none()
     }
 
     /// Fold another prompt's delivery into this one, for a merged turn.
@@ -31,7 +26,6 @@ impl PeerDelivery {
     pub fn absorb(&mut self, other: PeerDelivery) {
         self.direct = self.direct.or(other.direct);
         self.held.extend(other.held);
-        self.omitted_held.extend(other.omitted_held);
         self.cursor = self.cursor.max(other.cursor);
         self.transcript.extend(other.transcript);
     }
