@@ -46,6 +46,10 @@ pub(super) async fn peers(
             .await?;
             Ok(json!({ "messages": messages }))
         }
+        wire::Method::PeersAlerts {} => {
+            let messages = ask(handle, |reply| PeerCommand::Alerts { reply }).await?;
+            Ok(json!({ "messages": messages }))
+        }
         wire::Method::PeersControls {} => ask(handle, |reply| PeerCommand::Controls { reply })
             .await
             .map(|controls| json!(controls)),

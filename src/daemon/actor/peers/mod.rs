@@ -129,6 +129,11 @@ impl Daemon {
                 limit,
                 reply,
             } => self.peers_feed(project, before, limit, reply),
+            PeerCommand::Alerts { reply } => {
+                let mut alerts: Vec<_> = self.peers.alerts.values().cloned().collect();
+                alerts.sort_by_key(|record| record.id);
+                let _ = reply.send(Ok(alerts));
+            }
             PeerCommand::Controls { reply } => {
                 let _ = reply.send(Ok(self.peer_controls()));
             }

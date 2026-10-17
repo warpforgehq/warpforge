@@ -70,3 +70,12 @@ async fn a_hidden_session_cannot_set_a_status_note() {
         assert_eq!(error, super::super::HIDDEN_SELF, "{caller}");
     }
 }
+
+#[tokio::test]
+async fn no_alert_is_live_after_a_restart() {
+    let daemon = seeded(memory_store());
+    let alerts = ask(&daemon, |reply| PeerCommand::Alerts { reply })
+        .await
+        .unwrap();
+    assert!(alerts.is_empty());
+}

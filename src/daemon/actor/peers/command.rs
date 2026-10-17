@@ -17,6 +17,10 @@ pub enum PeerCommand {
         limit: Option<u32>,
         reply: Reply<Vec<wire::PeerMessage>>,
     },
+    /// The records whose alert is live, from actor memory.
+    Alerts {
+        reply: Reply<Vec<wire::PeerMessage>>,
+    },
     Controls {
         reply: Reply<wire::PeerControls>,
     },

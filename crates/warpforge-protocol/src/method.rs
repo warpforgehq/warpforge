@@ -1548,6 +1548,10 @@ pub enum Method {
         #[serde(default)]
         limit: Option<u32>,
     },
+    /// Every record whose message-limit alert is still live, however old.
+    /// Returns `{ messages: PeerMessage[] }`.
+    #[serde(rename = "peers.alerts")]
+    PeersAlerts {},
     /// Returns [`crate::PeerControls`].
     #[serde(rename = "peers.controls")]
     PeersControls {},
