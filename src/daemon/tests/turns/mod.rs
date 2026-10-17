@@ -11,6 +11,7 @@ mod editing;
 mod force_send;
 mod peer;
 mod queueing;
+mod stale;
 
 use super::*;
 use std::collections::HashMap;

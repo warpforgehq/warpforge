@@ -171,16 +171,12 @@ impl Daemon {
                 initiator,
                 peer,
             } => {
-                if self.is_stale_run(&task_id, run_id) {
+                // With no session left the task was cancelled, failed or
+                // replaced: it must not turn Running, and `drop_session`
+                // already held what the prompt carried.
+                if self.is_stale_run(&task_id, run_id) || !self.sessions.contains_key(&task_id) {
                     return;
                 }
-                // With no session left, `drop_session` already held what this
-                // prompt carried; marking it delivered would deliver it twice.
-                let peer = if self.sessions.contains_key(&task_id) {
-                    peer
-                } else {
-                    Default::default()
-                };
                 self.turn_updates.remove(&task_id);
                 self.mark_task_running(&task_id);
                 self.advisor_turn_started(&task_id);
