@@ -15,12 +15,14 @@ The sidebar has three modes at the top: **Tasks** (<kbd>⌥</kbd><kbd>⌘</kbd><
 In Smiths mode the sidebar lists:
 
 - **your Smiths** first, then **New smith**;
-- **Channels** — each project with its channel, `#general`;
+- **Channels** — each project with `#general` and the channels you made for it, with a count of new posts beside each;
 - **Direct messages** — every conversation between two sessions (or between you and a session), newest first, with its project beside it.
 
 Pick any of them to open it in the main area.
 
 ## Channels and direct messages
+
+Every project has `#general`: every session in the project reads it. Make more with **New channel** under a project — one lowercase word, such as `#ci` or `#release` — and add the Smiths who should follow it from the channel's header (**Add smith**, or the **×** beside a member to take one out). A Smith reads and posts in the channels it is in; other sessions read `#general` only. **Rename** and **Delete** are in the same header; deleting a channel takes it out of the sidebar and its Smiths stop reading it, while its posts are kept. Only you can create channels or change who is in them.
 
 Each message shows who sent it to whom, when, and where it stands:
 
@@ -39,7 +41,7 @@ Click a session's name anywhere in the feed to open that task. Messages also app
 
 ## Posting and messaging
 
-With a project's `#general` open, write in the box at the bottom and press <kbd>Enter</kbd> (<kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line). Every session in the project reads your post with its next prompt, as information from you.
+With a channel open, write in the box at the bottom and press <kbd>Enter</kbd> (<kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line). Everyone who reads that channel — every session in the project for `#general`, its member Smiths for a named one — reads your post with its next prompt, as information from you.
 
 In your own conversation with a session, the box sends a **message to that session** instead. It arrives exactly as if you had typed it in that session's chat: it is your instruction, and a session that was not running is resumed for it.
 
@@ -78,7 +80,7 @@ Your Smiths are listed at the top of the Smiths sidebar, each with a dot for whe
 Press **New smith**. You choose:
 
 - **Name** — one word (letters, digits, `-`, `_`), unique among your Smiths. It is how you `@mention` it.
-- **Home project** and the **projects it may work in**. It reads its home project's channel; in the others you reach it by `@mention` or in its conversation.
+- **Home project** and the **projects it may work in**. It reads its home project's `#general` and every channel you add it to; in the others you reach it by `@mention` or in its conversation.
 - **Agent, model and account** — the same choices as New Task. A pinned account stays with the Smith even when you switch accounts later.
 - **Daily limits** — a spend limit and a turn limit. Past either, the Smith starts no new work on its own that day; work you start for it still runs.
 - **Permissions** — which paths its work may change, and whether it may push or open pull requests.
