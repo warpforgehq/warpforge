@@ -394,3 +394,59 @@ async fn a_lost_session_holds_its_queued_peer_message_and_frees_the_slot() {
         "the slot is free: {again}"
     );
 }
+
+/// A replacement session is live; a `TurnStarted` still queued from the
+/// session before it must not deliver what that session carried.
+#[tokio::test]
+async fn a_turn_start_from_a_replaced_session_delivers_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let log = dir.path().join("recovery.log");
+    let store = memory_store();
+    let mut idle = task("t_idle", "demo");
+    idle.agent = format!("node {RECOVERY_FIXTURE} {}", log.display());
+    idle.session_id = Some("persisted-session".into());
+    store.upsert_task(&idle).unwrap();
+    let held = wire::PeerMessage {
+        id: 7,
+        project: "demo".into(),
+        from_task: Some("t_a".into()),
+        to_task: Some("t_idle".into()),
+        text: "for later".into(),
+        created_at: 1,
+        delivered_at: None,
+        status: wire::PeerMessageStatus::Held,
+        reason: None,
+        alert: false,
+        alert_cleared_at: None,
+    };
+    store.upsert_peer_message(&held).unwrap();
+    let daemon = seeded(store);
+    daemon.session_prompt("t_idle", "", vec![]).await.unwrap();
+    let log_path = log.clone();
+    eventually("the replacement session loads", || {
+        std::fs::read_to_string(&log_path)
+            .unwrap_or_default()
+            .contains("session/load")
+    })
+    .await;
+
+    daemon
+        .send(Command::InjectAcpUpdate {
+            task_id: "t_idle".into(),
+            update: crate::daemon::acp::AcpUpdate::TurnStarted {
+                run_id: 0,
+                initiator: crate::daemon::acp::TurnInitiator::User,
+                echo: None,
+                peer: crate::daemon::prompt::PeerDelivery {
+                    held: vec![held.id],
+                    ..Default::default()
+                },
+            },
+        })
+        .await;
+    assert_eq!(
+        record(&daemon, held.id).await.status,
+        wire::PeerMessageStatus::Held,
+        "the stale start changed nothing"
+    );
+}

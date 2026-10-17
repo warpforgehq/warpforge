@@ -75,6 +75,7 @@ pub(super) fn send_prompt(
         let _ = updates.send((
             task_id.clone(),
             AcpUpdate::TurnStarted {
+                run_id: reporter.run_id,
                 initiator,
                 echo,
                 peer: prompt.peer,
@@ -124,6 +125,7 @@ pub(super) fn send_prompt(
         let _ = updates.send((
             task_id,
             AcpUpdate::TurnEnded {
+                run_id: reporter.run_id,
                 stop_reason: stop,
                 initiator,
                 interrupted,

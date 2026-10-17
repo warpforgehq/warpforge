@@ -7,6 +7,14 @@ use crate::daemon::task::TaskStatus;
 use crate::daemon::wire as wireconv;
 
 impl Daemon {
+    /// An update from a session run other than the task's live one: a
+    /// replacement session started after the old one was dropped.
+    fn is_stale_run(&self, task_id: &str, run_id: u64) -> bool {
+        self.sessions
+            .get(task_id)
+            .is_some_and(|handle| handle.run_id() != run_id)
+    }
+
     pub(crate) async fn handle_acp_update(&mut self, task_id: String, update: AcpUpdate) {
         match update {
             AcpUpdate::SessionStarted { session_id } => {
@@ -158,10 +166,21 @@ impl Daemon {
             // end up in what this one delivers, and the echo below opens the
             // turn it belongs to.
             AcpUpdate::TurnStarted {
+                run_id,
                 echo,
                 initiator,
                 peer,
             } => {
+                if self.is_stale_run(&task_id, run_id) {
+                    return;
+                }
+                // With no session left, `drop_session` already held what this
+                // prompt carried; marking it delivered would deliver it twice.
+                let peer = if self.sessions.contains_key(&task_id) {
+                    peer
+                } else {
+                    Default::default()
+                };
                 self.turn_updates.remove(&task_id);
                 self.mark_task_running(&task_id);
                 self.advisor_turn_started(&task_id);
@@ -179,7 +198,10 @@ impl Daemon {
                     );
                 }
             }
-            AcpUpdate::QueueChanged { queued } => {
+            AcpUpdate::QueueChanged { run_id, queued } => {
+                if self.is_stale_run(&task_id, run_id) {
+                    return;
+                }
                 self.peers_queue_changed(&task_id, &queued);
                 if let Some(task) = self.tasks.get_mut(&task_id) {
                     if task.queued_prompts != queued {
@@ -190,10 +212,14 @@ impl Daemon {
                 }
             }
             AcpUpdate::TurnEnded {
+                run_id,
                 stop_reason,
                 initiator,
                 interrupted,
             } => {
+                if self.is_stale_run(&task_id, run_id) {
+                    return;
+                }
                 // The CLI that just stopped working may have refreshed its
                 // token; if it did so in the shared home, the vault that owns
                 // that login is now stale. Ask before any of the early returns

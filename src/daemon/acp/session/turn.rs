@@ -165,7 +165,10 @@ pub(super) async fn run(
             .collect();
         if waiting != announced {
             announced = waiting.clone();
-            update(AcpUpdate::QueueChanged { queued: waiting });
+            update(AcpUpdate::QueueChanged {
+                run_id: session.reporter.run_id,
+                queued: waiting,
+            });
         }
         let wake = deadline;
 
@@ -345,6 +348,7 @@ pub(super) async fn run(
                     running.handle.abort();
                     if !running.ended.swap(true, Ordering::AcqRel) {
                         update(AcpUpdate::TurnEnded {
+                            run_id: session.reporter.run_id,
                             stop_reason: "cancelled".into(),
                             initiator: running.initiator,
                             interrupted: true,
@@ -360,7 +364,10 @@ pub(super) async fn run(
         }
     }
     if !announced.is_empty() {
-        update(AcpUpdate::QueueChanged { queued: Vec::new() });
+        update(AcpUpdate::QueueChanged {
+            run_id: session.reporter.run_id,
+            queued: Vec::new(),
+        });
     }
 }
 

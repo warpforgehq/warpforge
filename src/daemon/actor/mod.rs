@@ -354,6 +354,10 @@ impl Daemon {
             }
             Command::Runner(cmd) => self.handle_runner_command(cmd).await,
             Command::Peers(cmd) => self.handle_peer_command(cmd).await,
+            #[cfg(test)]
+            Command::InjectAcpUpdate { task_id, update } => {
+                self.handle_acp_update(task_id, update).await
+            }
             other => self.handle_project_command(other).await,
         }
     }
