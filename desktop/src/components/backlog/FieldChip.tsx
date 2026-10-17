@@ -15,7 +15,7 @@ export function FieldChip<T extends string>({
 }: {
   ariaLabel: string;
   value: T;
-  options: { value: T; label: string; disabled?: boolean; hint?: string }[];
+  options: { value: T; label: string }[];
   triggerClassName?: string;
   onValueChange: (value: T) => void;
   children: React.ReactNode;
@@ -35,13 +35,8 @@ export function FieldChip<T extends string>({
       </SelectPrimitive.Trigger>
       <SelectContent className="min-w-[10rem]" align="start" sideOffset={4}>
         {options.map((option) => (
-          <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
-            <span className="flex items-center gap-1.5">
-              {option.label}
-              {option.hint && (
-                <span className="text-[11px] text-muted-foreground/70">{option.hint}</span>
-              )}
-            </span>
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
           </SelectItem>
         ))}
       </SelectContent>
