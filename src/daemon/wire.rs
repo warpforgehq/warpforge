@@ -156,6 +156,7 @@ pub fn task_info(t: &Task) -> wire::TaskInfo {
         queued_prompts: t.queued_prompts.clone(),
         advisor: t.advisor.clone(),
         smith_id: t.smith.as_ref().map(|s| s.smith_id.clone()),
+        status_note: t.status_note.clone(),
     }
 }
 

@@ -196,6 +196,7 @@ mod tests {
             queued_prompts: Vec::new(),
             advisor: None,
             smith_id: None,
+            status_note: None,
         }
     }
 
