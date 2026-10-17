@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { daemon } from "@/daemon";
+import { useMarkSmithSeen } from "@/hooks/useSmiths";
 import { injectionNote, smithStatus, smithWorkSessions } from "@/lib/smiths";
 import { taskLabel } from "@/lib/taskLabel";
 import type { BacklogItem, Smith, SmithDetail, Snapshot } from "@/protocol";
@@ -36,6 +37,7 @@ const DELETE_EXPLAINED =
  */
 export function SmithPage({ smith, snapshot, onOpenTask, onEdit, onDeleted }: Props) {
   const queryClient = useQueryClient();
+  useMarkSmithSeen(smith);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [starting, setStarting] = useState<{ item: BacklogItem | null } | null>(null);
   const status = smithStatus(smith, snapshot.tasks);

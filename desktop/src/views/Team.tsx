@@ -1,17 +1,8 @@
-import { MessagesSquare, Pause, Play } from "lucide-react";
+import { MessagesSquare } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { daemon } from "@/daemon";
 import { useSmiths } from "@/hooks/useSmiths";
 import {
@@ -20,18 +11,18 @@ import {
   mentionCandidates,
   userThread,
 } from "@/lib/peerFeed";
+import { projectChannels } from "@/lib/teamChannels";
 import type { Snapshot } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
 import { useSmithsStore } from "@/store/smiths";
 import { useUi } from "@/store/ui";
 
 import type { NewTaskOptions } from "../app/dialogs";
-import { ConversationList } from "./team/ConversationList";
 import { labeller } from "./team/labels";
-import { Teammates } from "./team/smiths/Teammates";
-import { Thread, changeControls } from "./team/Thread";
-
-const ALL = "__all__";
+import type { TeamSelection } from "./team/selection";
+import { TeammateMain } from "./team/smiths/TeammateMain";
+import { TeamSidebar } from "./team/TeamSidebar";
+import { Thread } from "./team/Thread";
 
 interface Props {
   snapshot: Snapshot;
@@ -45,18 +36,16 @@ interface Props {
 }
 
 /**
- * The Team screen (ADR 0026): every project's channel and the direct messages
- * between its sessions, where the user watches them talk, posts, hands work
- * out by @mention, and mutes or pauses them.
+ * The Team screen (ADR 0026, 0027), laid out like a chat app: each project's
+ * channels, the direct threads between sessions and the teammates on the
+ * left; the channel's feed or the teammate's page on the right.
  */
 export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   const records = usePeersStore((state) => state.records);
   const loaded = usePeersStore((state) => state.loaded);
   const paused = usePeersStore((state) => state.controls.pausedProjects);
   const markTeamSeen = useUi((state) => state.markTeamSeen);
-  const [area, setArea] = useState<"conversations" | "teammates">("conversations");
-  const [filter, setFilter] = useState<string>(ALL);
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [selection, setSelection] = useState<TeamSelection | null>(null);
   /** The user's thread with a session that has none yet, once asked for. */
   const [draft, setDraft] = useState<Conversation | null>(null);
 
@@ -68,37 +57,38 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   const smiths = useSmiths();
   const label = useMemo(() => labeller(taskById, smithsById), [smithsById, taskById]);
   const projects = useMemo(() => snapshot.projects.map((p) => p.name), [snapshot.projects]);
-  const shown = useMemo(
-    () => (filter === ALL ? projects : projects.filter((p) => p === filter)),
-    [filter, projects],
+
+  const conversations = useMemo(() => {
+    const all = buildConversations(Object.values(records));
+    if (draft && !all.some((c) => c.key === draft.key)) all.unshift(draft);
+    return all;
+  }, [draft, records]);
+  const dms = useMemo(() => conversations.filter((c) => c.kind === "dm"), [conversations]);
+
+  const firstChannel = projects[0] ? projectChannels(projects[0])[0]!.key : null;
+  const current = useMemo<TeamSelection | null>(
+    () => selection ?? (firstChannel ? { key: firstChannel, kind: "conversation" } : null),
+    [firstChannel, selection],
   );
-
-  const groups = useMemo(() => {
-    const conversations = buildConversations(
-      Object.values(records),
-      filter === ALL ? null : filter,
-    );
-    return shown.map((project) => {
-      const own = conversations.filter((c) => c.project === project);
-      const channel: Conversation = own.find((c) => c.kind === "team") ?? {
-        key: `${project}::team`,
-        kind: "team",
-        lastAt: 0,
-        parties: null,
-        project,
-        records: [],
-      };
-      const dms = own.filter((c) => c.kind === "dm");
-      if (draft?.project === project && !dms.some((c) => c.key === draft.key)) dms.unshift(draft);
-      return { conversations: [channel, ...dms], project };
-    });
-  }, [draft, filter, records, shown]);
-
-  const all = groups.flatMap((group) => group.conversations);
-  const selected = all.find((c) => c.key === selectedKey) ?? all[0] ?? null;
+  const conversation = useMemo(() => {
+    if (current?.kind !== "conversation") return null;
+    const found = conversations.find((c) => c.key === current.key);
+    if (found) return found;
+    const project = projects.find((p) => projectChannels(p).some((ch) => ch.key === current.key));
+    return project
+      ? ({
+          key: current.key,
+          kind: "team",
+          lastAt: 0,
+          parties: null,
+          project,
+          records: [],
+        } as Conversation)
+      : null;
+  }, [conversations, current, projects]);
   const candidates = useMemo(
-    () => (selected ? mentionCandidates(snapshot.tasks, selected.project, smiths) : []),
-    [selected, smiths, snapshot.tasks],
+    () => (conversation ? mentionCandidates(snapshot.tasks, conversation.project, smiths) : []),
+    [conversation, smiths, snapshot.tasks],
   );
 
   useEffect(() => {
@@ -108,7 +98,7 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   const openUserThread = useCallback((project: string, taskId: string) => {
     const thread = userThread(project, taskId);
     setDraft(thread);
-    setSelectedKey(thread.key);
+    setSelection({ key: thread.key, kind: "conversation" });
   }, []);
 
   const startSession = useCallback(
@@ -126,96 +116,47 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
     [onNewTask],
   );
 
-  const pausedHere = filter !== ALL && paused.includes(filter);
+  if (projects.length === 0) {
+    return (
+      <EmptyState
+        icon={MessagesSquare}
+        title="No projects yet"
+        hint="Add a project to see its sessions and teammates here."
+      />
+    );
+  }
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <header className="flex shrink-0 flex-wrap items-end justify-between gap-x-4 gap-y-2 px-1 pb-3 pt-2">
-        <div className="min-w-0 space-y-1.5">
-          <h1 className="truncate text-xl font-semibold leading-none tracking-tight">Team</h1>
-          <p className="truncate text-[13px] text-muted-foreground">
-            What your sessions tell each other, and where you hand out work.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Tabs value={area} onValueChange={(value) => setArea(value as typeof area)}>
-            <TabsList>
-              <TabsTrigger variant="pill" value="conversations">
-                Conversations
-              </TabsTrigger>
-              <TabsTrigger variant="pill" value="teammates">
-                Teammates
-                {smiths.length > 0 && (
-                  <span className="tnum text-[11px] text-muted-foreground">{smiths.length}</span>
-                )}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          {area === "conversations" && filter !== ALL && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              title={
-                pausedHere
-                  ? "Let this project's sessions message each other again"
-                  : "Refuse every agent's peer messages and posts in this project"
-              }
-              onClick={() => void changeControls(() => daemon.setPeerPaused(filter, !pausedHere))}
-            >
-              {pausedHere ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
-              {pausedHere ? "Resume project" : "Pause project"}
-            </Button>
-          )}
-          {area === "conversations" && (
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger aria-label="Project" className="h-8 w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>All projects</SelectItem>
-                {projects.map((project) => (
-                  <SelectItem key={project} value={project}>
-                    {project}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      </header>
-
-      {projects.length === 0 ? (
-        <EmptyState
-          icon={MessagesSquare}
-          title="No projects yet"
-          hint="Add a project to see its sessions talk to each other here."
+    <div className="flex h-full min-h-0 min-w-0 gap-3 px-1 py-2">
+      <TeamSidebar
+        projects={projects}
+        dms={dms}
+        smiths={smiths}
+        tasks={snapshot.tasks}
+        pausedProjects={paused}
+        selection={current}
+        label={label}
+        onSelect={setSelection}
+      />
+      {current?.kind === "teammate" || current?.kind === "newTeammate" ? (
+        <TeammateMain
+          selection={current}
+          snapshot={snapshot}
+          onSelect={setSelection}
+          onOpenTask={onOpenTask}
         />
-      ) : area === "teammates" ? (
-        <Teammates snapshot={snapshot} onOpenTask={onOpenTask} />
+      ) : conversation && loaded ? (
+        <Thread
+          conversation={conversation}
+          candidates={candidates}
+          label={label}
+          onOpenTask={onOpenTask}
+          onStartSession={startSession}
+          onMessageSession={openUserThread}
+        />
       ) : (
-        <div className="flex min-h-0 flex-1 gap-3 px-1 pb-2">
-          <ConversationList
-            groups={groups}
-            selectedKey={selected?.key ?? null}
-            pausedProjects={paused}
-            label={label}
-            onSelect={setSelectedKey}
-          />
-          {selected && loaded ? (
-            <Thread
-              conversation={selected}
-              candidates={candidates}
-              label={label}
-              onOpenTask={onOpenTask}
-              onStartSession={startSession}
-              onMessageSession={openUserThread}
-            />
-          ) : (
-            <div className="flex flex-1 items-center justify-center text-[13px] text-muted-foreground">
-              Loading the feed…
-            </div>
-          )}
+        <div className="flex flex-1 items-center justify-center text-[13px] text-muted-foreground">
+          Loading the feed…
         </div>
       )}
     </div>
