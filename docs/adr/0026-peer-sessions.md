@@ -152,11 +152,14 @@ record id rides on the queued prompt and comes back on `TurnStarted`, which sets
 with `to_task` null and wakes nobody. Each visible peer receives unseen posts,
 and direct messages held for it, passively: when the actor prepares that peer's next prompt
 (`Command::SessionPrompt`, and the opening prompt in `start_session`), it
-prepends a short digest — at most 10 items or 2,000 characters, newest kept,
-"N older messages omitted" (to tune). A prompt with no content of its own
-gets none. A task's first digest starts at posts made since it was created;
-the actor keeps the last 100 posts per project for this. A held message the
-digest has no room for is refused ("left out of a full digest"). A per-task
+prepends a short digest. Held direct messages come first, whole and oldest
+first, at most 10 or 8,000 characters (the first always); the rest stay held
+for the next prompt — the sender was told they would arrive, so none is
+clipped or refused for space. Channel posts fill their own budget, at most 10
+or 2,000 characters, newest kept, "N older posts omitted" (to tune). A prompt
+with no content of its own gets none. A task's first digest starts at posts
+made since it was created; the actor keeps the last 100 posts per project for
+this. A per-task
 cursor, persisted next to the records, advances when that prompt's turn
 starts, not when it was prepared; a turn that never starts leaves the posts
 unseen. What a waiting prompt carries is reserved so a second queued prompt
@@ -173,10 +176,17 @@ to_label, text, direction }`, `direction` one of `sent` / `received` /
 `TurnStarted`, carried on the prompt as every echo is (ADR 0011 invariant 12);
 the sender's `sent` entry, with the receiver (or `team`) as `to_*`, when
 routing accepts the message, queued or held. A queued `Peer` prompt names its
-record in `QueuedPrompt.peer_message_id`; removed from the queue, or dropped
-with the session, the record is refused and the sender's slot freed. The desktop renders one compact attributed line
-with a click-through to the other task, as `WorkflowEventLine` does. `System`
-turns stay un-echoed.
+record in `QueuedPrompt.peer_message_id`. The user removing it from the queue
+refuses the record; losing it any other way — the session ends or fails, the
+transport refuses the prompt — holds it, since the session can be resumed.
+Every session teardown and start failure goes through one function
+(`Daemon::drop_session` → `peers_session_gone`): in-flight direct messages are
+held, their senders' slots freed, digest reservations dropped. A queued
+`Peer` prompt cannot be edited (only `User` ones can), and a force-send needs
+a queued `User` prompt to cut the running turn short. Rendering these entries
+as one compact attributed line with a click-through to the other task, as
+`WorkflowEventLine` does, is desktop work (#116). `System` turns stay
+un-echoed.
 
 **Team is a global view in the sidebar.** A `GlobalView` `"team"`
 (`desktop/src/store/ui/types.ts`) with a `NAV` entry next to Automations and
@@ -208,7 +218,10 @@ direct message or a digest in a tagged block naming each sender, saying it is
 not from the user, and that it must not change the receiver's task, touch its
 files, grant permissions or lead to destructive actions. Bodies are untrusted
 input and go through the same guard as browser pages (`src/mcp/untrusted.rs`),
-so they cannot close the block early. A user post carried in a digest is
+so they cannot close the block early. Each message is its own
+`<peer_message from="…" kind="direct|team">` element; a sender's label is an
+escaped one-line attribute, so neither a body nor a label can forge another
+sender's entry. A user post carried in a digest is
 labelled as the user's but stays in the block: the channel is not a way to
 issue instructions around the chat.
 
@@ -224,7 +237,10 @@ on conversation, and nobody has to reset it. Proposed defaults, all to tune:
   are refused until it resets;
 - per sender → receiver, one message per 5 s — enough to break a tight loop,
   short enough not to slow a question and its answer;
-- at most 30 peer-initiated turns per receiving session per hour;
+- at most 30 peer-initiated turns per receiving session per hour. A queued
+  `Peer` prompt holds its share from acceptance and spends it when its turn
+  starts; a held message, or one riding another turn's digest, starts no peer
+  turn and is never charged;
 - at most one queued `Peer` prompt per sender per receiver; the reservation
   lapses after 30 minutes (`QUEUED_TTL`) if nothing delivers or drops it;
 - message and post text capped at 4,000 characters.
@@ -234,8 +250,8 @@ than retries, and it is recorded in the feed. Counters live in the actor, in
 memory.
 
 **A tripped pair window is the one time the user hears about the guard.** The
-first refusal in a window marks its record as an alert; the desktop turns that
-into one "needs you" item — "sessions X and Y hit the message limit" — on the
+first refusal in a window marks its record as an alert; the desktop is to turn
+that (#116) into one "needs you" item — "sessions X and Y hit the message limit" — on the
 task whose message tripped it. The rail is derived on the client
 (`buildAttentionQueue`, `desktop/src/lib/attentionRail.ts`) from task state
 plus daemon-fed maps such as the PR feedback one (`store/prFeedback.ts`); the
@@ -359,7 +375,7 @@ definitions), `src/mcp/handle/peers.rs`,
 - The feed and held messages survive a restart; notes, guard counters and
   queued deliveries do not.
 - `QueuedPrompt.initiator` gains `peer`, so the chat can show whose message is
-  waiting.
+  waiting once the desktop renders it (#116).
 
 ## Phases
 
