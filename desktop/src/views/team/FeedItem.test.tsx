@@ -22,8 +22,8 @@ function record(overrides: Partial<PeerMessage>): PeerMessage {
   };
 }
 
-function show(item: PeerMessage, onStartSession = vi.fn()) {
-  const onOpenTask = vi.fn();
+function show(item: PeerMessage, onStartSession = vi.fn<(record: PeerMessage) => void>()) {
+  const onOpenTask = vi.fn<(id: string) => void>();
   render(
     <ul>
       <FeedItem

@@ -3,11 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { postToTeam, messageSession } = vi.hoisted(() => ({
-  messageSession: vi.fn(async () => ({ relation: "peer" })),
-  postToTeam: vi.fn(async () => ({ relation: "team" })),
+  messageSession: vi.fn<(taskId: string, text: string) => Promise<unknown>>(async () => ({
+    relation: "peer",
+  })),
+  postToTeam: vi.fn<(project: string, text: string) => Promise<unknown>>(async () => ({
+    relation: "team",
+  })),
 }));
 vi.mock("@/daemon", () => ({ daemon: { messageSession, postToTeam } }));
-vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }) }));
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn<() => void>(), { error: vi.fn<() => void>() }),
+}));
 
 import { TeamComposer } from "./TeamComposer";
 
@@ -23,7 +29,13 @@ describe("TeamComposer", () => {
   });
 
   it("completes an @mention and posts to the project's channel", async () => {
-    render(<TeamComposer project="demo" candidates={candidates} onStartSession={vi.fn()} />);
+    render(
+      <TeamComposer
+        project="demo"
+        candidates={candidates}
+        onStartSession={vi.fn<(text: string) => void>()}
+      />,
+    );
     const box = screen.getByRole("textbox", { name: "Post to the team" });
     await userEvent.type(box, "@fix");
     expect(screen.getByRole("option", { name: /Fix login/ })).toBeTruthy();
@@ -38,7 +50,7 @@ describe("TeamComposer", () => {
         project="demo"
         candidates={candidates}
         targets={candidates}
-        onStartSession={vi.fn()}
+        onStartSession={vi.fn<(text: string) => void>()}
       />,
     );
     await userEvent.click(screen.getByRole("radio", { name: "Docs" }));
@@ -48,7 +60,7 @@ describe("TeamComposer", () => {
   });
 
   it("hands the text to New Task to start a session", async () => {
-    const onStartSession = vi.fn();
+    const onStartSession = vi.fn<(text: string) => void>();
     render(<TeamComposer project="demo" candidates={candidates} onStartSession={onStartSession} />);
     await userEvent.type(screen.getByRole("textbox"), "write the docs");
     await userEvent.click(screen.getByRole("button", { name: "Start a session" }));
