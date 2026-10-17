@@ -265,6 +265,7 @@ impl Daemon {
         }
         self.smith_sync_thread(&smith);
         self.smith_put(smith.clone());
+        self.channels_drop_smith(&smith.id, &smith.allowed_projects);
         let _ = reply.send(Ok(detail(self.smith_view(smith), files)));
     }
 
@@ -330,7 +331,7 @@ impl Daemon {
             self.emit(Event::TaskUpdated(updated));
         }
         self.smith_clear_yaml_assignees(format!("smith:{id}"));
-        self.channels_drop_smith(id);
+        self.channels_drop_smith(id, &[]);
         let root = self.smiths.root.clone();
         let id = id.to_string();
         self.emit(Event::SmithRemoved { id: id.clone() });

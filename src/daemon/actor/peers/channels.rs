@@ -120,14 +120,17 @@ impl Daemon {
         Ok(self.channel_save(channel))
     }
 
-    /// Take a deleted Smith out of every channel.
+    /// Take a Smith out of every channel outside the projects it is still
+    /// allowed in, so a membership cannot return with the project.
     /// @param smith_id the Smith
-    pub(crate) fn channels_drop_smith(&mut self, smith_id: &str) {
+    /// @param allowed its projects now; empty for a deleted Smith
+    pub(crate) fn channels_drop_smith(&mut self, smith_id: &str, allowed: &[String]) {
         let held: Vec<_> = self
             .peers
             .channels
             .values()
             .filter(|c| c.members.iter().any(|m| m == smith_id))
+            .filter(|c| !allowed.contains(&c.project))
             .cloned()
             .collect();
         for mut channel in held {
