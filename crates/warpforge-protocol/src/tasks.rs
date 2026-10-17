@@ -2,8 +2,9 @@
 //! plans, tool calls and the usage numbers a session reports.
 
 use crate::{
-    AdvisorOutcome, ConfigOption, OrchGraphInfo, PromptAttachmentSummary, TaskAdvisor,
-    WorkflowEventAgent, WorkflowEventKind, WorkflowEventTone, WorkflowRunInfo, WorkflowStage,
+    AdvisorOutcome, ConfigOption, OrchGraphInfo, PeerDirection, PromptAttachmentSummary,
+    TaskAdvisor, WorkflowEventAgent, WorkflowEventKind, WorkflowEventTone, WorkflowRunInfo,
+    WorkflowStage,
 };
 use serde::{Deserialize, Serialize};
 
@@ -108,9 +109,12 @@ pub struct QueuedPrompt {
     /// it. Session-scoped; it means nothing after the session ends.
     pub id: String,
     pub text: String,
-    /// `user`, `automation` or `system` — who submitted it. Only `user`
-    /// messages are folded together by `session.interrupt`.
+    /// `user`, `automation`, `system` or `peer` — who submitted it. Only
+    /// `user` messages are folded together by `session.interrupt`.
     pub initiator: String,
+    /// The feed record a `peer` message delivers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub peer_message_id: Option<u64>,
     /// Attachment metadata, shown read-only while the message waits. Editing
     /// the text keeps them; they cannot be re-attached from here.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -285,6 +289,23 @@ pub enum SessionUpdate {
         /// The frame height the agent asked for, reserved until the page
         /// reports its own.
         height: u32,
+    },
+    /// Peer messaging in this session's chat (ADR 0026): one the session
+    /// sent, one it received as a turn, or a digest that rode on a prompt.
+    /// Each names its feed records by id.
+    PeerMessage {
+        message_ids: Vec<u64>,
+        /// `None` for the user and for a digest of several senders.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        from_task: Option<String>,
+        from_label: String,
+        /// The receiver of a `sent` entry; `None` for a channel post.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        to_task: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        to_label: Option<String>,
+        text: String,
+        direction: PeerDirection,
     },
 }
 

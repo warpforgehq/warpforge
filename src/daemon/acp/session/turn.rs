@@ -53,6 +53,7 @@ impl Queued {
                 TurnInitiator::System => "system",
             }
             .into(),
+            peer_message_id: None,
             attachments: self.prompt.summaries.clone(),
         }
     }
