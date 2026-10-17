@@ -32,6 +32,9 @@ pub(super) async fn smiths(
             let smiths = ask(handle, |reply| SmithCommand::List { reply }).await?;
             Ok(json!({ "smiths": smiths }))
         }
+        wire::Method::SmithsDefaults { name } => Ok(json!(
+            crate::daemon::smiths::presets::defaults(name.as_deref())
+        )),
         wire::Method::SmithsGet { id } => {
             ask(handle, |reply| SmithCommand::Get { id, reply }).await
         }

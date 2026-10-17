@@ -83,6 +83,30 @@ pub struct Smith {
     pub injection: Option<SmithInjection>,
 }
 
+/// A personality a new Smith can start from: the text of its soul's `## Voice`
+/// section.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SmithPreset {
+    pub id: String,
+    pub label: String,
+    /// One line for the picker.
+    pub description: String,
+    /// The `## Voice` section's body.
+    pub voice: String,
+}
+
+/// What a new Smith starts from, so a client shows the real text rather than
+/// "leave empty for a template".
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SmithDefaults {
+    pub soul: String,
+    pub charter: String,
+    /// The first is the soul's own voice.
+    pub presets: Vec<SmithPreset>,
+}
+
 /// A Smith with its identity files, for the Smith's page.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
