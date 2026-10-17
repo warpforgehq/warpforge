@@ -17,8 +17,8 @@ export const useUi = create<UiState>()(
     }),
     {
       name: "wf-ui",
-      // Next persisted-shape change must bump this to 9.
-      version: 8,
+      // Next persisted-shape change must bump this to 10.
+      version: 9,
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
         if (version === 0 && state && "sidebarWidth" in state) {
@@ -81,6 +81,12 @@ export const useUi = create<UiState>()(
             ),
           };
         }
+        // The Tasks/Inbox tabs became sidebar modes with a stored value; the
+        // body used to be read off the route, so the route says which it was.
+        if (version < 9 && state) {
+          const view = state.view;
+          state = { ...state, sidebarMode: view === "inbox" || view === "team" ? view : "tasks" };
+        }
         return state;
       },
       // OpenTaskId is session-only — a reload shouldn't force-open a stale task.
@@ -98,6 +104,7 @@ export const useUi = create<UiState>()(
         activeSurface: _activeSurface,
         pullFilesPanelCollapsed: _pullFilesPanelCollapsed,
         inboxSelectedKey: _inboxSelectedKey,
+        teamSelection: _teamSelection,
         inboxFilters,
         backlogParamsByProject,
         ...rest

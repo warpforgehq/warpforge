@@ -13,6 +13,14 @@ import type { SettingsState } from "./settings";
 
 /** A destination the nav can address. */
 export type GlobalView = "control" | "inbox" | "automations" | "memory" | "team";
+/** What the sidebar body shows. A mode also sets the main area; the views in
+ *  `GlobalView` change only the main area. */
+export type SidebarMode = "tasks" | "inbox" | "team";
+/** What the Smiths (Team) main area shows. */
+export type TeamSelection =
+  | { kind: "conversation"; key: string }
+  | { kind: "teammate"; id: string; editing?: boolean }
+  | { kind: "newTeammate" };
 /** "project" is a subject, not a nav destination: it is reached by selecting a
  *  project in the sidebar tree, never from NAV. */
 export type View = GlobalView | "project";

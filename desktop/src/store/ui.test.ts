@@ -466,3 +466,42 @@ describe("inbox selection and filters", () => {
     });
   });
 });
+
+describe("sidebar mode", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useUi.setState({ sidebarMode: "tasks", teamSelection: null, view: "control" });
+  });
+
+  it.each([
+    ["inbox", "inbox"],
+    ["team", "team"],
+    ["control", "tasks"],
+    ["project", "tasks"],
+  ])("migrates a version 8 install on %s to the %s mode", async (view, mode) => {
+    localStorage.setItem("wf-ui", JSON.stringify({ state: { view }, version: 8 }));
+    await useUi.persist.rehydrate();
+    expect(useUi.getState().sidebarMode).toBe(mode);
+  });
+
+  it("keeps the mode across a restart, but not the Smiths selection", async () => {
+    useUi.getState().setSidebarMode("team");
+    useUi.getState().openTeam({ id: "sm_1", kind: "teammate" });
+    const stored = JSON.parse(localStorage.getItem("wf-ui") ?? "{}") as {
+      state: Record<string, unknown>;
+    };
+    expect(stored.state.sidebarMode).toBe("team");
+    expect(stored.state).not.toHaveProperty("teamSelection");
+  });
+
+  it("opens the Smiths area on a selection without touching the mode", () => {
+    useUi.setState({ openTaskId: "t_1", sidebarMode: "inbox" });
+    useUi.getState().openTeam({ key: "demo::team", kind: "conversation" });
+    expect(useUi.getState()).toMatchObject({
+      openTaskId: null,
+      sidebarMode: "inbox",
+      teamSelection: { key: "demo::team", kind: "conversation" },
+      view: "team",
+    });
+  });
+});
