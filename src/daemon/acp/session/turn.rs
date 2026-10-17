@@ -27,6 +27,10 @@ const INTERRUPT_GRACE: std::time::Duration = std::time::Duration::from_secs(5);
 /// entry, so there is nothing left to change.
 const GONE_ALREADY_SENT: &str = "that message was already sent";
 
+/// The refusal for editing a message someone else queued: its text is what
+/// the feed and the sender recorded.
+const NOT_YOURS: &str = "only your own messages can be edited";
+
 /// The single outstanding turn.
 struct Active {
     handle: JoinHandle<()>,
@@ -189,7 +193,10 @@ pub(super) async fn run(
                 // draining, and killing the turn would kill the very message it
                 // was meant to hurry along.
                 Some(AcpCommand::Interrupt { reply }) => {
-                    let nothing_waiting = queued.is_empty() && batched.is_empty();
+                    // Only the user's messages are forced through, so a queue
+                    // holding none is nothing to cut the turn short for.
+                    let nothing_waiting = batched.is_empty()
+                        && !queued.iter().any(|entry| entry.initiator == TurnInitiator::User);
                     let verdict = match (nothing_waiting, active.as_ref()) {
                         (false, Some(running)) => {
                             // Only the user's own messages fold into one
@@ -230,10 +237,11 @@ pub(super) async fn run(
                 }
                 Some(AcpCommand::EditQueued { id, text, reply }) => {
                     let verdict = match find_queued(&mut batched, &mut queued, &id) {
-                        Some(entry) => {
+                        Some(entry) if entry.initiator == TurnInitiator::User => {
                             entry.prompt.set_text(text);
                             Ok(())
                         }
+                        Some(_) => Err(NOT_YOURS.into()),
                         None => Err(GONE_ALREADY_SENT.into()),
                     };
                     let _ = reply.send(verdict);
