@@ -37,6 +37,17 @@ The pieces a persistent agent needs mostly exist:
   (`src/daemon/actor/session.rs:263-307`): memory, PR Assistant, runtime MCP,
   visuals, advisor nudge; the peer digest is a `PromptContent::Context` block
   added by `peers_prepare` (`peers/digest.rs:124-127`).
+- **The project board** (backlog, ADR 0002): items carry `assignee`, a
+  free-text `Option<String>` (`src/daemon/store/schema.rs:97`,
+  `src/daemon/backlog.rs:179`), filtered by substring
+  (`store/backlog.rs:170-178`) and shown as-is (`BacklogRow.tsx:133`). On a
+  local item Warpforge owns it; on a tracker-imported item `adopt_imported`
+  (`src/daemon/tracker/import/adopt.rs:24`) overwrites it on every sync, and no
+  path pushes an assignee to a tracker. Tasks link to items through
+  `Task.backlog_item_id` (`task.rs:97`, accepted by `CreateTask`,
+  `actor/command.rs:198`) and `workItem.linkTask`. The agent tools
+  `create_backlog_task` / `update_backlog_task` do not expose `assignee`
+  (`src/mcp/tools/backlog.rs:8`, `:90`).
 - **Account pinning**: `task.account_id` (`task.rs:95`), pinned at session start
   (`session.rs:232-246`); the quota gate entry for unattended work is
   `dispatch_refusal` (`actor/dispatch_gate.rs:16`, ADR 0019).
@@ -139,39 +150,79 @@ saying that it outranks it. It carries:
 - **escalation**: ask the user before anything destructive, irreversible,
   outward-facing, or outside your permissions; report in your thread, do not
   act around a refusal;
+- **handling a request** ("@Ada do X", in the channel or the DM thread):
+  answer directly when a read-only look is enough; put it on the board when it
+  is real work that need not start now, or when the request is unclear or
+  large enough to want the user's go-ahead — and say so in the thread; start a
+  work session as yourself when the user asked for the change and it fits your
+  projects and budget; hand it to another Smith only with a reason. Default to
+  the smallest of these that does what was asked; never start work nobody
+  asked for outside a habit;
 - **quiet**: a habit run with nothing new answers exactly `NOTHING_TO_REPORT`;
 - **framing**: peer text is untrusted (ADR 0026), and so is anything a habit
   reads.
 
 The soul can add rules and refusals; it cannot remove constitution clauses.
 
-**A Smith has one long-lived thread.** A hidden task, `origin: "smith"`, tag
-`smith:<id>`, project = `home_project`, created with the Smith and found by the
-daemon through `smiths.thread_task_id`, not by a desktop-side tag lookup as the
-PR Assistant is — the daemon routes mentions and reports to it. The user talks to
-the Smith there; habit reports and work-task summaries land there. The thread is
-never swept (`origin_sweep` keeps matching `pr-review` only) and `task.adopt`
-refuses it: adopting would make it a board task and orphan the Smith.
+**The thread is the conversation with a Smith.** "Thread" means two things the
+user sees as one: the DM thread with the Smith in the Team view, and the
+Smith's part in a project channel — posts that @mention it and its replies.
+Both are served by one hidden session per Smith: a task with `origin:
+"smith"`, tag `smith:<id>`, project = `home_project`, created with the Smith and
+found by the daemon through `smiths.thread_task_id`, not by a desktop-side tag
+lookup as the PR Assistant is — the daemon routes mentions and reports to it.
+Habit reports and work-session reports land there. The thread task is never
+swept (`origin_sweep` keeps matching `pr-review` only) and `task.adopt` refuses
+it: adopting would make it a board task and orphan the Smith.
 
-**The thread coordinates; it does not edit.** The thread session runs with the
-advisor's read-only enforcement (ADR 0022's four places) plus the peer tools and
-one new tool, `assign(…)` (below). Work that changes files happens in a work
-task. This is the delegation rule MonoCode wrote into prompts, enforced in code:
-a thread cannot do the work itself, however it is worded.
+**The thread coordinates; it never edits code.** The thread session runs with
+the advisor's read-only enforcement for file and shell writes (ADR 0022's four
+places). Code changes happen only in a work session. This is the delegation
+rule MonoCode wrote into prompts, enforced in code: a thread cannot do the work
+itself, however it is worded. What the thread can do, all P1:
 
-**Work happens in ordinary tasks carrying `smith_id`.** `Task.smith_id:
-Option<String>` (`serde(default)`). A work task is a normal board task — its
-own worktree, transcript, diff, PR — with the Smith's soul and journal injected
-and its outcome written back. It is created by the user (New Task → "assign to
-Smith"), by `assign` from a thread, or by a habit. Its project must be in the
-Smith's `allowed_projects`; the daemon refuses otherwise. A work task never has
-`parent_task_id` = the thread: `is_peer_visible` hides children, and the work
-must stay on the board and in the directory.
+- **answer** — read-only investigation of the code, runtime, memory and board;
+- **create board items** — `create_backlog_task`, which gains an optional
+  `assignee`;
+- **assign board items** to itself or another Smith — `update_backlog_task`
+  gains `assignee`. Assignment records intent and starts nothing;
+- **start work** — `start_work(smith | "self", project, brief, item?)` creates a
+  work session that *is* that Smith, optionally linked to a board item;
+- **talk** — the peer tools of ADR 0026 (`list_agents`, `message_agent`,
+  `set_status_note`).
+
+**A board item is assigned to a Smith through `assignee`.** The value is
+`smith:<id>` — the stable id, so a rename does not orphan assignments and a
+Smith cannot collide with a GitHub login; the board, the filter and the drawer
+render it as the Smith's name. The Team view lists a Smith's assigned items by
+filtering on that value. Only local items take a Smith assignee: on a tracker
+item the next sync would overwrite it (`adopt_imported`), so the daemon refuses
+it with that reason. *Rejected:* a separate assignment table — the field
+exists, is filterable and is already shown on every row.
+
+**A work session is an ordinary task carrying `smith_id`.** `Task.smith_id:
+Option<String>` (`serde(default)`). It is a normal board task — its own
+worktree, transcript, diff, PR — with the Smith's soul and journal injected and
+its outcome written back. A linked item uses the existing
+`Task.backlog_item_id` and `workItem.linkTask`. It is created by the user (New
+Task → "as Smith", or "start" on an assigned item), by `start_work` from a
+thread, or by a habit. Its project must be in the Smith's `allowed_projects`;
+the daemon refuses otherwise. A work session never has `parent_task_id` = the
+thread: `is_peer_visible` hides children, and the work must stay on the board
+and in the directory.
+
+**Work reports back to where it was asked.** A work session records its
+origin: the thread (DM or the channel post's project) that started it, or none
+when the user started it from New Task. When it settles, the daemon posts one
+short report there — title, outcome, diff stats, PR link, plus the session's
+closing message clipped — as a message from the Smith. Questions in between go
+through ordinary peer messaging: the work session messages its thread or the
+user, under ADR 0026's guard.
 
 **`kind: smith` in the directory.** `PeerKind` gains `Smith`. The thread is
 listed as `kind: smith`, `name` = the Smith's name, in the directory of every
 project in `allowed_projects` (a projection: the task still has one project).
-Its work tasks are listed as `kind: task` with `name` set, so `peer_label`
+Its work sessions are listed as `kind: task` with `name` set, so `peer_label`
 shows `Ada · fix login flake` with no change to tools or views. `is_peer_visible`
 gains one explicit arm: `origin == "smith"` and the caller's project is in that
 Smith's allowed list. `PeerInfo` for a Smith carries no soul or charter text
@@ -179,7 +230,7 @@ Smith's allowed list. `PeerInfo` for a Smith carries no soul or charter text
 
 **A bare `@Name` reaches the Smith's thread.** Mention resolution tries Smith
 names before labels: `@Ada` is the thread, `@Ada · fix login flake` is that
-work task by label. Smith names are unique, so a bare name is never ambiguous.
+work session by label. Smith names are unique, so a bare name is never ambiguous.
 A user's mention wakes the thread as a `User` turn; an agent's mention is a
 peer DM through the guard (ADR 0026 invariants 16–17).
 
@@ -192,7 +243,7 @@ peer DM through the guard (ADR 0026 invariants 16–17).
 - *Other harnesses:* the same text is a prefix in `start_session`, in the slot
   of `memory_prefix`.
 - *Every Smith session:* the opening prompt gets a bounded journal brief (most
-  recent and most relevant `smith:<id>` entries) and, for a work task, the
+  recent and most relevant `smith:<id>` entries) and, for a work session, the
   assignment brief.
 - *Later prompts:* the actor compares the task's recorded `soul_rev` and
   journal cursor with the current ones and, when they moved, prepends a
@@ -205,19 +256,22 @@ it for a session whose task carries that `smith_id`, and refuses it otherwise.
 Reads: a Smith's sessions see `global` + `project:<id>` + their own journal; a
 plain session's "all" never includes `smith:*`. The Memory view shows every
 scope to the user. Besides what the model chooses to store, the daemon writes
-one deterministic entry when a work task settles — task, outcome, diff stats,
+one deterministic entry when a work session settles — task, outcome, diff stats,
 PR — so the record of what a Smith did does not depend on the model
 remembering to write it. Dream and compaction run per scope.
 
-**Delegation goes through the peer tools and `assign`.** A Smith messages any
-Smith or session with `message_agent` (ADR 0026 guard and framing).
-`assign(smith | "self", project, brief)` creates a work task — for itself, or
-for another Smith, whose soul it then carries. A worker gets the brief, never
-the assigning Smith's persona. The daemon enforces: target project in the
-assignee's allowed list; assignment depth ≤ 2 (a task created by `assign`
-from a task created by `assign` cannot assign again); at most 3 open assigned
-work tasks per Smith (to tune); the assignee's budget, not the assigner's.
-Orchestrator children (`spawn_agent`) from a work task stay plain sub-agents.
+**Delegation goes through the peer tools, the board and `start_work`.** A
+Smith messages any Smith or session with `message_agent` (ADR 0026 guard and
+framing). Assigning an item to another Smith is a note on the board; that Smith
+picks it up when the user or a habit says so. `start_work` for another Smith
+creates a session carrying the target's soul; it gets the brief, never the
+starting Smith's persona. The daemon enforces on `start_work` and on an
+assignment to another Smith: the project is in the target's allowed list;
+start depth ≤ 2 (a session started by `start_work` from a session started by
+`start_work` cannot start more); at most 3 open work sessions per Smith (to
+tune); the target is not held; the target's budget, not the starter's.
+Orchestrator children (`spawn_agent`) from a work session stay plain
+sub-agents.
 
 **Scheduling is the daemon's, through automations (P2).** A habit in
 `charter.yaml` is mirrored as an automation row with `smith_id`; the tick,
@@ -246,9 +300,15 @@ wake" view and the audit trail.
 and turns per day. Spend is summed from cost reports the way the advisor's is
 (rise in the session's running cost, ADR 0022). Past the budget the Smith is
 `held: budget` until the window resets or the user raises it: habits are
-skipped as `SkippedBudget`, `assign` is refused, a running turn finishes. A task
-the user starts on a Smith is not refused, only warned — ADR 0019's rule that a
-person at the keyboard is not gated.
+skipped as `SkippedBudget`, `start_work` is refused, a running turn finishes. A
+task the user starts on a Smith is not refused, only warned — ADR 0019's rule
+that a person at the keyboard is not gated.
+
+**Account and quota.** `account_id` is optional per Smith and copied onto each
+work session's `task.account_id`, so a Smith keeps its account across a later
+switch; unset means today's selection at session start. Unattended Smith
+dispatch — habits and `start_work` — goes through `dispatch_refusal` with that
+account (ADR 0019); the daily cap above applies on top, at the same points.
 
 **Soul changes are proposed, never written, by a Smith (P3).**
 `propose_identity_change(file, new_text, reason)` stores a proposal; the user
@@ -260,10 +320,33 @@ thread's context is long, its session writes a handoff entry into the journal
 and the next session starts from it. Health: per-Smith eval prompts with
 expected behaviour (escalates, stays quiet, refuses), run on demand.
 
-**Team UI.** The Team view (ADR 0026) gains a Smiths section: create and edit a
-Smith (name, projects, agent/model/account, budget, soul and charter in an
-editor, with the identity repo's history), open its thread, see its work tasks
-and, from P2, its activity log.
+**Team owns Smith management (P1).** Smiths are created, edited, paused and
+deleted in the Team view (ADR 0026), nowhere else. A Smith appears there as a
+teammate: its DM thread, its open work sessions, its assigned board items and,
+from P2, its activity log. Edit covers name, soul and charter (in an editor,
+with the identity repo's history), model, account, allowed projects and
+permissions. Pause sets `held: paused`: no new sessions, habits skipped,
+running turns finish, mentions get "paused" from the daemon. Delete archives
+the thread task, moves the identity repo to `~/.warpforge/smiths/.deleted/<id>`,
+keeps the journal, clears `smith:<id>` from local items' `assignee`, and leaves
+past work sessions with their `smith_id` as history; nothing is injected into
+them again.
+
+**Projects: a home project and an allowed list.** The task model keeps one
+project per task; the Smith carries `home_project` and `allowed_projects`, and
+its thread is projected into each allowed project's directory (above). The
+thread's channel digest comes from the home project only; other projects reach
+it by mention or DM, so a Smith on five projects is not woken into five
+channels' chatter.
+
+**P1 does not wait for #120; P2 does.** Backlog #120: the daemon cannot tell
+the desktop from an agent, so any holder of the daemon token can call the
+RPCs that speak as the user. A P1 Smith acts only when the user or a peer gives
+it a turn — the exposure every session has today. The new RPCs that write a
+soul or charter, accept or revert an identity change, or pause, delete and
+edit a Smith join #120's list of user-only methods. P2 (habits and triggers)
+waits for #120: unattended runs plus an agent that can speak as the user or
+rewrite a soul is the case #120 exists for.
 
 ### Rejected
 
@@ -272,7 +355,9 @@ and, from P2, its activity log.
 - **Scheduler or tools in the webview.** Nothing runs with the window closed
   and a reload loses state — the MonoCode failure.
 - **Delegation rules in the prompt.** They drift with every prompt version; the
-  read-only thread and `assign` limits are code.
+  read-only thread and the `start_work` limits are code.
+- **A thread that edits code.** It would make the thread a second, unbounded
+  work session with no worktree, item link or report of its own.
 - **Discarding habit transcripts.** Quiet runs are archived, not deleted; the
   transcript is the evidence for "why did it do that".
 - **Mechanical context rotation** (drop the oldest N turns). It cuts decisions
@@ -299,8 +384,8 @@ and, from P2, its activity log.
 4. **A task's `_meta.systemPrompt` is byte-stable for its session's life.**
    (`acp/session/init.rs`) `session/new` and `session/load` send the same text;
    changes go as `<smith_update>`. A changed value rebuilds the Claude session.
-5. **A work task never has the thread as parent.** (`actor/smiths/`) It must
-   stay on the board and in the directory.
+5. **A work session never has the thread as parent.** (`actor/smiths/`) It
+   must stay on the board and in the directory.
 6. **The thread is never swept, never adopted, never edits files.**
    (`origin_sweep.rs`, `task.adopt`, `advisor_overrides`-style enforcement)
 7. **`smith:<id>` is written only by that Smith's tasks and read only by them
@@ -314,6 +399,15 @@ and, from P2, its activity log.
     ADR 0026 invariant 8). Nothing a Smith may do beyond a plain session rests on
     it alone until #120 lands.
 11. **`PeerInfo` for a Smith carries no identity text.** (ADR 0026 invariant 7)
+12. **Assigning a board item starts nothing.** (`actor/smiths/`, backlog)
+    Only `start_work`, the user, or a habit starts a session; a path that
+    starts work because an `assignee` changed turns the board into a trigger.
+13. **A Smith assignee is `smith:<id>`, on local items only.** (backlog
+    update path) A name would break on rename and collide with logins; a
+    tracker item's assignee is overwritten by the next sync.
+14. **Every work session the thread started reports back to it once, on
+    settle.** (`actor/smiths/`) The user asked there; a result that lands only
+    on the board is a result they have to go looking for.
 
 ## Consequences
 
@@ -327,46 +421,32 @@ and, from P2, its activity log.
 - Claude Smiths get the soul as system prompt; Codex and opencode get it as a
   prompt prefix, which is weaker against long contexts. The delta re-send
   narrows the gap.
-- Habits stop while the daemon is down (open question 2). On restart, missed
-  occurrences follow ADR 0007's grace window: at most one catch-up run.
-- Budget is per Smith; a work task assigned by another Smith is charged to the
-  assignee.
+- Habits run only while the daemon runs. On restart, missed occurrences follow
+  ADR 0007's grace window: at most one catch-up run.
+- Budget is per Smith; a work session started by another Smith is charged to
+  the Smith it runs as.
+- Tracker-imported items cannot be assigned to a Smith; the user starts work on
+  them as that Smith directly, or copies them to a local item.
+- Until #120, an agent holding the daemon token can call the Smith management
+  RPCs; the identity repo's history makes such an edit visible and revertible.
 
 ## Phases
 
 1. Smith entity, store and mirror; identity repo (soul, charter) with hash
-   check and hold; constitution; `PeerKind::Smith` in the directory, `@Name`
-   resolution; the thread (hidden task, read-only); `Task.smith_id` work tasks;
+   check and hold; constitution with the request-handling defaults;
+   `PeerKind::Smith` in the directory, `@Name` resolution; the thread (hidden
+   session, read-only) answering in DM and channel; board items created and
+   assigned by the thread (`assignee` = `smith:<id>`, local items only);
+   `start_work` with its limits, `Task.smith_id` work sessions linked through
+   `backlog_item_id`, and the settle report back to the asking thread;
    injection (`_meta.systemPrompt` append for Claude, prefix otherwise) with
    delta re-send; `smith:<id>` journal scope and the daemon's settle entry;
-   `assign` with its limits; Team UI to create and edit a Smith and open its
-   thread.
+   account copy and quota gate on `start_work`; Team view management — create,
+   edit, pause, delete, and the Smith's page with thread, work sessions and
+   assigned items.
 2. Habits via automations (precheck, isolated run, `NOTHING_TO_REPORT`),
-   event triggers, budget meter and hard pause, activity log. Gated on #120
-   (open question 3).
+   event triggers, budget meter and hard pause, activity log. Waits for #120.
 3. Identity-change proposals with diff approval, quarantine tier, model-written
    handoff rotation, evals and health.
 
-## Open questions (owner to confirm)
-
-1. **Projects.** Proposed: home project + `allowed_projects`; the task model
-   keeps one project per task; the thread is projected into each allowed
-   project's directory. Its channel digest comes from the home project only;
-   other projects reach it by mention or DM, so a Smith on five projects is not
-   woken into five channels' chatter.
-2. **Habits while the app is closed.** Proposed: defer. ADR 0014 already leaves
-   a CLI-started daemon running after quit; "start the daemon from the CLI (or
-   launchd)" is the opt-in, with no new quit mode. Revisit if habits prove
-   useful enough to want a managed background daemon.
-3. **#120.** Proposed: P1 does not wait — a P1 Smith acts only when the user or
-   a peer gives it a turn, the same exposure as any session today. But the new
-   identity-writing RPCs (`smiths.update`, soul/charter edits, accept/revert)
-   join #120's list of user-identity methods, and an agent holding the token
-   could rewrite a soul until then. P2 waits for #120: autonomous habits plus an
-   agent able to speak as the user, or edit a soul, is the case #120 exists for.
-4. **Account and budget.** Proposed: `account_id` optional per Smith, copied
-   onto each work task's `task.account_id` (so a Smith keeps its account across
-   a mid-run switch); unset means today's selection. Unattended Smith dispatch
-   (habits, `assign`) goes through `dispatch_refusal` with the Smith's account;
-   budget is the Smith's own daily cap on top, enforced at the same dispatch
-   points.
+Out of scope, not planned: running habits while the app is closed.
