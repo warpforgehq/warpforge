@@ -192,7 +192,7 @@ async fn a_direct_message_is_recorded_first_and_delivered_when_its_turn_starts()
     let texts = prompt_texts(&agent.log);
     let delivered = &texts[1];
     assert!(delivered.contains("<peer_messages>"), "{delivered}");
-    assert!(delivered.contains("--- from work of t_a (direct message) ---"));
+    assert!(delivered.contains("<peer_message from=\"work of t_a\" kind=\"direct\">"));
     assert!(delivered.contains("can you look at auth?"));
     assert!(record(&daemon, id).await.delivered_at.is_some());
     eventually("the receiver's entry", || {
@@ -231,7 +231,7 @@ async fn a_team_post_starts_no_turn_and_rides_the_next_prompt_once() {
     eventually("the second prompt", || prompt_texts(&log).len() == 2).await;
     let second = &prompt_texts(&agent.log)[1];
     assert!(
-        second.contains("--- from work of t_a (team post) ---"),
+        second.contains("<peer_message from=\"work of t_a\" kind=\"team\">"),
         "{second}"
     );
     assert!(second.contains("main is red"));
