@@ -53,8 +53,13 @@ Visibility is one function, `is_peer_visible(&Task)`:
 Snoozed tasks (`snoozed_until` in the future) stay visible and are marked
 `snoozed`: a snooze hides a task from its owner's attention, it does not stop
 the session. Orchestrator parents are visible and marked (tag `orchestrator`).
-The caller is never in its own list. Scope is the caller's project; other
-projects are opt-in (phase 2).
+The caller is never in its own list. The filter applies to the caller too: a
+hidden caller (a stage, an automation run, an orchestrator child, a settled
+task) sees an empty list and is refused on the peer and team paths, since no
+peer could answer it. Scope is the caller's project; other projects are opt-in
+(phase 2). `peers.list` and `peers.controls` read actor memory through the
+mailbox: ADR 0002's state snapshot for reads does not exist yet, and every
+task-derived read still goes this way.
 
 **The entry is metadata, never content.** `PeerInfo`: `id`, `kind` (`task`
 now, `smith` later), `title` (falls back to the first line of the prompt),
@@ -71,20 +76,38 @@ surface by filling `name`, without touching the tools or the views.
 
 **A status note says what a session is doing.** `set_status_note(text)` sets a
 short note on the caller's task (clipped, ~200 characters, to tune). In memory
-only, like `queued_prompts`: after a restart the honest value is empty.
+only, like `queued_prompts`: after a restart the honest value is empty. A muted
+session's note is withheld from `peers.list`.
 *Rejected:* deriving it from the last assistant message — that is transcript
 content, and it is usually mid-thought.
 
 **Peer messages are persisted records, and the feed is their view.** A
-`peer_messages` table (`src/daemon/store/peers.rs`): `id`, `project`,
-`from_task` (null = the user), `to_task` (null = a channel post), `text`,
-`created_at`, `delivered_at`, `status` (`queued` / `delivered` / `refused`)
-and `reason`. A record is written for every attempt, refusals included, through
-the actor's write-behind queue like every other store write (ADR 0007). Live
-changes go out as `Event::PeerMessageUpdated`; the feed pages the store off the
-actor loop (ADR 0002). On startup, `queued` records are marked `refused`
-(`daemon restarted`): session queues are not persisted (ADR 0011), so nothing
-is waiting to deliver them.
+`peer_messages` table (`src/daemon/store/peers.rs`): `id` (monotonic, numbered
+by the actor), `project`, `from_task` (null = the user), `to_task` (null = a
+channel post), `text`, `created_at`, `delivered_at`, `status`, `reason`,
+`alert`, `alert_cleared_at`. Status is one of:
+
+- `queued` — accepted into a live session's queue;
+- `held` — accepted for a visible peer with no live session (idle after a
+  restart, session ended). It is not woken: the message rides the digest of
+  its next prompt, like a post. The sender's guard slot is released at once
+  and the tool says "<label> is not running; it will see your message when it
+  is next resumed";
+- `posted` — a channel post; nobody has read it yet;
+- `delivered` — a turn started with it;
+- `refused` — `reason` names the rule.
+
+A record is written for every attempt the guard or routing refuses, through
+the actor's write-behind queue like every other store write (ADR 0007). An
+address that is not a task in the caller's project, or the caller itself, is an
+invalid request: the tool gets an error and no record is written, so the feed
+does not fill with junk ids. Live changes go out as `Event::PeerMessageUpdated`
+(`peer.messageUpdated`); `peers.feed` flushes the queue and pages the store off
+the actor loop (ADR 0002). On startup, `queued` records are marked `refused`
+(`daemon restarted`): session queues are not persisted (ADR 0011). `held`
+records survive. Per-task digest cursors and the user's mutes and pauses are
+persisted next to the records; deleting a task drops its cursor, its mute and
+its guard counters, and keeps its records.
 
 **The existing agent tools grow a peer half; only one tool is new.**
 
@@ -120,13 +143,14 @@ five stay below.
 existing `Command::SessionPrompt` with a new `TurnInitiator::Peer`. It needs its
 own RPC because `session.prompt` does not accept an initiator (ADR 0011
 invariant 5), and because only the daemon can tell a child from a peer. The receiver's session driver
-queues it behind the running turn like any prompt. A blocked peer, or one with
-no session, is refused, not woken. The record id rides on the queued prompt and
-comes back on `TurnStarted`, which sets `delivered_at` and `status: delivered`.
+queues it behind the running turn like any prompt. A blocked peer is refused; a
+peer with no live session gets the message `held` (above), never woken. The
+record id rides on the queued prompt and comes back on `TurnStarted`, which sets
+`delivered_at` and `status: delivered` and frees the sender's slot.
 
 **A channel post never starts a turn.** `message_agent("team", …)` writes a record
-with `to_task` null and wakes nobody. Each visible peer receives unseen posts
-passively: when the actor prepares that peer's next prompt
+with `to_task` null and wakes nobody. Each visible peer receives unseen posts,
+and direct messages held for it, passively: when the actor prepares that peer's next prompt
 (`Command::SessionPrompt`, and the opening prompt in `start_session`), it
 prepends a short digest — at most 10 posts or 2,000 characters, newest kept,
 "N older posts omitted" (to tune). A per-task cursor, persisted next to the
@@ -192,7 +216,8 @@ on conversation, and nobody has to reset it. Proposed defaults, all to tune:
 - per sender → receiver, one message per 5 s — enough to break a tight loop,
   short enough not to slow a question and its answer;
 - at most 30 peer-initiated turns per receiving session per hour;
-- at most one queued `Peer` prompt per sender per receiver;
+- at most one queued `Peer` prompt per sender per receiver; the reservation
+  lapses after 30 minutes (`QUEUED_TTL`) if nothing delivers or drops it;
 - message and post text capped at 4,000 characters.
 
 A refusal is an explicit tool error naming the rule, so the agent stops rather
@@ -209,7 +234,11 @@ alert is another such map, keyed by task, and clears when the window resets.
 It ranks with PR feedback, below anything that stops work: the sessions are
 still working, only their conversation is held. One item per pair per window,
 however many refusals follow. The other rules refuse silently, to the feed
-only.
+only. When the window ends — 10 quiet minutes, a `User`/`Automation` turn, a
+deleted task or a restart — the alert record gets `alert_cleared_at` and is
+re-emitted; an alert is live while that is null. Time-based ends are found by
+`PeerCommand::Tick`, sent with the automation and runner ticks every minute, so
+no new message is needed to clear one.
 
 **Overlap hint (phase 2).** When two visible peers' worktrees change the same
 files, the daemon posts a note to both. The file sets come from git on demand,
@@ -264,8 +293,8 @@ definitions), `src/mcp/handle/peers.rs`,
 2. **The record is written before delivery.** (`actor/peers/`) The record is
    in the store queue and its event emitted before the prompt is submitted.
    Nothing reaches an agent that the feed does not show.
-3. **A channel post never starts a turn.** (`actor/peers/`) Posts ride on a
-   prompt that something else submitted. A path that submits a prompt because
+3. **A channel post or a held message never starts a turn.** (`actor/peers/`)
+   Both ride on a prompt that something else submitted. A path that submits a prompt because
    a post exists turns every post into N turns.
 4. **A `Peer` prompt never joins a force-send batch.**
    (`src/daemon/acp/session/turn.rs`) The partition keeps `User` only; a merge
@@ -284,7 +313,8 @@ definitions), `src/mcp/handle/peers.rs`,
    Nothing may grant a peer more because of who it claims to be.
 9. **The guard refuses, it does not drop.** A blocked message returns an error
    to the sender and a `refused` record with its reason. Nothing is silently
-   discarded.
+   discarded. An invalid address is not a refusal: it gets an error and no
+   record.
 10. **The guard needs no one to reset it.** (`actor/peers/`) Every limit
     expires on time alone; a `User` or `Automation` turn may reset one early,
     never be required to.
@@ -316,8 +346,8 @@ definitions), `src/mcp/handle/peers.rs`,
   never reads the channel until someone gives it a turn — by design.
 - The sender is not authenticated (ADR 0018's known limit). Accepted for v1:
   the worst case is a message with a wrong name on it, framed as untrusted.
-- The feed survives a restart; notes, guard counters and queued deliveries do
-  not.
+- The feed and held messages survive a restart; notes, guard counters and
+  queued deliveries do not.
 - `QueuedPrompt.initiator` gains `peer`, so the chat can show whose message is
   waiting.
 
