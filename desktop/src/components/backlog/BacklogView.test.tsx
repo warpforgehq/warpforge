@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { daemon } from "@/daemon";
 import { normalizeRunnerStatus } from "@/daemon/runner";
 import { useUi } from "@/store/ui";
+import { setSmiths, smithFixture } from "@/test/smiths";
 
 import { BacklogView } from "./BacklogView";
 import type { WorkItem } from "./types";
@@ -55,6 +56,7 @@ beforeEach(() => {
   // The query lives in the persisted UI store, so a filter picked by one test
   // is still there for the next one.
   useUi.setState({ backlogParamsByProject: {} });
+  setSmiths([]);
   vi.spyOn(daemon, "listBacklog").mockImplementation(async (input) => {
     const sorted = [...allItems].sort((a, b) => {
       if (input.sortBy === "title") {
@@ -157,6 +159,32 @@ describe("BacklogView", () => {
     await vi.waitFor(() =>
       expect(daemon.listBacklog).toHaveBeenCalledWith(
         expect.objectContaining({ assignee: "stas92" }),
+      ),
+    );
+  });
+
+  it("offers every Smith by name and filters by its id", async () => {
+    setSmiths([smithFixture()]);
+    vi.mocked(daemon.listBacklog).mockImplementation(async (input) => ({
+      items: allItems
+        .slice(0, input.pageSize)
+        .map((item, index) => ({ ...item, assignee: index === 0 ? "smith:sm_gone" : null })),
+      page: input.page,
+      pageSize: input.pageSize,
+      total: allItems.length,
+      hasNextPage: false,
+    }));
+    renderBacklog();
+    await vi.waitFor(() => expect(rowTitles()).toHaveLength(PAGE_SIZE));
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    await user.click(await screen.findByRole("combobox", { name: "Assignee" }));
+    expect(await screen.findByRole("option", { name: "Removed teammate" })).toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "Ada" }));
+
+    await vi.waitFor(() =>
+      expect(daemon.listBacklog).toHaveBeenCalledWith(
+        expect.objectContaining({ assignee: "smith:sm_1" }),
       ),
     );
   });

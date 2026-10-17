@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { daemon } from "@/daemon";
+import { setSmiths, smithFixture } from "@/test/smiths";
 
 import { NewWorkItemDrawer } from "./NewWorkItemDrawer";
 
@@ -33,6 +34,7 @@ async function selectLinear() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  setSmiths([]);
   vi.spyOn(daemon, "trackerStatus").mockResolvedValue({
     github: { connected: false },
     linear: { connected: true, email: "me@example.com" },
@@ -113,6 +115,25 @@ describe("NewWorkItemDrawer", () => {
 
     // Linear answers for its own issues; a value set here would not survive
     // the next sync, so the control is not offered at all.
+    expect(screen.queryByLabelText("Assignee")).not.toBeInTheDocument();
+  });
+
+  it("puts a local item on a Smith, and offers none for a tracker item", async () => {
+    setSmiths([smithFixture()]);
+    renderDrawer();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    await user.click(screen.getByLabelText("Assignee"));
+    await user.click(await screen.findByRole("option", { name: "Ada" }));
+    typeTitle("For Ada");
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => {
+      expect(daemon.createBacklog).toHaveBeenCalledWith(
+        expect.objectContaining({ assignee: "smith:sm_1", source: "local" }),
+      );
+    });
+
+    await selectLinear();
     expect(screen.queryByLabelText("Assignee")).not.toBeInTheDocument();
   });
 

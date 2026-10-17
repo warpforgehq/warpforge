@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { daemon } from "@/daemon";
+import { setSmiths, smithFixture } from "@/test/smiths";
 
 import type { WorkItem } from "./types";
 import { WorkItemDrawer } from "./WorkItemDrawer";
@@ -39,6 +40,7 @@ function renderDrawer(
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  setSmiths([]);
   vi.spyOn(daemon, "updateBacklog").mockResolvedValue({
     id: "b-1",
     number: 1,
@@ -148,6 +150,33 @@ describe("WorkItemDrawer", () => {
     renderDrawer({ ...localItem, source: "github", assignee: "someone-else" });
 
     expect(await screen.findByText("someone-else")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Assignee" })).not.toBeInTheDocument();
+  });
+
+  it("assigns a local item to a Smith by id, without an identity", async () => {
+    setSmiths([
+      smithFixture(),
+      smithFixture({ id: "sm_2", name: "Bea", allowedProjects: ["elsewhere"] }),
+    ]);
+    renderDrawer(localItem);
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+
+    await user.click(await screen.findByRole("combobox", { name: "Assignee" }));
+    // The daemon refuses a Smith outside its allowed projects.
+    expect(screen.queryByRole("option", { name: "Bea" })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole("option", { name: "Ada" }));
+
+    expect(daemon.updateBacklog).toHaveBeenCalledWith(
+      expect.objectContaining({ itemId: "b-1", assignee: "smith:sm_1" }),
+    );
+    expect(screen.getByRole("combobox", { name: "Assignee" })).toHaveTextContent("Ada");
+  });
+
+  it("offers no Smith on a tracker item", () => {
+    setSmiths([smithFixture()]);
+    renderDrawer({ ...localItem, source: "github", assignee: "someone-else" });
+
+    expect(screen.getByText("someone-else")).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Assignee" })).not.toBeInTheDocument();
   });
 
