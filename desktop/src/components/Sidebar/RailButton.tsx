@@ -13,6 +13,8 @@ export const RailButton = forwardRef<
   HTMLButtonElement,
   {
     label: string;
+    /** Tooltip text when it says more than the label. */
+    tooltip?: string;
     active?: boolean;
     count?: number;
     hot?: boolean;
@@ -27,6 +29,7 @@ export const RailButton = forwardRef<
 >(function RailButton(
   {
     label,
+    tooltip,
     active,
     count,
     hot,
@@ -85,7 +88,7 @@ export const RailButton = forwardRef<
         sideOffset={10}
         className="flex items-center gap-3 [&_kbd]:text-muted-foreground/60"
       >
-        <span>{label}</span>
+        <span>{tooltip ?? label}</span>
         {shortcut && (
           <kbd className="tnum rounded border border-border px-1 font-sans text-[11px]">
             {shortcut}

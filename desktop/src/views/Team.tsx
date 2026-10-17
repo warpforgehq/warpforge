@@ -1,5 +1,5 @@
-import { MessagesSquare } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Hammer } from "lucide-react";
+import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/ui/empty-state";
@@ -15,13 +15,11 @@ import { projectChannels } from "@/lib/teamChannels";
 import type { Snapshot } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
 import { useSmithsStore } from "@/store/smiths";
-import { useUi } from "@/store/ui";
+import { type TeamSelection, useUi } from "@/store/ui";
 
 import type { NewTaskOptions } from "../app/dialogs";
 import { labeller } from "./team/labels";
-import type { TeamSelection } from "./team/selection";
 import { TeammateMain } from "./team/smiths/TeammateMain";
-import { TeamSidebar } from "./team/TeamSidebar";
 import { Thread } from "./team/Thread";
 
 interface Props {
@@ -35,19 +33,31 @@ interface Props {
   ) => void;
 }
 
+/** A user's direct thread with a session: `<project>::dm::|<task>`. */
+const USER_THREAD = /^(.*)::dm::\|(.+)$/;
+
 /**
- * The Team screen (ADR 0026, 0027), laid out like a chat app: each project's
- * channels, the direct threads between sessions and the teammates on the
- * left; the channel's feed or the teammate's page on the right.
+ * @param key a conversation key the sidebar picked
+ * @param projects the registered projects
+ * @returns the empty thread it names, before anything was said in it
+ */
+function emptyConversation(key: string, projects: string[]): Conversation | null {
+  const user = USER_THREAD.exec(key);
+  if (user) return userThread(user[1]!, user[2]!);
+  const project = projects.find((p) => projectChannels(p).some((ch) => ch.key === key));
+  return project ? { key, kind: "team", lastAt: 0, parties: null, project, records: [] } : null;
+}
+
+/**
+ * The Smiths main area (ADR 0026, 0027): the channel, direct thread or Smith
+ * picked in the sidebar's Smiths mode.
  */
 export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   const records = usePeersStore((state) => state.records);
   const loaded = usePeersStore((state) => state.loaded);
-  const paused = usePeersStore((state) => state.controls.pausedProjects);
   const markTeamSeen = useUi((state) => state.markTeamSeen);
-  const [selection, setSelection] = useState<TeamSelection | null>(null);
-  /** The user's thread with a session that has none yet, once asked for. */
-  const [draft, setDraft] = useState<Conversation | null>(null);
+  const stored = useUi((state) => state.teamSelection);
+  const openTeam = useUi((state) => state.openTeam);
 
   const taskById = useMemo(
     () => new Map(snapshot.tasks.map((task) => [task.id, task])),
@@ -58,34 +68,18 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   const label = useMemo(() => labeller(taskById, smithsById), [smithsById, taskById]);
   const projects = useMemo(() => snapshot.projects.map((p) => p.name), [snapshot.projects]);
 
-  const conversations = useMemo(() => {
-    const all = buildConversations(Object.values(records));
-    if (draft && !all.some((c) => c.key === draft.key)) all.unshift(draft);
-    return all;
-  }, [draft, records]);
-  const dms = useMemo(() => conversations.filter((c) => c.kind === "dm"), [conversations]);
-
   const firstChannel = projects[0] ? projectChannels(projects[0])[0]!.key : null;
-  const current = useMemo<TeamSelection | null>(
-    () => selection ?? (firstChannel ? { key: firstChannel, kind: "conversation" } : null),
-    [firstChannel, selection],
+  const selection = useMemo<TeamSelection | null>(
+    () => stored ?? (firstChannel ? { key: firstChannel, kind: "conversation" } : null),
+    [firstChannel, stored],
   );
   const conversation = useMemo(() => {
-    if (current?.kind !== "conversation") return null;
-    const found = conversations.find((c) => c.key === current.key);
-    if (found) return found;
-    const project = projects.find((p) => projectChannels(p).some((ch) => ch.key === current.key));
-    return project
-      ? ({
-          key: current.key,
-          kind: "team",
-          lastAt: 0,
-          parties: null,
-          project,
-          records: [],
-        } as Conversation)
-      : null;
-  }, [conversations, current, projects]);
+    if (selection?.kind !== "conversation") return null;
+    return (
+      buildConversations(Object.values(records)).find((c) => c.key === selection.key) ??
+      emptyConversation(selection.key, projects)
+    );
+  }, [projects, records, selection]);
   const candidates = useMemo(
     () => (conversation ? mentionCandidates(snapshot.tasks, conversation.project, smiths) : []),
     [conversation, smiths, snapshot.tasks],
@@ -95,11 +89,11 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
     markTeamSeen(Math.floor(Date.now() / 1000));
   }, [markTeamSeen, records]);
 
-  const openUserThread = useCallback((project: string, taskId: string) => {
-    const thread = userThread(project, taskId);
-    setDraft(thread);
-    setSelection({ key: thread.key, kind: "conversation" });
-  }, []);
+  const openUserThread = useCallback(
+    (project: string, taskId: string) =>
+      openTeam({ key: userThread(project, taskId).key, kind: "conversation" }),
+    [openTeam],
+  );
 
   const startSession = useCallback(
     (project: string, text: string, sourceId: number | null) => {
@@ -119,33 +113,27 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   if (projects.length === 0) {
     return (
       <EmptyState
-        icon={MessagesSquare}
+        icon={Hammer}
         title="No projects yet"
-        hint="Add a project to see its sessions and teammates here."
+        hint="Add a project to see its sessions and Smiths here."
       />
     );
   }
-
-  return (
-    <div className="flex h-full min-h-0 min-w-0 gap-3 px-1 py-2">
-      <TeamSidebar
-        projects={projects}
-        dms={dms}
-        smiths={smiths}
-        tasks={snapshot.tasks}
-        pausedProjects={paused}
-        selection={current}
-        label={label}
-        onSelect={setSelection}
-      />
-      {current?.kind === "teammate" || current?.kind === "newTeammate" ? (
+  if (selection?.kind === "teammate" || selection?.kind === "newTeammate") {
+    return (
+      <div className="flex h-full min-h-0 min-w-0 px-1 py-2">
         <TeammateMain
-          selection={current}
+          selection={selection}
           snapshot={snapshot}
-          onSelect={setSelection}
+          onSelect={openTeam}
           onOpenTask={onOpenTask}
         />
-      ) : conversation && loaded ? (
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-full min-h-0 min-w-0 px-1 py-2">
+      {conversation && loaded ? (
         <Thread
           conversation={conversation}
           candidates={candidates}
@@ -156,7 +144,7 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
         />
       ) : (
         <div className="flex flex-1 items-center justify-center text-[13px] text-muted-foreground">
-          Loading the feed…
+          {loaded ? "Pick a channel or a Smith in the sidebar." : "Loading the feed…"}
         </div>
       )}
     </div>

@@ -9,20 +9,22 @@ import UpdateControl from "@/components/UpdateControl";
 import type { ConnectionState, DaemonState } from "@/daemon";
 import { isTaskGroupPinned } from "@/lib/taskGroups";
 import { cn } from "@/lib/utils";
-import type { GlobalView, View } from "@/store/ui";
+import type { GlobalView, SidebarMode, View } from "@/store/ui";
 
-import { BodyPicker, SIDEBAR_BODY_ID, segmentTabId } from "./BodyPicker";
 import { CollapsedRail } from "./CollapsedRail";
 import { ConnectionDot } from "./ConnectionDot";
 import { DeleteShelfDialog } from "./DeleteShelfDialog";
+import { SIDEBAR_BODY_ID, SIDEBAR_MODES } from "./modes";
 import { NAV } from "./nav";
 import { EmptyRow, ProjectRow, ShelfRow } from "./rows";
-import { sidebarSegment, type SidebarSegment } from "./segments";
+import { SmithsBody } from "./SmithsBody";
 import { useSidebarTree } from "./useSidebarTree";
 
 interface SidebarProps {
   state: DaemonState;
   view: View;
+  /** The sidebar body's mode. */
+  mode: SidebarMode;
   openTaskId: string | null;
   collapsed: boolean;
   /** Default to "looks fine" rather than forcing every caller (mainly tests)
@@ -31,9 +33,9 @@ interface SidebarProps {
   connectionError?: string | null;
   onToggleCollapsed: () => void;
   onSelectView: (view: GlobalView) => void;
-  /** Picking Tasks: the host restores the last task it can still find, else
-   *  the selected project, else Mission Control. */
-  onSelectTasksSegment: () => void;
+  /** Picking a mode switches the body and the main area. For Tasks the host
+   *  restores the last task it can still find, else the selected project. */
+  onSelectMode: (mode: SidebarMode) => void;
   onOpenTask: (id: string) => void;
   onNewTask: () => void;
   onOpenProject: (name: string) => void;
@@ -67,13 +69,14 @@ function useTrailingFlag(value: boolean, delayMs: number): boolean {
 function Sidebar({
   state,
   view,
+  mode,
   openTaskId,
   collapsed,
   connection = "connected",
   connectionError = null,
   onToggleCollapsed,
   onSelectView,
-  onSelectTasksSegment,
+  onSelectMode,
   onOpenTask,
   onNewTask,
   onOpenProject,
@@ -87,6 +90,7 @@ function Sidebar({
     deletingShelf,
     handlePin,
     liveLane,
+    modeCount,
     navCount,
     nowSec,
     pinned,
@@ -105,16 +109,6 @@ function Sidebar({
 
   const handleOpenProjects = useCallback((name: string) => onOpenProject(name), [onOpenProject]);
 
-  const segment = sidebarSegment(view, openTaskId);
-  const handleSelectSegment = useCallback(
-    (next: SidebarSegment) => {
-      if (next === segment) return;
-      if (next === "inbox") onSelectView("inbox");
-      else onSelectTasksSegment();
-    },
-    [onSelectTasksSegment, onSelectView, segment],
-  );
-
   // The two trees cross-fade: the panel width owns the 180ms fold, and each
   // tree owns a 120ms opacity pass. The outgoing tree stays mounted until the
   // trailing flag catches up so it can fade instead of cutting at frame zero.
@@ -132,10 +126,11 @@ function Sidebar({
       agentUpdates={agentUpdates}
       liveLane={liveLane}
       navCount={navCount}
-      segment={segment}
+      modeCount={modeCount}
+      mode={mode}
       onToggleCollapsed={onToggleCollapsed}
       onSelectView={onSelectView}
-      onSelectSegment={handleSelectSegment}
+      onSelectMode={onSelectMode}
       onNewTask={onNewTask}
       onOpenTask={onOpenTask}
       onOpenSettings={onOpenSettings}
@@ -179,15 +174,7 @@ function Sidebar({
               </button>
             </div>
 
-            <div className="shrink-0 px-2 pt-2.5">
-              <BodyPicker
-                segment={segment}
-                inboxCount={navCount("inbox")}
-                onSelect={handleSelectSegment}
-              />
-            </div>
-
-            <div className="shrink-0 px-2 pb-2 pt-2">
+            <div className="shrink-0 px-2 pb-2 pt-2.5">
               <button
                 type="button"
                 onClick={onNewTask}
@@ -201,7 +188,53 @@ function Sidebar({
               </button>
             </div>
 
-            <nav className="flex shrink-0 flex-col gap-px border-b border-border px-2 pb-2.5">
+            <nav aria-label="Modes" className="flex shrink-0 flex-col gap-px px-2">
+              {SIDEBAR_MODES.map((item) => {
+                const active = mode === item.id;
+                const count = modeCount(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={active}
+                    aria-controls={SIDEBAR_BODY_ID}
+                    aria-keyshortcuts={`Alt+Meta+${item.key}`}
+                    title={
+                      item.id === "team"
+                        ? `Smiths — AI teammates (⌥⌘${item.key})`
+                        : `${item.label} (⌥⌘${item.key})`
+                    }
+                    onClick={() => onSelectMode(item.id)}
+                    className={cn(
+                      "relative flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
+                      active
+                        ? "bg-accent font-medium text-foreground"
+                        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                    )}
+                  >
+                    <item.icon
+                      className={cn(
+                        "size-4 shrink-0",
+                        active ? "text-primary" : "text-muted-foreground/60",
+                      )}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                    {count > 0 && (
+                      <span className="tnum shrink-0 text-[11px] font-semibold text-warn">
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div aria-hidden className="mx-3 my-2 h-px shrink-0 bg-border" />
+
+            <nav
+              aria-label="Views"
+              className="flex shrink-0 flex-col gap-px border-b border-border px-2 pb-2.5"
+            >
               {NAV.map((item) => {
                 const active = view === item.id && !openTaskId;
                 const count = navCount(item.id);
@@ -249,13 +282,8 @@ function Sidebar({
             {/* Reviewing is "pick one of many, then read it deeply", and the list
             it needs belongs at the window's left edge rather than beside a
             tree of tasks nobody is asking about mid-review. */}
-            {segment === "inbox" ? (
-              <div
-                id={SIDEBAR_BODY_ID}
-                role="tabpanel"
-                aria-labelledby={segmentTabId("inbox")}
-                className="min-h-0 flex-1"
-              >
+            {mode === "inbox" ? (
+              <div id={SIDEBAR_BODY_ID} className="min-h-0 flex-1">
                 <InboxListPane
                   projects={projectNames}
                   emptyHint={
@@ -266,12 +294,14 @@ function Sidebar({
                   onAddProject={onAddProject}
                 />
               </div>
+            ) : mode === "team" ? (
+              <div id={SIDEBAR_BODY_ID} className="min-h-0 flex-1 overflow-y-auto">
+                <SmithsBody projects={projectNames} tasks={state.snapshot.tasks} />
+              </div>
             ) : (
               <div
                 ref={scrollRef}
                 id={SIDEBAR_BODY_ID}
-                role="tabpanel"
-                aria-labelledby={segmentTabId("tasks")}
                 className="min-h-0 flex-1 overflow-y-auto px-2 py-3 [scrollbar-gutter:stable]"
               >
                 <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>

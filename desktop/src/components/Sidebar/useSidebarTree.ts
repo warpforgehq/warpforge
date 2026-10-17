@@ -10,7 +10,7 @@ import { buildAttentionQueue } from "@/lib/attentionRail";
 import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
 import { boardTasks } from "@/lib/taskOrigin";
 import { useUi } from "@/store/ui";
-import type { GlobalView } from "@/store/ui";
+import type { GlobalView, SidebarMode } from "@/store/ui";
 
 import {
   ancestorIds,
@@ -253,15 +253,20 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   );
 
   const navCount = useCallback(
-    (id: GlobalView) =>
-      id === "control"
-        ? blockingCount
-        : id === "inbox"
-          ? inboxUnseen
-          : id === "team"
-            ? teamUnread
-            : 0,
-    [blockingCount, inboxUnseen, teamUnread],
+    (id: GlobalView) => (id === "control" ? blockingCount : 0),
+    [blockingCount],
+  );
+
+  // The same count as Mission Control's "Needs you" tab: the attention queue
+  // without sessions lost to a restart.
+  const needsYouCount = useMemo(
+    () => queue.filter((item) => item.task.status !== "interrupted").length,
+    [queue],
+  );
+  const modeCount = useCallback(
+    (mode: SidebarMode) =>
+      mode === "tasks" ? needsYouCount : mode === "inbox" ? inboxUnseen : teamUnread,
+    [inboxUnseen, needsYouCount, teamUnread],
   );
 
   return {
@@ -269,6 +274,7 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     deletingShelf,
     handlePin,
     liveLane,
+    modeCount,
     navCount,
     nowSec,
     pinned,

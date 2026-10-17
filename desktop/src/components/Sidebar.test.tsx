@@ -84,7 +84,7 @@ import { daemon } from "../daemon";
 import type { DaemonState } from "../daemon";
 import type { ProjectInfo, PullRequestSummary, TaskInfo } from "../protocol";
 import { useUi } from "../store/ui";
-import type { GlobalView } from "../store/ui";
+import type { GlobalView, SidebarMode } from "../store/ui";
 import Sidebar from "./Sidebar";
 import {
   LANE_GLYPH_PX,
@@ -153,7 +153,7 @@ const handlers = {
   onOpenTask: vi.fn<(id: string) => void>(),
   onOpenProject: vi.fn<(name: string) => void>(),
   onSelectView: vi.fn<(view: GlobalView) => void>(),
-  onSelectTasksSegment: vi.fn<() => void>(),
+  onSelectMode: vi.fn<(mode: SidebarMode) => void>(),
   onToggleCollapsed: vi.fn<() => void>(),
 };
 
@@ -170,6 +170,7 @@ function renderSidebar(
         <Sidebar
           state={state}
           view="control"
+          mode="tasks"
           openTaskId={null}
           collapsed={false}
           {...handlers}
@@ -232,9 +233,13 @@ describe("Sidebar shell", () => {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
     expect(screen.queryByRole("button", { name: /^Projects/ })).not.toBeInTheDocument();
-    // The inbox is a body segment, not a fourth destination in the nav.
-    expect(screen.queryByRole("button", { name: /^Inbox/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /^Inbox/ })).toBeInTheDocument();
+    // Inbox is a mode, above the divider, not one of the views below it.
+    const views = screen.getByRole("navigation", { name: "Views" });
+    expect(within(views).queryByRole("button", { name: /^Inbox/ })).not.toBeInTheDocument();
+    const modes = screen.getByRole("navigation", { name: "Modes" });
+    for (const label of [/^Tasks/, /^Inbox/, /^Smiths/]) {
+      expect(within(modes).getByRole("button", { name: label })).toBeInTheDocument();
+    }
   });
 
   it("routes New task, nav and Settings through the App callbacks", () => {
@@ -243,8 +248,8 @@ describe("Sidebar shell", () => {
     fireEvent.click(screen.getByRole("button", { name: /New task/ }));
     expect(handlers.onNewTask).toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("tab", { name: /^Inbox/ }));
-    expect(handlers.onSelectView).toHaveBeenCalledWith("inbox");
+    fireEvent.click(screen.getByRole("button", { name: /^Inbox/ }));
+    expect(handlers.onSelectMode).toHaveBeenCalledWith("inbox");
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     expect(handlers.onOpenSettings).toHaveBeenCalled();
@@ -263,6 +268,7 @@ describe("Sidebar shell", () => {
           <Sidebar
             state={makeState([task("t1")])}
             view="automations"
+            mode="tasks"
             openTaskId="t1"
             collapsed={false}
             {...handlers}
@@ -308,9 +314,9 @@ describe("Sidebar shell", () => {
     expect(screen.queryByText("Workspace")).not.toBeInTheDocument();
     expect(screen.queryByText("Hidden when collapsed")).not.toBeInTheDocument();
     // Every rail control keeps an accessible name even without a visible label.
-    // Both segments are here too: the body is gone at this width, so the rail
-    // is the only way back to the tasks side.
-    for (const label of ["New task", "Tasks", "Inbox", "Mission Control", "Settings"]) {
+    // The three modes are here too: the body is gone at this width, so the
+    // rail is the only way to switch it.
+    for (const label of ["New task", "Tasks", "Inbox", "Smiths", "Mission Control", "Settings"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
 
@@ -327,6 +333,7 @@ describe("Sidebar shell", () => {
             <Sidebar
               state={makeState([])}
               view="control"
+              mode="tasks"
               openTaskId={null}
               collapsed={collapsed}
               {...handlers}
@@ -372,48 +379,54 @@ describe("Sidebar shell", () => {
   });
 });
 
-describe("Sidebar body segments", () => {
-  function segment(name: "Tasks" | "Inbox") {
-    return screen.getByRole("tab", { name: new RegExp(`^${name}`) });
+describe("Sidebar modes", () => {
+  function mode(name: "Tasks" | "Inbox" | "Smiths") {
+    return within(screen.getByRole("navigation", { name: "Modes" })).getByRole("button", {
+      name: new RegExp(`^${name}`),
+    });
   }
 
-  it("reads the active segment off the route rather than a flag of its own", () => {
-    const { unmount } = renderSidebar(makeState([]), { view: "control" });
-    expect(segment("Tasks")).toHaveAttribute("aria-selected", "true");
-    unmount();
-
-    renderSidebar(makeState([]), { view: "inbox" });
-    expect(segment("Inbox")).toHaveAttribute("aria-selected", "true");
+  it("marks the mode it is given, whatever view the main area shows", () => {
+    renderSidebar(makeState([]), { mode: "inbox", view: "automations" });
+    expect(mode("Inbox")).toHaveAttribute("aria-pressed", "true");
+    expect(mode("Tasks")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /^Automations/ })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
-  it("reads as Tasks once a task takes the column, whatever view it came from", () => {
-    renderSidebar(makeState([task("a", { prompt: "Task A" })]), {
-      openTaskId: "a",
-      view: "inbox",
-    });
-
-    expect(segment("Tasks")).toHaveAttribute("aria-selected", "true");
-    expect(segment("Inbox")).toHaveAttribute("aria-selected", "false");
-  });
-
-  it("asks the host to restore the last task when Tasks is picked from the inbox", () => {
-    renderSidebar(makeState([task("a", { prompt: "Task A" })]), { view: "inbox" });
-
-    fireEvent.click(segment("Tasks"));
-    expect(handlers.onSelectTasksSegment).toHaveBeenCalled();
+  it("asks the host to switch modes, the one you are on included", () => {
+    renderSidebar(makeState([]), { mode: "tasks" });
+    fireEvent.click(mode("Smiths"));
+    expect(handlers.onSelectMode).toHaveBeenCalledWith("team");
+    fireEvent.click(mode("Tasks"));
+    expect(handlers.onSelectMode).toHaveBeenCalledWith("tasks");
     expect(handlers.onSelectView).not.toHaveBeenCalled();
   });
 
-  it("does not navigate when the segment you are already on is picked", () => {
-    renderSidebar(makeState([]), { view: "control" });
-
-    fireEvent.click(segment("Tasks"));
-    expect(handlers.onSelectTasksSegment).not.toHaveBeenCalled();
-    expect(handlers.onSelectView).not.toHaveBeenCalled();
+  it("explains the Smiths mode on hover", () => {
+    renderSidebar(makeState([]));
+    expect(mode("Smiths").getAttribute("title")).toContain("Smiths — AI teammates");
   });
 
-  it("keeps New task and the global nav in both segments", () => {
-    renderSidebar(makeState([]), { view: "inbox" });
+  it("shows the Smiths body in Smiths mode", () => {
+    renderSidebar(makeState([task("a", { prompt: "Task A" })]), { mode: "team" });
+    expect(screen.getByRole("navigation", { name: "Smiths" })).toBeInTheDocument();
+    expect(screen.queryByText("Task A")).not.toBeInTheDocument();
+  });
+
+  it("counts what needs you on Tasks", () => {
+    renderSidebar(
+      makeState([
+        task("blocked", { blockedReason: "no creds", prompt: "Blocked", status: "blocked" }),
+      ]),
+    );
+    expect(mode("Tasks").textContent).toContain("1");
+  });
+
+  it("keeps New task and the views in every mode", () => {
+    renderSidebar(makeState([]), { mode: "inbox" });
 
     expect(screen.getByRole("button", { name: /New task/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Mission Control/ })).toBeInTheDocument();
@@ -1078,24 +1091,25 @@ describe("Sidebar inbox mode", () => {
 
   it("swaps the tree for the pull-request list, keeping everything global", async () => {
     vi.spyOn(daemon, "listPulls").mockResolvedValue([pull]);
-    renderSidebar(makeState([task("a", { prompt: "Task A" })]), { view: "inbox" });
+    renderSidebar(makeState([task("a", { prompt: "Task A" })]), { mode: "inbox", view: "inbox" });
 
     expect(await screen.findByText("Add widget")).toBeInTheDocument();
     expect(screen.queryByText("Task A")).not.toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /^Inbox/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("button", { name: /^Inbox/ })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: /New task/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
   });
 
-  it("restores the tree once a task is open, so the new task is never invisible", () => {
+  it("keeps the list while a task is open: only a mode changes the body", async () => {
     vi.spyOn(daemon, "listPulls").mockResolvedValue([pull]);
     renderSidebar(makeState([task("a", { prompt: "Task A" })]), {
+      mode: "inbox",
       openTaskId: "a",
       view: "inbox",
     });
 
-    expect(screen.getByText("Task A")).toBeInTheDocument();
-    expect(screen.queryByText("Add widget")).not.toBeInTheDocument();
+    expect(await screen.findByText("Add widget")).toBeInTheDocument();
+    expect(screen.queryByText("Task A")).not.toBeInTheDocument();
   });
 });
 
