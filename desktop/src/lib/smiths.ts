@@ -98,3 +98,16 @@ export function smithStatus(smith: Smith, tasks: TaskInfo[]): SmithStatus {
   const running = tasks.filter((t) => t.smithId === smith.id && t.status === "running").length;
   return running > 0 ? { kind: "working", sessions: running } : { kind: "idle" };
 }
+
+/**
+ * How a teammate's soul reaches its sessions, for its page.
+ * @param smith the Smith
+ * @returns a short note, or null when the daemon did not say
+ */
+export function injectionNote(smith: Pick<Smith, "agent" | "injection">): string | null {
+  if (smith.injection === "system_prompt") return "Soul delivered as system prompt";
+  if (smith.injection !== "prefix") return null;
+  return smith.agent === "claude"
+    ? "Soul delivered as opening message — install claude-agent-acp 0.91 or later for system prompt"
+    : "Soul delivered as opening message";
+}

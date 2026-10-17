@@ -35,6 +35,8 @@ export interface Smith {
   /** Empty when it may start sessions. */
   held?: SmithHold[];
   createdAt: number;
+  /** How its next new session gets its identity; absent from older daemons. */
+  injection?: "system_prompt" | "prefix";
 }
 
 /** A Smith with its identity files, for its page. */
