@@ -9,7 +9,7 @@ use warpforge_protocol as wire;
 
 use crate::mcp::agents::{agent_values, list_owned_agents, render_agents_listing};
 use crate::mcp::daemon_client::DaemonClient;
-use crate::mcp::format::scoped_project;
+use crate::mcp::format::{now_secs, scoped_project};
 
 pub(super) async fn dispatch(
     name: &str,
@@ -39,6 +39,13 @@ pub(super) async fn dispatch(
                 serde_json::from_value(result.get("peers").cloned().unwrap_or_default())?;
             out.push_str("## Peers (relation: peer)\n\n");
             out.push_str(&render_peers(&peers));
+            let result = client
+                .request("channels.list", json!({ "task_id": caller }))
+                .await?;
+            let channels: Vec<wire::Channel> =
+                serde_json::from_value(result.get("channels").cloned().unwrap_or_default())?;
+            out.push_str("\n\n## Channels\n\n");
+            out.push_str(&render_channels(&channels, now_secs()));
             Ok(out)
         }
         "message_agent" => {
@@ -120,6 +127,39 @@ fn render_peers(peers: &[wire::PeerInfo]) -> String {
     out
 }
 
+fn render_channels(channels: &[wire::Channel], now: u64) -> String {
+    let mut out = String::from("| channel | members | last post |\n");
+    out.push_str("| --- | --- | --- |\n");
+    out.push_str("| #general | every session in this project | |\n");
+    for channel in channels {
+        let members: Vec<&str> = channel.members.iter().map(|m| m.name.as_str()).collect();
+        let last = channel
+            .last_post_at
+            .map(|at| ago(now.saturating_sub(at)))
+            .unwrap_or_default();
+        out.push_str(&format!(
+            "| #{} ({}) | {} | {last} |\n",
+            channel.name,
+            cell(&channel.project),
+            cell(&members.join(", ")),
+        ));
+    }
+    out.push_str(
+        "\nPost with message_agent to \"#name\" (\"team\" is #general). The user adds \
+         members; you can post only to the channels listed here.",
+    );
+    out
+}
+
+fn ago(secs: u64) -> String {
+    match secs {
+        0..60 => "just now".into(),
+        60..3600 => format!("{}m ago", secs / 60),
+        3600..86400 => format!("{}h ago", secs / 3600),
+        _ => format!("{}d ago", secs / 86400),
+    }
+}
+
 fn sent_text(to: &str, sent: &wire::PeerSendResult) -> String {
     let label = sent.to_label.as_deref().unwrap_or(to);
     match sent.relation {
@@ -133,12 +173,17 @@ fn sent_text(to: &str, sent: &wire::PeerSendResult) -> String {
                 .as_ref()
                 .map(|post| post.mentions.as_slice())
                 .unwrap_or_default();
+            let channel = match to.starts_with('#') {
+                true => to,
+                false => "the team channel",
+            };
             let mut text = if mentions.is_empty() {
-                "Posted to the team channel. Nobody is woken; each peer reads it with its next prompt."
-                    .to_string()
+                format!(
+                    "Posted to {channel}. Nobody is woken; each peer reads it with its next prompt."
+                )
             } else {
                 format!(
-                    "Posted to the team channel, and sent as a direct message to {}. The other \
+                    "Posted to {channel}, and sent as a direct message to {}. The other \
                      peers read it with their next prompt.",
                     mentions.join(", ")
                 )
