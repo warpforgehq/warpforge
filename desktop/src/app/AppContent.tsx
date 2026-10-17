@@ -18,6 +18,7 @@ import {
   loadMissionControl,
   loadProjects,
   loadTaskDetail,
+  loadTeam,
   prefetchRouteChunks,
 } from "./routePrefetch";
 
@@ -28,6 +29,7 @@ const MissionControl = lazy(loadMissionControl);
 const NewTaskDialog = lazy(() => import("../views/NewTaskDialog"));
 const Projects = lazy(loadProjects);
 const TaskDetail = lazy(loadTaskDetail);
+const Team = lazy(loadTeam);
 
 function LiveMissionControl({
   onOpenTask,
@@ -138,6 +140,7 @@ export function AppContent({
                 backlogItemId={newTaskBacklogItemId}
                 initialMode={newTaskOptions?.mode}
                 factorySeed={newTaskOptions?.factory}
+                onCreated={newTaskOptions?.onCreated}
               />
             ) : openTask ? (
               <TaskDetail
@@ -165,6 +168,8 @@ export function AppContent({
               <Automations snapshot={snapshot} onOpenTask={onOpenTask} />
             ) : view === "memory" ? (
               <Memory snapshot={snapshot} onOpenTask={onOpenTask} />
+            ) : view === "team" ? (
+              <Team snapshot={snapshot} onOpenTask={onOpenTask} onNewTask={onNewTask} />
             ) : (
               <LiveMissionControl onOpenTask={onOpenTask} onNewTask={onNewTask} />
             )}

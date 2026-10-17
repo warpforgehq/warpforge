@@ -508,3 +508,19 @@ describe("buildAttentionQueue with pull-request feedback", () => {
     ]);
   });
 });
+
+describe("buildAttentionQueue — peer message limit", () => {
+  it("raises a live alert below anything that stops work", () => {
+    const tasks = [
+      task("chatty", { status: "running" }),
+      task("blocked", { status: "blocked", blockedReason: "needs a key" }),
+    ];
+    const alerts = new Map([["chatty", "sessions A and B hit the message limit"]]);
+    const queue = buildAttentionQueue(tasks, {}, undefined, alerts);
+    expect(queue.map((item) => item.task.id)).toStrictEqual(["blocked", "chatty"]);
+    expect(queue[1]).toMatchObject({
+      priority: 3.5,
+      reason: "sessions A and B hit the message limit",
+    });
+  });
+});

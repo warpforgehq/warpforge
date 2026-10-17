@@ -43,6 +43,8 @@ interface Props {
   initialMode?: TaskMode;
   /** Several backlog items to start in Factory at once, instead of a prompt. */
   factorySeed?: FactorySeed | null;
+  /** Called with the new task's id once it is created. */
+  onCreated?: (taskId: string) => void;
 }
 
 /**
@@ -60,6 +62,7 @@ export default function NewTaskDialog({
   backlogItemId,
   initialMode,
   factorySeed,
+  onCreated,
 }: Props) {
   const {
     agent,
@@ -154,6 +157,7 @@ export default function NewTaskDialog({
     configPicks,
     factory,
     mode,
+    onCreated,
     project,
     selectedWorkflow,
     useWorktree,

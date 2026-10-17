@@ -29,6 +29,11 @@ vi.mock("./daemon", () => {
       dismissAgentSetup: vi.fn<() => void>(),
       refreshTaskPullRequests: vi.fn<() => Promise<void>>(() => Promise.resolve()),
       request: vi.fn<() => Promise<unknown>>(),
+      peerFeed: vi.fn<() => Promise<unknown[]>>(() => Promise.resolve([])),
+      peerControls: vi.fn<() => Promise<unknown>>(() =>
+        Promise.resolve({ mutedTasks: [], pausedProjects: [] }),
+      ),
+      subscribeEvents: vi.fn<() => () => void>(() => () => {}),
     },
   };
 });
@@ -61,6 +66,9 @@ vi.mock("./views/InboxView", () => ({
 }));
 vi.mock("./views/Automations", () => ({
   default: vi.fn<() => React.ReactNode>(() => <div data-testid="automations" />),
+}));
+vi.mock("./views/Team", () => ({
+  default: vi.fn<() => React.ReactNode>(() => <div data-testid="team" />),
 }));
 vi.mock("./views/TaskDetail", () => ({
   default: vi.fn<() => React.ReactNode>(() => <div data-testid="task-detail" />),
@@ -276,6 +284,10 @@ describe("App view branches", () => {
     expect(
       await screen.findByTestId("automations", undefined, { timeout: 5_000 }),
     ).toBeInTheDocument();
+
+    act(() => useUi.setState({ view: "team" }));
+    rerender(<App />);
+    expect(await screen.findByTestId("team", undefined, { timeout: 5_000 })).toBeInTheDocument();
 
     act(() => useUi.setState({ view: "control" }));
     rerender(<App />);

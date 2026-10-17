@@ -32,6 +32,7 @@ vi.mock("./routePrefetch", () => {
     loadMissionControl: stub,
     loadProjects: stub,
     loadTaskDetail: stub,
+    loadTeam: stub,
     prefetchRouteChunks,
   };
 });

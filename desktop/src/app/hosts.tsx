@@ -9,6 +9,7 @@ import {
   agentUpdatesQueryKey,
   useAgentUpdates,
 } from "@/hooks/useAgentUpdates";
+import { usePeerFeedSync } from "@/hooks/usePeerFeed";
 import { usePrAssistantLifecycle } from "@/hooks/usePrAssistantLifecycle";
 import { runOnIdle } from "@/lib/idle";
 
@@ -41,6 +42,13 @@ export function PrAssistantLifecycleHost({ projects }: { projects: string[] }) {
  */
 export function AgentUpdatesHost() {
   useAgentUpdates();
+  return null;
+}
+
+/** Keeps the peer feed live app-wide, for the Team view, its badge and the
+ *  needs-you rail's message-limit alerts. */
+export function PeerFeedHost() {
+  usePeerFeedSync();
   return null;
 }
 

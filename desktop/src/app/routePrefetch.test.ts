@@ -26,6 +26,10 @@ vi.mock("../views/TaskDetail", () => {
   loaded.push("task-detail");
   return { default: () => null };
 });
+vi.mock("../views/Team", () => {
+  loaded.push("team");
+  return { default: () => null };
+});
 
 import { prefetchRouteChunks } from "./routePrefetch";
 
@@ -42,9 +46,10 @@ describe("prefetchRouteChunks", () => {
           "mission-control",
           "projects",
           "task-detail",
+          "team",
         ]),
       );
     });
-    expect(loaded).toHaveLength(6);
+    expect(loaded).toHaveLength(7);
   });
 });

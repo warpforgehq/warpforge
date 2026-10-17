@@ -1,0 +1,57 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { postToTeam, messageSession } = vi.hoisted(() => ({
+  messageSession: vi.fn(async () => ({ relation: "peer" })),
+  postToTeam: vi.fn(async () => ({ relation: "team" })),
+}));
+vi.mock("@/daemon", () => ({ daemon: { messageSession, postToTeam } }));
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn() }) }));
+
+import { TeamComposer } from "./TeamComposer";
+
+const candidates = [
+  { id: "t_11111111", label: "Fix login" },
+  { id: "t_22222222", label: "Docs" },
+];
+
+describe("TeamComposer", () => {
+  beforeEach(() => {
+    postToTeam.mockClear();
+    messageSession.mockClear();
+  });
+
+  it("completes an @mention and posts to the project's channel", async () => {
+    render(<TeamComposer project="demo" candidates={candidates} onStartSession={vi.fn()} />);
+    const box = screen.getByRole("textbox", { name: "Post to the team" });
+    await userEvent.type(box, "@fix");
+    expect(screen.getByRole("option", { name: /Fix login/ })).toBeTruthy();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.type(box, "take the bug{Enter}");
+    expect(postToTeam).toHaveBeenCalledWith("demo", "@Fix login take the bug");
+  });
+
+  it("messages the picked session of a direct thread", async () => {
+    render(
+      <TeamComposer
+        project="demo"
+        candidates={candidates}
+        targets={candidates}
+        onStartSession={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole("radio", { name: "Docs" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Message" }), "ship it{Enter}");
+    expect(messageSession).toHaveBeenCalledWith("t_22222222", "ship it");
+    expect(postToTeam).not.toHaveBeenCalled();
+  });
+
+  it("hands the text to New Task to start a session", async () => {
+    const onStartSession = vi.fn();
+    render(<TeamComposer project="demo" candidates={candidates} onStartSession={onStartSession} />);
+    await userEvent.type(screen.getByRole("textbox"), "write the docs");
+    await userEvent.click(screen.getByRole("button", { name: "Start a session" }));
+    expect(onStartSession).toHaveBeenCalledWith("write the docs");
+  });
+});

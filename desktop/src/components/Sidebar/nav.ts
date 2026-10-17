@@ -1,4 +1,4 @@
-import { Brain, CalendarClock, LayoutGrid } from "lucide-react";
+import { Brain, CalendarClock, LayoutGrid, MessagesSquare } from "lucide-react";
 
 import type { GlobalView } from "@/store/ui";
 
@@ -13,4 +13,5 @@ export const NAV: {
   { attention: true, icon: LayoutGrid, id: "control", label: "Mission Control" },
   { icon: CalendarClock, id: "automations", label: "Automations" },
   { icon: Brain, id: "memory", label: "Memory" },
+  { icon: MessagesSquare, id: "team", label: "Team" },
 ];
