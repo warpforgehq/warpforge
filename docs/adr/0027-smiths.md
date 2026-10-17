@@ -111,8 +111,10 @@ Splitting project memory per Smith would let two Smiths hold contradicting
 `smiths` table (`src/daemon/store/smiths.rs`): `id`, `name` (unique,
 case-insensitive), `home_project`, `allowed_projects`, `agent`, `model`,
 `account_id`, `budget`, `permissions`, `thread_task_id`, `soul_rev` and
-`charter_rev` (the identity repo's commit for each), `held` (why it may not
-start sessions, if anything), `created_at`. Loaded into a `HashMap` at spawn;
+`charter_rev` (the identity repo's commit for each), `held` (the reasons it may
+not start sessions — a set, since a paused Smith can also have an outside
+edit), `created_at`. A name is one mentionable word: letters, digits, `-`, `_`,
+starting with a letter, at most 32 characters. Loaded into a `HashMap` at spawn;
 every write goes mirror first, then the write-behind queue (ADR 0007). Commands
 are `Command::Smiths(SmithCommand)`, a nested enum with one exhaustive `match` in
 `src/daemon/actor/smiths/`, the shape of `Command::Peers` — the actor's chain
@@ -127,8 +129,9 @@ repo.** `~/.warpforge/smiths/<id>/`:
 - `charter.yaml` — habits (schedule + precheck + brief), triggers (P2), scope.
 
 The daemon `git init`s it and commits every change it makes, so the user gets
-history, diff and rollback for free. On load and before each session start the
-daemon compares the working tree with `soul_rev` / `charter_rev`. An
+history, diff and rollback for free. At startup and on the minute tick the
+daemon compares the working tree with `soul_rev` / `charter_rev`, off the actor
+loop; a check that raced one of its own edits is discarded. An
 out-of-band edit holds the Smith (`held: identity_changed`): no new session
 starts until the user accepts the change (the daemon commits it) or reverts it,
 from one prompt in the Smith's page. Unattended runs never pick up a soul nobody
@@ -177,7 +180,8 @@ it: adopting would make it a board task and orphan the Smith.
 
 **The thread coordinates; it never edits code.** The thread session runs with
 the advisor's read-only enforcement for file and shell writes (ADR 0022's four
-places). Code changes happen only in a work session. This is the delegation
+places), and its bridge runs as `WF_MODE=thread`: the advisor's read-only tools
+plus the coordinating ones below. It starts on its first message. Code changes happen only in a work session. This is the delegation
 rule MonoCode wrote into prompts, enforced in code: a thread cannot do the work
 itself, however it is worded. What the thread can do, all P1:
 
@@ -223,14 +227,17 @@ user, under ADR 0026's guard.
 listed as `kind: smith`, `name` = the Smith's name, in the directory of every
 project in `allowed_projects` (a projection: the task still has one project).
 Its work sessions are listed as `kind: task` with `name` set, so `peer_label`
-shows `Ada · fix login flake` with no change to tools or views. `is_peer_visible`
-gains one explicit arm: `origin == "smith"` and the caller's project is in that
-Smith's allowed list. `PeerInfo` for a Smith carries no soul or charter text
+shows `Ada · fix login flake` with no change to tools or views; the thread's
+label is the name alone. The one visibility filter is
+`Daemon::peer_visible(task, project)`: `is_peer_visible` in the task's own
+project, plus one arm — `origin == "smith"`, the thread not settled, and the
+project in that Smith's allowed list. `PeerInfo` for a Smith carries no soul or charter text
 (ADR 0026 invariant 7).
 
 **A bare `@Name` reaches the Smith's thread.** Mention resolution tries Smith
 names before labels: `@Ada` is the thread, `@Ada · fix login flake` is that
-work session by label. Smith names are unique, so a bare name is never ambiguous.
+work session by label. Smith names are unique, so a bare name is never ambiguous: a session whose
+label equals a Smith's name is mentionable by its id only.
 A user's mention wakes the thread as a `User` turn; an agent's mention is a
 peer DM through the guard (ADR 0026 invariants 16–17).
 
@@ -240,24 +247,31 @@ peer DM through the guard (ADR 0026 invariants 16–17).
   `_meta.systemPrompt = { append: constitution + soul }`. The text is fixed for
   the life of a task's session — the fingerprint rebuilds the session when it
   changes — so the task records the `soul_rev` it started with.
-- *Other harnesses:* the same text is a prefix in `start_session`, in the slot
-  of `memory_prefix`.
+- *Other harnesses:* the same text is a prefix in `start_session`, ahead of
+  `memory_prefix`.
+- Which path a task takes is fixed at its first start: `_meta` when the agent
+  command is `claude-agent-acp` and the adapter on `PATH` was at least 0.91.0
+  when the daemon started. The text is stored on the task (`Task.smith.prompt`),
+  so a resume sends the same bytes even after a soul edit or a daemon upgrade.
 - *Every Smith session:* the opening prompt gets a bounded journal brief (most
   recent and most relevant `smith:<id>` entries) and, for a work session, the
   assignment brief.
-- *Later prompts:* the actor compares the task's recorded `soul_rev` and
-  journal cursor with the current ones and, when they moved, prepends a
-  `<smith_update>` context block — the soul diff and new journal entries,
-  bounded — in the same place `peers_prepare` adds the digest. The cursors
+- *Later prompts* (and a resume's opening prompt): the actor compares the
+  task's recorded `soul_rev` and journal cursor with the current ones and,
+  when they moved, prepends a `<smith_update>` context block — the new soul in
+  full (bounded), not a diff, and new journal entries — in the same place
+  `peers_prepare` adds the digest. The cursors
   advance at `TurnStarted`, as the peer digest's does (ADR 0026 invariant 6).
 
-**The journal is a memory scope, `smith:<id>`.** `resolve_write_scope` accepts
-it for a session whose task carries that `smith_id`, and refuses it otherwise.
-Reads: a Smith's sessions see `global` + `project:<id>` + their own journal; a
-plain session's "all" never includes `smith:*`. The Memory view shows every
+**The journal is a memory scope, `smith:<id>`.** `MemoryStore::store` refuses
+it; the actor writes it through `store_journal` only for a task whose `smith`
+is that Smith. Reads: `memory.search` / `memory.list` carry the asking
+`task_id`; a Smith's sessions see `global` + `project:<id>` + their own journal,
+a plain session never sees `smith:*`, and a request with no `task_id` is the
+user's and sees every scope. The Memory view shows every
 scope to the user. Besides what the model chooses to store, the daemon writes
-one deterministic entry when a work session settles — task, outcome, diff stats,
-PR — so the record of what a Smith did does not depend on the model
+one deterministic entry when a work session settles or is archived — title,
+task id, project, outcome, files changed, board item — so the record of what a Smith did does not depend on the model
 remembering to write it. Dream and compaction run per scope.
 
 **Delegation goes through the peer tools, the board and `start_work`.** A
