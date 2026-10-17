@@ -10,7 +10,7 @@ use warpforge_protocol as wire;
 
 use super::directory::is_peer_visible;
 use super::guard::{check_length, MAX_TEXT_CHARS};
-use super::{MUTED_SELF, PAUSED};
+use super::{HIDDEN_SELF, MUTED_SELF, PAUSED};
 use crate::daemon::actor::{Command, Daemon};
 use crate::daemon::task::{now_secs, TaskStatus};
 
@@ -96,6 +96,16 @@ impl Daemon {
         to: &str,
         text: String,
     ) -> Result<wire::PeerSendResult, String> {
+        let addressable = to != from
+            && self
+                .tasks
+                .get(to)
+                .is_some_and(|task| task.project == project);
+        if !addressable {
+            return Err(format!(
+                "{to} is not a session in this project; list_agents names the ones you can message"
+            ));
+        }
         let verdict = self.peers_admit(from, project, to, &text);
         let record =
             self.peers_new_record(project, Some(from), Some(to), text, verdict.as_ref().err());
@@ -110,6 +120,21 @@ impl Daemon {
         })
     }
 
+    /// The rules on the sender, shared by direct messages and posts.
+    fn peers_sender_refusal(&self, from: &str, project: &str, text: &str) -> Result<(), Refused> {
+        check_length(text).map_err(|refusal| refusal.to_string())?;
+        if !self.tasks.get(from).is_some_and(is_peer_visible) {
+            return Err(HIDDEN_SELF.into());
+        }
+        if self.peers.muted.contains(from) {
+            return Err(MUTED_SELF.into());
+        }
+        if self.peers.paused.contains(project) {
+            return Err(PAUSED.into());
+        }
+        Ok(())
+    }
+
     fn peers_admit(
         &mut self,
         from: &str,
@@ -117,17 +142,10 @@ impl Daemon {
         to: &str,
         text: &str,
     ) -> Result<(), Refused> {
-        check_length(text).map_err(|refusal| refusal.to_string())?;
-        if self.peers.muted.contains(from) {
-            return Err(MUTED_SELF.into());
-        }
-        if self.peers.paused.contains(project) {
-            return Err(PAUSED.into());
-        }
+        self.peers_sender_refusal(from, project, text)?;
         let target = self
             .tasks
             .get(to)
-            .filter(|task| task.id != from && task.project == project)
             .filter(|task| is_peer_visible(task))
             .ok_or_else(|| {
                 format!("{to} is not this session's sub-agent or a peer in its project")
@@ -164,17 +182,7 @@ impl Daemon {
         project: &str,
         text: String,
     ) -> Result<wire::PeerSendResult, String> {
-        let verdict: Result<(), Refused> = check_length(&text)
-            .map_err(|refusal| refusal.to_string().into())
-            .and_then(|()| {
-                if self.peers.muted.contains(from) {
-                    Err(MUTED_SELF.into())
-                } else if self.peers.paused.contains(project) {
-                    Err(PAUSED.into())
-                } else {
-                    Ok(())
-                }
-            });
+        let verdict = self.peers_sender_refusal(from, project, &text);
         let mut record =
             self.peers_new_record(project, Some(from), None, text, verdict.as_ref().err());
         if verdict.is_ok() {

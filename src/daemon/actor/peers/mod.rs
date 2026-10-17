@@ -24,6 +24,8 @@ pub use command::PeerCommand;
 
 pub(crate) const MUTED_SELF: &str = "the user muted this session's peer messages";
 pub(crate) const PAUSED: &str = "the user paused peer messages in this project";
+pub(crate) const HIDDEN_SELF: &str =
+    "this session is not in the peer directory, so it cannot message peers or the team";
 
 /// The actor's peer state. Mutes, pauses and cursors mirror the store; the
 /// guard's counters live only here.
