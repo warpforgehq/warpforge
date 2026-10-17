@@ -8,9 +8,11 @@ mod delivery;
 mod digest;
 mod directory;
 mod guard;
+mod mention;
 mod message;
 #[cfg(test)]
 mod tests;
+mod user;
 
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
@@ -157,6 +159,27 @@ impl Daemon {
                 message,
                 reply,
             } => self.peers_message(from_task_id, to, message, reply).await,
+            PeerCommand::UserPost {
+                project,
+                text,
+                reply,
+            } => {
+                let _ = reply.send(self.peers_user_post(&project, text).await);
+            }
+            PeerCommand::UserMessage {
+                task_id,
+                text,
+                reply,
+            } => {
+                let _ = reply.send(self.peers_user_message(&task_id, text).await);
+            }
+            PeerCommand::UserStarted {
+                task_id,
+                source_id,
+                reply,
+            } => {
+                let _ = reply.send(self.peers_user_started(&task_id, source_id));
+            }
             PeerCommand::Tick => {
                 self.peers.guard.expire(Instant::now());
                 self.peers_end_alerts();

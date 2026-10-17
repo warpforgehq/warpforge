@@ -141,6 +141,16 @@ pub struct PeerMessage {
     /// a deleted task or a restart. An alert is live while this is `None`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub alert_cleared_at: Option<u64>,
+    /// The sessions a post reached through its @mentions.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mentions: Vec<String>,
+    /// The post this record came from: a mention's direct message, or the
+    /// line recording a session started from it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_id: Option<u64>,
+    /// The session the user started from a post; the record is that line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub started_task: Option<String>,
 }
 
 /// How the daemon resolved a `session.message` target.

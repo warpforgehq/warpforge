@@ -42,6 +42,24 @@ pub enum PeerCommand {
         message: String,
         reply: Reply<wire::PeerSendResult>,
     },
+    /// The user posts to a project's channel; @mentions become user prompts.
+    UserPost {
+        project: String,
+        text: String,
+        reply: Reply<wire::PeerSendResult>,
+    },
+    /// The user messages one session from the Team view.
+    UserMessage {
+        task_id: String,
+        text: String,
+        reply: Reply<wire::PeerSendResult>,
+    },
+    /// The user started `task_id` from the post `source_id`.
+    UserStarted {
+        task_id: String,
+        source_id: Option<u64>,
+        reply: Reply<wire::PeerMessage>,
+    },
     /// The minute timer: let lapsed guard limits go and end their alerts.
     Tick,
 }

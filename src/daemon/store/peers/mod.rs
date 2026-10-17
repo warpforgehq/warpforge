@@ -27,7 +27,10 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
             status       TEXT NOT NULL,
             reason       TEXT,
             alert        INTEGER NOT NULL DEFAULT 0,
-            alert_cleared_at INTEGER
+            alert_cleared_at INTEGER,
+            mentions     TEXT,
+            source_id    INTEGER,
+            started_task TEXT
         );
         CREATE INDEX IF NOT EXISTS peer_messages_project_idx ON peer_messages(project, id);
         CREATE TABLE IF NOT EXISTS peer_cursors (
@@ -41,10 +44,17 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
         );
         "#,
     )?;
-    let _ = conn.execute(
-        "ALTER TABLE peer_messages ADD COLUMN alert_cleared_at INTEGER",
-        [],
-    );
+    for column in [
+        "alert_cleared_at INTEGER",
+        "mentions TEXT",
+        "source_id INTEGER",
+        "started_task TEXT",
+    ] {
+        let _ = conn.execute(
+            &format!("ALTER TABLE peer_messages ADD COLUMN {column}"),
+            [],
+        );
+    }
     Ok(())
 }
 
@@ -67,7 +77,7 @@ impl PeerControl {
 }
 
 const MESSAGE_COLUMNS: &str = "id, project, from_task, to_task, text, created_at, delivered_at, \
-     status, reason, alert, alert_cleared_at";
+     status, reason, alert, alert_cleared_at, mentions, source_id, started_task";
 
 fn message_from_row(row: &Row<'_>) -> rusqlite::Result<wire::PeerMessage> {
     Ok(wire::PeerMessage {
@@ -82,6 +92,12 @@ fn message_from_row(row: &Row<'_>) -> rusqlite::Result<wire::PeerMessage> {
         reason: row.get(8)?,
         alert: row.get::<_, i64>(9)? != 0,
         alert_cleared_at: row.get::<_, Option<i64>>(10)?.map(|t| t as u64),
+        mentions: row
+            .get::<_, Option<String>>(11)?
+            .and_then(|json| serde_json::from_str(&json).ok())
+            .unwrap_or_default(),
+        source_id: row.get::<_, Option<i64>>(12)?.map(|id| id as u64),
+        started_task: row.get(13)?,
     })
 }
 
@@ -90,7 +106,7 @@ impl Store {
         self.conn.execute(
             &format!(
                 "INSERT OR REPLACE INTO peer_messages ({MESSAGE_COLUMNS}) \
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
             ),
             params![
                 message.id as i64,
@@ -104,6 +120,10 @@ impl Store {
                 message.reason,
                 message.alert as i64,
                 message.alert_cleared_at.map(|t| t as i64),
+                (!message.mentions.is_empty())
+                    .then(|| serde_json::to_string(&message.mentions).unwrap_or_default()),
+                message.source_id.map(|id| id as i64),
+                message.started_task,
             ],
         )?;
         Ok(())
@@ -152,7 +172,7 @@ impl Store {
         let mut stmt = self.conn.prepare(&format!(
             "SELECT {MESSAGE_COLUMNS} FROM ( \
                  SELECT *, ROW_NUMBER() OVER (PARTITION BY project ORDER BY id DESC) AS n \
-                 FROM peer_messages WHERE status = 'posted' \
+                 FROM peer_messages WHERE status = 'posted' AND started_task IS NULL \
              ) WHERE n <= ?1 ORDER BY id"
         ))?;
         let rows = stmt.query_map(params![per_project as i64], message_from_row)?;

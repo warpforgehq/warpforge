@@ -88,6 +88,33 @@ pub(super) async fn peers(
         })
         .await
         .map(|result| json!(result)),
+        wire::Method::PeersUserPost { project, text } => {
+            ask(handle, |reply| PeerCommand::UserPost {
+                project,
+                text,
+                reply,
+            })
+            .await
+            .map(|result| json!(result))
+        }
+        wire::Method::PeersUserMessage { task_id, text } => {
+            ask(handle, |reply| PeerCommand::UserMessage {
+                task_id,
+                text,
+                reply,
+            })
+            .await
+            .map(|result| json!(result))
+        }
+        wire::Method::PeersUserStarted { task_id, source_id } => {
+            ask(handle, |reply| PeerCommand::UserStarted {
+                task_id,
+                source_id,
+                reply,
+            })
+            .await
+            .map(|record| json!(record))
+        }
         _ => Err(wire::RpcError {
             code: wire::ErrorCode::InvalidRequest,
             message: "not a peer method".into(),

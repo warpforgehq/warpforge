@@ -418,6 +418,9 @@ async fn a_turn_start_from_a_replaced_session_delivers_nothing() {
         reason: None,
         alert: false,
         alert_cleared_at: None,
+        mentions: Vec::new(),
+        source_id: None,
+        started_task: None,
     };
     store.upsert_peer_message(&held).unwrap();
     let daemon = seeded(store);

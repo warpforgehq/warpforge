@@ -1570,4 +1570,20 @@ pub enum Method {
         to: String,
         message: String,
     },
+    /// The user posts to `project`'s channel; each @mentioned session gets
+    /// the post as a user prompt. Returns [`crate::PeerSendResult`].
+    #[serde(rename = "peers.userPost")]
+    PeersUserPost { project: String, text: String },
+    /// The user messages one session: a user prompt with a feed record.
+    /// Returns [`crate::PeerSendResult`].
+    #[serde(rename = "peers.userMessage")]
+    PeersUserMessage { task_id: String, text: String },
+    /// Record that the user started `task_id` from the post `source_id`.
+    /// Returns the [`crate::PeerMessage`] written.
+    #[serde(rename = "peers.userStarted")]
+    PeersUserStarted {
+        task_id: String,
+        #[serde(default)]
+        source_id: Option<u64>,
+    },
 }

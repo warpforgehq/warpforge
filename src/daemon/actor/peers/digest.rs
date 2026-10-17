@@ -140,6 +140,7 @@ impl Daemon {
         let reserved = self.peers.reserved.get(task_id);
         let unseen_post = |post: &&wire::PeerMessage| {
             post.from_task.as_deref() != Some(task_id)
+                && !post.mentions.iter().any(|m| m == task_id)
                 && cursor.map_or(post.created_at >= created_at, |c| post.id > c)
                 && !reserved.is_some_and(|r| r.contains(&post.id))
         };
