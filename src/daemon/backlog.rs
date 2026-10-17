@@ -231,6 +231,20 @@ pub struct Query {
     pub assignee: Option<String>,
 }
 
+/// A Smith assignee (`smith:<id>`) names one Smith: `smith:sm_1` must not
+/// match `smith:sm_12`. A person's login is matched by substring.
+/// @param value the item's assignee
+/// @param needle the filter, trimmed and lowercased
+/// @returns whether the item matches
+pub(crate) fn assignee_matches(value: &str, needle: &str) -> bool {
+    let value = value.to_lowercase();
+    if needle.starts_with("smith:") {
+        value == needle
+    } else {
+        value.contains(needle)
+    }
+}
+
 pub fn page(mut items: Vec<wire::BacklogItem>, query: &Query) -> wire::BacklogPage {
     let search = query.search.to_lowercase();
     let assignee_needle = query
@@ -256,7 +270,7 @@ pub fn page(mut items: Vec<wire::BacklogItem>, query: &Query) -> wire::BacklogPa
             && assignee_needle.as_ref().is_none_or(|needle| {
                 item.assignee
                     .as_deref()
-                    .is_some_and(|value| value.to_lowercase().contains(needle))
+                    .is_some_and(|value| assignee_matches(value, needle))
             })
     });
     items.sort_by(|a, b| {

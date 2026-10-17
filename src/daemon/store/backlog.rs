@@ -167,15 +167,17 @@ impl Store {
             query.source.as_deref(),
             query.priority.as_deref(),
         );
-        let assignee_pattern = query
-            .assignee
-            .as_deref()
-            .map(|value| format!("%{}%", value.trim()));
+        let assignee = query.assignee.as_deref().map(str::trim);
+        let smith_assignee = assignee.filter(|value| value.starts_with("smith:"));
+        let assignee_pattern = assignee
+            .filter(|value| !value.starts_with("smith:"))
+            .map(|value| format!("%{value}%"));
         let where_sql = "project = ?1 AND (?2 = '' OR title LIKE ?3 OR body LIKE ?3)\
                          AND (?4 IS NULL OR status = ?4)\
                          AND (?5 IS NULL OR source = ?5)\
                          AND (?6 IS NULL OR priority = ?6)\
-                         AND (?7 IS NULL OR assignee LIKE ?7)";
+                         AND (?7 IS NULL OR assignee LIKE ?7)\
+                         AND (?8 IS NULL OR assignee = ?8 COLLATE NOCASE)";
         let count: u64 = self.conn.query_row(
             &format!("SELECT COUNT(*) FROM backlog_items WHERE {where_sql}"),
             rusqlite::params![
@@ -185,12 +187,13 @@ impl Store {
                 status,
                 source,
                 priority,
-                assignee_pattern
+                assignee_pattern,
+                smith_assignee
             ],
             |row| row.get(0),
         )?;
         let sql = format!(
-            "SELECT id,number,project,title,body,status,priority,source,external_id,url,remote_status,assignee,created_at,updated_at,task_id FROM backlog_items WHERE {where_sql} ORDER BY {sort_column} {direction}, id ASC LIMIT ?8 OFFSET ?9"
+            "SELECT id,number,project,title,body,status,priority,source,external_id,url,remote_status,assignee,created_at,updated_at,task_id FROM backlog_items WHERE {where_sql} ORDER BY {sort_column} {direction}, id ASC LIMIT ?9 OFFSET ?10"
         );
         let mut statement = self.conn.prepare(&sql)?;
         let rows = statement.query_map(
@@ -202,6 +205,7 @@ impl Store {
                 source,
                 priority,
                 assignee_pattern,
+                smith_assignee,
                 page_size,
                 offset
             ],
