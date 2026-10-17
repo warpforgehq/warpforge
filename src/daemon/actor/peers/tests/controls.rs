@@ -55,3 +55,18 @@ async fn deleting_a_task_drops_its_mute_for_good() {
         .unwrap();
     assert!(controls.muted_tasks.is_empty());
 }
+
+#[tokio::test]
+async fn a_hidden_session_cannot_set_a_status_note() {
+    let daemon = seeded(memory_store());
+    for caller in ["t_hidden", "t_child"] {
+        let error = ask(&daemon, |reply| PeerCommand::SetStatusNote {
+            task_id: caller.into(),
+            text: "busy".into(),
+            reply,
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(error, super::super::HIDDEN_SELF, "{caller}");
+    }
+}
