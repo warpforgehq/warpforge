@@ -129,9 +129,11 @@ repo.** `~/.warpforge/smiths/<id>/`:
 - `charter.yaml` — habits (schedule + precheck + brief), triggers (P2), scope.
 
 The daemon `git init`s it and commits every change it makes, so the user gets
-history, diff and rollback for free. At startup and on the minute tick the
-daemon compares the working tree with `soul_rev` / `charter_rev`, off the actor
-loop; a check that raced one of its own edits is discarded. An
+history, diff and rollback for free. Right after spawn and on the minute tick
+the daemon compares the working tree with `soul_rev` / `charter_rev`, off the
+actor loop; a check that raced one of its own edits is discarded, and a check
+git could not answer holds nothing (it is logged). A missing repo counts as
+changed. An
 out-of-band edit holds the Smith (`held: identity_changed`): no new session
 starts until the user accepts the change (the daemon commits it) or reverts it,
 from one prompt in the Smith's page. Unattended runs never pick up a soul nobody
@@ -257,6 +259,10 @@ peer DM through the guard (ADR 0026 invariants 16–17).
   command is `claude-agent-acp` and the adapter on `PATH` was at least 0.91.0
   when the daemon started. The text is stored on the task (`Task.smith.prompt`),
   so a resume sends the same bytes even after a soul edit or a daemon upgrade.
+  Without `_meta`, every physical start's opening prompt carries that text
+  again. `Smith.injection` (`system_prompt` | `prefix`) reports which path its
+  next new session takes. The journal cursor is the memory row id, not a
+  timestamp.
 - *Every Smith session:* the opening prompt gets a bounded journal brief (most
   recent and most relevant `smith:<id>` entries) and, for a work session, the
   assignment brief.
@@ -351,7 +357,8 @@ with the identity repo's history), model, account, allowed projects and
 permissions. Pause sets `held: paused`: no new sessions, habits skipped,
 running turns finish, mentions get "paused" from the daemon. Delete archives
 the thread task, moves the identity repo to `~/.warpforge/smiths/.deleted/<id>`,
-keeps the journal, clears `smith:<id>` from local items' `assignee`, and leaves
+keeps the journal, clears `smith:<id>` from local items' `assignee` (SQLite and
+YAML backlogs), and leaves
 past work sessions with their `smith_id` as history; nothing is injected into
 them again.
 
@@ -436,9 +443,12 @@ rewrite a soul is the case #120 exists for.
 
 - A Smith's identity, journal and history survive tasks, restarts and model
   changes; switching its model keeps its continuity.
-- A Smith is as safe as the session it runs in: write-path and push limits are
-  enforced where the daemon sees the action (ACP `fs/write_text_file`,
-  permission requests, `git.push` RPC). A harness that writes or pushes through
+- A Smith is as safe as the session it runs in. Its write paths are enforced
+  where the daemon sees a write: ACP `fs/write_text_file` in its work sessions,
+  through the same policy spine as the advisor's denial. `push` and
+  `create_pr` are recorded but not enforced yet: the daemon's `git.push` and
+  PR RPCs cannot tell the user's click from an agent's call until #120, and an
+  agent pushes through its own shell. A harness that writes or pushes through
   its own shell is held by the prompt and by review — the same limit as the
   advisor's read-only mode on harnesses without one.
 - Claude Smiths get the soul as system prompt; Codex and opencode get it as a
