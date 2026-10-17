@@ -128,6 +128,7 @@ pub(super) async fn task_create(
             origin,
             start,
             advisor,
+            smith_id: None,
             reply: tx,
         })
         .await;

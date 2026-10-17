@@ -51,6 +51,7 @@ impl DaemonHandle {
         scope: Option<&str>,
         limit: Option<u32>,
         mode: Option<&str>,
+        task_id: Option<String>,
     ) -> Result<serde_json::Value, crate::daemon::memory::MemoryError> {
         let (tx, rx) = oneshot::channel();
         self.send(Command::MemorySearch {
@@ -58,6 +59,7 @@ impl DaemonHandle {
             scope: scope.map(str::to_string),
             limit,
             mode: mode.map(str::to_string),
+            task_id,
             reply: tx,
         })
         .await;
@@ -70,6 +72,7 @@ impl DaemonHandle {
         kind: Option<&str>,
         limit: Option<u32>,
         offset: Option<u32>,
+        task_id: Option<String>,
     ) -> Result<serde_json::Value, crate::daemon::memory::MemoryError> {
         let (tx, rx) = oneshot::channel();
         self.send(Command::MemoryList {
@@ -77,6 +80,7 @@ impl DaemonHandle {
             kind: kind.map(str::to_string),
             limit,
             offset,
+            task_id,
             reply: tx,
         })
         .await;

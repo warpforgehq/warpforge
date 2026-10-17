@@ -61,6 +61,7 @@ impl Daemon {
                             has_images: false,
                             text: text.clone(),
                             peer: Default::default(),
+                            smith: None,
                         },
                         crate::daemon::acp::TurnInitiator::System,
                     )

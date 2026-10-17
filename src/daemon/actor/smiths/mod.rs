@@ -4,10 +4,13 @@
 
 mod command;
 mod directory;
+mod journal;
 mod manage;
 pub(crate) mod prompt;
+mod session;
 #[cfg(test)]
 mod tests;
+mod work;
 
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -33,6 +36,11 @@ pub(crate) struct SmithsState {
     pending_names: HashSet<String>,
     /// Smiths whose identity repo has a write in flight.
     busy: HashSet<String>,
+    /// Each Smith's soul as last committed, for prompts built on the loop.
+    souls: HashMap<String, String>,
+    /// The installed Claude adapter reads `_meta.systemPrompt` (checked once
+    /// at startup); otherwise the soul goes as an opening prefix.
+    claude_meta: bool,
 }
 
 /// The identity revs a Smith row records.
@@ -53,12 +61,16 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>, root: PathBuf) -> Sm
         Some(Ok(store)) => store.load_smiths().unwrap_or_default(),
         _ => Vec::new(),
     };
+    let mut souls = HashMap::new();
     let smiths = rows
         .into_iter()
         .map(|mut smith| {
-            let unchanged =
-                identity::is_unchanged(&identity::repo(&root, &smith.id), &recorded(&smith));
+            let dir = identity::repo(&root, &smith.id);
+            let unchanged = identity::is_unchanged(&dir, &recorded(&smith));
             set_hold(&mut smith, wire::SmithHold::IdentityChanged, !unchanged);
+            if let Ok(files) = identity::read(&dir) {
+                souls.insert(smith.id.clone(), files.soul);
+            }
             (smith.id.clone(), smith)
         })
         .collect();
@@ -67,6 +79,8 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>, root: PathBuf) -> Sm
         smiths,
         pending_names: HashSet::new(),
         busy: HashSet::new(),
+        souls,
+        claude_meta: !cfg!(test) && crate::daemon::smiths::claude_adapter_reads_meta(),
     }
 }
 
@@ -115,6 +129,27 @@ impl Daemon {
             SmithCommand::RevertIdentity { id, reply } => {
                 self.smith_resolve_identity(&id, false, reply)
             }
+            SmithCommand::StartWork {
+                id,
+                project,
+                brief,
+                backlog_item_id,
+                worktree,
+                reply,
+            } => {
+                let result = self
+                    .smith_start_work(&id, &project, brief, backlog_item_id, worktree)
+                    .await;
+                let _ = reply.send(result);
+            }
+            #[cfg(test)]
+            SmithCommand::UseMemory { path } => {
+                if let Ok(memory) = crate::daemon::memory::MemoryStore::open_at(&path) {
+                    self.memory = memory;
+                }
+            }
+            #[cfg(test)]
+            SmithCommand::SetClaudeMeta { on } => self.smiths.claude_meta = on,
             SmithCommand::Created {
                 smith,
                 result,
@@ -135,6 +170,14 @@ impl Daemon {
             .write(PersistWrite::Smith(Box::new(smith.clone())));
         self.emit(Event::SmithUpdated(Box::new(smith.clone())));
         self.smiths.smiths.insert(smith.id.clone(), smith);
+    }
+
+    /// @param task_id a task
+    /// @returns whether it is a Smith's thread
+    pub(crate) fn is_smith_thread(&self, task_id: &str) -> bool {
+        self.tasks
+            .get(task_id)
+            .is_some_and(|task| task.origin.as_deref() == Some(SMITH_ORIGIN))
     }
 
     /// The Smith whose thread is `task_id`.

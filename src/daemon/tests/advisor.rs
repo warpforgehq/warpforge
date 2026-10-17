@@ -87,6 +87,7 @@ async fn advised_task(limits: Vec<wire::AgentAccountLimits>) -> Setup {
                 agent: "mockadv".into(),
                 model: None,
             }),
+            smith_id: None,
             reply: tx,
         })
         .await;

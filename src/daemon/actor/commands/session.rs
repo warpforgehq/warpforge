@@ -138,6 +138,7 @@ impl Daemon {
                     Some(handle) => {
                         let prepared =
                             self.peers_prepare(&task_id, initiator, peer_message, prepared.clone());
+                        let prepared = self.smith_prepare(&task_id, prepared);
                         Some(handle.prompt(prepared, initiator))
                     }
                     None => None,
@@ -199,6 +200,10 @@ impl Daemon {
                             );
                             self.request_resume_replay_guard(&task_id);
                             let _ = reply.send(Ok(()));
+                        } else if let Some(started) =
+                            self.smith_start_thread(&task_id, &text, attachments.clone())
+                        {
+                            let _ = reply.send(started);
                         } else if let Some(task) = self
                             .tasks
                             .get(&task_id)

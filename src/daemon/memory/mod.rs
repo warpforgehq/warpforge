@@ -37,6 +37,7 @@ mod locate;
 mod projects;
 mod search;
 mod store;
+pub use store::SMITH_SCOPE_PREFIX;
 
 #[cfg(test)]
 mod tests;

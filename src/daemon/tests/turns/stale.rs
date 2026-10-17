@@ -19,6 +19,7 @@ fn turn_started() -> AcpUpdate {
         initiator: TurnInitiator::User,
         echo: None,
         peer: Default::default(),
+        smith: None,
     }
 }
 

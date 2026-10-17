@@ -48,6 +48,7 @@ struct Session {
     permission_run_id: String,
     default_model: Option<String>,
     config_overrides: HashMap<String, String>,
+    session_meta: Option<Value>,
 }
 
 impl Clone for Session {
@@ -74,6 +75,7 @@ impl Clone for Session {
             permission_run_id: self.permission_run_id.clone(),
             default_model: self.default_model.clone(),
             config_overrides: self.config_overrides.clone(),
+            session_meta: self.session_meta.clone(),
         }
     }
 }
@@ -110,6 +112,9 @@ pub fn spawn_acp_session(
     // Environment changes for the agent process, layered over the daemon's own:
     // the selected account's home to set, and inherited auth variables to drop.
     env: AgentEnv,
+    // `_meta` sent on `session/new` and `session/load` alike — a Smith's
+    // system prompt (ADR 0027). It must not change for the session's life.
+    session_meta: Option<Value>,
 ) -> anyhow::Result<AcpHandle> {
     let run_id = NEXT_RUN_ID.fetch_add(1, Ordering::Relaxed);
     let mut child_command = Command::new("sh");
@@ -240,6 +245,7 @@ pub fn spawn_acp_session(
         permission_run_id,
         default_model,
         config_overrides,
+        session_meta,
     };
 
     reader::spawn_reader(session.clone(), stdout, policy_tx, debug);

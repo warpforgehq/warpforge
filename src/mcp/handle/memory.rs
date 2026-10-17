@@ -98,6 +98,9 @@ pub(super) async fn dispatch(
             {
                 params["mode"] = json!(v);
             }
+            if !task.is_empty() {
+                params["task_id"] = json!(task);
+            }
             let result = client.request("memory.search", params).await?;
             json_text(&result)
         }
@@ -122,6 +125,9 @@ pub(super) async fn dispatch(
             }
             if let Some(v) = args.get("offset").and_then(Value::as_u64) {
                 params["offset"] = json!(v.min(u32::MAX as u64));
+            }
+            if !task.is_empty() {
+                params["task_id"] = json!(task);
             }
             let result = client.request("memory.list", params).await?;
             json_text(&result)

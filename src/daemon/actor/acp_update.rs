@@ -170,6 +170,7 @@ impl Daemon {
                 echo,
                 initiator,
                 peer,
+                smith,
             } => {
                 // With no session left the task was cancelled, failed or
                 // replaced: it must not turn Running, and `drop_session`
@@ -181,6 +182,7 @@ impl Daemon {
                 self.mark_task_running(&task_id);
                 self.advisor_turn_started(&task_id);
                 self.peers_turn_started(&task_id, initiator, peer);
+                self.smith_turn_started(&task_id, smith);
                 if let Some(echo) = echo {
                     // A reconnect retry can submit the same text again after
                     // the first attempt was already recorded; drop only that

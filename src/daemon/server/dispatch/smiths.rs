@@ -67,6 +67,24 @@ pub(super) async fn smiths(
         wire::Method::SmithsRevertIdentity { id } => {
             ask(handle, |reply| SmithCommand::RevertIdentity { id, reply }).await
         }
+        wire::Method::SmithsStartWork {
+            id,
+            project,
+            brief,
+            backlog_item_id,
+            worktree,
+        } => {
+            let task_id = ask(handle, |reply| SmithCommand::StartWork {
+                id,
+                project,
+                brief,
+                backlog_item_id,
+                worktree,
+                reply,
+            })
+            .await?;
+            Ok(json!({ "taskId": task_id }))
+        }
         _ => Err(wire::RpcError {
             code: wire::ErrorCode::InvalidRequest,
             message: "not a Smith method".into(),

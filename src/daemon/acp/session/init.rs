@@ -125,9 +125,12 @@ pub(super) async fn handshake(session: &Session, agent_name: &str) -> Result<Ini
                 &session.pending,
                 &session.next_id,
                 "session/load",
-                json!({
-                    "sessionId": sid, "cwd": session.cwd, "mcpServers": session.mcp_servers
-                }),
+                with_meta(
+                    json!({
+                        "sessionId": sid, "cwd": session.cwd, "mcpServers": session.mcp_servers
+                    }),
+                    session,
+                ),
                 &mut driver_exit_rx,
             ),
         )
@@ -188,9 +191,10 @@ pub(super) async fn handshake(session: &Session, agent_name: &str) -> Result<Ini
                 &session.pending,
                 &session.next_id,
                 "session/new",
-                json!({
-                    "cwd": session.cwd, "mcpServers": session.mcp_servers
-                }),
+                with_meta(
+                    json!({ "cwd": session.cwd, "mcpServers": session.mcp_servers }),
+                    session,
+                ),
                 &mut driver_exit_rx,
             ),
         )
@@ -395,4 +399,13 @@ pub(super) async fn handshake(session: &Session, agent_name: &str) -> Result<Ini
         embedded_context,
         image_supported,
     })
+}
+
+/// The same `_meta` on `session/new` and `session/load`: the Claude adapter
+/// rebuilds a session whose `systemPrompt` differs (ADR 0027 invariant 4).
+fn with_meta(mut params: serde_json::Value, session: &Session) -> serde_json::Value {
+    if let Some(meta) = &session.session_meta {
+        params["_meta"] = meta.clone();
+    }
+    params
 }

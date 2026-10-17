@@ -79,6 +79,7 @@ pub(super) fn send_prompt(
                 initiator,
                 echo,
                 peer: prompt.peer,
+                smith: prompt.smith,
             },
         ));
     }

@@ -479,6 +479,7 @@ fn handle_enforces_negotiated_image_capability() {
         has_images: true,
         text: String::new(),
         peer: Default::default(),
+        smith: None,
     };
     assert!(handle.prompt(prompt.clone(), TurnInitiator::User).is_err());
     assert!(rx.try_recv().is_err());
@@ -552,6 +553,7 @@ async fn child_exit_reports_once_with_status_and_safe_stderr() {
         None,
         std::collections::HashMap::new(),
         super::super::accounts::AgentEnv::default(),
+        None,
     )
     .unwrap();
 
@@ -612,6 +614,7 @@ async fn spawn_env_reaches_the_agent_process() {
         None,
         std::collections::HashMap::new(),
         env,
+        None,
     )
     .unwrap();
 
@@ -652,6 +655,7 @@ async fn closed_stdout_is_reported_without_waiting_for_initialize_timeout() {
         None,
         std::collections::HashMap::new(),
         super::super::accounts::AgentEnv::default(),
+        None,
     )
     .unwrap();
 
@@ -711,6 +715,7 @@ async fn dropping_last_handle_kills_child_process_group() {
         None,
         std::collections::HashMap::new(),
         super::super::accounts::AgentEnv::default(),
+        None,
     )
     .unwrap();
     let pid = tokio::time::timeout(std::time::Duration::from_secs(2), async {

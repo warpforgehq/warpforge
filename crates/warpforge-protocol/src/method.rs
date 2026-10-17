@@ -456,6 +456,10 @@ pub enum Method {
         limit: Option<u32>,
         #[serde(default)]
         mode: Option<String>,
+        /// The session asking; a session sees only its own Smith's journal.
+        /// Absent for the user, who sees every scope.
+        #[serde(default)]
+        task_id: Option<String>,
     },
     #[serde(rename = "memory.list")]
     MemoryList {
@@ -467,6 +471,9 @@ pub enum Method {
         limit: Option<u32>,
         #[serde(default)]
         offset: Option<u32>,
+        /// As for `memory.search`.
+        #[serde(default)]
+        task_id: Option<String>,
     },
     #[serde(rename = "memory.update")]
     MemoryUpdate { id: String, content: String },
@@ -1618,4 +1625,16 @@ pub enum Method {
     /// [`crate::SmithDetail`].
     #[serde(rename = "smiths.revertIdentity")]
     SmithsRevertIdentity { id: String },
+    /// Start a work session as the Smith: a board task in one of its allowed
+    /// projects. Returns `{ taskId }`.
+    #[serde(rename = "smiths.startWork")]
+    SmithsStartWork {
+        id: String,
+        project: String,
+        brief: String,
+        #[serde(default)]
+        backlog_item_id: Option<String>,
+        #[serde(default = "default_true")]
+        worktree: bool,
+    },
 }
