@@ -359,7 +359,7 @@ impl Daemon {
                 self.sessions.insert(task_id.to_string(), handle);
             }
             Err(e) => {
-                self.peers_session_gone(task_id);
+                self.drop_session(task_id);
                 if let Some(task) = self.tasks.get_mut(task_id) {
                     task.blocked_reason = Some(format!("failed to start agent: {e}"));
                     task.set_status(TaskStatus::Blocked);

@@ -179,9 +179,13 @@ routing accepts the message, queued or held. A queued `Peer` prompt names its
 record in `QueuedPrompt.peer_message_id`. The user removing it from the queue
 refuses the record; losing it any other way — the session ends or fails, the
 transport refuses the prompt — holds it, since the session can be resumed.
-Every session teardown and start failure goes through one function
-(`Daemon::drop_session` → `peers_session_gone`): in-flight direct messages are
-held, their senders' slots freed, digest reservations dropped. A queued
+Every session teardown and start failure goes through one function,
+`Daemon::drop_session`: in-flight direct messages are held, their senders'
+slots freed, digest reservations dropped. Lifecycle updates (`TurnStarted`,
+`QueueChanged`, `TurnEnded`) carry the session's run id, and one from a run
+other than the task's live session is discarded before it changes anything; a
+`TurnStarted` arriving after its session was dropped delivers nothing, since
+the drop already held what it carried. A queued
 `Peer` prompt cannot be edited (only `User` ones can), and a force-send needs
 a queued `User` prompt to cut the running turn short. Rendering these entries
 as one compact attributed line with a click-through to the other task, as
@@ -218,12 +222,13 @@ direct message or a digest in a tagged block naming each sender, saying it is
 not from the user, and that it must not change the receiver's task, touch its
 files, grant permissions or lead to destructive actions. Bodies are untrusted
 input and go through the same guard as browser pages (`src/mcp/untrusted.rs`),
-so they cannot close the block early. Each message is its own
-`<peer_message from="…" kind="direct|team">` element; a sender's label is an
-escaped one-line attribute, so neither a body nor a label can forge another
-sender's entry. A user post carried in a digest is
-labelled as the user's but stays in the block: the channel is not a way to
-issue instructions around the chat.
+so they cannot close the block early. Each message is its own element: a
+session's is `<peer_message from="<label>" task="<id>" kind="direct|team">`,
+with the label an escaped one-line attribute, and the user's post is
+`<peer_message kind="user-post">`, with no `from` or `task`. Neither a body
+nor a label can forge another sender's entry, and a session titled "the user"
+is still a session. A user post carried in a digest stays in the block: the
+channel is not a way to issue instructions around the chat.
 
 **The loop guard is in the daemon, not in the prompt, and heals itself.** A
 prompt asking agents to stop is a suggestion; two agents politely thanking
