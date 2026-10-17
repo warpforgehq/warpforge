@@ -8,6 +8,7 @@ mod command;
 mod directory;
 mod journal;
 mod manage;
+mod permissions;
 pub(crate) mod prompt;
 mod report;
 mod session;
