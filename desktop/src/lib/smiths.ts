@@ -1,4 +1,4 @@
-import type { Smith, SmithHold, TaskInfo } from "../protocol";
+import type { PeerMessage, SessionUpdate, Smith, SmithHold, TaskInfo } from "../protocol";
 import { isSettledTask } from "./taskGroups";
 
 /** A board assignee that names a Smith: its stable id, never its name. */
@@ -110,4 +110,40 @@ export function injectionNote(smith: Pick<Smith, "agent" | "injection">): string
   return smith.agent === "claude"
     ? "Soul delivered as opening message — install claude-agent-acp 0.91 or later for system prompt"
     : "Soul delivered as opening message";
+}
+
+/**
+ * Unread for one teammate: its sessions' feed records since the user last
+ * opened its page, plus thread replies that ended since then.
+ * @param smith the Smith
+ * @param records feed records
+ * @param tasks the snapshot's tasks
+ * @param seenAt unix seconds its page was last open
+ * @param repliesSince thread turns that ended since its page was last open
+ * @returns how many things are new
+ */
+export function smithUnread(
+  smith: Smith,
+  records: Iterable<PeerMessage>,
+  tasks: TaskInfo[],
+  seenAt: number,
+  repliesSince: number,
+): number {
+  const own = new Set(tasks.filter((t) => t.smithId === smith.id).map((t) => t.id));
+  own.add(smith.threadTaskId);
+  let count = Math.max(0, repliesSince);
+  for (const record of records) {
+    if (record.createdAt > seenAt && record.fromTask && own.has(record.fromTask)) count += 1;
+  }
+  return count;
+}
+
+/**
+ * @param updates a session's transcript entries
+ * @returns how many turns ended in it
+ */
+export function endedTurns(updates: readonly SessionUpdate[]): number {
+  let count = 0;
+  for (const update of updates) if (update.kind === "turn_ended") count += 1;
+  return count;
 }
