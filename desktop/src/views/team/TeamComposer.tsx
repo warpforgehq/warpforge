@@ -1,0 +1,199 @@
+import { Play, Send } from "lucide-react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { daemon } from "@/daemon";
+import {
+  type MentionCandidate,
+  applyMention,
+  mentionAtCaret,
+  mentionText,
+  rankCandidates,
+} from "@/lib/peerFeed";
+import { cn } from "@/lib/utils";
+
+const MENU_LIMIT = 8;
+
+interface Props {
+  project: string;
+  /** The sessions a channel post can @mention. */
+  candidates: MentionCandidate[];
+  /** Set for a direct thread: the sessions the user can message in it. */
+  targets?: MentionCandidate[];
+  onStartSession: (text: string) => void;
+}
+
+/**
+ * Writes to the team: a channel post (each @mention is handed the post as the
+ * user's prompt), or a direct message to one session of a thread.
+ */
+export function TeamComposer({ project, candidates, targets, onStartSession }: Props) {
+  const [text, setText] = useState("");
+  const [caret, setCaret] = useState(0);
+  const [active, setActive] = useState(0);
+  const [sending, setSending] = useState(false);
+  const [target, setTarget] = useState<string | null>(null);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const pendingCaret = useRef<number | null>(null);
+  const direct = targets !== undefined;
+  const to = direct ? (targets.find((t) => t.id === target) ?? targets[0]) : undefined;
+
+  const mention = direct ? null : mentionAtCaret(text, caret);
+  const matches = useMemo(
+    () => (mention ? rankCandidates(candidates, mention.query).slice(0, MENU_LIMIT) : []),
+    [candidates, mention],
+  );
+  const menuOpen = matches.length > 0;
+
+  const pick = (candidate: MentionCandidate) => {
+    if (!mention) return;
+    const next = applyMention(text, mention, caret, mentionText(candidate, candidates));
+    setText(next.text);
+    setCaret(next.caret);
+    setActive(0);
+    pendingCaret.current = next.caret;
+  };
+
+  useLayoutEffect(() => {
+    if (pendingCaret.current === null) return;
+    ref.current?.setSelectionRange(pendingCaret.current, pendingCaret.current);
+    pendingCaret.current = null;
+  });
+
+  const send = async () => {
+    const body = text.trim();
+    if (!body || sending || (direct && !to)) return;
+    setSending(true);
+    try {
+      const result = to
+        ? await daemon.messageSession(to.id, body)
+        : await daemon.postToTeam(project, body);
+      setText("");
+      setCaret(0);
+      if (result.notice) toast(result.notice);
+    } catch (error) {
+      toast.error(direct ? "Message not sent" : "Post not sent", {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (menuOpen) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const step = event.key === "ArrowDown" ? 1 : -1;
+        setActive((index) => (index + step + matches.length) % matches.length);
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        pick(matches[Math.min(active, matches.length - 1)]!);
+        return;
+      }
+    }
+    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      void send();
+    }
+  };
+
+  return (
+    <div className="relative shrink-0 space-y-2 border-t border-border pt-3">
+      {menuOpen && (
+        <ul
+          role="listbox"
+          aria-label="Mention a session"
+          className="absolute bottom-full left-0 z-10 mb-1 w-80 overflow-hidden rounded-md border border-border bg-popover py-1 text-[13px] shadow-md"
+        >
+          {matches.map((candidate, index) => (
+            <li
+              key={candidate.id}
+              role="option"
+              aria-selected={index === active}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                pick(candidate);
+              }}
+              className={cn(
+                "flex cursor-pointer items-center gap-2 px-2 py-1",
+                index === active && "bg-accent",
+              )}
+            >
+              <span className="min-w-0 flex-1 truncate">{candidate.label}</span>
+              <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                {candidate.id}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {direct && targets.length > 1 && (
+        <div role="radiogroup" aria-label="Message" className="flex gap-1 text-xs">
+          {targets.map((candidate) => (
+            <button
+              key={candidate.id}
+              type="button"
+              role="radio"
+              aria-checked={candidate.id === to?.id}
+              onClick={() => setTarget(candidate.id)}
+              className={cn(
+                "max-w-48 truncate rounded-md border px-2 py-0.5",
+                candidate.id === to?.id
+                  ? "border-primary text-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {candidate.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <Textarea
+        ref={ref}
+        value={text}
+        rows={3}
+        aria-label={direct ? "Message" : "Post to the team"}
+        placeholder={
+          direct
+            ? `Message ${to?.label ?? "the session"} — it arrives as your prompt`
+            : "Post to the team. @mention a session to hand it the work."
+        }
+        onChange={(event) => {
+          setText(event.target.value);
+          setCaret(event.target.selectionStart);
+          setActive(0);
+        }}
+        onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
+        onKeyDown={onKeyDown}
+      />
+      <div className="flex items-center justify-end gap-2">
+        {!direct && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!text.trim()}
+            onClick={() => onStartSession(text.trim())}
+          >
+            <Play className="size-3.5" />
+            Start a session
+          </Button>
+        )}
+        <Button
+          type="button"
+          size="sm"
+          disabled={!text.trim() || sending}
+          onClick={() => void send()}
+        >
+          <Send className="size-3.5" />
+          {direct ? "Send" : "Post"}
+        </Button>
+      </div>
+    </div>
+  );
+}

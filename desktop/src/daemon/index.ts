@@ -36,18 +36,19 @@ export type { ConnectionState, DaemonState, TerminalDataListener } from "./types
 
 const ComposedClient = PeerMethods(
   TerminalMethods(
-  RunnerMethods(
-    AutomationMethods(
-      OrchestrationMethods(
-        ProjectMethods(
-          RuntimeMethods(
-            TaskMethods(
-              MemoryMethods(
-                BacklogMethods(
-                  WorkItemMethods(
-                    PullMethods(
-                      TrackerMethods(
-                        TextMethods(AgentMethods(SessionMethods(WorktreeMethods(CoreClient)))),
+    RunnerMethods(
+      AutomationMethods(
+        OrchestrationMethods(
+          ProjectMethods(
+            RuntimeMethods(
+              TaskMethods(
+                MemoryMethods(
+                  BacklogMethods(
+                    WorkItemMethods(
+                      PullMethods(
+                        TrackerMethods(
+                          TextMethods(AgentMethods(SessionMethods(WorktreeMethods(CoreClient)))),
+                        ),
                       ),
                     ),
                   ),
@@ -58,7 +59,6 @@ const ComposedClient = PeerMethods(
         ),
       ),
     ),
-  ),
   ),
 );
 

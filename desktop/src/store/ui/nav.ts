@@ -53,6 +53,9 @@ export interface NavState {
    * see `partialize` in `store.ts`.
    */
   backlogParamsByProject: Record<string, BacklogParams>;
+  /** Unix seconds the Team view last showed the feed; newer records count as
+   *  unread on its nav item. */
+  teamSeenAt: number;
 
   setView: (v: GlobalView) => void;
   /** Land on the Tasks half of the sidebar: `validTaskId` if the caller found
@@ -80,6 +83,7 @@ export interface NavState {
   resetBacklogParams: (project: string) => void;
   /** Forget every per-project memory — for a project that was removed. */
   clearProjectState: (project: string) => void;
+  markTeamSeen: (at: number) => void;
 }
 
 export const createNavSlice: UiSlice<NavState> = (set) => ({
@@ -98,6 +102,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   activeSurface: DEFAULT_TASK_SURFACE,
   projectSurfaceByProject: {},
   backlogParamsByProject: {},
+  teamSeenAt: 0,
 
   setView: (view) => set({ openTaskId: null, openTaskNav: null, view }),
   selectTasksSegment: (validTaskId) =>
@@ -135,6 +140,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       lastTaskId: openTaskId,
     }),
   clearOpenTaskNav: () => set({ openTaskNav: null }),
+  markTeamSeen: (at) => set((s) => (at > s.teamSeenAt ? { teamSeenAt: at } : {})),
   focusAttentionTask: (attentionTargetId) =>
     set((s) => ({
       attentionTargetId,

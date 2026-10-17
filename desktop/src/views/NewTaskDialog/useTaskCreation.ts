@@ -57,6 +57,7 @@ export function useTaskCreation({
   configPicks,
   factory,
   mode,
+  onCreated,
   project,
   selectedWorkflow,
   useWorktree,
@@ -73,6 +74,7 @@ export function useTaskCreation({
   /** Factory mode's choices; ignored in the other modes. */
   factory: FactoryOptions;
   mode: TaskMode;
+  onCreated?: (taskId: string) => void;
   project: string;
   selectedWorkflow: WorkflowMeta | null;
   useWorktree: boolean;
@@ -153,6 +155,7 @@ export function useTaskCreation({
         });
       }
     }
+    onCreated?.(taskId);
     openTask(taskId);
     toast.success(
       queued ? "Queued in Factory" : selectedWorkflow ? "Factory task started" : "Task started",

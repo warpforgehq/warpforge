@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DaemonState } from "@/daemon";
 import { useAgentUpdatesCount } from "@/hooks/useAgentUpdates";
 import { useInboxUnseenCount } from "@/hooks/useInboxUnseen";
+import { usePeerAlertReasons, useTeamUnread } from "@/hooks/usePeerFeed";
 import { usePrFeedbackReasons } from "@/hooks/usePrFeedbackReasons";
 import { buildAttentionQueue } from "@/lib/attentionRail";
 import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
@@ -51,9 +52,10 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   const [settlingProject, setSettlingProject] = useState<string | null>(null);
 
   const prFeedback = usePrFeedbackReasons(state.taskPullRequests);
+  const peerAlerts = usePeerAlertReasons(tasks);
   const queue = useMemo(
-    () => buildAttentionQueue(tasks, state.sessionUpdates, prFeedback),
-    [prFeedback, state.sessionUpdates, tasks],
+    () => buildAttentionQueue(tasks, state.sessionUpdates, prFeedback, peerAlerts),
+    [peerAlerts, prFeedback, state.sessionUpdates, tasks],
   );
   const taskGroupIndex = useMemo(() => buildTaskGroupIndex(tasks), [tasks]);
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
@@ -66,6 +68,7 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   // The inbox's unread count — same query the inbox views render from, so
   // the badge, the tab count and the rows never disagree.
   const inboxUnseen = useInboxUnseenCount(names);
+  const teamUnread = useTeamUnread();
   // Only the collapsed rail needs this count; expanded renders AgentUpdateBanner,
   // which reads the same cached query.
   const agentUpdates = useAgentUpdatesCount();
@@ -250,8 +253,15 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   );
 
   const navCount = useCallback(
-    (id: GlobalView) => (id === "control" ? blockingCount : id === "inbox" ? inboxUnseen : 0),
-    [blockingCount, inboxUnseen],
+    (id: GlobalView) =>
+      id === "control"
+        ? blockingCount
+        : id === "inbox"
+          ? inboxUnseen
+          : id === "team"
+            ? teamUnread
+            : 0,
+    [blockingCount, inboxUnseen, teamUnread],
   );
 
   return {

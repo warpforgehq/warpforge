@@ -12,7 +12,7 @@ import type { SettingsState } from "./settings";
  */
 
 /** A destination the nav can address. */
-export type GlobalView = "control" | "inbox" | "automations" | "memory";
+export type GlobalView = "control" | "inbox" | "automations" | "memory" | "team";
 /** "project" is a subject, not a nav destination: it is reached by selecting a
  *  project in the sidebar tree, never from NAV. */
 export type View = GlobalView | "project";

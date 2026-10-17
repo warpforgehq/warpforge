@@ -21,6 +21,7 @@ const VIEW_LABEL: Record<GlobalView, string> = {
   control: "Mission Control",
   inbox: "Inbox",
   memory: "Memory",
+  team: "Team",
 };
 
 interface AppHeaderProps {

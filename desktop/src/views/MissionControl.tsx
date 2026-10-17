@@ -19,6 +19,7 @@ import {
 import { boardTasks } from "@/lib/taskOrigin";
 
 import type { DaemonState } from "../daemon";
+import { usePeerAlertReasons } from "../hooks/usePeerFeed";
 import { usePrFeedbackReasons } from "../hooks/usePrFeedbackReasons";
 import { buildAttentionQueue } from "../lib/attentionRail";
 import { buildLiveStripItems } from "../lib/liveStrip";
@@ -100,9 +101,10 @@ export default function MissionControl({ state, onOpenTask, onNewTask }: Props) 
     return buildLiveStripItems(live, state.sessionUpdates, EMPTY_PINNED_SET);
   }, [activeTab, live, state.sessionUpdates]);
   const prFeedback = usePrFeedbackReasons(state.taskPullRequests);
+  const peerAlerts = usePeerAlertReasons(boardTaskList);
   const attentionQueue = useMemo(
-    () => buildAttentionQueue(boardTaskList, state.sessionUpdates, prFeedback),
-    [boardTaskList, prFeedback, state.sessionUpdates],
+    () => buildAttentionQueue(boardTaskList, state.sessionUpdates, prFeedback, peerAlerts),
+    [boardTaskList, peerAlerts, prFeedback, state.sessionUpdates],
   );
   const failures = useMemo(
     () => buildFailureList(boardTaskList, state.sessionUpdates),
