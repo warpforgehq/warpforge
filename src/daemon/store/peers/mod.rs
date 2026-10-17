@@ -132,6 +132,33 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
+    /// @param status which records
+    /// @returns every record with that status, oldest first
+    pub fn load_peer_messages_with_status(
+        &self,
+        status: wire::PeerMessageStatus,
+    ) -> Result<Vec<wire::PeerMessage>> {
+        let mut stmt = self.conn.prepare(&format!(
+            "SELECT {MESSAGE_COLUMNS} FROM peer_messages WHERE status = ?1 ORDER BY id"
+        ))?;
+        let rows = stmt.query_map(params![status.as_str()], message_from_row)?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// The newest channel posts of every project, for the digests.
+    /// @param per_project how many to keep per project
+    /// @returns oldest first within each project
+    pub fn load_recent_peer_posts(&self, per_project: u32) -> Result<Vec<wire::PeerMessage>> {
+        let mut stmt = self.conn.prepare(&format!(
+            "SELECT {MESSAGE_COLUMNS} FROM ( \
+                 SELECT *, ROW_NUMBER() OVER (PARTITION BY project ORDER BY id DESC) AS n \
+                 FROM peer_messages WHERE status = 'posted' \
+             ) WHERE n <= ?1 ORDER BY id"
+        ))?;
+        let rows = stmt.query_map(params![per_project as i64], message_from_row)?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
     /// The largest record id, so the actor numbers new records after it.
     /// @returns 0 for an empty table
     pub fn max_peer_message_id(&self) -> Result<u64> {

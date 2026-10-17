@@ -163,3 +163,33 @@ fn forgetting_a_task_drops_its_cursor_and_mute_but_keeps_records() {
     );
     assert_eq!(store.load_peer_messages(None, None, 10).unwrap().len(), 1);
 }
+
+#[test]
+fn held_records_and_recent_posts_load_for_the_digests() {
+    let store = store();
+    let mut held = record(1, "demo", wire::PeerMessageStatus::Held);
+    held.to_task = Some("t_b".into());
+    store.upsert_peer_message(&held).unwrap();
+    for id in 2..6 {
+        let mut post = record(
+            id,
+            if id % 2 == 0 { "demo" } else { "other" },
+            wire::PeerMessageStatus::Posted,
+        );
+        post.to_task = None;
+        store.upsert_peer_message(&post).unwrap();
+    }
+    assert_eq!(
+        store
+            .load_peer_messages_with_status(wire::PeerMessageStatus::Held)
+            .unwrap(),
+        vec![held]
+    );
+    let ids: Vec<u64> = store
+        .load_recent_peer_posts(1)
+        .unwrap()
+        .iter()
+        .map(|post| post.id)
+        .collect();
+    assert_eq!(ids, vec![4, 5]);
+}
