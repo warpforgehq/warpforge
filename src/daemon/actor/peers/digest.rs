@@ -90,6 +90,10 @@ impl Daemon {
             .filter(|_| initiator == TurnInitiator::Peer)
             .and_then(|id| self.peers.in_flight.get(&id).cloned());
         if let Some(record) = direct {
+            debug_assert!(
+                record.from_task.is_some(),
+                "only an agent's direct message is a Peer turn; the user's is a User prompt"
+            );
             let from = self.peers_label(record.from_task.as_deref());
             let item = PeerItem {
                 from: record
