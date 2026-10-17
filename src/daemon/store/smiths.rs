@@ -56,6 +56,7 @@ fn smith_from_row(row: &Row<'_>) -> rusqlite::Result<wire::Smith> {
         charter_rev: row.get(11)?,
         held: json(row.get(12)?),
         created_at: row.get::<_, i64>(13)? as u64,
+        injection: None,
     })
 }
 
@@ -148,6 +149,7 @@ mod tests {
             charter_rev: "r2".into(),
             held: vec![wire::SmithHold::Paused],
             created_at: 7,
+            injection: None,
         }
     }
 

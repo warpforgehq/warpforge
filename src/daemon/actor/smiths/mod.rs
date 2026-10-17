@@ -115,7 +115,12 @@ impl Daemon {
     pub(crate) async fn handle_smith_command(&mut self, cmd: SmithCommand) {
         match cmd {
             SmithCommand::List { reply } => {
-                let mut smiths: Vec<wire::Smith> = self.smiths.smiths.values().cloned().collect();
+                let mut smiths: Vec<wire::Smith> = self
+                    .smiths
+                    .smiths
+                    .values()
+                    .map(|smith| self.smith_view(smith.clone()))
+                    .collect();
                 smiths.sort_by_key(|smith| smith.name.to_lowercase());
                 let _ = reply.send(Ok(smiths));
             }
@@ -192,8 +197,26 @@ impl Daemon {
         }
     }
 
+    /// The Smith as clients see it: with how its next session will be given
+    /// its identity. Read from the configured agent only, never a file.
+    pub(crate) fn smith_view(&self, mut smith: wire::Smith) -> wire::Smith {
+        let command = self
+            .configured_agents
+            .iter()
+            .find(|a| a.id == smith.agent || a.display_name == smith.agent)
+            .map_or(smith.agent.as_str(), |a| a.acp_command.as_str());
+        let meta = self.smiths.claude_meta && session::is_claude_adapter(command);
+        smith.injection = Some(if meta {
+            wire::SmithInjection::SystemPrompt
+        } else {
+            wire::SmithInjection::Prefix
+        });
+        smith
+    }
+
     /// Mirror first, then the store queue, then the event (ADR 0007).
     fn smith_put(&mut self, smith: wire::Smith) {
+        let smith = self.smith_view(smith);
         self.persist
             .write(PersistWrite::Smith(Box::new(smith.clone())));
         self.emit(Event::SmithUpdated(Box::new(smith.clone())));

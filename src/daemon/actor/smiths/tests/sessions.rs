@@ -371,3 +371,42 @@ async fn a_journal_entry_in_the_same_second_is_still_delivered() {
     assert!(next.contains("second entry"), "{next}");
     assert!(!next.contains("first entry"), "{next}");
 }
+
+#[tokio::test]
+async fn edits_reach_the_thread_and_the_injection_is_reported() {
+    let home = home();
+    let agent = agent(home._dir.path(), true);
+    let daemon = spawn(&home, &[]);
+    let smith = create(&daemon, ada()).await.unwrap().smith;
+    assert_eq!(smith.injection, Some(wire::SmithInjection::Prefix));
+    daemon
+        .send(Command::Smiths(SmithCommand::SetClaudeMeta { on: true }))
+        .await;
+    let edited = ask(&daemon, |reply| SmithCommand::Update {
+        id: smith.id.clone(),
+        patch: Box::new(wire::SmithPatch {
+            agent: Some(agent.command.clone()),
+            model: Some("opus".into()),
+            account_id: Some("acc_ada".into()),
+            ..Default::default()
+        }),
+        reply,
+    })
+    .await
+    .unwrap()
+    .smith;
+    assert_eq!(edited.injection, Some(wire::SmithInjection::SystemPrompt));
+    assert_eq!(
+        list(&daemon).await[0].injection,
+        Some(wire::SmithInjection::SystemPrompt)
+    );
+    let thread = daemon
+        .tasks()
+        .await
+        .into_iter()
+        .find(|t| t.id == smith.thread_task_id)
+        .unwrap();
+    assert_eq!(thread.agent, agent.command);
+    assert_eq!(thread.model.as_deref(), Some("opus"));
+    assert_eq!(thread.account_id.as_deref(), Some("acc_ada"));
+}

@@ -67,7 +67,7 @@ impl Daemon {
 
     pub(super) fn smith_get(&self, id: &str, reply: Reply<wire::SmithDetail>) {
         let smith = match self.smith(id) {
-            Ok(smith) => smith.clone(),
+            Ok(smith) => self.smith_view(smith.clone()),
             Err(error) => {
                 let _ = reply.send(Err(error));
                 return;
@@ -124,6 +124,7 @@ impl Daemon {
             charter_rev: String::new(),
             held: Vec::new(),
             created_at: now_secs(),
+            injection: None,
         };
         self.smiths.pending_names.insert(create.name.to_lowercase());
         let files = Identity {
@@ -180,7 +181,7 @@ impl Daemon {
             .souls
             .insert(smith.id.clone(), files.soul.clone());
         self.smith_put(smith.clone());
-        let _ = reply.send(Ok(detail(smith, files)));
+        let _ = reply.send(Ok(detail(self.smith_view(smith), files)));
     }
 
     pub(super) fn smith_update(
@@ -262,18 +263,32 @@ impl Daemon {
             Some(patch) => apply(&mut smith, patch),
             None => set_hold(&mut smith, wire::SmithHold::IdentityChanged, false),
         }
-        if let Some(thread) = self
-            .tasks
-            .get_mut(&smith.thread_task_id)
-            .filter(|thread| thread.title != smith.name)
-        {
-            thread.title = smith.name.clone();
-            let updated = thread.clone();
-            self.persist(&updated);
-            self.emit(Event::TaskUpdated(updated));
-        }
+        self.smith_sync_thread(&smith);
         self.smith_put(smith.clone());
-        let _ = reply.send(Ok(detail(smith, files)));
+        let _ = reply.send(Ok(detail(self.smith_view(smith), files)));
+    }
+
+    /// Carry the Smith's name, agent, model and account onto its thread
+    /// task; a running thread session keeps what it started with, and the
+    /// next one starts with these.
+    fn smith_sync_thread(&mut self, smith: &wire::Smith) {
+        let Some(thread) = self.tasks.get_mut(&smith.thread_task_id) else {
+            return;
+        };
+        let same = thread.title == smith.name
+            && thread.agent == smith.agent
+            && thread.model == smith.model
+            && thread.account_id == smith.account_id;
+        if same {
+            return;
+        }
+        thread.title = smith.name.clone();
+        thread.agent = smith.agent.clone();
+        thread.model = smith.model.clone();
+        thread.account_id = smith.account_id.clone();
+        let updated = thread.clone();
+        self.persist(&updated);
+        self.emit(Event::TaskUpdated(updated));
     }
 
     pub(super) fn smith_set_paused(
@@ -284,7 +299,7 @@ impl Daemon {
         let mut smith = self.smith(id)?.clone();
         set_hold(&mut smith, wire::SmithHold::Paused, paused);
         self.smith_put(smith.clone());
-        Ok(smith)
+        Ok(self.smith_view(smith))
     }
 
     /// Archive the thread, retire the identity repo and take the Smith off
