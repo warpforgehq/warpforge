@@ -80,7 +80,10 @@ immediately — follow up with read_service_logs to watch the outcome.\n\
 port-forward.\n\
 - create_backlog_task(title, project?, body?, priority?, status?): record \
 follow-up work as a local backlog item without starting an agent. The older \
-create_task name is a deprecated alias.";
+create_task name is a deprecated alias.\n\
+- Other Warpforge sessions in this project are your peers: list_agents shows \
+them with what they are doing, message_agent(task_id or \"team\", message) \
+reaches them, and set_status_note(text) tells them what you are doing.";
 
 /// Tells every working session when to answer with a page instead of prose
 /// (`render_html`, ADR 0025).
