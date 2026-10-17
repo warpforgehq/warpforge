@@ -3,37 +3,61 @@ import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { daemon } from "@/daemon";
 import { peerAlertReasons, unreadCount } from "@/lib/peerFeed";
 import { taskLabel } from "@/lib/taskLabel";
-import type { DaemonEvent, TaskInfo } from "@/protocol";
+import type { DaemonEvent, PeerMessage, TaskInfo } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
 import { useUi } from "@/store/ui";
 
-/** How many of the newest records the app loads on connect. */
-export const FEED_PAGE = 500;
+/** How many of the newest records the app loads on connect: the daemon's
+ *  page limit. Live alerts are fetched on their own, whatever their age. */
+export const FEED_PAGE = 200;
 
 const getConnection = () => daemon.getState().connection;
 
-/** Load the feed and controls on every connect, then follow
+/** Load the feed, live alerts and controls on every connect, then follow
  *  `peer.messageUpdated`. Mounted once, by `PeerFeedHost`. */
 export function usePeerFeedSync() {
   const connection = useSyncExternalStore(daemon.subscribe, getConnection);
   useEffect(() => {
     if (connection !== "connected") return;
     let cancelled = false;
-    void Promise.all([daemon.peerFeed({ limit: FEED_PAGE }), daemon.peerControls()])
-      .then(([records, controls]) => {
-        if (!cancelled) usePeersStore.getState().load(records, controls);
+    // An update that arrives while the page is in flight is newer than the
+    // page; it is applied after it, not overwritten by it.
+    let pending: Map<number, PeerMessage> | null = new Map();
+    const unsubscribe = daemon.subscribeEvents((event: DaemonEvent) => {
+      if (event.event !== "peer.messageUpdated") return;
+      pending?.set(event.data.id, event.data);
+      usePeersStore.getState().upsert(event.data);
+    });
+    void Promise.all([
+      daemon.peerFeed({ limit: FEED_PAGE }),
+      daemon.peerAlerts(),
+      daemon.peerControls(),
+    ])
+      .then(([page, alerts, controls]) => {
+        if (cancelled) return;
+        const newer = [...(pending?.values() ?? [])];
+        usePeersStore.getState().load([...alerts, ...page, ...newer], controls);
+        seedTeamSeen(page);
       })
       .catch(() => {
         if (!cancelled) usePeersStore.setState({ loaded: true });
+      })
+      .finally(() => {
+        pending = null;
       });
-    const unsubscribe = daemon.subscribeEvents((event: DaemonEvent) => {
-      if (event.event === "peer.messageUpdated") usePeersStore.getState().upsert(event.data);
-    });
     return () => {
       cancelled = true;
       unsubscribe();
     };
   }, [connection]);
+}
+
+/** A first load would otherwise count the whole page as unread. */
+function seedTeamSeen(page: PeerMessage[]) {
+  const ui = useUi.getState();
+  if (ui.teamSeenAt !== 0) return;
+  const newest = page.reduce((max, record) => Math.max(max, record.createdAt), 0);
+  ui.markTeamSeen(newest || Math.floor(Date.now() / 1000));
 }
 
 /**
