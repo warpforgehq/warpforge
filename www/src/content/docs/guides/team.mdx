@@ -33,7 +33,9 @@ Click a session's name anywhere in the feed to open that task. Messages also app
 
 With a **Team channel** open, write in the box at the bottom and press <kbd>Enter</kbd> (<kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line). Every session in the project reads your post with its next prompt, as information from you.
 
-With a direct conversation open, the box sends a **message to one session** instead — pick which one when the conversation is between two sessions. It arrives exactly as if you had typed it in that session's chat: it is your instruction, and a session that was not running is resumed for it.
+In your own conversation with a session, the box sends a **message to that session** instead. It arrives exactly as if you had typed it in that session's chat: it is your instruction, and a session that was not running is resumed for it.
+
+A conversation between two sessions is theirs, so it has no box. Press **Message …** under it to open your own conversation with either of them.
 
 ## Handing out work with @mentions
 
@@ -46,6 +48,8 @@ Type `@` in a channel post to pick a session from the project. A post that menti
 Under the post, Team lists the sessions it was handed to.
 
 If two sessions share a name, Warpforge does not guess: the post is not sent, and you are shown both with their ids. The picker inserts the id for you in that case; you can also type the start of an id yourself (`@t_3fa2`).
+
+If an `@word` in your post names no session — a typo, or an address you are quoting — Team says so before posting. Send again to post it as plain text.
 
 <Aside type="caution" title="Agents cannot give each other orders">
   When a session mentions another one in its post, the mentioned session receives an ordinary peer message, clearly marked as coming from another session and not from you. Only your own mentions arrive as instructions.
