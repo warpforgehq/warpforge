@@ -54,7 +54,7 @@ impl Queued {
                 TurnInitiator::Peer => "peer",
             }
             .into(),
-            peer_message_id: None,
+            peer_message_id: self.prompt.peer.direct,
             attachments: self.prompt.summaries.clone(),
         }
     }
@@ -105,7 +105,12 @@ pub(super) async fn run(
                     attachments: prompt.summaries.clone(),
                 }
             });
-        update(AcpUpdate::TurnStarted { initiator, echo });
+        let peer = prompt.peer.clone();
+        update(AcpUpdate::TurnStarted {
+            initiator,
+            echo,
+            peer,
+        });
         Active {
             handle: send_prompt(
                 &session.out_tx,

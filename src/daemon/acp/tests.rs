@@ -478,6 +478,7 @@ fn handle_enforces_negotiated_image_capability() {
         summaries: vec![],
         has_images: true,
         text: String::new(),
+        peer: Default::default(),
     };
     assert!(handle.prompt(prompt.clone(), TurnInitiator::User).is_err());
     assert!(rx.try_recv().is_err());

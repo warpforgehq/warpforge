@@ -108,7 +108,7 @@ impl Daemon {
                 text,
                 attachments,
                 initiator,
-                peer_message: _,
+                peer_message,
                 reply,
             } => {
                 let root = self.tasks.get(&task_id).map(|task| {
@@ -133,11 +133,14 @@ impl Daemon {
                         return;
                     }
                 };
-                let live_delivery = self
-                    .sessions
-                    .get(&task_id)
-                    .cloned()
-                    .map(|handle| handle.prompt(prepared.clone(), initiator));
+                let live_delivery = match self.sessions.get(&task_id).cloned() {
+                    Some(handle) => {
+                        let prepared =
+                            self.peers_prepare(&task_id, initiator, peer_message, prepared.clone());
+                        Some(handle.prompt(prepared, initiator))
+                    }
+                    None => None,
+                };
                 match live_delivery {
                     Some(Ok(())) => {
                         // Neither the status nor the transcript moves here. A
@@ -151,6 +154,7 @@ impl Daemon {
                         // before reconnecting so its last process guard can
                         // terminate/reap the old child.
                         self.sessions.remove(&task_id);
+                        self.peers_session_gone(&task_id);
                         // A peer's message never resumes a session; it is held.
                         if initiator == crate::daemon::acp::TurnInitiator::Peer {
                             let _ = reply.send(Err("the receiver has no live session".into()));

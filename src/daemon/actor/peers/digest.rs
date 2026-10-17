@@ -1,0 +1,228 @@
+//! What a prompt carries for its peers (ADR 0026): a direct message framed as
+//! a peer's, and the digest of channel posts and held messages the receiver
+//! has not seen. Nothing here submits a prompt; it rides on one being made.
+
+use warpforge_protocol as wire;
+
+use super::directory::is_peer_visible;
+use crate::daemon::acp::TurnInitiator;
+use crate::daemon::actor::Daemon;
+use crate::daemon::prompt::{PeerDelivery, PreparedPrompt, PromptContent};
+use crate::mcp::untrusted::{peer_messages, PeerItem};
+
+pub(crate) const DIGEST_ITEMS: usize = 10;
+pub(crate) const DIGEST_CHARS: usize = 2000;
+/// Channel posts kept in memory per project for the digests.
+pub(crate) const POSTS_KEPT: usize = 100;
+const DIGEST_LABEL: &str = "Team digest";
+
+/// A digest line: whose message, and whether it was a channel post.
+struct Item {
+    id: u64,
+    from: String,
+    channel: bool,
+    text: String,
+}
+
+/// Keep the newest items within the caps, oldest first, the newest one always,
+/// clipped to the character cap when it alone is over.
+/// @returns the kept items and how many older ones were left out
+fn fit(mut items: Vec<Item>) -> (Vec<Item>, Vec<Item>) {
+    items.sort_by_key(|item| item.id);
+    let mut kept: Vec<Item> = Vec::new();
+    let mut chars = 0;
+    while let Some(mut item) = items.pop() {
+        let len = item.text.chars().count();
+        if kept.is_empty() && len > DIGEST_CHARS {
+            item.text = item.text.chars().take(DIGEST_CHARS).collect();
+        } else if kept.len() == DIGEST_ITEMS || chars + len > DIGEST_CHARS {
+            items.push(item);
+            break;
+        }
+        chars += item.text.chars().count();
+        kept.push(item);
+    }
+    kept.reverse();
+    (kept, items)
+}
+
+impl Daemon {
+    /// Give a prompt about to be submitted to `task_id` what it delivers: the
+    /// framed direct message of a `Peer` turn, and the digest. A prompt with
+    /// no content starts no turn, so it gets nothing.
+    /// @param task_id the receiving task
+    /// @param initiator who asked for the turn
+    /// @param direct the record a `Peer` turn delivers
+    /// @param prompt the prepared prompt
+    /// @returns the prompt with its peer blocks and delivery
+    pub(crate) fn peers_prepare(
+        &mut self,
+        task_id: &str,
+        initiator: TurnInitiator,
+        direct: Option<u64>,
+        mut prompt: PreparedPrompt,
+    ) -> PreparedPrompt {
+        let direct = direct
+            .filter(|_| initiator == TurnInitiator::Peer)
+            .and_then(|id| self.peers.in_flight.get(&id).cloned());
+        if let Some(record) = direct {
+            let from = self.peers_label(record.from_task.as_deref());
+            let item = PeerItem {
+                from: &from,
+                channel: false,
+                text: &record.text,
+            };
+            prompt.content = vec![PromptContent::Context(peer_messages(&[item], 0))];
+            prompt.peer.direct = Some(record.id);
+            prompt
+                .peer
+                .transcript
+                .push(wire::SessionUpdate::PeerMessage {
+                    message_ids: vec![record.id],
+                    from_task: record.from_task.clone(),
+                    from_label: from,
+                    to_task: None,
+                    to_label: None,
+                    text: record.text.clone(),
+                    direction: wire::PeerDirection::Received,
+                });
+        }
+        if prompt.content.is_empty() {
+            return prompt;
+        }
+        if let Some((block, delivery)) = self.peers_digest(task_id) {
+            prompt.content.insert(0, PromptContent::Context(block));
+            prompt.peer.absorb(delivery);
+        }
+        prompt
+    }
+
+    /// The unseen posts and held messages for `task_id`, framed, and what
+    /// delivering them changes; reserves them for this prompt.
+    fn peers_digest(&mut self, task_id: &str) -> Option<(String, PeerDelivery)> {
+        let task = self.tasks.get(task_id)?;
+        if !is_peer_visible(task) || self.peers.muted.contains(task_id) {
+            return None;
+        }
+        let (project, created_at) = (task.project.clone(), task.created_at);
+        let cursor = self.peers.cursors.get(task_id).copied();
+        let reserved = self.peers.reserved.get(task_id);
+        let unseen_post = |post: &&wire::PeerMessage| {
+            post.from_task.as_deref() != Some(task_id)
+                && cursor.map_or(post.created_at >= created_at, |c| post.id > c)
+                && !reserved.is_some_and(|r| r.contains(&post.id))
+        };
+        let posts: Vec<wire::PeerMessage> = self
+            .peers
+            .posts
+            .get(&project)
+            .into_iter()
+            .flatten()
+            .filter(unseen_post)
+            .cloned()
+            .collect();
+        let held: Vec<wire::PeerMessage> = self
+            .peers
+            .held
+            .iter()
+            .filter(|m| m.to_task.as_deref() == Some(task_id))
+            .filter(|m| !reserved.is_some_and(|r| r.contains(&m.id)))
+            .cloned()
+            .collect();
+        if posts.is_empty() && held.is_empty() {
+            return None;
+        }
+
+        let items = posts
+            .iter()
+            .chain(held.iter())
+            .map(|m| Item {
+                id: m.id,
+                from: self.peers_label(m.from_task.as_deref()),
+                channel: m.to_task.is_none(),
+                text: m.text.clone(),
+            })
+            .collect();
+        let (kept, omitted) = fit(items);
+        let is_held = |id: u64| held.iter().any(|m| m.id == id);
+        let mut delivery = PeerDelivery {
+            held: kept
+                .iter()
+                .map(|i| i.id)
+                .filter(|id| is_held(*id))
+                .collect(),
+            omitted_held: omitted
+                .iter()
+                .map(|i| i.id)
+                .filter(|id| is_held(*id))
+                .collect(),
+            cursor: posts.iter().map(|p| p.id).max(),
+            ..Default::default()
+        };
+        let lines: Vec<String> = kept
+            .iter()
+            .map(|i| format!("{}: {}", i.from, i.text))
+            .collect();
+        delivery.transcript.push(wire::SessionUpdate::PeerMessage {
+            message_ids: kept.iter().map(|i| i.id).collect(),
+            from_task: None,
+            from_label: DIGEST_LABEL.into(),
+            to_task: None,
+            to_label: None,
+            text: lines.join("\n"),
+            direction: wire::PeerDirection::Digest,
+        });
+        let framed: Vec<PeerItem<'_>> = kept
+            .iter()
+            .map(|i| PeerItem {
+                from: &i.from,
+                channel: i.channel,
+                text: &i.text,
+            })
+            .collect();
+        let block = peer_messages(&framed, omitted.len());
+        self.peers
+            .reserved
+            .entry(task_id.to_string())
+            .or_default()
+            .extend(posts.iter().chain(held.iter()).map(|m| m.id));
+        Some((block, delivery))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn item(id: u64, text: &str) -> Item {
+        Item {
+            id,
+            from: "peer".into(),
+            channel: true,
+            text: text.into(),
+        }
+    }
+
+    #[test]
+    fn the_newest_ten_are_kept_oldest_first() {
+        let (kept, omitted) = fit((1..=13).map(|id| item(id, "x")).collect());
+        let ids: Vec<u64> = kept.iter().map(|i| i.id).collect();
+        assert_eq!(ids, (4..=13).collect::<Vec<_>>());
+        assert_eq!(omitted.len(), 3);
+    }
+
+    #[test]
+    fn the_character_cap_drops_older_items() {
+        let long = "y".repeat(900);
+        let (kept, omitted) = fit(vec![item(1, &long), item(2, &long), item(3, &long)]);
+        assert_eq!(kept.iter().map(|i| i.id).collect::<Vec<_>>(), vec![2, 3]);
+        assert_eq!(omitted.len(), 1);
+    }
+
+    #[test]
+    fn a_single_oversized_item_is_clipped_not_dropped() {
+        let (kept, omitted) = fit(vec![item(1, &"z".repeat(DIGEST_CHARS + 500))]);
+        assert_eq!(kept[0].text.chars().count(), DIGEST_CHARS);
+        assert!(omitted.is_empty());
+    }
+}

@@ -64,7 +64,23 @@ pub(crate) fn clip_note(text: &str) -> Option<String> {
     (!text.is_empty()).then(|| text.chars().take(NOTE_MAX_CHARS).collect())
 }
 
+/// How every surface names the user as a sender.
+pub(crate) const USER_LABEL: &str = "the user";
+
 impl Daemon {
+    /// @param task_id a sender or receiver; `None` for the user
+    /// @returns its `peer_label`, or its id once the task is gone
+    pub(crate) fn peers_label(&self, task_id: Option<&str>) -> String {
+        match task_id {
+            None => USER_LABEL.to_string(),
+            Some(id) => self
+                .tasks
+                .get(id)
+                .map(|task| wire::peer_label(&peer_info(task, now_secs())))
+                .unwrap_or_else(|| id.to_string()),
+        }
+    }
+
     /// A hidden caller sees nobody, since nobody could answer it; a muted
     /// session's note is withheld.
     pub(super) fn peers_list(&self, task_id: &str) -> Result<Vec<wire::PeerInfo>, String> {

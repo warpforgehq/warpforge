@@ -282,6 +282,7 @@ impl Daemon {
                 summaries: vec![],
                 has_images: false,
                 text: nudge,
+                peer: Default::default(),
             },
             TurnInitiator::System,
         );

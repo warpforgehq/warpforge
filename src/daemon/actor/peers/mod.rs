@@ -4,19 +4,20 @@
 
 mod command;
 mod controls;
+mod delivery;
+mod digest;
 mod directory;
 mod guard;
 mod message;
 #[cfg(test)]
 mod tests;
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use warpforge_protocol as wire;
 
-use crate::daemon::acp::TurnInitiator;
 use crate::daemon::actor::{Daemon, Event};
 use crate::daemon::runtime::Write as PersistWrite;
 use crate::daemon::store::{PeerControl, Store};
@@ -40,6 +41,15 @@ pub(crate) struct PeersState {
     paused: BTreeSet<String>,
     /// Each live alert's record, by pair, to rewrite when its window ends.
     alerts: HashMap<guard::Pair, wire::PeerMessage>,
+    /// Direct messages in a live session's queue, by record id.
+    in_flight: HashMap<u64, wire::PeerMessage>,
+    /// Direct messages waiting for their receiver's next prompt, oldest first.
+    held: Vec<wire::PeerMessage>,
+    /// The newest channel posts per project, oldest first.
+    posts: HashMap<String, VecDeque<wire::PeerMessage>>,
+    /// Records already carried by a prompt whose turn has not started, per
+    /// receiving task, so a second queued prompt does not repeat them.
+    reserved: HashMap<String, HashSet<u64>>,
 }
 
 /// Refuse what the previous daemon left queued, then read the peer rows once,
@@ -54,6 +64,10 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>) -> PeersState {
         muted: BTreeSet::new(),
         paused: BTreeSet::new(),
         alerts: HashMap::new(),
+        in_flight: HashMap::new(),
+        held: Vec::new(),
+        posts: HashMap::new(),
+        reserved: HashMap::new(),
     };
     let Some(Ok(store)) = store.map(|s| s.lock()) else {
         return state;
@@ -76,7 +90,26 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>) -> PeersState {
         .unwrap_or_default()
         .into_iter()
         .collect();
+    state.held = store
+        .load_peer_messages_with_status(wire::PeerMessageStatus::Held)
+        .unwrap_or_default();
+    for post in store
+        .load_recent_peer_posts(digest::POSTS_KEPT as u32)
+        .unwrap_or_default()
+    {
+        state.remember_post(post);
+    }
     state
+}
+
+impl PeersState {
+    pub(super) fn remember_post(&mut self, post: wire::PeerMessage) {
+        let posts = self.posts.entry(post.project.clone()).or_default();
+        posts.push_back(post);
+        while posts.len() > digest::POSTS_KEPT {
+            posts.pop_front();
+        }
+    }
 }
 
 impl Daemon {
@@ -126,28 +159,6 @@ impl Daemon {
                 self.peers_end_alerts();
             }
         }
-    }
-
-    /// A turn started in `task_id`: a `User` or `Automation` turn resets the
-    /// pair windows it is in.
-    /// @param task_id the task whose turn started
-    /// @param initiator who asked for the turn
-    pub(crate) fn peers_turn_started(&mut self, task_id: &str, initiator: TurnInitiator) {
-        if matches!(initiator, TurnInitiator::User | TurnInitiator::Automation) {
-            self.peers.guard.reset_for(task_id);
-            self.peers_end_alerts();
-        }
-    }
-
-    /// Drop a deleted task's cursor, mute and counters; its records stay.
-    /// @param task_id the deleted task
-    pub(crate) fn peers_task_deleted(&mut self, task_id: &str) {
-        self.peers.cursors.remove(task_id);
-        self.peers.muted.remove(task_id);
-        self.peers.guard.forget(task_id);
-        self.peers_end_alerts();
-        self.persist
-            .write(PersistWrite::PeerForgetTask(task_id.to_string()));
     }
 
     /// Stamp the record of every alert whose window ended and announce it,

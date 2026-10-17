@@ -157,11 +157,15 @@ impl Daemon {
             // turn buffer starts here, so a cut-short turn's fragment cannot
             // end up in what this one delivers, and the echo below opens the
             // turn it belongs to.
-            AcpUpdate::TurnStarted { echo, initiator } => {
+            AcpUpdate::TurnStarted {
+                echo,
+                initiator,
+                peer,
+            } => {
                 self.turn_updates.remove(&task_id);
                 self.mark_task_running(&task_id);
                 self.advisor_turn_started(&task_id);
-                self.peers_turn_started(&task_id, initiator);
+                self.peers_turn_started(&task_id, initiator, peer);
                 if let Some(echo) = echo {
                     // A reconnect retry can submit the same text again after
                     // the first attempt was already recorded; drop only that
@@ -176,6 +180,7 @@ impl Daemon {
                 }
             }
             AcpUpdate::QueueChanged { queued } => {
+                self.peers_queue_changed(&task_id, &queued);
                 if let Some(task) = self.tasks.get_mut(&task_id) {
                     if task.queued_prompts != queued {
                         task.queued_prompts = queued;
@@ -206,6 +211,7 @@ impl Daemon {
                     return;
                 }
                 self.emit_session(&task_id, update);
+                self.peers_turn_ended(&task_id);
                 // Turn over: the ball is in the human's court either way, so the
                 // status is just `Waiting`. This used to branch on
                 // `files_changed` to pick `NeedsReview` vs `Idle` — one
