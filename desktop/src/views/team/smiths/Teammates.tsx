@@ -3,7 +3,6 @@ import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { useSmiths } from "@/hooks/useSmiths";
-import { mentionCandidates } from "@/lib/peerFeed";
 import type { SmithDetail, Snapshot } from "@/protocol";
 import { useSmithsStore } from "@/store/smiths";
 
@@ -17,7 +16,6 @@ type Panel = { kind: "view"; id: string } | { kind: "edit"; id: string } | { kin
 
 interface Props {
   snapshot: Snapshot;
-  label: (id: string | null | undefined) => string;
   onOpenTask: (id: string) => void;
 }
 
@@ -55,7 +53,7 @@ function EditSmith({
 
 /** Team's Teammates area: the Smiths, one teammate's page, and the form that
  *  creates or edits one. */
-export function Teammates({ snapshot, label, onOpenTask }: Props) {
+export function Teammates({ snapshot, onOpenTask }: Props) {
   const queryClient = useQueryClient();
   const smiths = useSmiths();
   const byId = useSmithsStore((state) => state.smiths);
@@ -102,8 +100,6 @@ export function Teammates({ snapshot, label, onOpenTask }: Props) {
           key={shown.id}
           smith={shown}
           snapshot={snapshot}
-          candidates={mentionCandidates(snapshot.tasks, shown.homeProject, smiths)}
-          label={label}
           onOpenTask={onOpenTask}
           onEdit={() => setPanel({ id: shown.id, kind: "edit" })}
           onDeleted={() => setPanel(null)}
