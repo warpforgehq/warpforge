@@ -4,6 +4,8 @@ use std::time::Duration;
 use tokio::time::timeout;
 use warpforge_protocol as wire;
 
+mod held;
+
 use super::PeerCommand;
 use crate::daemon::actor::{Command, Daemon, DaemonHandle, Event};
 use crate::daemon::store::{Store, RESTART_REASON};
@@ -151,17 +153,6 @@ async fn a_hidden_caller_cannot_message_post_or_list_peers() {
     assert!(records
         .iter()
         .all(|r| r.status == wire::PeerMessageStatus::Refused));
-}
-
-#[tokio::test]
-async fn a_peer_without_a_running_session_is_refused_not_woken() {
-    let daemon = seeded(memory_store());
-    let error = send(&daemon, "t_a", "t_b", "hello").await.unwrap_err();
-    assert!(error.contains("no running agent session"), "{error}");
-    assert_eq!(
-        feed(&daemon).await[0].status,
-        wire::PeerMessageStatus::Refused
-    );
 }
 
 #[tokio::test]
