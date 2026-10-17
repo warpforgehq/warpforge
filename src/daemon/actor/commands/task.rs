@@ -259,6 +259,7 @@ impl Daemon {
                     self.emit(Event::TaskUpdated(updated));
                 }
                 self.smith_task_settled(&id);
+                self.smith_report_back(&id);
 
                 // Archive every direct child so the whole group moves to history.
                 // A child can itself be a live workflow pipeline (spawned via

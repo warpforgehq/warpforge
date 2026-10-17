@@ -3,11 +3,13 @@
 //! off the loop (`daemon/smiths/identity.rs`); results come back as commands.
 
 mod assign;
+mod budget;
 mod command;
 mod directory;
 mod journal;
 mod manage;
 pub(crate) mod prompt;
+mod report;
 mod session;
 #[cfg(test)]
 mod tests;
@@ -42,6 +44,8 @@ pub(crate) struct SmithsState {
     /// The installed Claude adapter reads `_meta.systemPrompt` (checked once
     /// at startup); otherwise the soul goes as an opening prefix.
     claude_meta: bool,
+    /// Turns and spend per Smith over the last day, for the daily budget.
+    spend: budget::Spend,
 }
 
 /// The identity revs a Smith row records.
@@ -82,6 +86,7 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>, root: PathBuf) -> Sm
         busy: HashSet::new(),
         souls,
         claude_meta: !cfg!(test) && crate::daemon::smiths::claude_adapter_reads_meta(),
+        spend: Default::default(),
     }
 }
 
@@ -140,6 +145,27 @@ impl Daemon {
             } => {
                 let result = self
                     .smith_start_work(&id, &project, brief, backlog_item_id, worktree)
+                    .await;
+                let _ = reply.send(result);
+            }
+            SmithCommand::StartWorkFrom {
+                from,
+                target,
+                project,
+                brief,
+                backlog_item_id,
+                worktree,
+                reply,
+            } => {
+                let result = self
+                    .smith_start_work_from(
+                        &from,
+                        &target,
+                        &project,
+                        brief,
+                        backlog_item_id,
+                        worktree,
+                    )
                     .await;
                 let _ = reply.send(result);
             }

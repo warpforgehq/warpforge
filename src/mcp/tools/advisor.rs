@@ -26,8 +26,10 @@ pub(crate) const THREAD_TOOLS: &[&str] = &[
     "set_status_note",
     "memory_store",
     "create_backlog_task",
+    "update_backlog_task",
     "list_backlog_tasks",
     "get_backlog_task",
+    "start_work",
 ];
 
 pub(super) fn defs() -> Vec<Value> {

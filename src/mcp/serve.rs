@@ -8,8 +8,8 @@ use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt};
 use super::daemon_client::DaemonClient;
 use super::identity::BridgeMode;
 use super::{
-    advisor_tool_defs, browser_tool_defs, handle, tool_defs, MCP_VERSION, READ_ONLY_TOOLS,
-    THREAD_TOOLS,
+    advisor_tool_defs, browser_tool_defs, handle, smith_tool_defs, tool_defs, MCP_VERSION,
+    READ_ONLY_TOOLS, THREAD_TOOLS,
 };
 
 /// The session a server's tools act for.
@@ -100,9 +100,11 @@ fn session_tools(session: &Session) -> Value {
             return tools;
         }
         BridgeMode::Thread => {
+            list.extend(smith_tool_defs());
             list.retain(|tool| tool["name"].as_str().is_some_and(thread_may_call));
             return tools;
         }
+        BridgeMode::Work => list.extend(smith_tool_defs()),
         BridgeMode::Advised => list.extend(advisor_tool_defs()),
         BridgeMode::Single | BridgeMode::Orchestrator => {}
     }
@@ -128,6 +130,9 @@ async fn session_call(
     }
     if session.mode == BridgeMode::Thread && !thread_may_call(name) {
         anyhow::bail!("a Smith's thread does not change code: '{name}' is for a work session");
+    }
+    if name == "start_work" && !matches!(session.mode, BridgeMode::Thread | BridgeMode::Work) {
+        anyhow::bail!("start_work is for a Smith's own sessions");
     }
     if name == "ask_advisor" {
         if session.mode != BridgeMode::Advised {
@@ -337,18 +342,22 @@ mod tests {
             "message_agent",
             "memory_store",
             "create_backlog_task",
+            "update_backlog_task",
+            "start_work",
         ] {
             assert!(thread.contains(&tool.to_string()), "{tool}");
         }
         for tool in [
             "service_restart",
             "spawn_agent",
-            "update_backlog_task",
+            "close_backlog_task",
             "ask_advisor",
         ] {
             assert!(!thread.contains(&tool.to_string()), "{tool}");
         }
         assert!(thread.iter().all(|name| thread_may_call(name)));
+        assert!(tool_names(BridgeMode::Work).contains(&"start_work".to_string()));
+        assert!(!tool_names(BridgeMode::Single).contains(&"start_work".to_string()));
     }
 
     #[tokio::test]

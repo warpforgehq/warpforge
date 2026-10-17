@@ -136,6 +136,16 @@ pub struct TaskSmith {
     /// The daemon's settle entry was written to the journal.
     #[serde(default)]
     pub journaled: bool,
+    /// How many `start_work` hops led here: 0 for the thread or a session
+    /// the user started.
+    #[serde(default)]
+    pub depth: u8,
+    /// The task whose `start_work` asked for this one; it gets the report.
+    #[serde(default)]
+    pub report_to: Option<String>,
+    /// The settle report was sent to `report_to`.
+    #[serde(default)]
+    pub reported: bool,
 }
 
 impl TaskSmith {
