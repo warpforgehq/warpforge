@@ -23,7 +23,9 @@ export function usePeerFeedSync() {
       .then(([records, controls]) => {
         if (!cancelled) usePeersStore.getState().load(records, controls);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) usePeersStore.setState({ loaded: true });
+      });
     const unsubscribe = daemon.subscribeEvents((event: DaemonEvent) => {
       if (event.event === "peer.messageUpdated") usePeersStore.getState().upsert(event.data);
     });
