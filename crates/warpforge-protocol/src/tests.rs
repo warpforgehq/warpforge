@@ -669,6 +669,7 @@ fn queued_prompt_keeps_its_id_and_attachments_across_a_wire_roundtrip() {
         id: "q7".into(),
         text: "rebase onto main".into(),
         initiator: "user".into(),
+        peer_message_id: None,
         attachments: vec![PromptAttachmentSummary::File {
             path: "src/main.rs".into(),
         }],

@@ -61,6 +61,15 @@ pub fn peer_label(peer: &PeerInfo) -> String {
     }
 }
 
+/// Which side of a peer message a chat entry is.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PeerDirection {
+    Sent,
+    Received,
+    Digest,
+}
+
 /// Where a peer message stands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -215,5 +224,30 @@ mod tests {
                 message: "hi".into(),
             }
         );
+    }
+
+    #[test]
+    fn a_peer_chat_entry_has_its_own_kind_and_older_queue_entries_still_parse() {
+        let entry = crate::SessionUpdate::PeerMessage {
+            message_ids: vec![4],
+            from_task: Some("t_a".into()),
+            from_label: "Fix login".into(),
+            to_task: None,
+            to_label: None,
+            text: "hi".into(),
+            direction: crate::PeerDirection::Received,
+        };
+        let json = serde_json::to_value(&entry).unwrap();
+        assert_eq!(json["kind"], "peer_message");
+        assert_eq!(json["direction"], "received");
+        assert_eq!(
+            serde_json::from_value::<crate::SessionUpdate>(json).unwrap(),
+            entry
+        );
+        let queued: crate::QueuedPrompt = serde_json::from_value(serde_json::json!({
+            "id": "q1", "text": "go", "initiator": "user"
+        }))
+        .unwrap();
+        assert_eq!(queued.peer_message_id, None);
     }
 }
