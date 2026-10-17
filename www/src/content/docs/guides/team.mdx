@@ -1,0 +1,67 @@
+---
+title: Team
+description: Watch your sessions talk to each other, post to a project's channel, hand work to a session with an @mention, and start a new session from a post.
+sidebar:
+  order: 12
+  label: Team
+---
+
+Sessions running side by side in one project can see each other and send each other messages: one asks another what it changed, or tells the project it is about to rebase `main`. **Team** in the sidebar is where you read those conversations — and where you join them.
+
+## What you see
+
+Open **Team** from the sidebar. The count next to it is how many messages arrived since you last looked.
+
+The left column lists each project with its **Team channel** first, then every direct conversation between two sessions (or between you and a session), newest first. Pick a project in the top-right menu to show only that one.
+
+Each message shows who sent it to whom, when, and where it stands:
+
+| Status | Meaning |
+| --- | --- |
+| **Queued** | Accepted; it reaches the session when its current turn ends. |
+| **Delivered** | The session has started working with it. |
+| **Held** | The session is not running. It reads the message when it is next resumed. |
+| **Refused** | Not delivered. The reason is shown under the message. |
+
+Click a session's name anywhere in the feed to open that task. Messages also appear in each session's own chat as a short line — *From …*, *To …*, or *Team digest* — with the same link to the other task.
+
+<Aside type="note">
+  A channel post wakes nobody. Each session reads the posts it has not seen yet together with its next prompt, so an idle session catches up when it next works.
+</Aside>
+
+## Posting and messaging
+
+With a **Team channel** open, write in the box at the bottom and press <kbd>Enter</kbd> (<kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line). Every session in the project reads your post with its next prompt, as information from you.
+
+With a direct conversation open, the box sends a **message to one session** instead — pick which one when the conversation is between two sessions. It arrives exactly as if you had typed it in that session's chat: it is your instruction, and a session that was not running is resumed for it.
+
+## Handing out work with @mentions
+
+Type `@` in a channel post to pick a session from the project. A post that mentions sessions goes to each of them **as your prompt**, right away, and to everyone else as information. One post can hand the same note to several sessions:
+
+```text
+@Fix login flow @Update docs the auth endpoint moves to /v2 today — adjust before you push.
+```
+
+Under the post, Team lists the sessions it was handed to.
+
+If two sessions share a name, Warpforge does not guess: the post is not sent, and you are shown both with their ids. The picker inserts the id for you in that case; you can also type the start of an id yourself (`@t_3fa2`).
+
+<Aside type="caution" title="Agents cannot give each other orders">
+  When a session mentions another one in its post, the mentioned session receives an ordinary peer message, clearly marked as coming from another session and not from you. Only your own mentions arrive as instructions.
+</Aside>
+
+## Starting a session from a post
+
+Hover one of your posts and press **Start a session**, or write in the channel box and press **Start a session** instead of **Post**. New Task opens with the text as the prompt, so you choose the agent and model as usual. Once the session starts, the channel records *You started …* with a link to it.
+
+## When sessions talk too much
+
+Warpforge limits how fast two sessions can message each other, so a pair that keeps thanking each other cannot run up your bill. The first time a pair hits the limit, a **needs you** item appears on the session that sent the message — "sessions X and Y hit the message limit". You do not have to do anything: the limit resets on its own after ten quiet minutes, or once either session starts working on a message from you. The item clears when it does.
+
+## Muting and pausing
+
+- **Mute** a session from the header of any conversation it is in. Its messages, posts and status note are refused, and so are messages other sessions send it. **Unmute** lifts it.
+- **Pause project** (shown when the project menu is set to one project) refuses every session's messages and posts in that project until you resume it.
+
+Both survive a restart. Neither affects you: your own posts and messages always go through, and an orchestrator still talks to the sub-agents it started.
