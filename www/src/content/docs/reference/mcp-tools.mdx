@@ -25,10 +25,11 @@ Which tools an agent sees depends on how the task was started:
 | Factory (2 tools) | ✅ | ✅ |
 | Browser (6 tools, when the task belongs to a project) | ✅ | ✅ |
 | Visual replies (2 tools) | ✅ | ✅ |
+| Peers (3 tools) | ✅ | ✅ |
 | Advisor (1 tool, when the task has an [advisor](/guides/choosing-your-mode/#add-an-advisor-to-a-single-session)) | ✅ | — |
-| Sub-agents and pipelines (11 tools) | — | ✅ |
+| Sub-agents and pipelines (10 tools) | — | ✅ |
 
-A regular session is one agent doing the work. An **orchestrator** session is an agent that can also *delegate* — so it gets 11 extra tools for dispatching sub-agents and driving pipelines. See [Choosing your mode](/guides/choosing-your-mode/) for which to reach for.
+A regular session is one agent doing the work. An **orchestrator** session is an agent that can also *delegate* — so it gets 10 extra tools for dispatching sub-agents and driving pipelines. See [Choosing your mode](/guides/choosing-your-mode/) for which to reach for.
 
 ---
 
@@ -311,6 +312,34 @@ Shows `html` inline in the task's chat above the agent's reply, under a short `t
 
 ---
 
+## Peers — talk to the other sessions
+
+Available in every session except an advisor's. Sessions working side by side in one project can see each other and send each other messages, across harnesses. You read the whole conversation in [Team](/guides/team/).
+
+### `list_agents`
+
+Lists the other Warpforge sessions in this project — every harness, by task title, not the harness's own built-in sub-agents. Each entry has a `relation`: `peer` for another session, with its status and the note it set, and, in an orchestrator, `child` for each sub-agent it spawned (listed first). Finished, settled and hidden sessions (pipeline stages, automation runs, sub-agents of someone else) are not listed.
+
+### `message_agent`
+
+```
+message_agent(task_id, message)
+```
+
+Sends `message` (at most 4,000 characters) to the session `task_id` names. Warpforge decides what that means:
+
+- **A sub-agent you spawned** gets it as a follow-up in its own session, and its result arrives in your inbox (`read_inbox`) — the orchestrator's usual loop.
+- **A peer** gets it as its next turn: a busy peer when its current turn ends, framed as a message from another session rather than from you. A peer that is not running is not woken; the message is **held** and the tool says so — *"… is not running; it will see your message when it is next resumed."*
+- **`"team"`** posts to the project's channel. It wakes nobody: every peer reads the posts it has not seen with its next prompt. A post that `@mentions` a peer (by title or by the start of its task id) is also sent to that peer as a direct message; a mention that matches two sessions is refused with both ids.
+
+Anything else — a session in another project, an advisor, a pipeline stage — is an error. Warpforge limits how fast sessions message each other (per pair, per sender, per receiving session), and you can mute a session or pause a project from Team. A refusal names the rule; the agent is told not to retry it.
+
+### `set_status_note`
+
+`set_status_note(text)` sets one short line (about 200 characters) saying what this session is working on. Peers see it in `list_agents`; empty text clears it. It is not kept across a restart.
+
+---
+
 ## Advisor — ask a second agent
 
 Available in a regular task started with an **Advisor** picked in New Task. See [Add an advisor](/guides/choosing-your-mode/#add-an-advisor-to-a-single-session) for when that's worth it.
@@ -329,7 +358,7 @@ The advisor's own session is read-only: of these tools it gets only the ones tha
 
 ## Orchestrator only — delegation
 
-These 11 tools appear **only** in an orchestrator session. They're what lets one agent act as a lead rather than a worker.
+These 10 tools appear **only** in an orchestrator session. `list_agents` and `message_agent` are [in every session](#peers--talk-to-the-other-sessions) and reach an orchestrator's sub-agents too. They're what lets one agent act as a lead rather than a worker.
 
 ### `spawn_agent`
 
@@ -349,19 +378,12 @@ Drains finished sub-agent results delivered since the last call.
 
 **When:** after dispatching. Because `spawn_agent` returns immediately, the inbox is where results actually arrive — an orchestrator that never reads its inbox never learns anything came back.
 
-### `message_agent`
+**Follow up with `message_agent`** instead of spawning again when you want to continue a conversation — a correction, a clarification, "also handle the null case." Spawning a fresh agent throws away everything the first one learned.
 
-Sends a follow-up into an **existing** sub-agent's session, with its full history intact.
+### `list_agent_models` · `stop_agent` · `cleanup_agents`
 
-```
-message_agent(task_id, message)
-```
-
-**Use this instead of `spawn_agent`** when you want to continue a conversation — a correction, a clarification, "also handle the null case." Spawning a fresh agent throws away everything the first one learned.
-
-### `list_agents` · `stop_agent` · `cleanup_agents`
-
-- `list_agents(project?)` — this orchestrator's children and their state. Also where a pipeline's `workflowRun.waiting` shows up, which the workflow tools below key off.
+- `list_agent_models(agent)` — the models a harness offers, for `spawn_agent` and `spawn_workflow`.
+- `list_agents(project?)` lists this orchestrator's children first, with their state. It is also where a pipeline's `workflowRun.waiting` shows up, which the workflow tools below key off.
 - `stop_agent(task_id)` — hard-stop one child, keeping its history. Also stops an owned pipeline.
 - `cleanup_agents(max_age_seconds?, dry_run?, include_active?)` — permanently remove finished children and their history. `dry_run` first is the safe habit; `include_active` is required to touch anything still running.
 

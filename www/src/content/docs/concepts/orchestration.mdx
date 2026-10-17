@@ -15,7 +15,7 @@ A regular Warpforge task is one conversation with one coding agent. Enable **Orc
 - `spawn_agent` — dispatch a bounded task to Claude Code, Codex, OpenCode, or any configured harness, and return immediately;
 - `message_agent` — send a follow-up into an existing sub-agent's session, in context;
 - `read_inbox` — drain finished results and decide what happens next;
-- `list_agents`, `stop_agent`, `cleanup_agents` — see, stop, and clear up its own children.
+- `list_agents`, `stop_agent`, `cleanup_agents` — see, stop, and clear up its own children (`list_agents` also lists the [peer sessions](/guides/team/) working beside it).
 
 The distinctive part: **sub-agents don't have to be the same harness as the lead.** A Claude Code orchestrator can put a Codex sub-agent on one piece and an opencode sub-agent on another, in the same task, and reconcile what comes back.
 
