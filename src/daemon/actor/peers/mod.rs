@@ -230,6 +230,10 @@ impl Daemon {
             } => {
                 let _ = reply.send(self.channel_set_member(&id, &smith_id, member));
             }
+            #[cfg(test)]
+            PeerCommand::PostKeys { reply } => {
+                let _ = reply.send(self.peers.posts.keys().cloned().collect());
+            }
             PeerCommand::Tick => {
                 self.peers.guard.expire(Instant::now());
                 self.peers_end_alerts();

@@ -94,6 +94,11 @@ pub enum PeerCommand {
         member: bool,
         reply: Reply<wire::Channel>,
     },
+    /// Test-only: the (project, channel) keys of the posts kept for digests.
+    #[cfg(test)]
+    PostKeys {
+        reply: oneshot::Sender<Vec<(String, Option<String>)>>,
+    },
     /// The minute timer: let lapsed guard limits go and end their alerts.
     Tick,
 }

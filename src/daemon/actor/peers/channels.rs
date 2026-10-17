@@ -86,6 +86,9 @@ impl Daemon {
             .channels
             .remove(id)
             .ok_or_else(|| format!("unknown channel {id}"))?;
+        self.peers
+            .posts
+            .retain(|(_, channel), _| channel.as_deref() != Some(id));
         self.persist
             .write(PersistWrite::DeleteChannel(id.to_string()));
         self.emit(Event::ChannelRemoved { id: id.to_string() });
