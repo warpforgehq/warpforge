@@ -102,6 +102,10 @@ pub struct TaskInfo {
     /// The Smith the task runs as: its thread, or one of its work sessions.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub smith_id: Option<String>,
+    /// What the session says it is doing (`set_status_note`). In memory:
+    /// empty after a restart.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status_note: Option<String>,
 }
 
 /// One message waiting behind the running turn.

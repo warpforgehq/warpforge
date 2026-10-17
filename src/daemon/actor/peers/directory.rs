@@ -3,7 +3,7 @@
 
 use warpforge_protocol as wire;
 
-use crate::daemon::actor::Daemon;
+use crate::daemon::actor::{Daemon, Event};
 use crate::daemon::runner::RUNNER_TAG;
 use crate::daemon::task::{derive_title, now_secs, Task, TaskStatus};
 
@@ -127,6 +127,9 @@ impl Daemon {
         }
         if let Some(task) = self.tasks.get_mut(task_id) {
             task.status_note = clip_note(text);
+            // Clients show the note (the Smiths sidebar); nothing is persisted.
+            let updated = task.clone();
+            self.emit(Event::TaskUpdated(updated));
         }
         Ok(())
     }

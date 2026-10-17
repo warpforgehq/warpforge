@@ -80,3 +80,29 @@ async fn no_alert_is_live_after_a_restart() {
         .unwrap();
     assert!(alerts.is_empty());
 }
+
+#[tokio::test]
+async fn a_status_note_reaches_clients_on_the_task() {
+    let daemon = seeded(memory_store());
+    let mut events = daemon.subscribe();
+    ask(&daemon, |reply| PeerCommand::SetStatusNote {
+        task_id: "t_b".into(),
+        text: "reviewing auth".into(),
+        reply,
+    })
+    .await
+    .unwrap();
+    let task = timeout(Duration::from_secs(5), async {
+        loop {
+            if let Ok(Event::TaskUpdated(task)) = events.recv().await {
+                break task;
+            }
+        }
+    })
+    .await
+    .expect("the task is re-sent");
+    let info = crate::daemon::wire::task_info(&task);
+    assert_eq!(info.status_note.as_deref(), Some("reviewing auth"));
+    let json = serde_json::to_value(&info).unwrap();
+    assert_eq!(json["statusNote"], "reviewing auth");
+}
