@@ -82,7 +82,7 @@ impl Daemon {
             persist.flush().await;
             let result = crate::daemon::runtime::store_read(store, move |store| {
                 store
-                    .load_peer_messages(project.as_deref(), before, limit)
+                    .load_peer_messages(project.as_deref(), before, limit, None)
                     .map_err(|e| format!("{e:#}"))
             })
             .await

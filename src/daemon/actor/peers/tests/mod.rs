@@ -269,6 +269,7 @@ async fn records_still_queued_at_startup_are_refused() {
             mentions: Vec::new(),
             source_id: None,
             started_task: None,
+            channel_id: None,
         })
         .unwrap();
     let daemon = seeded(store);

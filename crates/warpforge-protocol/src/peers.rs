@@ -154,6 +154,9 @@ pub struct PeerMessage {
     /// The session the user started from a post; the record is that line.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub started_task: Option<String>,
+    /// The named channel a post went to; `None` is `#general`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channel_id: Option<String>,
 }
 
 /// How the daemon resolved a `session.message` target.

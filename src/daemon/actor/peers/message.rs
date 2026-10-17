@@ -272,6 +272,7 @@ impl Daemon {
             mentions: Vec::new(),
             source_id: None,
             started_task: None,
+            channel_id: None,
         }
     }
 }

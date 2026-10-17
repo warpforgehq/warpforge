@@ -72,6 +72,8 @@ pub enum Write {
     },
     /// A deleted task's cursor and mute.
     PeerForgetTask(String),
+    Channel(Box<crate::daemon::store::StoredChannel>),
+    DeleteChannel(String),
     Smith(Box<wire::Smith>),
     DeleteSmith(String),
     /// A deleted Smith's `smith:<id>`, taken off local backlog items.
@@ -113,6 +115,8 @@ impl Write {
             Write::PeerCursor { task_id, last_seen } => store.save_peer_cursor(&task_id, last_seen),
             Write::PeerControl { kind, key, on } => store.set_peer_control(kind, &key, on),
             Write::PeerForgetTask(task_id) => store.forget_peer_task(&task_id),
+            Write::Channel(channel) => store.upsert_channel(&channel),
+            Write::DeleteChannel(id) => store.delete_channel(&id),
             Write::Smith(smith) => store.upsert_smith(&smith),
             Write::DeleteSmith(id) => store.delete_smith(&id),
             Write::ClearBacklogAssignee(assignee) => store.clear_backlog_assignee(&assignee),
