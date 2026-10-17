@@ -12,6 +12,8 @@ import {
   peerAlertReasons,
   rankCandidates,
   unreadCount,
+  userThread,
+  userWritesIn,
 } from "./peerFeed";
 
 function record(id: number, overrides: Partial<PeerMessage> = {}): PeerMessage {
@@ -139,5 +141,14 @@ describe("mentions", () => {
     ];
     expect(isPeerVisible(tasks[0]!)).toBe(true);
     expect(mentionCandidates(tasks, "demo").map((c) => c.id)).toStrictEqual(["t_1"]);
+  });
+});
+
+describe("user threads", () => {
+  it("names the same thread a user's direct message lands in", () => {
+    const [thread] = buildConversations([record(1, { fromTask: undefined, toTask: "t_b" })]);
+    expect(userThread("demo", "t_b").key).toBe(thread!.key);
+    expect(userWritesIn(thread!)).toBe(true);
+    expect(userWritesIn(buildConversations([record(2)])[0]!)).toBe(false);
   });
 });

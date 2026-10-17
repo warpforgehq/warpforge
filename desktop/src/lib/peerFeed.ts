@@ -46,6 +46,32 @@ export function conversationKey(record: PeerMessage): string {
 }
 
 /**
+ * @param conversation a thread
+ * @returns whether the user writes in it: the channel, or the user's own
+ *   direct thread with a session
+ */
+export function userWritesIn(conversation: Conversation): boolean {
+  return conversation.kind === "team" || conversation.parties?.includes(null) === true;
+}
+
+/**
+ * The user's direct thread with one session, empty until the first message.
+ * @param project the session's project
+ * @param taskId the session
+ * @returns the thread
+ */
+export function userThread(project: string, taskId: string): Conversation {
+  return {
+    key: conversationKey({ project, toTask: taskId } as PeerMessage),
+    kind: "dm",
+    lastAt: 0,
+    parties: [null, taskId],
+    project,
+    records: [],
+  };
+}
+
+/**
  * Group the feed into threads, each oldest first, threads newest first.
  * @param records feed records in any order
  * @param project only this project's threads, when given

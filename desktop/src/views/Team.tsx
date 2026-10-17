@@ -12,7 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { daemon } from "@/daemon";
-import { type Conversation, buildConversations, mentionCandidates } from "@/lib/peerFeed";
+import {
+  type Conversation,
+  buildConversations,
+  mentionCandidates,
+  userThread,
+} from "@/lib/peerFeed";
 import type { Snapshot } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
 import { useUi } from "@/store/ui";
@@ -47,6 +52,8 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   const markTeamSeen = useUi((state) => state.markTeamSeen);
   const [filter, setFilter] = useState<string>(ALL);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  /** The user's thread with a session that has none yet, once asked for. */
+  const [draft, setDraft] = useState<Conversation | null>(null);
 
   const taskById = useMemo(
     () => new Map(snapshot.tasks.map((task) => [task.id, task])),
@@ -74,9 +81,11 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
         project,
         records: [],
       };
-      return { conversations: [channel, ...own.filter((c) => c.kind === "dm")], project };
+      const dms = own.filter((c) => c.kind === "dm");
+      if (draft?.project === project && !dms.some((c) => c.key === draft.key)) dms.unshift(draft);
+      return { conversations: [channel, ...dms], project };
     });
-  }, [filter, records, shown]);
+  }, [draft, filter, records, shown]);
 
   const all = groups.flatMap((group) => group.conversations);
   const selected = all.find((c) => c.key === selectedKey) ?? all[0] ?? null;
@@ -88,6 +97,12 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   useEffect(() => {
     markTeamSeen(Math.floor(Date.now() / 1000));
   }, [markTeamSeen, records]);
+
+  const openUserThread = useCallback((project: string, taskId: string) => {
+    const thread = userThread(project, taskId);
+    setDraft(thread);
+    setSelectedKey(thread.key);
+  }, []);
 
   const startSession = useCallback(
     (project: string, text: string, sourceId: number | null) => {
@@ -170,6 +185,7 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
               label={label}
               onOpenTask={onOpenTask}
               onStartSession={startSession}
+              onMessageSession={openUserThread}
             />
           ) : (
             <div className="flex flex-1 items-center justify-center text-[13px] text-muted-foreground">
