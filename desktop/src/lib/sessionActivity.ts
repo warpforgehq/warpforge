@@ -72,6 +72,10 @@ export function sessionActivity(
       return { detail: "updating the plan", label: "mapping", tone: "thinking" };
     case "advisor_consultation":
       return { detail: "weighing the advisor's answer", label: "thinking", tone: "thinking" };
+    case "peer_message":
+      return last.direction === "sent"
+        ? { detail: "waiting for the next update", label: "working", tone: "working" }
+        : { detail: "reading a teammate's message", label: "thinking", tone: "thinking" };
     case "permission_request":
       return null;
     default:

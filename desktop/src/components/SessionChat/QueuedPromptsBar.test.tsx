@@ -24,9 +24,7 @@ const waiting = (id: string, text: string, initiator: QueuedPrompt["initiator"] 
 /** Run the Undo action attached to the "removed" toast. */
 function clickUndo() {
   const calls = toastSuccess.mock.calls;
-  const options = calls[calls.length - 1]?.[1] as
-    | { action?: { onClick?: () => void } }
-    | undefined;
+  const options = calls[calls.length - 1]?.[1] as { action?: { onClick?: () => void } } | undefined;
   options?.action?.onClick?.();
 }
 
@@ -164,5 +162,31 @@ describe("QueuedPromptsBar", () => {
       />,
     );
     expect(screen.getByText("src/main.rs")).toBeInTheDocument();
+  });
+
+  it("shows a peer message without edit or send-now, but still removable", async () => {
+    render(<QueuedPromptsBar taskId="t1" queued={[waiting("q1", "API is ready", "peer")]} />);
+    expect(screen.getByText("Peer message")).toBeInTheDocument();
+    expect(screen.getByText("API is ready")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit queued message" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Send now" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Remove queued message" }));
+    expect(request).toHaveBeenCalledWith("session.removeQueued", {
+      task_id: "t1",
+      queued_id: "q1",
+    });
+    expect(toastSuccess).toHaveBeenCalledWith("Queued message removed", undefined);
+  });
+
+  it("keeps send-now for the user's message queued beside a peer one", () => {
+    render(
+      <QueuedPromptsBar
+        taskId="t1"
+        queued={[waiting("q1", "API is ready", "peer"), waiting("q2", "and run the tests")]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Send all now" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Edit queued message" })).toHaveLength(1);
   });
 });

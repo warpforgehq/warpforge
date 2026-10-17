@@ -84,7 +84,9 @@ export interface QueuedPrompt {
   text: string;
   /** Who submitted it. Only `user` messages are folded together by
    *  `session.interrupt`. */
-  initiator: "user" | "automation" | "system";
+  initiator: "user" | "automation" | "system" | "peer";
+  /** The feed record a `peer` message delivers. */
+  peerMessageId?: number;
   /** Attachment metadata, shown read-only while the message waits. Editing
    *  the text keeps them; they cannot be re-attached from here. */
   attachments?: PromptAttachmentSummary[];
@@ -142,6 +144,18 @@ export type SessionUpdate =
       tone: WorkflowEventTone;
     }
   | { kind: "agent_thought"; text: string }
+  | {
+      /** Peer messaging (ADR 0026): one the session sent, one it received as
+       *  a turn, or a digest that rode on a prompt. */
+      kind: "peer_message";
+      message_ids: number[];
+      from_task?: string;
+      from_label: string;
+      to_task?: string;
+      to_label?: string;
+      text: string;
+      direction: "sent" | "received" | "digest";
+    }
   | {
       kind: "tool_call";
       tool_call_id: string;

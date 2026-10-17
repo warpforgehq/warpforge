@@ -16,6 +16,7 @@ import {
 import { HtmlRenderFrame } from "../../components/HtmlRenderFrame";
 import type { FileLinkResolver } from "../../components/Markdown";
 import { BufferedMarkdown, CollapsibleMarkdown, Markdown } from "../../components/Markdown";
+import { PeerMessageLine } from "../../components/PeerMessageLine";
 import { ThinkingBlock } from "../../components/ThinkingBlock";
 import { WorkflowEventLine } from "../../components/WorkflowEventLine";
 import type { EditHunk, PromptAttachmentSummary, SessionUpdate } from "../../protocol";
@@ -301,6 +302,8 @@ export function StreamLine({
       );
     case "workflow_event":
       return <WorkflowEventLine update={update} compact={compact} onOpenTask={onOpenTask} />;
+    case "peer_message":
+      return <PeerMessageLine update={update} compact={compact} onOpenTask={onOpenTask} />;
     case "advisor_consultation":
       return <AdvisorConsultationBlock update={update} compact={compact} onOpenTask={onOpenTask} />;
     case "html_render":

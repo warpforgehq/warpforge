@@ -76,6 +76,17 @@ export function sessionUpdatesSemanticallyEqual(a: SessionUpdate, b: SessionUpda
         a.outcome === (b as typeof a).outcome &&
         a.advisor_task_id === (b as typeof a).advisor_task_id
       );
+    case "peer_message":
+      return (
+        a.direction === (b as typeof a).direction &&
+        a.text === (b as typeof a).text &&
+        a.from_task === (b as typeof a).from_task &&
+        a.from_label === (b as typeof a).from_label &&
+        a.to_task === (b as typeof a).to_task &&
+        a.to_label === (b as typeof a).to_label &&
+        a.message_ids.length === (b as typeof a).message_ids.length &&
+        a.message_ids.every((id, i) => id === (b as typeof a).message_ids[i])
+      );
     case "html_render":
       return (
         a.render_id === (b as typeof a).render_id &&

@@ -16,6 +16,7 @@ import { BacklogMethods } from "./backlog";
 import { CoreClient } from "./client";
 import { MemoryMethods } from "./memory";
 import { OrchestrationMethods } from "./orchestration";
+import { PeerMethods } from "./peers";
 import { ProjectMethods } from "./projects";
 import { PullMethods } from "./pulls";
 import { RunnerMethods } from "./runner";
@@ -33,7 +34,8 @@ export { DaemonRpcError } from "./rpcError";
 export { DAEMON_PROTOCOL_VERSION } from "./types";
 export type { ConnectionState, DaemonState, TerminalDataListener } from "./types";
 
-const ComposedClient = TerminalMethods(
+const ComposedClient = PeerMethods(
+  TerminalMethods(
   RunnerMethods(
     AutomationMethods(
       OrchestrationMethods(
@@ -56,6 +58,7 @@ const ComposedClient = TerminalMethods(
         ),
       ),
     ),
+  ),
   ),
 );
 

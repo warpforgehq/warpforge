@@ -10,6 +10,7 @@ import { daemon } from "../../daemon";
 
 const LABEL: Record<QueuedPrompt["initiator"], string> = {
   automation: "Scheduled run",
+  peer: "Peer message",
   system: "Warpforge",
   user: "You",
 };
@@ -98,9 +99,14 @@ export function QueuedPromptsBar({ taskId, queued }: { taskId: string; queued: Q
         toast.error(cause instanceof Error ? cause.message : "Could not remove the message");
         return;
       }
-      toast.success("Queued message removed", {
-        action: { label: "Undo", onClick: () => void requeue(message) },
-      });
+      // Removing a peer message refuses it; re-sending its text as the user's own
+      // would misattribute it, so there is no undo.
+      toast.success(
+        "Queued message removed",
+        message.initiator === "peer"
+          ? undefined
+          : { action: { label: "Undo", onClick: () => void requeue(message) } },
+      );
     },
     [requeue, taskId],
   );
@@ -127,6 +133,8 @@ export function QueuedPromptsBar({ taskId, queued }: { taskId: string; queued: Q
   );
 
   if (queued.length < 1) return null;
+  // The daemon only edits and force-sends the user's own messages.
+  const canSendNow = queued.some((message) => message.initiator === "user");
 
   return (
     <div className="shrink-0 px-2 pt-1.5">
@@ -137,16 +145,18 @@ export function QueuedPromptsBar({ taskId, queued }: { taskId: string; queued: Q
               ? "1 message waiting for the agent"
               : `${queued.length} messages waiting for the agent`}
           </span>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-6 border-amber-500/40 px-2 text-xs"
-            disabled={sending}
-            onClick={sendNow}
-          >
-            {queued.length === 1 ? "Send now" : "Send all now"}
-          </Button>
+          {canSendNow && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-6 border-amber-500/40 px-2 text-xs"
+              disabled={sending}
+              onClick={sendNow}
+            >
+              {queued.length === 1 ? "Send now" : "Send all now"}
+            </Button>
+          )}
         </div>
         <ul className="space-y-1">
           {queued.map((message) => {
@@ -221,20 +231,22 @@ export function QueuedPromptsBar({ taskId, queued }: { taskId: string; queued: Q
                       </>
                     ) : (
                       <>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          aria-label="Edit queued message"
-                          title="Edit"
-                          onClick={() => {
-                            setDraft(message.text);
-                            setEditing(message.id);
-                          }}
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
+                        {message.initiator === "user" && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            aria-label="Edit queued message"
+                            title="Edit"
+                            onClick={() => {
+                              setDraft(message.text);
+                              setEditing(message.id);
+                            }}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                        )}
                         <Button
                           type="button"
                           variant="ghost"
