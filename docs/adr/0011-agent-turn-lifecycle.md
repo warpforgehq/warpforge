@@ -31,12 +31,13 @@ whether a prompt went out or is waiting, and that is the fact every other
 decision here depends on.
 
 **A turn is announced, not inferred.** The driver emits `AcpUpdate::TurnStarted`
-when a prompt actually leaves, and that — not the RPC that submitted it — is
+when a prompt actually leaves — once its `session/prompt` is on the writer's
+queue; a prompt the transport refused starts no turn — and that — not the RPC that submitted it — is
 what sets the task `Running`. `TurnEnded` then means one specific turn, the one
 that started.
 
 **`TurnEnded` carries identity: `initiator` and `interrupted`.** `TurnInitiator`
-(`Initial` / `User` / `System` / `Automation`) travels with the submission and
+(`Initial` / `User` / `System` / `Automation` / `Peer`) travels with the submission and
 comes back on both updates. `interrupted` distinguishes a turn the agent
 finished from one cut short for a queued message.
 
@@ -142,10 +143,12 @@ nor the chat, which is the disappearance this whole surface exists to prevent.
    records half a thought as the agent's result. Skipping the consumers is only
    half of it — the fragment must also be out of the *next* turn's text, which
    is what clearing the turn buffer on `TurnStarted` is for.
-4. **Only a non-`User` turn closes an automation run.**
-   (`src/daemon/actor/commands/task.rs`) A `reuse_session` automation shares a
-   task with whoever chats into it; a person's reply must not be filed as the
-   scheduled run's output.
+4. **Only a run's own turn closes an automation run.**
+   (`src/daemon/actor/commands/task.rs`, `TurnInitiator::feeds_automation`)
+   `Automation` and `Initial` turns do — the latter for a run in a task it
+   created; `User`, `System` and `Peer` turns never do. A `reuse_session`
+   automation shares a task with whoever chats into it; a person's or a peer's
+   reply must not be filed as the scheduled run's output.
 5. **The `session.prompt` RPC does not accept an initiator.** Clients would set
    it wrong or set it deliberately. The daemon assigns one per call site.
 6. **A force-send emits one `session/prompt`, never one per queued message.**
@@ -165,10 +168,11 @@ nor the chat, which is the disappearance this whole surface exists to prevent.
    (`src/daemon/acp/prompt.rs`) Only the await is spawned. A prompt written from
    inside the spawned task can be overtaken by the driver's own
    `session/cancel`, leaving the agent running a turn nothing can stop.
-10. **A force-send batches `User` prompts only.**
-    (`src/daemon/acp/session/turn.rs`) Merging an `Automation` or `System`
-    prompt into it would dispatch that prompt under a `User` initiator, which
-    invariant 4 then keeps out of its own run's result.
+10. **A force-send batches `User` prompts only, and needs one.**
+    (`src/daemon/acp/session/turn.rs`) Merging an `Automation`, `System` or
+    `Peer` prompt into it would dispatch that prompt under a `User` initiator,
+    which invariant 4 then keeps out of its own run's result. A queue with no
+    `User` prompt is nothing to cut the running turn short for.
 11. **Only a turn the run itself started can fail that run as interrupted.**
     (`src/daemon/actor/acp_update.rs`) A person force-sending into a
     `reuse_session` automation's task interrupts *their* turn; failing the run
