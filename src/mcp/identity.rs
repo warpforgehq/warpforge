@@ -34,6 +34,8 @@ pub(crate) enum BridgeMode {
     Advised,
     /// An advisor's own session: read-only tools only.
     Advisor,
+    /// A Smith's thread: read-only tools plus the ones it coordinates with.
+    Thread,
 }
 
 impl BridgeMode {
@@ -45,6 +47,7 @@ impl BridgeMode {
             BridgeMode::Orchestrator => "orchestrator",
             BridgeMode::Advised => "advised",
             BridgeMode::Advisor => "advisor",
+            BridgeMode::Thread => "thread",
         }
     }
 
@@ -53,6 +56,7 @@ impl BridgeMode {
             Some("orchestrator") => BridgeMode::Orchestrator,
             Some("advised") => BridgeMode::Advised,
             Some("advisor") => BridgeMode::Advisor,
+            Some("thread") => BridgeMode::Thread,
             _ => BridgeMode::Single,
         }
     }

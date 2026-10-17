@@ -130,6 +130,8 @@ impl Daemon {
             BridgeMode::Orchestrator
         } else if task.origin.as_deref() == Some(ADVISOR_ORIGIN) {
             BridgeMode::Advisor
+        } else if task.origin.as_deref() == Some(crate::daemon::actor::smiths::SMITH_ORIGIN) {
+            BridgeMode::Thread
         } else if task.advisor.is_some() {
             BridgeMode::Advised
         } else {
@@ -151,7 +153,7 @@ impl Daemon {
         agent: &str,
         mut overrides: HashMap<String, String>,
     ) -> HashMap<String, String> {
-        if self.advisor_executor_of(task_id).is_none() {
+        if !self.is_read_only_session(task_id) {
             return overrides;
         }
         let agent_id = self.agent_id_of(agent);
@@ -206,7 +208,7 @@ impl Daemon {
         task_id: &str,
         request: wire::SessionUpdate,
     ) -> bool {
-        if self.advisor_executor_of(task_id).is_none() {
+        if !self.is_read_only_session(task_id) {
             return false;
         }
         let wire::SessionUpdate::PermissionRequest { ref request_id, .. } = request else {
@@ -229,8 +231,25 @@ impl Daemon {
 
     /// The advisor's file writes are refused before any policy runs.
     pub(crate) fn advisor_policy_denial(&self, task_id: &str) -> Option<PolicyResult> {
+        if self.is_thread_task(task_id) {
+            return Some(PolicyResult::deny(
+                "a Smith's thread is read-only; changes happen in a work session",
+            ));
+        }
         self.advisor_executor_of(task_id)
             .map(|_| PolicyResult::deny("the advisor is read-only"))
+    }
+
+    /// The sessions held read-only in all four places of ADR 0022: an
+    /// advisor's, and a Smith's thread (ADR 0027 invariant 6).
+    pub(crate) fn is_read_only_session(&self, task_id: &str) -> bool {
+        self.advisor_executor_of(task_id).is_some() || self.is_thread_task(task_id)
+    }
+
+    fn is_thread_task(&self, task_id: &str) -> bool {
+        self.tasks.get(task_id).is_some_and(|task| {
+            task.origin.as_deref() == Some(crate::daemon::actor::smiths::SMITH_ORIGIN)
+        })
     }
 
     /// Clean up after a deleted task: an executor takes its advisor with it,
