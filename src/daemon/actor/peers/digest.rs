@@ -10,8 +10,13 @@ use crate::daemon::actor::Daemon;
 use crate::daemon::prompt::{PeerDelivery, PreparedPrompt, PromptContent};
 use crate::mcp::untrusted::{peer_messages, PeerItem};
 
+/// Channel posts in one digest, and their characters: older ones are omitted.
 pub(crate) const DIGEST_ITEMS: usize = 10;
 pub(crate) const DIGEST_CHARS: usize = 2000;
+/// Held direct messages in one digest, and their characters: the rest wait for
+/// the next one. Never clipped — the sender was told the message would arrive.
+pub(crate) const HELD_ITEMS: usize = 10;
+pub(crate) const HELD_CHARS: usize = 8000;
 /// Channel posts kept in memory per project for the digests.
 pub(crate) const POSTS_KEPT: usize = 100;
 const DIGEST_LABEL: &str = "Team digest";
@@ -24,26 +29,43 @@ struct Item {
     text: String,
 }
 
-/// Keep the newest items within the caps, oldest first, the newest one always,
-/// clipped to the character cap when it alone is over.
-/// @returns the kept items and how many older ones were left out
-fn fit(mut items: Vec<Item>) -> (Vec<Item>, Vec<Item>) {
-    items.sort_by_key(|item| item.id);
+/// The oldest held messages that fit, whole; the first one always.
+/// @returns the messages this digest carries
+fn take_held(mut held: Vec<Item>) -> Vec<Item> {
+    held.sort_by_key(|item| item.id);
     let mut kept: Vec<Item> = Vec::new();
     let mut chars = 0;
-    while let Some(mut item) = items.pop() {
+    for item in held {
+        let len = item.text.chars().count();
+        if !kept.is_empty() && (kept.len() == HELD_ITEMS || chars + len > HELD_CHARS) {
+            break;
+        }
+        chars += len;
+        kept.push(item);
+    }
+    kept
+}
+
+/// The newest posts within the caps, oldest first, the newest one always,
+/// clipped to the character cap when it alone is over.
+/// @returns the kept posts and how many older ones were left out
+fn fit_posts(mut posts: Vec<Item>) -> (Vec<Item>, usize) {
+    posts.sort_by_key(|item| item.id);
+    let mut kept: Vec<Item> = Vec::new();
+    let mut chars = 0;
+    while let Some(mut item) = posts.pop() {
         let len = item.text.chars().count();
         if kept.is_empty() && len > DIGEST_CHARS {
             item.text = item.text.chars().take(DIGEST_CHARS).collect();
         } else if kept.len() == DIGEST_ITEMS || chars + len > DIGEST_CHARS {
-            items.push(item);
+            posts.push(item);
             break;
         }
         chars += item.text.chars().count();
         kept.push(item);
     }
     kept.reverse();
-    (kept, items)
+    (kept, posts.len())
 }
 
 impl Daemon {
@@ -133,29 +155,17 @@ impl Daemon {
             return None;
         }
 
-        let items = posts
-            .iter()
-            .chain(held.iter())
-            .map(|m| Item {
-                id: m.id,
-                from: self.peers_label(m.from_task.as_deref()),
-                channel: m.to_task.is_none(),
-                text: m.text.clone(),
-            })
-            .collect();
-        let (kept, omitted) = fit(items);
-        let is_held = |id: u64| held.iter().any(|m| m.id == id);
+        let item = |m: &wire::PeerMessage| Item {
+            id: m.id,
+            from: self.peers_label(m.from_task.as_deref()),
+            channel: m.to_task.is_none(),
+            text: m.text.clone(),
+        };
+        let held_kept = take_held(held.iter().map(item).collect());
+        let (posts_kept, omitted) = fit_posts(posts.iter().map(item).collect());
+        let kept: Vec<Item> = held_kept.into_iter().chain(posts_kept).collect();
         let mut delivery = PeerDelivery {
-            held: kept
-                .iter()
-                .map(|i| i.id)
-                .filter(|id| is_held(*id))
-                .collect(),
-            omitted_held: omitted
-                .iter()
-                .map(|i| i.id)
-                .filter(|id| is_held(*id))
-                .collect(),
+            held: kept.iter().filter(|i| !i.channel).map(|i| i.id).collect(),
             cursor: posts.iter().map(|p| p.id).max(),
             ..Default::default()
         };
@@ -180,12 +190,17 @@ impl Daemon {
                 text: &i.text,
             })
             .collect();
-        let block = peer_messages(&framed, omitted.len());
+        let block = peer_messages(&framed, omitted);
         self.peers
             .reserved
             .entry(task_id.to_string())
             .or_default()
-            .extend(posts.iter().chain(held.iter()).map(|m| m.id));
+            .extend(
+                posts
+                    .iter()
+                    .map(|m| m.id)
+                    .chain(delivery.held.iter().copied()),
+            );
         Some((block, delivery))
     }
 }
@@ -194,35 +209,48 @@ impl Daemon {
 mod tests {
     use super::*;
 
-    fn item(id: u64, text: &str) -> Item {
+    fn item(id: u64, channel: bool, text: &str) -> Item {
         Item {
             id,
             from: "peer".into(),
-            channel: true,
+            channel,
             text: text.into(),
         }
     }
 
     #[test]
-    fn the_newest_ten_are_kept_oldest_first() {
-        let (kept, omitted) = fit((1..=13).map(|id| item(id, "x")).collect());
+    fn the_newest_ten_posts_are_kept_oldest_first() {
+        let (kept, omitted) = fit_posts((1..=13).map(|id| item(id, true, "x")).collect());
         let ids: Vec<u64> = kept.iter().map(|i| i.id).collect();
         assert_eq!(ids, (4..=13).collect::<Vec<_>>());
-        assert_eq!(omitted.len(), 3);
+        assert_eq!(omitted, 3);
     }
 
     #[test]
-    fn the_character_cap_drops_older_items() {
+    fn the_character_cap_drops_older_posts_and_clips_a_lone_long_one() {
         let long = "y".repeat(900);
-        let (kept, omitted) = fit(vec![item(1, &long), item(2, &long), item(3, &long)]);
+        let (kept, omitted) = fit_posts(vec![
+            item(1, true, &long),
+            item(2, true, &long),
+            item(3, true, &long),
+        ]);
         assert_eq!(kept.iter().map(|i| i.id).collect::<Vec<_>>(), vec![2, 3]);
-        assert_eq!(omitted.len(), 1);
+        assert_eq!(omitted, 1);
+        let (kept, _) = fit_posts(vec![item(1, true, &"z".repeat(DIGEST_CHARS + 500))]);
+        assert_eq!(kept[0].text.chars().count(), DIGEST_CHARS);
     }
 
     #[test]
-    fn a_single_oversized_item_is_clipped_not_dropped() {
-        let (kept, omitted) = fit(vec![item(1, &"z".repeat(DIGEST_CHARS + 500))]);
-        assert_eq!(kept[0].text.chars().count(), DIGEST_CHARS);
-        assert!(omitted.is_empty());
+    fn held_messages_go_whole_and_oldest_first_and_the_rest_wait() {
+        let full = "h".repeat(4000);
+        let held = take_held(vec![
+            item(3, false, &full),
+            item(1, false, &full),
+            item(2, false, &full),
+        ]);
+        assert_eq!(held.iter().map(|i| i.id).collect::<Vec<_>>(), vec![1, 2]);
+        assert!(held.iter().all(|i| i.text.chars().count() == 4000));
+        let many = take_held((1..=12).map(|id| item(id, false, "x")).collect());
+        assert_eq!(many.len(), HELD_ITEMS);
     }
 }

@@ -113,10 +113,13 @@ pub(crate) fn check_length(text: &str) -> Result<(), GuardRefusal> {
 
 impl PeerGuard {
     /// Check a direct message against every rule and, when it passes, count
-    /// it and reserve the sender's queued slot for that receiver.
+    /// it. One that will start a `Peer` turn also reserves the sender's queued
+    /// slot, which holds a share of the receiver's hourly cap until the turn
+    /// starts or the slot is released.
     /// @param from the sending task
     /// @param to the receiving task
     /// @param text the message body
+    /// @param starts_turn whether it is queued as a turn rather than held
     /// @param now the current instant
     /// @returns the first rule that refuses it
     pub(crate) fn admit(
@@ -124,6 +127,7 @@ impl PeerGuard {
         from: &str,
         to: &str,
         text: &str,
+        starts_turn: bool,
         now: Instant,
     ) -> Result<(), GuardRefusal> {
         self.expire(now);
@@ -142,7 +146,13 @@ impl PeerGuard {
                 return Err(GuardRefusal::PairWindow { alert });
             }
         }
-        if self.received.get(to).map_or(0, VecDeque::len) >= RECEIVER_TURNS_PER_HOUR {
+        let waiting = self
+            .queued
+            .keys()
+            .filter(|(_, receiver)| receiver == to)
+            .count();
+        let delivered = self.received.get(to).map_or(0, VecDeque::len);
+        if starts_turn && delivered + waiting >= RECEIVER_TURNS_PER_HOUR {
             return Err(GuardRefusal::ReceiverHourly);
         }
 
@@ -154,12 +164,13 @@ impl PeerGuard {
         window.count += 1;
         window.last = now;
         self.last_sent.insert(direction.clone(), now);
-        self.queued.insert(direction, now);
+        if starts_turn {
+            self.queued.insert(direction, now);
+        }
         Ok(())
     }
 
-    /// A direct message reached its receiver: count it against the
-    /// receiver's hourly cap.
+    /// A `Peer` turn started: its share of the receiver's hourly cap is spent.
     /// @param to the receiving task
     /// @param now the current instant
     pub(crate) fn note_delivered(&mut self, to: &str, now: Instant) {

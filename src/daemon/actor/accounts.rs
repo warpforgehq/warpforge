@@ -307,7 +307,7 @@ impl Daemon {
             .cloned()
             .collect();
         for task_id in stale {
-            if let Some(handle) = self.sessions.remove(&task_id) {
+            if let Some(handle) = self.drop_session(&task_id) {
                 handle.cancel();
             }
         }

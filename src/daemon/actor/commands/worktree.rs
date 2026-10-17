@@ -327,7 +327,7 @@ impl Daemon {
         for terminal_id in self.agents.kill_for_task(task_id) {
             self.emit(Event::AgentExited { id: terminal_id });
         }
-        if let Some(handle) = self.sessions.remove(task_id) {
+        if let Some(handle) = self.drop_session(task_id) {
             let _ = handle.cancel_and_wait().await;
         }
         if let Some((project, base_repo, path, branch)) = self.worktree_for_removal(task_id) {

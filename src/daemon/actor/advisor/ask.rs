@@ -279,7 +279,7 @@ impl Daemon {
             .get(executor)
             .and_then(|task| task.advisor.as_ref()?.task_id.clone());
         if let Some(child) = child {
-            if let Some(handle) = self.sessions.remove(&child) {
+            if let Some(handle) = self.drop_session(&child) {
                 handle.cancel();
             }
             if let Some(task) = self.tasks.get_mut(&child) {

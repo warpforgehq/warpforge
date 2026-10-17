@@ -124,7 +124,6 @@ impl Daemon {
         let held = matches!(verdict, Ok(Delivery::Hold));
         if held {
             record.status = wire::PeerMessageStatus::Held;
-            self.peers.guard.release(from, to);
             self.peers.held.push(record.clone());
         }
         self.peers_record(&record);
@@ -195,9 +194,10 @@ impl Daemon {
         } else {
             Delivery::Hold
         };
+        let starts_turn = matches!(delivery, Delivery::Queue);
         self.peers
             .guard
-            .admit(from, to, text, Instant::now())
+            .admit(from, to, text, starts_turn, Instant::now())
             .map(|()| delivery)
             .map_err(|refusal| Refused {
                 reason: refusal.to_string(),

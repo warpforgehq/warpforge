@@ -199,7 +199,7 @@ impl Daemon {
                     // Stopping a workflow parent stops the whole pipeline.
                     self.workflow_finalize(&id, WorkflowOutcome::Stopped).await
                 } else {
-                    let stop_result = match self.sessions.remove(&id) {
+                    let stop_result = match self.drop_session(&id) {
                         Some(handle) => handle.cancel_and_wait().await,
                         None => Ok(()),
                     };
@@ -275,7 +275,7 @@ impl Daemon {
                 let stop_result = if self.workflow_is_active(&id) {
                     self.workflow_finalize(&id, WorkflowOutcome::Stopped).await
                 } else {
-                    match self.sessions.remove(&id) {
+                    match self.drop_session(&id) {
                         Some(handle) => handle.cancel_and_wait().await,
                         None => Ok(()),
                     }

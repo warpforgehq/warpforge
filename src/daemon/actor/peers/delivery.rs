@@ -15,7 +15,6 @@ use crate::daemon::runtime::Write as PersistWrite;
 use crate::daemon::task::now_secs;
 
 const DROPPED: &str = "dropped from the receiver's queue before it was delivered";
-const OMITTED: &str = "left out of a full digest";
 const RECEIVER_DELETED: &str = "the receiving session was deleted";
 
 impl Daemon {
@@ -38,13 +37,9 @@ impl Daemon {
         if matches!(rx.try_recv(), Ok(Ok(()))) {
             return true;
         }
-        self.peers.in_flight.remove(&record.id);
-        record.status = wire::PeerMessageStatus::Held;
-        self.peers.held.push(record.clone());
-        if let Some(from) = record.from_task.as_deref() {
-            self.peers.guard.release(from, &to);
+        if let Some(held) = self.peers.in_flight.remove(&record.id) {
+            *record = self.peers_hold(held);
         }
-        self.peers_record(record);
         false
     }
 
@@ -70,6 +65,7 @@ impl Daemon {
             .direct
             .and_then(|id| self.peers.in_flight.remove(&id))
         {
+            self.peers.removing.remove(&record.id);
             if let Some(from) = record.from_task.as_deref() {
                 self.peers.guard.release(from, task_id);
             }
@@ -78,19 +74,13 @@ impl Daemon {
             record.delivered_at = Some(now);
             self.peers_record(&record);
         }
-        for id in delivery.held.iter().chain(&delivery.omitted_held) {
+        for id in &delivery.held {
             let Some(index) = self.peers.held.iter().position(|m| m.id == *id) else {
                 continue;
             };
             let mut record = self.peers.held.remove(index);
-            if delivery.held.contains(id) {
-                self.peers.guard.note_delivered(task_id, instant);
-                record.status = wire::PeerMessageStatus::Delivered;
-                record.delivered_at = Some(now);
-            } else {
-                record.status = wire::PeerMessageStatus::Refused;
-                record.reason = Some(OMITTED.into());
-            }
+            record.status = wire::PeerMessageStatus::Delivered;
+            record.delivered_at = Some(now);
             self.peers_record(&record);
         }
         if let Some(cursor) = delivery.cursor {
@@ -105,9 +95,7 @@ impl Daemon {
         }
         if let Some(reserved) = self.peers.reserved.get_mut(task_id) {
             let cursor = delivery.cursor.unwrap_or(0);
-            reserved.retain(|id| {
-                *id > cursor && !delivery.held.contains(id) && !delivery.omitted_held.contains(id)
-            });
+            reserved.retain(|id| *id > cursor && !delivery.held.contains(id));
         }
         for entry in delivery.transcript {
             self.emit_session(task_id, entry);
@@ -115,7 +103,8 @@ impl Daemon {
     }
 
     /// The receiver's queue changed: a direct message that left it without
-    /// its turn starting was removed or dropped with the session.
+    /// its turn starting was removed by the user — refused — or lost with the
+    /// session or its transport — held for the next prompt.
     /// @param task_id the receiving task
     /// @param queued what is still waiting
     pub(crate) fn peers_queue_changed(&mut self, task_id: &str, queued: &[wire::QueuedPrompt]) {
@@ -129,9 +118,14 @@ impl Daemon {
             .filter(|id| !queued.iter().any(|q| q.peer_message_id == Some(*id)))
             .collect();
         for id in gone {
+            let removed = self.peers.removing.remove(&id);
             let Some(mut record) = self.peers.in_flight.remove(&id) else {
                 continue;
             };
+            if !removed {
+                self.peers_hold(record);
+                continue;
+            }
             if let Some(from) = record.from_task.as_deref() {
                 self.peers.guard.release(from, task_id);
             }
@@ -139,6 +133,34 @@ impl Daemon {
             record.reason = Some(DROPPED.into());
             self.peers_record(&record);
         }
+    }
+
+    /// The user is removing a waiting message; if it is a peer's, its record
+    /// is refused when it leaves the queue.
+    /// @param task_id the receiving task
+    /// @param queued_id the queue entry
+    pub(crate) fn peers_removing(&mut self, task_id: &str, queued_id: &str) {
+        let id = self
+            .tasks
+            .get(task_id)
+            .and_then(|task| task.queued_prompts.iter().find(|q| q.id == queued_id))
+            .and_then(|q| q.peer_message_id);
+        if let Some(id) = id {
+            self.peers.removing.insert(id);
+        }
+    }
+
+    /// Keep an accepted direct message for its receiver's next prompt, and
+    /// free the sender's slot: it waits in no session queue now.
+    /// @returns the record as held
+    fn peers_hold(&mut self, mut record: wire::PeerMessage) -> wire::PeerMessage {
+        if let (Some(from), Some(to)) = (record.from_task.as_deref(), record.to_task.as_deref()) {
+            self.peers.guard.release(from, to);
+        }
+        record.status = wire::PeerMessageStatus::Held;
+        self.peers.held.push(record.clone());
+        self.peers_record(&record);
+        record
     }
 
     /// A turn ended with nothing left waiting: any reservation is for a
@@ -154,11 +176,25 @@ impl Daemon {
         }
     }
 
-    /// The task's session handle is gone: no prompt prepared for it will
-    /// start, so its reservations are void.
+    /// The one reconciliation for a session that is gone or never started:
+    /// direct messages in its queue are held (it can be resumed), their
+    /// senders' slots freed, and digest reservations dropped.
     /// @param task_id the task whose session went away
     pub(crate) fn peers_session_gone(&mut self, task_id: &str) {
         self.peers.reserved.remove(task_id);
+        let lost: Vec<u64> = self
+            .peers
+            .in_flight
+            .values()
+            .filter(|m| m.to_task.as_deref() == Some(task_id))
+            .map(|m| m.id)
+            .collect();
+        for id in lost {
+            self.peers.removing.remove(&id);
+            if let Some(record) = self.peers.in_flight.remove(&id) {
+                self.peers_hold(record);
+            }
+        }
     }
 
     /// Drop a deleted task's cursor, mute and counters, and refuse what was

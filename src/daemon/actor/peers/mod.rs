@@ -50,6 +50,8 @@ pub(crate) struct PeersState {
     /// Records already carried by a prompt whose turn has not started, per
     /// receiving task, so a second queued prompt does not repeat them.
     reserved: HashMap<String, HashSet<u64>>,
+    /// Queued direct messages the user is removing from a receiver's queue.
+    removing: HashSet<u64>,
 }
 
 /// Refuse what the previous daemon left queued, then read the peer rows once,
@@ -68,6 +70,7 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>) -> PeersState {
         held: Vec::new(),
         posts: HashMap::new(),
         reserved: HashMap::new(),
+        removing: HashSet::new(),
     };
     let Some(Ok(store)) = store.map(|s| s.lock()) else {
         return state;

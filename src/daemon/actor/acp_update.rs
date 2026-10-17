@@ -297,7 +297,7 @@ impl Daemon {
                     self.note_agent_failure(&id, &message);
                 }
                 // Remove dead ACP handle so subsequent prompts trigger resume.
-                self.sessions.remove(&task_id);
+                self.drop_session(&task_id);
                 self.drop_pending_permissions(&task_id);
                 if let Some(task) = self.tasks.get_mut(&task_id) {
                     task.blocked_reason = Some(message);
