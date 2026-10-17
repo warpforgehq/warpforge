@@ -122,6 +122,12 @@ pub enum Command {
         task_id: String,
         created: Result<crate::daemon::actor::session::WorktreeCreated, String>,
     },
+    /// Test-only: hand the actor an agent update as if a session sent it.
+    #[cfg(test)]
+    InjectAcpUpdate {
+        task_id: String,
+        update: crate::daemon::acp::AcpUpdate,
+    },
     /// Test-only: report whether a finished turn's output has a consumer.
     #[cfg(test)]
     TurnOutputConsumerProbe {

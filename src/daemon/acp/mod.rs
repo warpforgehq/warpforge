@@ -132,6 +132,8 @@ pub enum AcpUpdate {
     /// A `session/prompt` just went out. Exactly one turn is outstanding from
     /// here until the matching [`AcpUpdate::TurnEnded`].
     TurnStarted {
+        /// The session run this belongs to, like [`AcpUpdate::Error`]'s.
+        run_id: u64,
         initiator: TurnInitiator,
         /// The submitted message, to record in the transcript now that the
         /// agent has it. `None` for a turn nobody typed into the chat.
@@ -140,6 +142,7 @@ pub enum AcpUpdate {
         peer: crate::daemon::prompt::PeerDelivery,
     },
     TurnEnded {
+        run_id: u64,
         stop_reason: String,
         initiator: TurnInitiator,
         /// The turn was cut short to make room for a queued message rather than
@@ -149,6 +152,7 @@ pub enum AcpUpdate {
     /// Everything submitted that the agent has not been given yet, in the order
     /// it will go out. Sent whenever that list changes.
     QueueChanged {
+        run_id: u64,
         queued: Vec<wire::QueuedPrompt>,
     },
     /// A model the user (or task creation) asked for could not be applied to
