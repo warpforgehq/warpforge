@@ -4,6 +4,7 @@ import type { Smith, TaskInfo } from "@/protocol";
 
 import {
   assigneeLabel,
+  injectionNote,
   smithAssignee,
   smithIdFromAssignee,
   smithNameError,
@@ -100,5 +101,18 @@ describe("smithStatus", () => {
     expect(smithStatus(smith(), tasks)).toStrictEqual({ kind: "working", sessions: 1 });
     expect(smithWorkSessions(smith(), tasks).map((t) => t.id)).toStrictEqual(["t_open"]);
     expect(smithStatus(smith(), [task("t_x")])).toStrictEqual({ kind: "idle" });
+  });
+});
+
+describe("injectionNote", () => {
+  it("says how the soul is delivered, with the upgrade hint only for Claude on a prefix", () => {
+    expect(injectionNote({ agent: "claude", injection: "system_prompt" })).toBe(
+      "Soul delivered as system prompt",
+    );
+    expect(injectionNote({ agent: "claude", injection: "prefix" })).toContain("0.91");
+    expect(injectionNote({ agent: "codex", injection: "prefix" })).toBe(
+      "Soul delivered as opening message",
+    );
+    expect(injectionNote({ agent: "claude" })).toBeNull();
   });
 });
