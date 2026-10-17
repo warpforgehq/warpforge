@@ -54,4 +54,17 @@ describe("sessionActivity", () => {
     expect(activity?.toolCallId).toBeUndefined();
     expect(activity?.startedAt).toBeUndefined();
   });
+
+  it("reads a received peer message as the start of the turn", () => {
+    const activity = sessionActivity({ status: "running" }, [
+      {
+        direction: "received",
+        from_label: "Backend",
+        kind: "peer_message",
+        message_ids: [1],
+        text: "API is ready",
+      },
+    ]);
+    expect(activity?.tone).toBe("thinking");
+  });
 });

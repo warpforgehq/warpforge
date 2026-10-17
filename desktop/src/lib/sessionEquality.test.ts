@@ -44,3 +44,28 @@ describe("sessionUpdatesSemanticallyEqual for html renders", () => {
     expect(sessionUpdatesSemanticallyEqual(page, { ...page, height: 500 })).toBe(false);
   });
 });
+
+describe("sessionUpdatesSemanticallyEqual for peer messages", () => {
+  const message: SessionUpdate = {
+    direction: "received",
+    from_label: "Backend",
+    from_task: "t_b",
+    kind: "peer_message",
+    message_ids: [1, 2],
+    text: "API is ready",
+  };
+
+  it("treats a copy as equal and any changed field as different", () => {
+    expect(sessionUpdatesSemanticallyEqual(message, { ...message, message_ids: [1, 2] })).toBe(
+      true,
+    );
+    expect(sessionUpdatesSemanticallyEqual(message, { ...message, text: "Not yet" })).toBe(false);
+    expect(sessionUpdatesSemanticallyEqual(message, { ...message, direction: "digest" })).toBe(
+      false,
+    );
+    expect(sessionUpdatesSemanticallyEqual(message, { ...message, from_task: "t_c" })).toBe(false);
+    expect(sessionUpdatesSemanticallyEqual(message, { ...message, message_ids: [1, 3] })).toBe(
+      false,
+    );
+  });
+});

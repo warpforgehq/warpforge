@@ -68,4 +68,38 @@ describe("latestSessionPreview", () => {
       truncated: true,
     });
   });
+
+  it("previews a peer message by its sender and text", () => {
+    const updates: SessionUpdate[] = [
+      {
+        direction: "received",
+        from_label: "Backend",
+        from_task: "t_b",
+        kind: "peer_message",
+        message_ids: [3],
+        text: "API is ready",
+      },
+    ];
+    expect(latestSessionPreview(updates, { active: false })).toEqual({
+      kind: "message",
+      label: "Peer message",
+      text: "From Backend: API is ready",
+      truncated: false,
+    });
+  });
+
+  it("previews a channel post as addressed to the team", () => {
+    const updates: SessionUpdate[] = [
+      {
+        direction: "sent",
+        from_label: "Frontend",
+        kind: "peer_message",
+        message_ids: [4],
+        text: "shipping the form",
+      },
+    ];
+    expect(latestSessionPreview(updates, { active: false })?.text).toBe(
+      "To team: shipping the form",
+    );
+  });
 });
