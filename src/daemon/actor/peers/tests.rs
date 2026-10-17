@@ -90,30 +90,60 @@ async fn feed(daemon: &DaemonHandle) -> Vec<wire::PeerMessage> {
 }
 
 #[tokio::test]
-async fn a_target_that_is_neither_child_nor_peer_is_refused_and_recorded() {
+async fn a_hidden_target_is_refused_and_recorded() {
     let daemon = seeded(memory_store());
     let mut events = daemon.subscribe();
-    for target in ["t_hidden", "t_far", "t_nope", "t_a"] {
+    let error = send(&daemon, "t_a", "t_hidden", "hello").await.unwrap_err();
+    assert!(
+        error.contains("not this session's sub-agent or a peer"),
+        "{error}"
+    );
+    let record = timeout(Duration::from_secs(5), async {
+        loop {
+            if let Ok(Event::PeerMessageUpdated(record)) = events.recv().await {
+                break record;
+            }
+        }
+    })
+    .await
+    .expect("a record for the refusal");
+    assert_eq!(record.to_task.as_deref(), Some("t_hidden"));
+    assert_eq!(record.status, wire::PeerMessageStatus::Refused);
+    assert_eq!(record.reason.as_deref(), Some(error.as_str()));
+    assert!(!record.alert);
+}
+
+#[tokio::test]
+async fn an_address_outside_the_project_is_an_error_without_a_record() {
+    let daemon = seeded(memory_store());
+    for target in ["t_far", "t_nope", "t_a"] {
         let error = send(&daemon, "t_a", target, "hello").await.unwrap_err();
         assert!(
-            error.contains("not this session's sub-agent or a peer"),
+            error.contains("not a session in this project"),
             "{target}: {error}"
         );
-        let record = timeout(Duration::from_secs(5), async {
-            loop {
-                if let Ok(Event::PeerMessageUpdated(record)) = events.recv().await {
-                    break record;
-                }
-            }
-        })
-        .await
-        .expect("a record for every refusal");
-        assert_eq!(record.to_task.as_deref(), Some(target));
-        assert_eq!(record.status, wire::PeerMessageStatus::Refused);
-        assert_eq!(record.reason.as_deref(), Some(error.as_str()));
-        assert!(!record.alert);
     }
-    assert_eq!(feed(&daemon).await.len(), 4);
+    assert!(feed(&daemon).await.is_empty());
+}
+
+#[tokio::test]
+async fn a_hidden_caller_cannot_message_or_post() {
+    let daemon = seeded(memory_store());
+    for caller in ["t_hidden", "t_child"] {
+        assert_eq!(
+            send(&daemon, caller, "t_b", "hello").await.unwrap_err(),
+            super::HIDDEN_SELF
+        );
+        assert_eq!(
+            send(&daemon, caller, "team", "hello").await.unwrap_err(),
+            super::HIDDEN_SELF
+        );
+    }
+    let records = feed(&daemon).await;
+    assert_eq!(records.len(), 4);
+    assert!(records
+        .iter()
+        .all(|r| r.status == wire::PeerMessageStatus::Refused));
 }
 
 #[tokio::test]
