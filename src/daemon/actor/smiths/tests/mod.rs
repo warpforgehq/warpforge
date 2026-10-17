@@ -85,6 +85,7 @@ fn ada() -> wire::SmithCreate {
         charter: None,
         permissions: None,
         budget: None,
+        color: None,
     }
 }
 
@@ -199,6 +200,56 @@ async fn names_are_unique_words_and_projects_must_exist() {
     broken.charter = Some("habits: [".into());
     assert!(create(&daemon, broken).await.unwrap_err().contains("YAML"));
     assert_eq!(list(&daemon).await.len(), 1);
+}
+
+#[tokio::test]
+async fn a_colour_is_kept_from_create_through_an_edit_and_checked() {
+    let home = home();
+    let daemon = spawn(&home, &[]);
+    let created = create(
+        &daemon,
+        wire::SmithCreate {
+            color: Some(4),
+            ..ada()
+        },
+    )
+    .await
+    .unwrap()
+    .smith;
+    assert_eq!(created.color, 4);
+    let patch = |color| {
+        Box::new(wire::SmithPatch {
+            color: Some(color),
+            ..Default::default()
+        })
+    };
+    let id = created.id.clone();
+    let edited = ask(&daemon, |reply| SmithCommand::Update {
+        id: id.clone(),
+        patch: patch(1),
+        reply,
+    })
+    .await
+    .unwrap();
+    assert_eq!(edited.smith.color, 1);
+    let refused = ask(&daemon, |reply| SmithCommand::Update {
+        id,
+        patch: patch(6),
+        reply,
+    })
+    .await;
+    assert!(refused.unwrap_err().contains("palette"));
+    let plain = create(
+        &daemon,
+        wire::SmithCreate {
+            name: "Grace".into(),
+            ..ada()
+        },
+    )
+    .await
+    .unwrap()
+    .smith;
+    assert_eq!(plain.color, crate::daemon::smiths::default_color(&plain.id));
 }
 
 #[tokio::test]

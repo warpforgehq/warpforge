@@ -77,6 +77,10 @@ pub struct Smith {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub held: Vec<SmithHold>,
     pub created_at: u64,
+    /// Its colour: an index into the client theme's categorical palette, never
+    /// a colour value, so it suits every theme.
+    #[serde(default)]
+    pub color: u8,
     /// How its next new session will be given its identity; set by the
     /// daemon when it sends a Smith, never stored.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -136,6 +140,9 @@ pub struct SmithCreate {
     pub permissions: Option<SmithPermissions>,
     #[serde(default)]
     pub budget: Option<SmithBudget>,
+    /// A palette index; derived from the id when absent.
+    #[serde(default)]
+    pub color: Option<u8>,
 }
 
 /// `smiths.update` params: only the fields given change. An empty `model` or
@@ -160,6 +167,9 @@ pub struct SmithPatch {
     pub permissions: Option<SmithPermissions>,
     #[serde(default)]
     pub budget: Option<SmithBudget>,
+    /// A palette index; derived from the id when absent.
+    #[serde(default)]
+    pub color: Option<u8>,
 }
 
 #[cfg(test)]
@@ -183,6 +193,7 @@ mod tests {
             charter_rev: "abc".into(),
             held: vec![SmithHold::IdentityChanged],
             created_at: 1,
+            color: 2,
             injection: None,
         };
         let json = serde_json::to_value(&smith).unwrap();

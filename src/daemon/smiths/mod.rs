@@ -62,6 +62,28 @@ pub fn check_name(name: &str) -> Result<(), String> {
     }
 }
 
+/// How many colours a client's palette has; a Smith's `color` indexes it.
+pub const PALETTE: u8 = 6;
+
+/// A Smith's colour before anyone picks one: stable for its id. The desktop
+/// derived the same value before the daemon stored it.
+/// @param id the Smith's id
+/// @returns a palette index
+pub fn default_color(id: &str) -> u8 {
+    let hash = id
+        .chars()
+        .fold(0u32, |hash, c| hash.wrapping_mul(31).wrapping_add(c as u32));
+    (hash % PALETTE as u32) as u8
+}
+
+/// @param color a proposed palette index
+/// @returns why it is not one
+pub fn check_color(color: u8) -> Result<(), String> {
+    (color < PALETTE)
+        .then_some(())
+        .ok_or_else(|| format!("a Smith's colour is a palette index below {PALETTE}"))
+}
+
 /// The soul a new Smith starts from when none is given.
 /// @param name the Smith's name
 /// @returns the template
@@ -113,6 +135,14 @@ mod tests {
         std::fs::write(dir.path().join("package.json"), manifest("0.90.3-beta")).unwrap();
         assert!(adapter_version(&dist.join("index.js")).unwrap() < META_SINCE);
         assert_eq!(parse_version("1.2"), None);
+    }
+
+    #[test]
+    fn a_colour_is_a_stable_palette_index() {
+        assert_eq!(default_color("sm_1"), default_color("sm_1"));
+        assert!((0..100).all(|i| default_color(&format!("sm_{i}")) < PALETTE));
+        assert!(check_color(PALETTE - 1).is_ok());
+        assert!(check_color(PALETTE).is_err());
     }
 
     #[test]

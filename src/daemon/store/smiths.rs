@@ -25,24 +25,28 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
             soul_rev         TEXT NOT NULL,
             charter_rev      TEXT NOT NULL,
             held             TEXT NOT NULL DEFAULT '[]',
-            created_at       INTEGER NOT NULL
+            created_at       INTEGER NOT NULL,
+            color            INTEGER
         );
         CREATE UNIQUE INDEX IF NOT EXISTS smiths_name_idx ON smiths(name COLLATE NOCASE);
         "#,
     )?;
+    // Rows from before colours were stored read NULL and get the id's colour.
+    let _ = conn.execute("ALTER TABLE smiths ADD COLUMN color INTEGER", []);
     Ok(())
 }
 
 const COLUMNS: &str = "id, name, home_project, allowed_projects, agent, model, account_id, \
-     budget, permissions, thread_task_id, soul_rev, charter_rev, held, created_at";
+     budget, permissions, thread_task_id, soul_rev, charter_rev, held, created_at, color";
 
 fn json<T: serde::de::DeserializeOwned + Default>(text: String) -> T {
     serde_json::from_str(&text).unwrap_or_default()
 }
 
 fn smith_from_row(row: &Row<'_>) -> rusqlite::Result<wire::Smith> {
+    let id: String = row.get(0)?;
     Ok(wire::Smith {
-        id: row.get(0)?,
+        id: id.clone(),
         name: row.get(1)?,
         home_project: row.get(2)?,
         allowed_projects: json(row.get(3)?),
@@ -56,6 +60,11 @@ fn smith_from_row(row: &Row<'_>) -> rusqlite::Result<wire::Smith> {
         charter_rev: row.get(11)?,
         held: json(row.get(12)?),
         created_at: row.get::<_, i64>(13)? as u64,
+        color: row
+            .get::<_, Option<i64>>(14)?
+            .and_then(|c| u8::try_from(c).ok())
+            .filter(|c| *c < crate::daemon::smiths::PALETTE)
+            .unwrap_or_else(|| crate::daemon::smiths::default_color(&id)),
         injection: None,
     })
 }
@@ -67,14 +76,15 @@ impl Store {
         self.conn.execute(
             &format!(
                 "INSERT INTO smiths ({COLUMNS}) \
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15) \
                  ON CONFLICT(id) DO UPDATE SET name = excluded.name, \
                  home_project = excluded.home_project, \
                  allowed_projects = excluded.allowed_projects, agent = excluded.agent, \
                  model = excluded.model, account_id = excluded.account_id, \
                  budget = excluded.budget, permissions = excluded.permissions, \
                  thread_task_id = excluded.thread_task_id, soul_rev = excluded.soul_rev, \
-                 charter_rev = excluded.charter_rev, held = excluded.held"
+                 charter_rev = excluded.charter_rev, held = excluded.held, \
+                 color = excluded.color"
             ),
             params![
                 smith.id,
@@ -91,6 +101,7 @@ impl Store {
                 smith.charter_rev,
                 serde_json::to_string(&smith.held)?,
                 smith.created_at as i64,
+                smith.color as i64,
             ],
         )?;
         Ok(())
@@ -149,6 +160,7 @@ mod tests {
             charter_rev: "r2".into(),
             held: vec![wire::SmithHold::Paused],
             created_at: 7,
+            color: 3,
             injection: None,
         }
     }
@@ -168,5 +180,20 @@ mod tests {
         assert_eq!(store.load_smiths().unwrap(), vec![renamed]);
         store.delete_smith("sm_1").unwrap();
         assert!(store.load_smiths().unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_row_without_a_colour_reads_the_ids_colour() {
+        let store = Store::open_at(std::path::Path::new(":memory:")).unwrap();
+        store.upsert_smith(&smith("sm_1", "Ada")).unwrap();
+        store
+            .conn
+            .execute("UPDATE smiths SET color = NULL", [])
+            .unwrap();
+        let loaded = store.load_smiths().unwrap();
+        assert_eq!(
+            loaded[0].color,
+            crate::daemon::smiths::default_color("sm_1")
+        );
     }
 }
