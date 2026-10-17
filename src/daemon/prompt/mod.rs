@@ -3,8 +3,11 @@ use std::path::Path;
 use serde_json::{json, Value};
 use warpforge_protocol::{PromptAttachment, PromptAttachmentSummary};
 
+pub use peer::PeerDelivery;
+
 mod blobs;
 mod files;
+mod peer;
 #[cfg(test)]
 mod tests;
 
@@ -39,12 +42,15 @@ pub enum PromptContent {
         mime_type: String,
         text: String,
     },
+    /// Text the daemon wrote, not the submitter: editing the queued message
+    /// replaces only `Text`, so this survives an edit.
+    Context(String),
 }
 
 impl PromptContent {
     pub fn to_acp(&self, embedded_context: bool) -> Value {
         match self {
-            Self::Text(text) => json!({ "type": "text", "text": text }),
+            Self::Text(text) | Self::Context(text) => json!({ "type": "text", "text": text }),
             Self::Resource { uri, text } if embedded_context => json!({
                 "type": "resource",
                 "resource": { "uri": uri, "mimeType": "text/plain", "text": text }
@@ -85,6 +91,8 @@ pub struct PreparedPrompt {
     /// It is what the queue shows and what the transcript records when the
     /// prompt is dispatched, so it has to survive a merge.
     pub text: String,
+    /// The peer messages this prompt delivers when its turn starts.
+    pub peer: PeerDelivery,
 }
 
 impl PreparedPrompt {
@@ -101,6 +109,7 @@ impl PreparedPrompt {
             merged.content.extend(part.content);
             merged.summaries.extend(part.summaries);
             merged.has_images |= part.has_images;
+            merged.peer.absorb(part.peer);
             if !part.text.is_empty() {
                 texts.push(part.text);
             }
@@ -201,5 +210,6 @@ pub fn prepare_prompt(
         summaries,
         has_images: image_count > 0,
         text,
+        peer: PeerDelivery::default(),
     })
 }

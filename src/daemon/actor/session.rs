@@ -4,7 +4,7 @@ use anyhow::Result;
 
 use warpforge_protocol as wire;
 
-use crate::daemon::acp::spawn_acp_session;
+use crate::daemon::acp::{spawn_acp_session, TurnInitiator};
 use crate::daemon::actor::advisor::prompt::EXECUTOR_NUDGE;
 use crate::daemon::actor::prompt::bridge_env;
 use crate::daemon::actor::prompt::mcp_servers;
@@ -318,6 +318,9 @@ impl Daemon {
             full_prompt,
             &attachments,
         ) {
+            Ok(prepared) if !prompt.is_empty() => {
+                self.peers_prepare(task_id, TurnInitiator::Initial, None, prepared)
+            }
             Ok(prompt) => prompt,
             Err(error) => {
                 if let Some(task) = self.tasks.get_mut(task_id) {

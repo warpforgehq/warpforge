@@ -8,7 +8,7 @@ use tokio::sync::oneshot;
 
 use warpforge_protocol as wire;
 
-use super::directory::{is_peer_visible, peer_info};
+use super::directory::is_peer_visible;
 use super::guard::{check_length, MAX_TEXT_CHARS};
 use super::{HIDDEN_SELF, MUTED_SELF, PAUSED};
 use crate::daemon::actor::{Command, Daemon};
@@ -72,7 +72,8 @@ impl Daemon {
             self.peers_message_child(to, text, reply).await;
             return;
         }
-        let _ = reply.send(self.peers_direct(&from, &project, &to, text));
+        let result = self.peers_direct(&from, &project, &to, text).await;
+        let _ = reply.send(result);
     }
 
     /// The caller's own sub-agent gets today's follow-up: a `User` prompt,
@@ -100,7 +101,7 @@ impl Daemon {
         });
     }
 
-    fn peers_direct(
+    async fn peers_direct(
         &mut self,
         from: &str,
         project: &str,
@@ -124,6 +125,7 @@ impl Daemon {
         if held {
             record.status = wire::PeerMessageStatus::Held;
             self.peers.guard.release(from, to);
+            self.peers.held.push(record.clone());
         }
         self.peers_record(&record);
         self.peers_end_alerts();
@@ -135,19 +137,16 @@ impl Daemon {
         if let Err(refused) = verdict {
             return Err(refused.reason);
         }
-        let notice = if held {
-            let label = self
-                .tasks
-                .get(to)
-                .map(|task| wire::peer_label(&peer_info(task, now_secs())))
-                .unwrap_or_else(|| to.to_string());
-            Some(format!(
-                "{label} is not running; it will see your message when it is next resumed."
-            ))
-        } else {
-            self.peers_submit(&record);
-            None
-        };
+        if !held {
+            self.peers_submit(&mut record).await;
+        }
+        self.peers_echo_sent(&record);
+        let notice = (record.status == wire::PeerMessageStatus::Held).then(|| {
+            format!(
+                "{} is not running; it will see your message when it is next resumed.",
+                self.peers_label(Some(to))
+            )
+        });
         Ok(wire::PeerSendResult {
             relation: wire::PeerRelation::Peer,
             message: Some(record),
@@ -206,12 +205,6 @@ impl Daemon {
             })
     }
 
-    /// Hand an accepted direct message to the receiver's session.
-    fn peers_submit(&mut self, _record: &wire::PeerMessage) {
-        // Stub until backlog #114: no Peer turn is submitted yet, so the
-        // record stays queued and holds the sender's queued slot.
-    }
-
     /// A channel post wakes nobody (ADR 0026 invariant 3): it is recorded and
     /// rides on each peer's next prompt.
     fn peers_post(
@@ -228,6 +221,8 @@ impl Daemon {
         }
         self.peers_record(&record);
         verdict.map_err(|refused| refused.reason)?;
+        self.peers.remember_post(record.clone());
+        self.peers_echo_sent(&record);
         Ok(wire::PeerSendResult {
             relation: wire::PeerRelation::Team,
             message: Some(record),

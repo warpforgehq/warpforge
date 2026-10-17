@@ -95,6 +95,7 @@ fn receiver_takes_thirty_peer_messages_per_hour() {
         let from = format!("s{i}");
         guard.admit(&from, "r", "hi", start).unwrap();
         guard.release(&from, "r");
+        guard.note_delivered("r", start);
     }
     assert_eq!(
         guard.admit("late", "r", "hi", start + SEC),
@@ -156,4 +157,15 @@ fn a_reset_or_a_deleted_task_reports_the_alert_ended() {
     guard.forget("b");
     assert_eq!(guard.take_cleared(), vec![pair("a", "b")]);
     assert!(guard.admit("c", "b", "hi", now + SEC).is_ok());
+}
+
+#[test]
+fn accepted_but_undelivered_messages_do_not_count_against_the_hour() {
+    let mut guard = PeerGuard::default();
+    let start = Instant::now();
+    for i in 0..RECEIVER_TURNS_PER_HOUR + 5 {
+        let from = format!("s{i}");
+        guard.admit(&from, "r", "hi", start).unwrap();
+        guard.release(&from, "r");
+    }
 }

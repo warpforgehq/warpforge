@@ -60,6 +60,7 @@ impl Daemon {
                             summaries: vec![],
                             has_images: false,
                             text: text.clone(),
+                            peer: Default::default(),
                         },
                         crate::daemon::acp::TurnInitiator::System,
                     )

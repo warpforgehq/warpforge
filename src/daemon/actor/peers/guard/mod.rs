@@ -80,7 +80,8 @@ pub(crate) struct PeerGuard {
     windows: HashMap<Pair, PairWindow>,
     /// Last accepted message per sender → receiver.
     last_sent: HashMap<(String, String), Instant>,
-    /// Accepted messages per receiver within the last hour, oldest first.
+    /// Direct messages delivered per receiver within the last hour, oldest
+    /// first.
     received: HashMap<String, VecDeque<Instant>>,
     /// Sender → receiver routes with a message still waiting, and since when.
     queued: HashMap<(String, String), Instant>,
@@ -153,12 +154,19 @@ impl PeerGuard {
         window.count += 1;
         window.last = now;
         self.last_sent.insert(direction.clone(), now);
+        self.queued.insert(direction, now);
+        Ok(())
+    }
+
+    /// A direct message reached its receiver: count it against the
+    /// receiver's hourly cap.
+    /// @param to the receiving task
+    /// @param now the current instant
+    pub(crate) fn note_delivered(&mut self, to: &str, now: Instant) {
         self.received
             .entry(to.to_string())
             .or_default()
             .push_back(now);
-        self.queued.insert(direction, now);
-        Ok(())
     }
 
     /// Free the sender's queued slot: its message was delivered, refused, or

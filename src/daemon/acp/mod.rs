@@ -136,6 +136,8 @@ pub enum AcpUpdate {
         /// The submitted message, to record in the transcript now that the
         /// agent has it. `None` for a turn nobody typed into the chat.
         echo: Option<PromptEcho>,
+        /// The peer messages the turn delivers; marked delivered only now.
+        peer: crate::daemon::prompt::PeerDelivery,
     },
     TurnEnded {
         stop_reason: String,
@@ -228,6 +230,7 @@ pub async fn generate_text(
         summaries: Vec::new(),
         has_images: false,
         text: prompt,
+        peer: Default::default(),
     };
     let (tx, mut rx) = mpsc::unbounded_channel();
     let handle = spawn_acp_session(
