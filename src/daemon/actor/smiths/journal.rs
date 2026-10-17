@@ -82,22 +82,17 @@ impl Daemon {
 
     /// The newest journal entries after `since`, oldest first, within the caps.
     /// @param smith_id the Smith
-    /// @param since `created_at` of the newest entry already given; 0 for none
-    /// @returns the entries and the newest one's `created_at`
+    /// @param since the row id of the newest entry already given; 0 for none
+    /// @returns the entries and the newest one's row id
     pub(crate) fn smith_journal_since(&self, smith_id: &str, since: u64) -> (Vec<Memory>, u64) {
-        let scope = format!("{SMITH_SCOPE_PREFIX}{smith_id}");
-        let mut entries: Vec<Memory> = self
+        let entries = self
             .memory
-            .list(Some(&scope), None, Some(BRIEF_ENTRIES), None)
-            .unwrap_or_default()
-            .into_iter()
-            .filter(|m| m.created_at as u64 > since)
-            .collect();
-        entries.sort_by_key(|m| m.created_at);
-        let newest = entries.last().map_or(since, |m| m.created_at as u64);
+            .journal_after(smith_id, since as i64, BRIEF_ENTRIES)
+            .unwrap_or_default();
+        let newest = entries.first().map_or(since, |(rowid, _)| *rowid as u64);
         let mut chars = 0;
         let mut kept: Vec<Memory> = Vec::new();
-        for entry in entries.into_iter().rev() {
+        for (_, entry) in entries {
             chars += entry.content.chars().count();
             if !kept.is_empty() && chars > BRIEF_CHARS {
                 break;

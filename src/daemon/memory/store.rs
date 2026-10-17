@@ -42,6 +42,53 @@ impl MemoryStore {
         )
     }
 
+    /// A Smith's newest journal entries after `after`, by insertion order:
+    /// the cursor is the row id, so two entries in one second are distinct.
+    /// @param smith_id the Smith
+    /// @param after the row id of the newest entry already given; 0 for none
+    /// @param limit the most entries to return
+    /// @returns `(row id, entry)`, newest first
+    pub fn journal_after(
+        &self,
+        smith_id: &str,
+        after: i64,
+        limit: u32,
+    ) -> Result<Vec<(i64, Memory)>, MemoryError> {
+        let conn = self.guard()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, project_id, scope, kind, content, created_at, updated_at, \
+                    last_accessed, created_by, superseded_by, tags, rowid \
+             FROM memories WHERE scope = ?1 AND rowid > ?2 ORDER BY rowid DESC LIMIT ?3",
+        )?;
+        let rows = stmt.query_map(
+            params![
+                format!("{SMITH_SCOPE_PREFIX}{smith_id}"),
+                after,
+                limit as i64
+            ],
+            |row| {
+                Ok((
+                    row.get::<_, i64>(11)?,
+                    super::helpers::row_to_memory(row, None)?,
+                ))
+            },
+        )?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// The scope a memory is in.
+    /// @param id the memory
+    /// @returns its scope, `None` when there is no such memory
+    pub fn scope_of(&self, id: &str) -> Option<String> {
+        let conn = self.guard().ok()?;
+        conn.query_row(
+            "SELECT scope FROM memories WHERE id = ?1",
+            params![id],
+            |row| row.get(0),
+        )
+        .ok()
+    }
+
     fn resolve_write_scope(
         &self,
         scope: Option<&str>,

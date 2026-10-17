@@ -107,16 +107,14 @@ impl Daemon {
             .cloned()
             .unwrap_or_default();
         let via_meta = self.smiths.claude_meta && is_claude_adapter(command);
-        let fresh = {
+        {
             let record = self.tasks.get_mut(task_id)?.smith.as_mut()?;
-            let fresh = record.prompt.is_none();
-            if fresh {
+            if record.prompt.is_none() {
                 record.prompt = Some(system_text(&soul));
                 record.via_meta = via_meta;
                 record.soul_rev = Some(smith.soul_rev.clone());
             }
-            fresh
-        };
+        }
         let record = self.tasks.get(task_id)?.smith.clone()?;
         let text = record.prompt.clone().unwrap_or_default();
         let meta = record
@@ -125,7 +123,9 @@ impl Daemon {
         let mut prefix = String::new();
         let mut delivery = None;
         if opening {
-            if fresh && !record.via_meta {
+            // Without `_meta` the agent hears the soul only from the opening
+            // prompt, so every physical start carries the stored text again.
+            if !record.via_meta {
                 prefix.push_str(&text);
                 prefix.push_str("\n\n");
             }
