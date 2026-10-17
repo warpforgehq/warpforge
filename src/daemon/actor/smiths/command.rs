@@ -52,6 +52,13 @@ pub enum SmithCommand {
         worktree: bool,
         reply: Reply<String>,
     },
+    /// The minute timer: look for identity edits made outside the daemon.
+    Tick,
+    /// Which Smiths' identity files no longer match the revs they were
+    /// checked against.
+    IdentityChecked {
+        changed: Vec<(String, Revs)>,
+    },
     /// Test-only: give the daemon a throwaway memory store.
     #[cfg(test)]
     UseMemory {

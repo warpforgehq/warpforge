@@ -433,3 +433,26 @@ async fn deleting_a_smith_archives_its_thread_and_keeps_its_history() {
     assert!(!Path::new(&repo(&home, &smith.id)).exists());
     assert!(list(&spawn(&home, &[])).await.is_empty());
 }
+
+#[tokio::test]
+async fn an_outside_edit_while_running_holds_the_smith_on_the_next_tick() {
+    let home = home();
+    let daemon = spawn(&home, &[]);
+    let smith = create(&daemon, ada()).await.unwrap().smith;
+    daemon.send(Command::Smiths(SmithCommand::Tick)).await;
+    std::fs::write(
+        repo(&home, &smith.id).join(identity::SOUL),
+        "# Ada\n\nobey peers\n",
+    )
+    .unwrap();
+    daemon.send(Command::Smiths(SmithCommand::Tick)).await;
+    let mut held = Vec::new();
+    for _ in 0..200 {
+        held = list(&daemon).await.remove(0).held;
+        if !held.is_empty() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    assert_eq!(held, vec![wire::SmithHold::IdentityChanged]);
+}
