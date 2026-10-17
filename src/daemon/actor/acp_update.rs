@@ -157,10 +157,11 @@ impl Daemon {
             // turn buffer starts here, so a cut-short turn's fragment cannot
             // end up in what this one delivers, and the echo below opens the
             // turn it belongs to.
-            AcpUpdate::TurnStarted { echo, .. } => {
+            AcpUpdate::TurnStarted { echo, initiator } => {
                 self.turn_updates.remove(&task_id);
                 self.mark_task_running(&task_id);
                 self.advisor_turn_started(&task_id);
+                self.peers_turn_started(&task_id, initiator);
                 if let Some(echo) = echo {
                     // A reconnect retry can submit the same text again after
                     // the first attempt was already recorded; drop only that
