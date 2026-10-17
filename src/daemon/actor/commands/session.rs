@@ -108,6 +108,7 @@ impl Daemon {
                 text,
                 attachments,
                 initiator,
+                peer_message: _,
                 reply,
             } => {
                 let root = self.tasks.get(&task_id).map(|task| {
@@ -150,6 +151,11 @@ impl Daemon {
                         // before reconnecting so its last process guard can
                         // terminate/reap the old child.
                         self.sessions.remove(&task_id);
+                        // A peer's message never resumes a session; it is held.
+                        if initiator == crate::daemon::acp::TurnInitiator::Peer {
+                            let _ = reply.send(Err("the receiver has no live session".into()));
+                            return;
+                        }
                         let resume = self.tasks.get(&task_id).and_then(|task| {
                             task.session_id.as_ref().map(|session_id| {
                                 (

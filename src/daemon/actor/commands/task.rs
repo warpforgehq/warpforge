@@ -174,7 +174,7 @@ impl Daemon {
                 self.notify_orch_finished(&task_id, success, output.clone());
                 // A person chatting into a `reuse_session` automation's task
                 // must not close out the scheduled run with their own answer.
-                if initiator != crate::daemon::acp::TurnInitiator::User {
+                if initiator.feeds_automation() {
                     self.automation_task_finished(&task_id, success, &output);
                 }
                 if !workflow_child {

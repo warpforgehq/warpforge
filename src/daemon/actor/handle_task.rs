@@ -18,6 +18,7 @@ impl DaemonHandle {
             text: text.into(),
             attachments,
             initiator: crate::daemon::acp::TurnInitiator::User,
+            peer_message: None,
             reply: tx,
         })
         .await;

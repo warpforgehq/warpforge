@@ -9,6 +9,7 @@
 
 mod editing;
 mod force_send;
+mod peer;
 mod queueing;
 
 use super::*;
@@ -213,4 +214,82 @@ async fn wait_for_line(path: &Path, needle: &str) {
     })
     .await
     .unwrap_or_else(|_| panic!("mock log never contained {needle:?}"));
+}
+
+/// An automation that prompts into `task_id`'s own session, disabled so only
+/// an explicit run-now fires it.
+async fn reuse_automation(daemon: &DaemonHandle, task_id: &str, prompt: &str) -> String {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    daemon
+        .send(Command::AutomationCreate {
+            automation: Box::new(wire::Automation {
+                id: "automation-1".into(),
+                project: "demo".into(),
+                name: "nightly".into(),
+                prompt: prompt.into(),
+                agent: "unused".into(),
+                model: None,
+                config_overrides: HashMap::new(),
+                trigger: wire::AutomationTrigger::default(),
+                timezone: "UTC".into(),
+                precheck: None,
+                enabled: false,
+                missed_run_grace_minutes: 0,
+                reuse_session: true,
+                worktree: false,
+                worktree_base: None,
+                created_at: 0,
+                updated_at: 0,
+                next_run_at: None,
+                last_run_at: None,
+                last_status: None,
+                last_task_id: Some(task_id.into()),
+            }),
+            reply: tx,
+        })
+        .await;
+    rx.await.unwrap().expect("automation created").id
+}
+
+async fn run_now(daemon: &DaemonHandle, automation_id: &str) {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    daemon
+        .send(Command::AutomationRunNow {
+            id: automation_id.into(),
+            reply: tx,
+        })
+        .await;
+    rx.await.unwrap().expect("run dispatched");
+}
+
+fn record_run_statuses(daemon: &DaemonHandle) -> Arc<Mutex<Vec<String>>> {
+    let trail = Arc::new(Mutex::new(Vec::new()));
+    let sink = Arc::clone(&trail);
+    let mut events = daemon.subscribe();
+    tokio::spawn(async move {
+        while let Ok(event) = events.recv().await {
+            if let Event::AutomationRunUpdated(run) = event {
+                sink.lock().unwrap().push(run.status.as_str().to_string());
+            }
+        }
+    });
+    trail
+}
+
+async fn wait_for_run_status(trail: &Arc<Mutex<Vec<String>>>, status: &str) {
+    timeout(Duration::from_secs(5), async {
+        loop {
+            if trail.lock().unwrap().iter().any(|s| s == status) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap_or_else(|_| {
+        panic!(
+            "the run never reached {status}: {:?}",
+            trail.lock().unwrap()
+        )
+    });
 }

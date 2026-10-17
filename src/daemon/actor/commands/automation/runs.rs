@@ -268,6 +268,7 @@ impl Daemon {
                         text: prompt,
                         attachments: Vec::new(),
                         initiator: crate::daemon::acp::TurnInitiator::Automation,
+                        peer_message: None,
                         reply: tx,
                     })
                     .await

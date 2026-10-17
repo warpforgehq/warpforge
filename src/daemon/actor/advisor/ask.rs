@@ -249,6 +249,7 @@ impl Daemon {
                     text,
                     attachments: Vec::new(),
                     initiator: TurnInitiator::System,
+                    peer_message: None,
                     reply,
                 })
                 .await;

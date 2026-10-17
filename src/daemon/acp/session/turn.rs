@@ -51,6 +51,7 @@ impl Queued {
                 TurnInitiator::Automation => "automation",
                 TurnInitiator::User | TurnInitiator::Initial => "user",
                 TurnInitiator::System => "system",
+                TurnInitiator::Peer => "peer",
             }
             .into(),
             peer_message_id: None,
