@@ -2,8 +2,8 @@ use anyhow::{anyhow, Result};
 use serde_json::{json, Value};
 
 use crate::mcp::agents::{
-    agent_values, list_owned_agents, model_ids, render_agents_listing, validate_model,
-    ACTIVE_AGENT_STATUSES, DEFAULT_CLEANUP_MAX_AGE_SECONDS, INACTIVE_AGENT_STATUSES,
+    agent_values, list_owned_agents, model_ids, validate_model, ACTIVE_AGENT_STATUSES,
+    DEFAULT_CLEANUP_MAX_AGE_SECONDS, INACTIVE_AGENT_STATUSES,
 };
 use crate::mcp::daemon_client::DaemonClient;
 use crate::mcp::format::{json_text, now_secs, scoped_project};
@@ -168,35 +168,6 @@ pub(super) async fn dispatch(
                 ));
             }
             Ok(out)
-        }
-        "message_agent" => {
-            let task_id = args
-                .get("task_id")
-                .and_then(Value::as_str)
-                .ok_or_else(|| anyhow!("'task_id' is required"))?;
-            let message = args
-                .get("message")
-                .and_then(Value::as_str)
-                .ok_or_else(|| anyhow!("'message' is required"))?;
-            client
-                .request(
-                    "session.prompt",
-                    json!({
-                        "task_id": task_id,
-                        "text": message,
-                    }),
-                )
-                .await?;
-            Ok(format!(
-                "Message sent to sub-agent task {task_id}. It runs asynchronously; \
-                 you will be notified when its result is waiting — then call read_inbox."
-            ))
-        }
-        "list_agents" => {
-            let scoped = scoped_project(args, project)?;
-            let result = list_owned_agents(client, parent_task, scoped.as_deref()).await?;
-            let agents = agent_values(&result)?;
-            Ok(render_agents_listing(&agents))
         }
         "stop_agent" => {
             let task_id = args

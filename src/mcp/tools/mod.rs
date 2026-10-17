@@ -8,6 +8,7 @@ mod browser;
 mod html;
 mod memory;
 mod orchestrator;
+mod peers;
 mod runner;
 mod runtime;
 
@@ -18,6 +19,7 @@ pub(crate) fn tool_defs(is_orchestrator: bool) -> Value {
     tools.extend(runner::defs());
     tools.extend(memory::defs());
     tools.extend(html::defs());
+    tools.extend(peers::defs());
 
     if is_orchestrator {
         if let Value::Array(orch) = orchestrator::defs() {
