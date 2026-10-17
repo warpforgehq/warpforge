@@ -36,6 +36,7 @@ pub mod runtime;
 pub mod search;
 pub mod server;
 pub mod sessions;
+pub mod smiths;
 pub mod spend;
 pub mod store;
 pub mod task;
