@@ -11,7 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { daemon } from "@/daemon";
+import { useSmiths } from "@/hooks/useSmiths";
 import {
   type Conversation,
   buildConversations,
@@ -20,11 +22,13 @@ import {
 } from "@/lib/peerFeed";
 import type { Snapshot } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
+import { useSmithsStore } from "@/store/smiths";
 import { useUi } from "@/store/ui";
 
 import type { NewTaskOptions } from "../app/dialogs";
 import { ConversationList } from "./team/ConversationList";
 import { labeller } from "./team/labels";
+import { Teammates } from "./team/smiths/Teammates";
 import { Thread, changeControls } from "./team/Thread";
 
 const ALL = "__all__";
@@ -50,6 +54,7 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   const loaded = usePeersStore((state) => state.loaded);
   const paused = usePeersStore((state) => state.controls.pausedProjects);
   const markTeamSeen = useUi((state) => state.markTeamSeen);
+  const [area, setArea] = useState<"conversations" | "teammates">("conversations");
   const [filter, setFilter] = useState<string>(ALL);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   /** The user's thread with a session that has none yet, once asked for. */
@@ -59,7 +64,9 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
     () => new Map(snapshot.tasks.map((task) => [task.id, task])),
     [snapshot.tasks],
   );
-  const label = useMemo(() => labeller(taskById), [taskById]);
+  const smithsById = useSmithsStore((state) => state.smiths);
+  const smiths = useSmiths();
+  const label = useMemo(() => labeller(taskById, smithsById), [smithsById, taskById]);
   const projects = useMemo(() => snapshot.projects.map((p) => p.name), [snapshot.projects]);
   const shown = useMemo(
     () => (filter === ALL ? projects : projects.filter((p) => p === filter)),
@@ -90,8 +97,8 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   const all = groups.flatMap((group) => group.conversations);
   const selected = all.find((c) => c.key === selectedKey) ?? all[0] ?? null;
   const candidates = useMemo(
-    () => (selected ? mentionCandidates(snapshot.tasks, selected.project) : []),
-    [selected, snapshot.tasks],
+    () => (selected ? mentionCandidates(snapshot.tasks, selected.project, smiths) : []),
+    [selected, smiths, snapshot.tasks],
   );
 
   useEffect(() => {
@@ -131,7 +138,20 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {filter !== ALL && (
+          <Tabs value={area} onValueChange={(value) => setArea(value as typeof area)}>
+            <TabsList>
+              <TabsTrigger variant="pill" value="conversations">
+                Conversations
+              </TabsTrigger>
+              <TabsTrigger variant="pill" value="teammates">
+                Teammates
+                {smiths.length > 0 && (
+                  <span className="tnum text-[11px] text-muted-foreground">{smiths.length}</span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {area === "conversations" && filter !== ALL && (
             <Button
               type="button"
               variant="outline"
@@ -147,19 +167,21 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
               {pausedHere ? "Resume project" : "Pause project"}
             </Button>
           )}
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger aria-label="Project" className="h-8 w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All projects</SelectItem>
-              {projects.map((project) => (
-                <SelectItem key={project} value={project}>
-                  {project}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {area === "conversations" && (
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger aria-label="Project" className="h-8 w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All projects</SelectItem>
+                {projects.map((project) => (
+                  <SelectItem key={project} value={project}>
+                    {project}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </header>
 
@@ -169,6 +191,8 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
           title="No projects yet"
           hint="Add a project to see its sessions talk to each other here."
         />
+      ) : area === "teammates" ? (
+        <Teammates snapshot={snapshot} label={label} onOpenTask={onOpenTask} />
       ) : (
         <div className="flex min-h-0 flex-1 gap-3 px-1 pb-2">
           <ConversationList
