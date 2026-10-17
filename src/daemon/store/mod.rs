@@ -16,6 +16,7 @@ mod peers;
 mod runner;
 mod schema;
 mod sessions;
+mod smiths;
 mod snapshot;
 mod tasks;
 #[cfg(test)]
