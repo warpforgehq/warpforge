@@ -60,6 +60,16 @@ pub enum Write {
     CheckoutLease(Box<wire::CheckoutLease>),
     /// The project whose checkout lease ended.
     CheckoutLeaseDrop(String),
+    PeerMessage(Box<wire::PeerMessage>),
+    PeerCursor {
+        task_id: String,
+        last_seen: u64,
+    },
+    PeerControl {
+        kind: crate::daemon::store::PeerControl,
+        key: String,
+        on: bool,
+    },
 }
 
 impl Write {
@@ -93,6 +103,9 @@ impl Write {
             Write::ItemRun(run) => store.upsert_item_run(&run),
             Write::CheckoutLease(lease) => store.save_checkout_lease(&lease),
             Write::CheckoutLeaseDrop(project) => store.delete_checkout_lease(&project),
+            Write::PeerMessage(message) => store.upsert_peer_message(&message),
+            Write::PeerCursor { task_id, last_seen } => store.save_peer_cursor(&task_id, last_seen),
+            Write::PeerControl { kind, key, on } => store.set_peer_control(kind, &key, on),
         }
     }
 }

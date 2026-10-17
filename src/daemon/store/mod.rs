@@ -12,6 +12,7 @@ use std::path::PathBuf;
 mod agents;
 mod automations;
 mod backlog;
+mod peers;
 mod runner;
 mod schema;
 mod sessions;
@@ -21,6 +22,7 @@ mod tasks;
 mod tests;
 mod tracker;
 
+pub use peers::PeerControl;
 pub use snapshot::fold_for_snapshot;
 pub use tracker::TrackerLink;
 

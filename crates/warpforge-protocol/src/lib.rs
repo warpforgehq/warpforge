@@ -44,6 +44,9 @@ pub mod html_render;
 pub mod method;
 pub use method::*;
 
+pub mod peers;
+pub use peers::*;
+
 pub mod project;
 pub use project::*;
 
