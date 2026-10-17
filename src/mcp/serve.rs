@@ -9,6 +9,7 @@ use super::daemon_client::DaemonClient;
 use super::identity::BridgeMode;
 use super::{
     advisor_tool_defs, browser_tool_defs, handle, tool_defs, MCP_VERSION, READ_ONLY_TOOLS,
+    THREAD_TOOLS,
 };
 
 /// The session a server's tools act for.
@@ -80,6 +81,10 @@ where
     }
 }
 
+fn thread_may_call(name: &str) -> bool {
+    READ_ONLY_TOOLS.contains(&name) || THREAD_TOOLS.contains(&name)
+}
+
 fn session_tools(session: &Session) -> Value {
     let mut tools = tool_defs(session.is_orchestrator);
     let Value::Array(list) = &mut tools else {
@@ -92,6 +97,10 @@ fn session_tools(session: &Session) -> Value {
                     .as_str()
                     .is_some_and(|name| READ_ONLY_TOOLS.contains(&name))
             });
+            return tools;
+        }
+        BridgeMode::Thread => {
+            list.retain(|tool| tool["name"].as_str().is_some_and(thread_may_call));
             return tools;
         }
         BridgeMode::Advised => list.extend(advisor_tool_defs()),
@@ -116,6 +125,9 @@ async fn session_call(
         .unwrap_or("");
     if session.mode == BridgeMode::Advisor && !READ_ONLY_TOOLS.contains(&name) {
         anyhow::bail!("the advisor is read-only: '{name}' is not available to it");
+    }
+    if session.mode == BridgeMode::Thread && !thread_may_call(name) {
+        anyhow::bail!("a Smith's thread does not change code: '{name}' is for a work session");
     }
     if name == "ask_advisor" {
         if session.mode != BridgeMode::Advised {
@@ -315,6 +327,28 @@ mod tests {
             .iter()
             .all(|tool| !advisor.contains(&tool.to_string())));
         assert!(!tool_names(BridgeMode::Single).contains(&"stop_agent".to_string()));
+    }
+
+    #[test]
+    fn a_smiths_thread_gets_read_only_tools_and_the_ones_it_coordinates_with() {
+        let thread = tool_names(BridgeMode::Thread);
+        for tool in [
+            "list_agents",
+            "message_agent",
+            "memory_store",
+            "create_backlog_task",
+        ] {
+            assert!(thread.contains(&tool.to_string()), "{tool}");
+        }
+        for tool in [
+            "service_restart",
+            "spawn_agent",
+            "update_backlog_task",
+            "ask_advisor",
+        ] {
+            assert!(!thread.contains(&tool.to_string()), "{tool}");
+        }
+        assert!(thread.iter().all(|name| thread_may_call(name)));
     }
 
     #[tokio::test]

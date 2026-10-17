@@ -18,6 +18,18 @@ pub(crate) const READ_ONLY_TOOLS: &[&str] = &[
     "render_preview",
 ];
 
+/// What a Smith's thread may call besides the read-only tools: it talks,
+/// records and puts work on the board, and never edits code (ADR 0027).
+pub(crate) const THREAD_TOOLS: &[&str] = &[
+    "list_agents",
+    "message_agent",
+    "set_status_note",
+    "memory_store",
+    "create_backlog_task",
+    "list_backlog_tasks",
+    "get_backlog_task",
+];
+
 pub(super) fn defs() -> Vec<Value> {
     vec![json!({
         "name": "ask_advisor",

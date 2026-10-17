@@ -38,7 +38,7 @@ pub(crate) fn advisor_tool_defs() -> Vec<Value> {
     advisor::defs()
 }
 
-pub(crate) use advisor::READ_ONLY_TOOLS;
+pub(crate) use advisor::{READ_ONLY_TOOLS, THREAD_TOOLS};
 
 /// The browser tools, offered to sessions bound to a project.
 /// @returns the tool definitions

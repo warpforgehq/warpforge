@@ -59,7 +59,9 @@ mod tools;
 pub(crate) mod untrusted;
 
 pub(crate) use daemon_client::DaemonClient;
-pub(crate) use tools::{advisor_tool_defs, browser_tool_defs, tool_defs, READ_ONLY_TOOLS};
+pub(crate) use tools::{
+    advisor_tool_defs, browser_tool_defs, tool_defs, READ_ONLY_TOOLS, THREAD_TOOLS,
+};
 
 /// MCP protocol version we implement.
 const MCP_VERSION: &str = "2024-11-05";
