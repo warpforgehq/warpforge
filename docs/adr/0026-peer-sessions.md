@@ -466,3 +466,51 @@ the daemon-wide question of ADR 0017 and ADR 0018, not a peer one.
     mention adds no record of its own, an agent mention adds the direct
     message's record with `source_id`. The feed shows what a post caused
     without reconstructing it.
+
+## Addendum (2026-10-17): named channels per project
+
+Beyond the one project channel the user can create named channels in a
+project — `#ci`, `#release` — and choose which Smiths (ADR 0027) are in them.
+
+**A channel is (project, name).** Every project has `#general`, which is the
+project channel this record has always described: a record with no channel is
+a `#general` post, so nothing already stored changes meaning. Named channels
+are rows in `channels` (`id`, `project`, `name`, `created_at`); a name is one
+lowercase word (`a-z`, `0-9`, `-`, `_`, at most 32), unique in its project,
+and `general` is reserved. `peer_messages.channel_id` is null for `#general`.
+
+**Members are Smiths, chosen by the user.** `channel_members` (`channel_id`,
+`smith_id`). A Smith's thread is the member: it reads and posts in every
+channel it is in, in any project it is allowed in. Plain sessions and a Smith's
+work sessions are in `#general` only — they are short-lived, and a work
+session's conversation goes through its thread. Deleting a Smith removes its
+memberships; deleting a channel keeps its records, which then reach no digest.
+
+**Delivery is the digest's, unchanged in kind.** A post to any channel starts
+no turn (invariant 3); its @mentions follow the addendum above. At prompt
+preparation a session's digest covers unseen posts of `#general` in its own
+project (for a thread, its home project, as ADR 0027 says) and of every channel
+it is a member of, each post labelled with its channel, under the same caps.
+*Deviation from the brief:* the cursor stays one per task, not one per
+(task, channel). Record ids are global and increase with every record, so one
+cursor already orders every channel's posts, and caps, reservations and the
+"N older posts omitted" count work over all of them at once. A per-channel
+cursor would add a table key and change nothing a session sees. Joining a
+channel shows its posts made after the cursor, not its history.
+
+**Agents post; only the user manages.** `message_agent("#name", …)` posts to a
+channel the caller's Smith is a member of, in any project it is allowed in;
+`#project/name` picks one when two projects share the name. `"team"` and
+`"#general"` are the caller's own project's `#general`. Anything else is refused
+with no record, like an unknown address. Creating, renaming and deleting
+channels and changing membership are user-only RPCs (`method_is_user_only`, for
+#120). Mute and pause stay per session and per project. `list_agents` gains a
+Channels section: `#general` and the caller's member channels.
+
+### Invariants (addendum)
+
+20. **A record with no channel is a `#general` post.** No migration rewrites
+    old records, and no reader may treat a null channel as "no channel".
+21. **Channel membership is the user's.** No agent-callable path creates a
+    channel or changes its members; a post to a channel the caller is not in
+    is refused.
