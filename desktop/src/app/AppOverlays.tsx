@@ -12,6 +12,7 @@ import type { AppDialogs } from "./dialogs";
 import {
   getPendingAgentSetup,
   AgentUpdatesHost,
+  NewSmithHost,
   PeerFeedHost,
   SmithsHost,
   PrAssistantLifecycleHost,
@@ -65,6 +66,7 @@ export function AppOverlays({
       <PrAssistantLifecycleHost projects={projects} />
       <AgentUpdatesHost />
       <PeerFeedHost />
+      <NewSmithHost snapshot={snapshot} />
       <SmithsHost />
       <SettingsPrefetchHost />
       {addProjectOpen && (

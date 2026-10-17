@@ -1,27 +1,38 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Pause, Pencil, Play, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pause, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { SmithAvatar } from "@/components/SmithAvatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { daemon } from "@/daemon";
 import { useMarkSmithSeen } from "@/hooks/useSmiths";
-import { injectionNote, smithStatus, smithWorkSessions } from "@/lib/smiths";
-import { taskLabel } from "@/lib/taskLabel";
-import type { BacklogItem, Smith, SmithDetail, Snapshot } from "@/protocol";
+import { smithStatus, smithWorkSessions } from "@/lib/smiths";
+import type { Smith, SmithDetail, Snapshot } from "@/protocol";
+import { useUi } from "@/store/ui";
 
 import { HeldBanner } from "./HeldBanner";
-import { smithDetailKey, useSmithItems } from "./queries";
+import { smithDetailKey } from "./queries";
 import { SmithChat } from "./SmithChat";
+import { SmithSettings } from "./SmithSettings";
 import { SmithStatusBadge } from "./SmithStatusBadge";
-import { StartWorkDialog } from "./StartWorkDialog";
+import { SmithWork } from "./SmithWork";
+
+type Tab = "chat" | "work" | "settings";
 
 interface Props {
   smith: Smith;
   snapshot: Snapshot;
+  tab?: Tab;
   onOpenTask: (id: string) => void;
-  onEdit: () => void;
   onDeleted: () => void;
 }
 
@@ -32,17 +43,16 @@ const DELETE_EXPLAINED =
   "did stays on the board.";
 
 /**
- * A teammate's page: its status and controls, the conversation with it, its
- * open work and the board items assigned to it.
+ * A Smith's page: Chat with it (the default), its Work, and its Settings.
+ * Pause and Delete live in the "⋯" menu.
  */
-export function SmithPage({ smith, snapshot, onOpenTask, onEdit, onDeleted }: Props) {
+export function SmithPage({ smith, snapshot, tab = "chat", onOpenTask, onDeleted }: Props) {
   const queryClient = useQueryClient();
+  const openTeam = useUi((state) => state.openTeam);
   useMarkSmithSeen(smith);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [starting, setStarting] = useState<{ item: BacklogItem | null } | null>(null);
   const status = smithStatus(smith, snapshot.tasks);
-  const sessions = smithWorkSessions(smith, snapshot.tasks);
-  const { items, loading } = useSmithItems(smith);
+  const openWork = smithWorkSessions(smith, snapshot.tasks).length;
   const paused = smith.held?.includes("paused") ?? false;
 
   const run = async (what: string, action: () => Promise<unknown>) => {
@@ -52,119 +62,82 @@ export function SmithPage({ smith, snapshot, onOpenTask, onEdit, onDeleted }: Pr
       toast.error(what, { description: error instanceof Error ? error.message : String(error) });
     }
   };
-
   const resolved = (detail: SmithDetail) =>
     queryClient.setQueryData(smithDetailKey(smith.id), detail);
 
   return (
-    <section
-      aria-label={smith.name}
-      className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto"
-    >
-      <header className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold">{smith.name}</h2>
-        <SmithStatusBadge status={status} />
-        <span className="text-[13px] text-muted-foreground">
-          {smith.homeProject}
-          {smith.allowedProjects.length > 1 && ` +${smith.allowedProjects.length - 1}`} ·{" "}
-          {smith.agent}
-          {smith.model ? ` · ${smith.model}` : ""}
-        </span>
-        <div className="ml-auto flex flex-wrap gap-1">
-          <Button type="button" size="sm" onClick={() => setStarting({ item: null })}>
-            <Play className="size-3.5" />
-            Start work
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={onEdit}>
-            <Pencil className="size-3.5" />
-            Edit
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() =>
-              void run(paused ? "Could not resume" : "Could not pause", () =>
-                daemon.setSmithPaused(smith.id, !paused),
-              )
-            }
-          >
-            {paused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
-            {paused ? "Resume" : "Pause"}
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmDelete(true)}>
-            <Trash2 className="size-3.5" />
-            Delete
-          </Button>
+    <section aria-label={smith.name} className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+      <header className="flex flex-wrap items-center gap-3">
+        <SmithAvatar smith={smith} size="size-9" className="[&>span]:text-sm" />
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className="truncate text-lg font-semibold leading-tight">{smith.name}</h2>
+            <SmithStatusBadge status={status} />
+          </div>
+          <p className="truncate text-xs text-muted-foreground">
+            {smith.homeProject}
+            {smith.allowedProjects.length > 1 && ` +${smith.allowedProjects.length - 1}`} ·{" "}
+            {smith.agent}
+            {smith.model ? ` · ${smith.model}` : ""}
+          </p>
         </div>
+        <Tabs
+          value={tab}
+          onValueChange={(next) => openTeam({ id: smith.id, kind: "teammate", tab: next as Tab })}
+          className="ml-auto"
+        >
+          <TabsList>
+            <TabsTrigger variant="pill" value="chat">
+              Chat
+            </TabsTrigger>
+            <TabsTrigger variant="pill" value="work">
+              Work
+              {openWork > 0 && (
+                <span className="tnum text-[11px] text-muted-foreground">{openWork}</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger variant="pill" value="settings">
+              Settings
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="ghost" size="icon" aria-label="More" className="size-8">
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              className="text-[13px]"
+              onSelect={() =>
+                void run(paused ? "Could not resume" : "Could not pause", () =>
+                  daemon.setSmithPaused(smith.id, !paused),
+                )
+              }
+            >
+              {paused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
+              {paused ? "Resume" : "Pause"}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-[13px] text-destructive"
+              onSelect={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="size-3.5" />
+              Delete…
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
-
-      {injectionNote(smith) && (
-        <p className="-mt-2 text-xs text-muted-foreground">{injectionNote(smith)}</p>
-      )}
 
       <HeldBanner smith={smith} onResolved={resolved} />
 
-      <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="flex h-[65vh] min-h-[24rem] min-w-0 flex-col">
-          <SmithChat smith={smith} snapshot={snapshot} onOpenTask={onOpenTask} />
-        </div>
-        <aside className="space-y-4 text-[13px]">
-          <section aria-label="Open work" className="space-y-1">
-            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Open work
-            </h3>
-            {sessions.length === 0 && <p className="text-muted-foreground">Nothing open.</p>}
-            {sessions.map((task) => (
-              <button
-                key={task.id}
-                type="button"
-                onClick={() => onOpenTask(task.id)}
-                className="block w-full truncate rounded px-1 py-0.5 text-left hover:bg-accent/60"
-              >
-                {taskLabel(task).split("\n")[0]}
-                <span className="ml-1 text-xs text-muted-foreground">{task.status}</span>
-              </button>
-            ))}
-          </section>
-          <section aria-label="Assigned on the board" className="space-y-1">
-            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Assigned on the board
-            </h3>
-            {loading && <p className="text-muted-foreground">Loading…</p>}
-            {!loading && items.length === 0 && (
-              <p className="text-muted-foreground">No board items assigned.</p>
-            )}
-            {items.map((item) => (
-              <div key={item.id} className="flex min-w-0 items-center gap-1">
-                <span className="min-w-0 flex-1 truncate">
-                  <span className="text-muted-foreground">#{item.number}</span> {item.title}
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 shrink-0 px-2 text-xs"
-                  onClick={() => setStarting({ item })}
-                >
-                  Start
-                </Button>
-              </div>
-            ))}
-          </section>
-        </aside>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {tab === "chat" && <SmithChat smith={smith} snapshot={snapshot} onOpenTask={onOpenTask} />}
+        {tab === "work" && <SmithWork smith={smith} snapshot={snapshot} onOpenTask={onOpenTask} />}
+        {tab === "settings" && <SmithSettings smithId={smith.id} snapshot={snapshot} />}
       </div>
 
-      {starting && (
-        <StartWorkDialog
-          open
-          smith={smith}
-          items={items}
-          item={starting.item}
-          onOpenChange={(open) => !open && setStarting(null)}
-          onStarted={onOpenTask}
-        />
-      )}
       <ConfirmDialog
         open={confirmDelete}
         title="Delete this smith?"

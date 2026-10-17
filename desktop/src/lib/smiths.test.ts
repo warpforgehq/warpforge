@@ -100,7 +100,17 @@ describe("smithStatus", () => {
       task("t_done", { smithId: "sm_1", status: "done" }),
       task("t_open", { smithId: "sm_1" }),
     ];
-    expect(smithStatus(smith(), tasks)).toStrictEqual({ kind: "working", sessions: 1 });
+    expect(smithStatus(smith(), tasks)).toStrictEqual({ kind: "working", note: null, sessions: 1 });
+    const busy = [...tasks, task("t_fix", { smithId: "sm_1", status: "running", title: "Fix CI" })];
+    expect(smithStatus(smith(), busy)).toMatchObject({ kind: "working", note: "Fix CI" });
+    const asking = [
+      ...busy,
+      task("t_q", { pendingPermission: true, smithId: "sm_1", title: "Bump deps" }),
+    ];
+    expect(smithStatus(smith(), asking)).toStrictEqual({
+      kind: "waiting",
+      note: "needs you: Bump deps",
+    });
     expect(smithWorkSessions(smith(), tasks).map((t) => t.id)).toStrictEqual(["t_open"]);
     expect(smithStatus(smith(), [task("t_x")])).toStrictEqual({ kind: "idle" });
   });

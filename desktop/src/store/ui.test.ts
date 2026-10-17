@@ -505,3 +505,22 @@ describe("sidebar mode", () => {
     });
   });
 });
+
+describe("Smiths sidebar project and colours", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useUi.setState({ newSmithOpen: false, smithColors: {}, smithsProject: null });
+  });
+
+  it("remembers the picked project and colours across a restart, not the open dialog", () => {
+    useUi.getState().setSmithsProject("api");
+    useUi.getState().setSmithColor("sm_1", 4);
+    useUi.getState().openNewSmith();
+    const stored = JSON.parse(localStorage.getItem("wf-ui") ?? "{}") as {
+      state: Record<string, unknown>;
+    };
+    expect(stored.state.smithsProject).toBe("api");
+    expect(stored.state.smithColors).toStrictEqual({ sm_1: 4 });
+    expect(stored.state).not.toHaveProperty("newSmithOpen");
+  });
+});

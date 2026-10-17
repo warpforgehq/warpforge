@@ -21,6 +21,9 @@ export function IdentityEditor({ value, onChange, language, label, placeholder }
   const host = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
+  // Set while the editor takes a new `value` from its parent, so that update
+  // is not reported back as the user's edit.
+  const syncing = useRef(false);
   onChangeRef.current = onChange;
   const themeMode = useThemeMode();
 
@@ -37,7 +40,9 @@ export function IdentityEditor({ value, onChange, language, label, placeholder }
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({ "aria-label": label }),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged) onChangeRef.current(update.state.doc.toString());
+            if (update.docChanged && !syncing.current) {
+              onChangeRef.current(update.state.doc.toString());
+            }
           }),
         ],
       }),
@@ -51,7 +56,9 @@ export function IdentityEditor({ value, onChange, language, label, placeholder }
   useEffect(() => {
     const view = viewRef.current;
     if (!view || view.state.doc.toString() === value) return;
+    syncing.current = true;
     view.dispatch({ changes: { from: 0, insert: value, to: view.state.doc.length } });
+    syncing.current = false;
   }, [value]);
 
   return (

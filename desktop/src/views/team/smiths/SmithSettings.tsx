@@ -1,0 +1,443 @@
+import { ChevronDown, Loader2, X } from "lucide-react";
+import { useState } from "react";
+
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { smithColorIndex } from "@/lib/smithColors";
+import { injectionNote } from "@/lib/smiths";
+import { applyName, applyVoice, voiceOf } from "@/lib/soulText";
+import { cn } from "@/lib/utils";
+import type { SmithDetail, Snapshot } from "@/protocol";
+import { useUi } from "@/store/ui";
+
+import { HarnessChip } from "../../NewTaskDialog/chips";
+import { modelOption } from "../../NewTaskDialog/useTaskCreation";
+import { ColorPicker } from "./ColorPicker";
+import { IdentityEditor } from "./IdentityEditor";
+import { useSmithDefaults } from "./NewSmithDialog";
+import { useSmithDetail } from "./queries";
+import { FieldError, SettingsCard, useCardForm } from "./SettingsCard";
+
+const DEFAULT = "__default__";
+
+function IdentityCard({ detail }: { detail: SmithDetail }) {
+  const form = useCardForm(detail, ["name"]);
+  const color = useUi((state) => smithColorIndex(detail.smith.id, state.smithColors));
+  const setSmithColor = useUi((state) => state.setSmithColor);
+  return (
+    <SettingsCard title="Identity" description="How you see and @mention it." form={form}>
+      <div className="flex flex-wrap items-start gap-6">
+        <label className="space-y-1.5">
+          <span className="text-xs text-muted-foreground">Name</span>
+          <Input
+            aria-label="Name"
+            className="w-56"
+            value={form.values.name}
+            onChange={(event) => form.set("name", event.target.value)}
+          />
+          <FieldError error={form.errors.name} />
+        </label>
+        <div className="space-y-1.5">
+          <span className="text-xs text-muted-foreground">Colour</span>
+          <ColorPicker
+            value={color}
+            name={form.values.name}
+            onChange={(index) => setSmithColor(detail.smith.id, index)}
+          />
+        </div>
+      </div>
+    </SettingsCard>
+  );
+}
+
+function SoulCard({ detail }: { detail: SmithDetail }) {
+  const form = useCardForm(detail, ["soul"]);
+  const defaults = useSmithDefaults();
+  const voice = voiceOf(form.values.soul);
+  return (
+    <SettingsCard
+      title="Soul"
+      description="Its voice, the rules it decides by and what it refuses. Warpforge's own ground rules always come first."
+      form={form}
+    >
+      {defaults.data && (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="text-muted-foreground">Voice:</span>
+          {defaults.data.presets.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              aria-pressed={voice === preset.voice}
+              title={preset.description}
+              onClick={() => form.set("soul", applyVoice(form.values.soul, preset.voice))}
+              className={cn(
+                "rounded-full border px-2 py-0.5 transition-colors",
+                voice === preset.voice
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {preset.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            className="ml-auto text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            onClick={() =>
+              form.set("soul", applyName(defaults.data.soul, form.values.name || detail.smith.name))
+            }
+          >
+            Restore default
+          </button>
+        </div>
+      )}
+      <IdentityEditor
+        label="Soul"
+        language="markdown"
+        value={form.values.soul}
+        onChange={(next) => form.set("soul", next)}
+      />
+    </SettingsCard>
+  );
+}
+
+function CharterCard({ detail }: { detail: SmithDetail }) {
+  const form = useCardForm(detail, ["charter"]);
+  const defaults = useSmithDefaults();
+  return (
+    <SettingsCard
+      title="Charter"
+      description="Its standing duties, in YAML. Warpforge does not run them on a schedule yet."
+      form={form}
+    >
+      {defaults.data && (
+        <div className="flex justify-end text-xs">
+          <button
+            type="button"
+            className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            onClick={() => form.set("charter", defaults.data.charter)}
+          >
+            Restore default
+          </button>
+        </div>
+      )}
+      <IdentityEditor
+        label="Charter"
+        language="yaml"
+        value={form.values.charter}
+        onChange={(next) => form.set("charter", next)}
+      />
+      <FieldError error={form.errors.charter} />
+    </SettingsCard>
+  );
+}
+
+function ProjectsCard({ detail, snapshot }: { detail: SmithDetail; snapshot: Snapshot }) {
+  const form = useCardForm(detail, ["allowedProjects"]);
+  const projects = snapshot.projects.map((p) => p.name);
+  const home = form.values.homeProject;
+  const extra = form.values.allowedProjects.filter((p) => p !== home);
+  return (
+    <SettingsCard
+      title="Projects"
+      description="Where it may work. It reads its home project's #general."
+      form={form}
+    >
+      <div className="space-y-2 text-[13px]">
+        <p>
+          <span className="text-muted-foreground">Home: </span>
+          {home}
+        </p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-muted-foreground">Also in:</span>
+          {extra.length === 0 && <span className="text-muted-foreground">no other project</span>}
+          {extra.map((project) => (
+            <span
+              key={project}
+              className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs"
+            >
+              {project}
+              <button
+                type="button"
+                aria-label={`Remove ${project}`}
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() =>
+                  form.set(
+                    "allowedProjects",
+                    form.values.allowedProjects.filter((p) => p !== project),
+                  )
+                }
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          ))}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Projects
+                <ChevronDown className="size-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
+              {projects
+                .filter((p) => p !== home)
+                .map((project) => (
+                  <DropdownMenuCheckboxItem
+                    key={project}
+                    className="text-[13px]"
+                    checked={form.values.allowedProjects.includes(project)}
+                    onCheckedChange={(checked) =>
+                      form.set(
+                        "allowedProjects",
+                        checked
+                          ? [...form.values.allowedProjects, project]
+                          : form.values.allowedProjects.filter((p) => p !== project),
+                      )
+                    }
+                  >
+                    {project}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </SettingsCard>
+  );
+}
+
+function ModelCard({ detail, snapshot }: { detail: SmithDetail; snapshot: Snapshot }) {
+  const form = useCardForm(detail, ["agent", "model", "accountId"]);
+  const agents = (snapshot.agents ?? []).filter((agent) => agent.enabled);
+  const models =
+    modelOption(agents.find((a) => a.id === form.values.agent)?.models ?? [])?.options ?? [];
+  const accounts = (snapshot.accounts ?? []).filter((a) => a.agentId === form.values.agent);
+  const note = injectionNote(detail.smith);
+  return (
+    <SettingsCard title="Model & account" form={form}>
+      <div className="flex flex-wrap items-center gap-3 text-[13px]">
+        <HarnessChip
+          agent={form.values.agent}
+          agents={agents}
+          label="Agent"
+          title="The agent it runs on"
+          onChange={(next) => {
+            form.set("agent", next);
+            form.set("model", null);
+            form.set("accountId", null);
+          }}
+        />
+        <Select
+          value={form.values.model ?? DEFAULT}
+          onValueChange={(next) => form.set("model", next === DEFAULT ? null : next)}
+        >
+          <SelectTrigger aria-label="Model" className="h-8 w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={DEFAULT}>Default model</SelectItem>
+            {models.map((choice) => (
+              <SelectItem key={choice.value} value={choice.value}>
+                {choice.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={form.values.accountId ?? DEFAULT}
+          onValueChange={(next) => form.set("accountId", next === DEFAULT ? null : next)}
+        >
+          <SelectTrigger aria-label="Account" className="h-8 w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={DEFAULT}>Current account</SelectItem>
+            {accounts.map((account) => (
+              <SelectItem key={account.id} value={account.id}>
+                {account.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {note && <p className="text-xs text-muted-foreground">{note}</p>}
+    </SettingsCard>
+  );
+}
+
+function LimitsCard({ detail }: { detail: SmithDetail }) {
+  const form = useCardForm(detail, ["usdPerDay", "turnsPerDay"]);
+  return (
+    <SettingsCard
+      title="Limits"
+      description="Past either, it starts no new work on its own that day. Empty means no limit."
+      form={form}
+    >
+      <div className="flex flex-wrap gap-6 text-[13px]">
+        <label className="space-y-1.5">
+          <span className="text-xs text-muted-foreground">Spend per day (USD)</span>
+          <Input
+            aria-label="Spend per day"
+            inputMode="decimal"
+            className="w-32"
+            value={form.values.usdPerDay}
+            onChange={(event) => form.set("usdPerDay", event.target.value)}
+          />
+          <FieldError error={form.errors.usdPerDay} />
+        </label>
+        <label className="space-y-1.5">
+          <span className="text-xs text-muted-foreground">Turns per day</span>
+          <Input
+            aria-label="Turns per day"
+            inputMode="numeric"
+            className="w-32"
+            value={form.values.turnsPerDay}
+            onChange={(event) => form.set("turnsPerDay", event.target.value)}
+          />
+          <FieldError error={form.errors.turnsPerDay} />
+        </label>
+      </div>
+    </SettingsCard>
+  );
+}
+
+function Toggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="flex items-center gap-2 text-[13px]"
+    >
+      <span
+        className={cn(
+          "relative h-4 w-7 rounded-full transition-colors",
+          checked ? "bg-primary" : "bg-muted-foreground/30",
+        )}
+      >
+        <span
+          className={cn(
+            "absolute top-0.5 size-3 rounded-full bg-background transition-transform",
+            checked ? "translate-x-3.5" : "translate-x-0.5",
+          )}
+        />
+      </span>
+      {label}
+    </button>
+  );
+}
+
+function PermissionsCard({ detail }: { detail: SmithDetail }) {
+  const form = useCardForm(detail, ["writePaths", "push", "createPr"]);
+  const [draft, setDraft] = useState("");
+  const paths = form.values.writePaths.split("\n").filter(Boolean);
+  const setPaths = (next: string[]) => form.set("writePaths", next.join("\n"));
+  const add = () => {
+    const path = draft.trim();
+    if (path && !paths.includes(path)) setPaths([...paths, path]);
+    setDraft("");
+  };
+  return (
+    <SettingsCard
+      title="Permissions"
+      description="What its work may change beyond reading."
+      form={form}
+    >
+      <div className="space-y-2">
+        <span className="text-xs text-muted-foreground">
+          Paths it may change {paths.length === 0 && "— anywhere in the project"}
+        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {paths.map((path) => (
+            <span
+              key={path}
+              className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 font-mono text-xs"
+            >
+              {path}
+              <button
+                type="button"
+                aria-label={`Remove ${path}`}
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setPaths(paths.filter((p) => p !== path))}
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          ))}
+          <Input
+            aria-label="Add a path"
+            placeholder="src/ — Enter to add"
+            className="h-7 w-48 font-mono text-xs"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                add();
+              }
+            }}
+          />
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-6">
+        <Toggle label="May push" checked={form.values.push} onChange={(v) => form.set("push", v)} />
+        <Toggle
+          label="May open pull requests"
+          checked={form.values.createPr}
+          onChange={(v) => form.set("createPr", v)}
+        />
+      </div>
+    </SettingsCard>
+  );
+}
+
+/** The Smith page's Settings tab: one card per concern, each saved alone. */
+export function SmithSettings({ smithId, snapshot }: { smithId: string; snapshot: Snapshot }) {
+  const detail = useSmithDetail(smithId);
+  if (!detail.data) {
+    return (
+      <div className="flex items-center gap-2 p-4 text-[13px] text-muted-foreground">
+        <Loader2 aria-hidden className="size-3.5 animate-spin" />
+        Loading settings…
+      </div>
+    );
+  }
+  return (
+    <div className="grid gap-3 pb-4 xl:grid-cols-2">
+      <IdentityCard detail={detail.data} />
+      <ModelCard detail={detail.data} snapshot={snapshot} />
+      <div className="xl:col-span-2">
+        <SoulCard detail={detail.data} />
+      </div>
+      <ProjectsCard detail={detail.data} snapshot={snapshot} />
+      <LimitsCard detail={detail.data} />
+      <PermissionsCard detail={detail.data} />
+      <CharterCard detail={detail.data} />
+    </div>
+  );
+}

@@ -140,7 +140,7 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
       />
     );
   }
-  if (selection?.kind === "teammate" || selection?.kind === "newTeammate") {
+  if (selection?.kind === "teammate") {
     return (
       <div className="flex h-full min-h-0 min-w-0 px-1 py-2">
         <TeammateMain

@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Snapshot, TaskInfo } from "@/protocol";
+import { useUi } from "@/store/ui";
 import { smithFixture } from "@/test/smiths";
 
 vi.mock("@/daemon", () => ({ daemon: {} }));
@@ -12,6 +14,8 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
   useQueryClient: () => ({ setQueryData: vi.fn<() => void>() }),
 }));
 vi.mock("@/hooks/useSmiths", () => ({ useMarkSmithSeen: vi.fn<() => void>() }));
+vi.mock("./SmithSettings", () => ({ SmithSettings: () => <div data-testid="settings" /> }));
+vi.mock("./SmithWork", () => ({ SmithWork: () => <div data-testid="work" /> }));
 vi.mock("./queries", () => ({
   smithDetailKey: (id: string) => ["smith", id],
   useSmithItems: () => ({ items: [], loading: false }),
@@ -43,7 +47,6 @@ function show(injection?: "system_prompt" | "prefix") {
       smith={smithFixture({ injection })}
       snapshot={snapshot}
       onOpenTask={vi.fn<(id: string) => void>()}
-      onEdit={vi.fn<() => void>()}
       onDeleted={vi.fn<() => void>()}
     />,
   );
@@ -56,8 +59,15 @@ describe("SmithPage", () => {
     expect(screen.queryByRole("button", { name: /Open chat/ })).toBeNull();
   });
 
-  it("says how the soul is delivered when the daemon tells it", () => {
-    show("prefix");
-    expect(screen.getByText(/install claude-agent-acp 0.91/)).toBeTruthy();
+  it("opens on Chat and switches tabs through the Smiths selection", async () => {
+    useUi.setState({ teamSelection: null });
+    show();
+    expect(screen.getByRole("tab", { name: "Chat" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(screen.getByRole("tab", { name: /Work/ }));
+    expect(useUi.getState().teamSelection).toStrictEqual({
+      id: "sm_1",
+      kind: "teammate",
+      tab: "work",
+    });
   });
 });

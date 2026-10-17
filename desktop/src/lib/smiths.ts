@@ -1,5 +1,6 @@
 import type { PeerMessage, SessionUpdate, Smith, SmithHold, TaskInfo } from "../protocol";
 import { isSettledTask } from "./taskGroups";
+import { taskLabel } from "./taskLabel";
 
 /** A board assignee that names a Smith: its stable id, never its name. */
 const SMITH_ASSIGNEE = "smith:";
@@ -69,7 +70,8 @@ export const HOLD_LABEL: Record<SmithHold, string> = {
 /** What a Smith is doing, for its row and page. */
 export type SmithStatus =
   | { kind: "held"; reasons: string[] }
-  | { kind: "working"; sessions: number }
+  | { kind: "waiting"; note: string }
+  | { kind: "working"; sessions: number; note: string | null }
   | { kind: "idle" };
 
 /**
@@ -83,10 +85,16 @@ export function smithWorkSessions(smith: Smith, tasks: TaskInfo[]): TaskInfo[] {
     .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+function shortTitle(task: TaskInfo): string {
+  return taskLabel(task).split("\n")[0]!.trim();
+}
+
 /**
+ * Held before anything else, then waiting on you (a question or a block in
+ * any of its sessions), then working, else idle.
  * @param smith the Smith
  * @param tasks the snapshot's tasks
- * @returns held with its reasons, working when a session of it runs, else idle
+ * @returns its status, with a short note for the sidebar
  */
 export function smithStatus(smith: Smith, tasks: TaskInfo[]): SmithStatus {
   if (smith.held && smith.held.length > 0) {
@@ -95,8 +103,18 @@ export function smithStatus(smith: Smith, tasks: TaskInfo[]): SmithStatus {
       reasons: smith.held.map((hold) => HOLD_LABEL[hold] ?? hold),
     };
   }
-  const running = tasks.filter((t) => t.smithId === smith.id && t.status === "running").length;
-  return running > 0 ? { kind: "working", sessions: running } : { kind: "idle" };
+  const own = tasks.filter((t) => t.smithId === smith.id && !isSettledTask(t));
+  const waiting = own.find((t) => t.pendingPermission || t.status === "blocked");
+  if (waiting) {
+    return {
+      kind: "waiting",
+      note: waiting.id === smith.threadTaskId ? "needs you" : `needs you: ${shortTitle(waiting)}`,
+    };
+  }
+  const running = own.filter((t) => t.status === "running");
+  if (running.length === 0) return { kind: "idle" };
+  const work = running.find((t) => t.id !== smith.threadTaskId);
+  return { kind: "working", note: work ? shortTitle(work) : null, sessions: running.length };
 }
 
 /**

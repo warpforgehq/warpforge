@@ -39,6 +39,23 @@ export interface Smith {
   injection?: "system_prompt" | "prefix";
 }
 
+/** A personality a new Smith can start from: its soul's `## Voice` text. */
+export interface SmithPreset {
+  id: string;
+  label: string;
+  description: string;
+  voice: string;
+}
+
+/** What a new Smith starts from (`smiths.defaults`): the daemon's own
+ *  templates, so the app never shows text of its own invention. */
+export interface SmithDefaults {
+  soul: string;
+  charter: string;
+  /** The first is the soul's own voice. */
+  presets: SmithPreset[];
+}
+
 /** A Smith with its identity files, for its page. */
 export interface SmithDetail {
   smith: Smith;

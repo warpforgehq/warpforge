@@ -19,8 +19,7 @@ export type SidebarMode = "tasks" | "inbox" | "team";
 /** What the Smiths (Team) main area shows. */
 export type TeamSelection =
   | { kind: "conversation"; key: string }
-  | { kind: "teammate"; id: string; editing?: boolean }
-  | { kind: "newTeammate" };
+  | { kind: "teammate"; id: string; tab?: "chat" | "work" | "settings" };
 /** "project" is a subject, not a nav destination: it is reached by selecting a
  *  project in the sidebar tree, never from NAV. */
 export type View = GlobalView | "project";

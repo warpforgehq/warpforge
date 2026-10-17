@@ -1,4 +1,4 @@
-import type { Smith, SmithDetail, SmithInput, SmithPatch } from "../protocol";
+import type { Smith, SmithDefaults, SmithDetail, SmithInput, SmithPatch } from "../protocol";
 import type { CoreClient } from "./client";
 import type { Constructor } from "./types";
 
@@ -29,6 +29,11 @@ export function SmithMethods<TBase extends Constructor<CoreClient>>(Base: TBase)
       const result = await this.request("smiths.list", {});
       const smiths = (result as { smiths?: Smith[] })?.smiths;
       return Array.isArray(smiths) ? smiths : [];
+    }
+
+    /** The soul, charter and voice presets a new Smith starts from. */
+    async smithDefaults(name?: string): Promise<SmithDefaults> {
+      return (await this.request("smiths.defaults", { name: name ?? null })) as SmithDefaults;
     }
 
     async getSmith(id: string): Promise<SmithDetail> {
