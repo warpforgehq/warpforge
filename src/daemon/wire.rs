@@ -281,6 +281,9 @@ pub fn to_wire(ev: &Event) -> Option<wire::Event> {
         }
         Event::RunnerUpdated(status) => Some(wire::Event::RunnerUpdated((**status).clone())),
         Event::RunnerRunUpdated(run) => Some(wire::Event::RunnerRunUpdated((**run).clone())),
+        Event::PeerMessageUpdated(message) => {
+            Some(wire::Event::PeerMessageUpdated((**message).clone()))
+        }
         Event::ProjectAdded(info) => Some(wire::Event::ProjectAdded(info.clone())),
         Event::ProjectRemoved { name } => Some(wire::Event::ProjectRemoved { name: name.clone() }),
         Event::ProjectConfigChanged(state) => {

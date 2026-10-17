@@ -159,6 +159,8 @@ pub enum Event {
     /// A project's backlog runner changed (ADR 0023).
     RunnerUpdated(Box<wire::RunnerStatus>),
     RunnerRunUpdated(Box<wire::ItemRun>),
+    /// A peer message record was written or its status changed (ADR 0026).
+    PeerMessageUpdated(Box<wire::PeerMessage>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

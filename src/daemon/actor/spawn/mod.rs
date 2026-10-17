@@ -206,6 +206,7 @@ impl Daemon {
         let mut runner = crate::daemon::actor::runner::load_state(store.as_ref());
         let (runner_watch_tx, runner_watch_rx) = mpsc::unbounded_channel();
         runner.set_watch(runner_watch_tx);
+        let peers = crate::daemon::actor::peers::load_state(store.as_ref());
         let daemon = Daemon {
             agent_limits,
             projects,
@@ -260,6 +261,7 @@ impl Daemon {
             automation_run_counters,
             advisors: Default::default(),
             runner,
+            peers,
         };
 
         let handle = DaemonHandle {

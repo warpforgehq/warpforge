@@ -48,6 +48,7 @@ mod html_render;
 pub(crate) mod lifecycle;
 mod origin_sweep;
 mod output;
+mod peers;
 mod pf_event;
 mod policy;
 mod ports;
@@ -84,6 +85,7 @@ pub use command::AgentProbeContext;
 pub use command::Command;
 pub use event::{ChildResult, Event, GitEffect, ProjectRemovalError};
 pub use handle::DaemonHandle;
+pub use peers::PeerCommand;
 
 pub struct Daemon {
     projects: Vec<ProjectEntry>,
@@ -230,6 +232,8 @@ pub struct Daemon {
     advisors: advisor::Advisors,
     /// The backlog runner's mirror of its settings, queue and live runs (ADR 0023).
     runner: runner::RunnerState,
+    /// Peer messaging: mutes, pauses, digest cursors and the loop guard (ADR 0026).
+    peers: peers::PeersState,
 }
 
 impl Daemon {
@@ -349,6 +353,7 @@ impl Daemon {
                 self.sweep_pr_review_tasks();
             }
             Command::Runner(cmd) => self.handle_runner_command(cmd).await,
+            Command::Peers(cmd) => self.handle_peer_command(cmd).await,
             other => self.handle_project_command(other).await,
         }
     }

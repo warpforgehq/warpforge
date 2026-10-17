@@ -23,6 +23,8 @@ mod tests;
 mod tracker;
 
 pub use peers::PeerControl;
+#[cfg(test)]
+pub use peers::RESTART_REASON;
 pub use snapshot::fold_for_snapshot;
 pub use tracker::TrackerLink;
 
