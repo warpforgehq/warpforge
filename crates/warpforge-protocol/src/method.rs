@@ -476,9 +476,19 @@ pub enum Method {
         task_id: Option<String>,
     },
     #[serde(rename = "memory.update")]
-    MemoryUpdate { id: String, content: String },
+    MemoryUpdate {
+        id: String,
+        content: String,
+        /// The session asking; it may not touch another Smith's journal.
+        #[serde(default)]
+        task_id: Option<String>,
+    },
     #[serde(rename = "memory.delete")]
-    MemoryDelete { id: String },
+    MemoryDelete {
+        id: String,
+        #[serde(default)]
+        task_id: Option<String>,
+    },
     #[serde(rename = "memory.stats")]
     MemoryStats {},
     /// Toggle local embeddings (`none` | `fastembed`). `fastembed` downloads

@@ -59,9 +59,10 @@ pub(super) async fn memory_update(
     handle: &DaemonHandle,
     id: String,
     content: String,
+    task_id: Option<String>,
 ) -> Result<serde_json::Value, wire::RpcError> {
     handle
-        .memory_update(&id, &content)
+        .memory_update(&id, &content, task_id)
         .await
         .map_err(memory_error)
 }
@@ -69,9 +70,10 @@ pub(super) async fn memory_update(
 pub(super) async fn memory_delete(
     handle: &DaemonHandle,
     id: String,
+    task_id: Option<String>,
 ) -> Result<serde_json::Value, wire::RpcError> {
     handle
-        .memory_delete(&id)
+        .memory_delete(&id, task_id)
         .await
         .map(|_| json!(null))
         .map_err(memory_error)

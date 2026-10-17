@@ -143,9 +143,11 @@ pub(super) async fn dispatch(
                 .and_then(Value::as_str)
                 .filter(|s| !s.trim().is_empty())
                 .ok_or_else(|| anyhow!("'content' is required"))?;
-            let result = client
-                .request("memory.update", json!({ "id": id, "content": content }))
-                .await?;
+            let mut params = json!({ "id": id, "content": content });
+            if !task.is_empty() {
+                params["task_id"] = json!(task);
+            }
+            let result = client.request("memory.update", params).await?;
             json_text(&result)
         }
         "memory_delete" => {
@@ -154,7 +156,11 @@ pub(super) async fn dispatch(
                 .and_then(Value::as_str)
                 .filter(|s| !s.trim().is_empty())
                 .ok_or_else(|| anyhow!("'id' is required"))?;
-            let result = client.request("memory.delete", json!({ "id": id })).await?;
+            let mut params = json!({ "id": id });
+            if !task.is_empty() {
+                params["task_id"] = json!(task);
+            }
+            let result = client.request("memory.delete", params).await?;
             json_text(&result)
         }
         "memory_stats" => {

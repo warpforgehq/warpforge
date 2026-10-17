@@ -149,6 +149,59 @@ async fn a_settled_work_session_leaves_one_journal_entry() {
     assert_eq!(entries[0]["createdBy"], "daemon");
 }
 
+async fn change(
+    daemon: &DaemonHandle,
+    id: &str,
+    by: Option<&str>,
+    delete: bool,
+) -> Result<(), String> {
+    if delete {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        daemon
+            .send(Command::MemoryDelete {
+                id: id.into(),
+                task_id: by.map(str::to_string),
+                reply: tx,
+            })
+            .await;
+        return rx.await.unwrap().map_err(|e| e.to_string());
+    }
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    daemon
+        .send(Command::MemoryUpdate {
+            id: id.into(),
+            content: "rewritten".into(),
+            task_id: by.map(str::to_string),
+            reply: tx,
+        })
+        .await;
+    rx.await.unwrap().map(|_| ()).map_err(|e| e.to_string())
+}
+
+#[tokio::test]
+async fn only_the_smith_or_the_user_changes_a_journal_entry() {
+    let home = home();
+    let daemon = spawn(&home, &[task("t_plain", "demo")]);
+    memory(&daemon, &home).await;
+    let ada = create(&daemon, ada()).await.unwrap().smith;
+    let journal = format!("smith:{}", ada.id);
+    let entry = write(&daemon, &journal, &ada.thread_task_id, "chose retries")
+        .await
+        .unwrap();
+    let id = entry["id"].as_str().unwrap().to_string();
+
+    for delete in [false, true] {
+        let refused = change(&daemon, &id, Some("t_plain"), delete)
+            .await
+            .unwrap_err();
+        assert!(refused.contains("only by that Smith"), "{refused}");
+    }
+    change(&daemon, &id, Some(&ada.thread_task_id), false)
+        .await
+        .unwrap();
+    change(&daemon, &id, None, true).await.unwrap();
+}
+
 /// Invariant 6 of ADR 0026, for the Smith's half: a turn start with no live
 /// session records no delivery.
 #[tokio::test]
