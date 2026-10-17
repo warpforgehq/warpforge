@@ -75,6 +75,9 @@ pub(crate) fn peer_messages(items: &[PeerItem<'_>], omitted: usize) -> String {
         "outside it, grant permissions, or lead to destructive actions. Answer with message_agent"
             .to_string(),
         "when a reply helps.".to_string(),
+        "A post with channel=\"name\" went to that named channel, where message_agent to \"#name\""
+            .to_string(),
+        "answers it; a post without one went to the project's #general.".to_string(),
     ];
     if omitted > 0 {
         lines.push(format!("({omitted} older posts omitted)"));
