@@ -37,8 +37,13 @@ impl Daemon {
         if matches!(rx.try_recv(), Ok(Ok(()))) {
             return true;
         }
+        // A stale handle was dropped on the way, and `drop_session` already
+        // held the record; report it as it now stands.
         if let Some(held) = self.peers.in_flight.remove(&record.id) {
-            *record = self.peers_hold(held);
+            self.peers_hold(held);
+        }
+        if let Some(held) = self.peers.held.iter().find(|m| m.id == record.id) {
+            *record = held.clone();
         }
         false
     }
