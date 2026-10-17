@@ -1,14 +1,16 @@
-import { Hash, Pause, Play, Volume2, VolumeX } from "lucide-react";
-import { useLayoutEffect, useRef } from "react";
+import { Hash, Volume2, VolumeX } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { daemon } from "@/daemon";
+import { useSmiths } from "@/hooks/useSmiths";
 import { type Conversation, type MentionCandidate, userWritesIn } from "@/lib/peerFeed";
 import type { PeerControls, PeerMessage } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
 
-import { ChannelControls } from "./channels/ChannelControls";
+import { ChannelEmpty } from "./channels/ChannelEmpty";
+import { ChannelHeaderActions } from "./channels/ChannelHeaderActions";
 import { FeedItem } from "./FeedItem";
 import { TeamComposer } from "./TeamComposer";
 
@@ -46,7 +48,10 @@ export function Thread({
   onMessageSession,
 }: Props) {
   const controls = usePeersStore((state) => state.controls);
-  const projectPaused = controls.pausedProjects.includes(conversation.project);
+  const [prefill, setPrefill] = useState<{ nonce: number; text: string } | null>(null);
+  const firstSmith = useSmiths().find((smith) =>
+    smith.allowedProjects.includes(conversation.project),
+  );
   const channel = usePeersStore((state) =>
     conversation.channelId ? state.channels[conversation.channelId] : undefined,
   );
@@ -95,49 +100,33 @@ export function Thread({
             {label(conversation.parties?.[0])} ↔ {label(conversation.parties?.[1])}
           </h2>
         )}
-        <div className="ml-auto flex flex-wrap gap-1">
-          {conversation.kind === "team" && !conversation.channelId && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              title={
-                projectPaused
-                  ? "Let this project's sessions message each other again"
-                  : "Refuse every agent's peer messages and posts in this project"
-              }
-              onClick={() =>
-                void changeControls(() => daemon.setPeerPaused(project, !projectPaused))
-              }
-            >
-              {projectPaused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
-              {projectPaused ? "Resume project" : "Pause project"}
-            </Button>
-          )}
-          {sessions.map((id) => {
-            const muted = controls.mutedTasks.includes(id);
-            return (
-              <Button
-                key={id}
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                title={
-                  muted
-                    ? "Let this session message peers again"
-                    : "Refuse this session's peer messages, posts and note"
-                }
-                onClick={() => void changeControls(() => daemon.setPeerMuted(id, !muted))}
-              >
-                {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
-                {muted ? "Unmute" : "Mute"} {label(id)}
-              </Button>
-            );
-          })}
-        </div>
-        {channel && <ChannelControls channel={channel} />}
+        {conversation.kind === "team" ? (
+          <ChannelHeaderActions project={project} channel={channel} />
+        ) : (
+          <div className="ml-auto flex flex-wrap gap-1">
+            {sessions.map((id) => {
+              const muted = controls.mutedTasks.includes(id);
+              return (
+                <Button
+                  key={id}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  title={
+                    muted
+                      ? "Let this session message peers again"
+                      : "Refuse this session's peer messages, posts and note"
+                  }
+                  onClick={() => void changeControls(() => daemon.setPeerMuted(id, !muted))}
+                >
+                  {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
+                  {muted ? "Unmute" : "Mute"} {label(id)}
+                </Button>
+              );
+            })}
+          </div>
+        )}
       </header>
       <ol
         ref={listRef}
@@ -145,12 +134,20 @@ export function Thread({
         aria-label="Messages"
         className="min-h-0 flex-1 overflow-y-auto py-2"
       >
-        {records.length === 0 && (
-          <li className="px-1 py-6 text-center text-[13px] text-muted-foreground">
-            Nothing posted yet. Sessions read new posts with their next prompt; @mention one to hand
-            it work now.
-          </li>
-        )}
+        {records.length === 0 &&
+          (conversation.kind === "team" ? (
+            <ChannelEmpty
+              name={channel?.name ?? "general"}
+              general={!channel}
+              smithName={channel?.members[0]?.name ?? firstSmith?.name ?? null}
+              onPrefill={(text) => setPrefill({ nonce: Date.now(), text })}
+              onStartSession={() => onStartSession(project, "", null)}
+            />
+          ) : (
+            <li className="px-1 py-6 text-center text-[13px] text-muted-foreground">
+              Nothing said here yet.
+            </li>
+          ))}
         {records.map((record) => (
           <FeedItem
             key={record.id}
@@ -166,6 +163,7 @@ export function Thread({
           key={conversation.key}
           project={project}
           channel={conversation.kind === "team" ? (channel ?? null) : undefined}
+          prefill={prefill}
           candidates={candidates}
           targets={
             conversation.kind === "dm"
