@@ -44,6 +44,11 @@ pub(super) async fn dispatch(
         "message_agent" => {
             let to = required(args, "task_id")?;
             let message = required(args, "message")?;
+            if to == caller {
+                return Err(anyhow!(
+                    "you can't message yourself; task_id is this session"
+                ));
+            }
             let result = client
                 .request(
                     "session.message",

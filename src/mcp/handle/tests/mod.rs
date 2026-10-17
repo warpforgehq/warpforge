@@ -5,6 +5,7 @@ use crate::mcp::daemon_client::fake::FakeDaemon;
 use crate::mcp::daemon_client::DaemonClient;
 
 mod backlog_tracker;
+mod peer_self;
 mod peers;
 mod spawn_workflow;
 
