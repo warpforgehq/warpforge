@@ -6,7 +6,7 @@ use tokio::sync::{mpsc, watch};
 
 use super::process::{acp_error_detail, ChildState, FailureReporter};
 use super::rpc::{begin_rpc, finish_rpc, wait_for_exit_with_grace, Pending, RpcOutcome};
-use super::{AcpUpdate, TurnInitiator};
+use super::{AcpUpdate, PromptEcho, TurnInitiator};
 use crate::daemon::prompt::PreparedPrompt;
 
 /// One dispatched turn: what to say, who asked for it, and the two flags the
@@ -20,7 +20,8 @@ pub(super) struct Turn {
 }
 
 /// Write a `session/prompt` and await its reply in the background, emitting a
-/// TurnEnded when it resolves. Returns the task's join handle; the turn loop
+/// TurnEnded when it resolves. `TurnStarted` goes out only once the request is
+/// on the writer's queue: a prompt the transport refused was said to nobody. Returns the task's join handle; the turn loop
 /// awaits it so only one `session/prompt` is ever outstanding per session (see
 /// `turn::run`).
 ///
@@ -61,6 +62,25 @@ pub(super) fn send_prompt(
             "prompt": prompt.content.iter().map(|block| block.to_acp(embedded_context)).collect::<Vec<_>>()
         }),
     );
+    if started.is_some() {
+        // The chat holds what the agent heard and nothing it has not; turns
+        // nobody typed into the chat are not echoed at all.
+        let echo =
+            matches!(initiator, TurnInitiator::User | TurnInitiator::Automation).then(|| {
+                PromptEcho {
+                    text: prompt.text.clone(),
+                    attachments: prompt.summaries.clone(),
+                }
+            });
+        let _ = updates.send((
+            task_id.clone(),
+            AcpUpdate::TurnStarted {
+                initiator,
+                echo,
+                peer: prompt.peer,
+            },
+        ));
+    }
     tokio::spawn(async move {
         let res = match started {
             Some(mut started) => finish_rpc(&mut started, &mut exit_rx).await,

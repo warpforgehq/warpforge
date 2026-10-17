@@ -739,3 +739,67 @@ async fn dropping_last_handle_kills_child_process_group() {
     .await
     .expect("dropping the handle should kill the child");
 }
+
+/// Launch one turn through `send_prompt`, over a writer that is open or gone.
+/// @returns every update the turn's start sent before it awaits the reply
+async fn turn_start_updates(writer_open: bool) -> Vec<AcpUpdate> {
+    let (out_tx, out_rx) = mpsc::unbounded_channel::<String>();
+    if !writer_open {
+        drop(out_rx);
+    }
+    let (updates_tx, mut updates_rx) = mpsc::unbounded_channel();
+    let (kill_tx, _kill_rx) = mpsc::unbounded_channel();
+    let (_exit_tx, exit_rx) = watch::channel(super::process::ChildState::Running);
+    let reporter = super::process::FailureReporter {
+        task_id: "t".into(),
+        run_id: 1,
+        updates: updates_tx.clone(),
+        reported: Arc::new(AtomicBool::new(false)),
+    };
+    let handle = super::prompt::send_prompt(
+        &out_tx,
+        &Default::default(),
+        &Default::default(),
+        &updates_tx,
+        "t",
+        "s",
+        super::prompt::Turn {
+            prompt: PreparedPrompt {
+                content: vec![PromptContent::Text("hello".into())],
+                text: "hello".into(),
+                ..Default::default()
+            },
+            initiator: TurnInitiator::User,
+            interrupted: Arc::new(AtomicBool::new(false)),
+            ended: Arc::new(AtomicBool::new(false)),
+        },
+        false,
+        exit_rx,
+        reporter,
+        kill_tx,
+        "mock",
+    );
+    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    handle.abort();
+    let mut seen = Vec::new();
+    while let Ok((_, update)) = updates_rx.try_recv() {
+        seen.push(update);
+    }
+    seen
+}
+
+#[tokio::test]
+async fn a_prompt_the_writer_refused_never_starts_a_turn() {
+    let refused = turn_start_updates(false).await;
+    assert!(
+        !refused
+            .iter()
+            .any(|u| matches!(u, AcpUpdate::TurnStarted { .. })),
+        "nobody was told anything"
+    );
+    let sent = turn_start_updates(true).await;
+    assert!(sent.iter().any(|u| matches!(
+        u,
+        AcpUpdate::TurnStarted { echo: Some(echo), .. } if echo.text == "hello"
+    )));
+}
