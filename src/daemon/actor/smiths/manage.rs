@@ -9,7 +9,9 @@ use super::{recorded, set_hold, SmithCommand, SMITH_ORIGIN};
 use crate::daemon::actor::{Command, Daemon, Event};
 use crate::daemon::runtime::Write as PersistWrite;
 use crate::daemon::smiths::identity::{self, Identity, Revs};
-use crate::daemon::smiths::{check_charter, check_name, soul_template, CHARTER_TEMPLATE};
+use crate::daemon::smiths::{
+    check_charter, check_color, check_name, default_color, soul_template, CHARTER_TEMPLATE,
+};
 use crate::daemon::task::{now_secs, Task, TaskSmith, TaskStatus};
 
 type Reply<T> = oneshot::Sender<Result<T, String>>;
@@ -99,6 +101,7 @@ impl Daemon {
             .smith_check_name(&create.name, None)
             .and_then(|()| self.smith_check_projects(&allowed))
             .and_then(|()| check_charter(&charter))
+            .and_then(|()| create.color.map_or(Ok(()), check_color))
             .and_then(|()| {
                 (!create.agent.trim().is_empty())
                     .then_some(())
@@ -124,6 +127,7 @@ impl Daemon {
             charter_rev: String::new(),
             held: Vec::new(),
             created_at: now_secs(),
+            color: create.color.unwrap_or_else(|| default_color(&id)),
             injection: None,
         };
         self.smiths.pending_names.insert(create.name.to_lowercase());
@@ -213,6 +217,7 @@ impl Daemon {
 
     fn smith_check_patch(&self, id: &str, patch: &wire::SmithPatch) -> Result<(), String> {
         let smith = self.smith(id)?;
+        patch.color.map_or(Ok(()), check_color)?;
         if self.smiths.busy.contains(id) {
             return Err(format!("{} is still saving an edit; try again", smith.name));
         }
@@ -417,5 +422,8 @@ fn apply(smith: &mut wire::Smith, patch: wire::SmithPatch) {
     }
     if let Some(budget) = patch.budget {
         smith.budget = budget;
+    }
+    if let Some(color) = patch.color {
+        smith.color = color;
     }
 }
