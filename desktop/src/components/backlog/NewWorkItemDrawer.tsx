@@ -1,5 +1,6 @@
 "use client";
 
+import * as SelectPrimitive from "@radix-ui/react-select";
 import { useQueryClient } from "@tanstack/react-query";
 import { Flag, Loader2, Maximize2, Minimize2, Paperclip, WandSparkles, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -15,12 +16,12 @@ import {
   DialogPortal,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem } from "@/components/ui/select";
 import { daemon } from "@/daemon";
 import { cn } from "@/lib/utils";
 import { useUi } from "@/store/ui";
 
-import { AssigneeIcon, UNASSIGNED, useAssigneeLabel, useSmithAssigneeOptions } from "./assignee";
-import { FieldChip } from "./FieldChip";
+import { AssigneeIcon, useAssigneeLabel, useSmithAssigneeOptions } from "./assignee";
 import { priorityTone, SOURCE_DOT, STATUS_META } from "./labels";
 import type { WorkItemPriority, WorkItemSource, WorkItemStatus } from "./types";
 import { sourceAvailable, useMe, useProjectSources } from "./use-tracker";
@@ -47,11 +48,60 @@ const PRIORITY_OPTIONS: { value: WorkItemPriority; label: string }[] = [
   { value: "low", label: "Low" },
 ];
 
+/** Radix Select forbids an empty item value, so "nobody" needs a sentinel. */
+const UNASSIGNED = "__unassigned__";
+
 const SOURCE_LABELS: Record<WorkItemSource, string> = {
   github: "GitHub",
   linear: "Linear",
   local: "Local",
 };
+
+/** Chip trigger styled like the matching table cell, opening a Select
+ *  dropdown (the project's standard single-select dropdown). */
+function FieldChip<T extends string>({
+  ariaLabel,
+  value,
+  options,
+  triggerClassName,
+  onValueChange,
+  children,
+}: {
+  ariaLabel: string;
+  value: T;
+  options: { value: T; label: string; disabled?: boolean; hint?: string }[];
+  triggerClassName?: string;
+  onValueChange: (value: T) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Select value={value} onValueChange={(next) => onValueChange(next as T)}>
+      <SelectPrimitive.Trigger
+        type="button"
+        aria-label={ariaLabel}
+        className={cn(
+          "flex h-7 shrink-0 items-center justify-start gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[13px] transition-colors",
+          "hover:bg-secondary hover:text-foreground data-[state=open]:bg-secondary data-[state=open]:text-foreground",
+          triggerClassName,
+        )}
+      >
+        {children}
+      </SelectPrimitive.Trigger>
+      <SelectContent className="min-w-[10rem]" align="start" sideOffset={4}>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+            <span className="flex items-center gap-1.5">
+              {option.label}
+              {option.hint && (
+                <span className="text-[11px] text-muted-foreground/70">{option.hint}</span>
+              )}
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 export function NewWorkItemDrawer({ open, onOpenChange, project }: NewWorkItemDrawerProps) {
   const expanded = useUi((state) => state.newWorkItemExpanded);
@@ -363,7 +413,7 @@ export function NewWorkItemDrawer({ open, onOpenChange, project }: NewWorkItemDr
                 options={STATUS_OPTIONS}
                 onValueChange={setStatus}
                 triggerClassName={cn(
-                  "font-medium transition-opacity hover:bg-secondary hover:opacity-80",
+                  "font-medium transition-opacity hover:opacity-80",
                   statusMeta.className,
                 )}
               >
