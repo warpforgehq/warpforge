@@ -20,6 +20,7 @@ fn record(id: u64, project: &str, status: wire::PeerMessageStatus) -> wire::Peer
         mentions: Vec::new(),
         source_id: None,
         started_task: None,
+        channel_id: None,
     }
 }
 
@@ -40,14 +41,22 @@ fn peer_message_round_trips_and_pages_newest_first() {
     }
 
     assert_eq!(
-        store.load_peer_messages(Some("demo"), None, 10).unwrap(),
+        store
+            .load_peer_messages(Some("demo"), None, 10, None)
+            .unwrap(),
         vec![post.clone(), refused.clone()]
     );
     assert_eq!(
-        store.load_peer_messages(None, Some(3), 1).unwrap(),
+        store.load_peer_messages(None, Some(3), 1, None).unwrap(),
         vec![post]
     );
-    assert_eq!(store.load_peer_messages(None, None, 10).unwrap().len(), 3);
+    assert_eq!(
+        store
+            .load_peer_messages(None, None, 10, None)
+            .unwrap()
+            .len(),
+        3
+    );
     assert_eq!(store.max_peer_message_id().unwrap(), 3);
 }
 
@@ -60,7 +69,7 @@ fn rewriting_a_record_updates_its_status() {
     message.delivered_at = Some(200);
     store.upsert_peer_message(&message).unwrap();
     assert_eq!(
-        store.load_peer_messages(None, None, 10).unwrap(),
+        store.load_peer_messages(None, None, 10, None).unwrap(),
         vec![message]
     );
 }
@@ -75,7 +84,7 @@ fn restart_refuses_only_queued_records() {
         .upsert_peer_message(&record(2, "demo", wire::PeerMessageStatus::Delivered))
         .unwrap();
     assert_eq!(store.refuse_queued_peer_messages().unwrap(), 1);
-    let loaded = store.load_peer_messages(None, None, 10).unwrap();
+    let loaded = store.load_peer_messages(None, None, 10, None).unwrap();
     assert_eq!(loaded[0].status, wire::PeerMessageStatus::Delivered);
     assert_eq!(loaded[1].status, wire::PeerMessageStatus::Refused);
     assert_eq!(loaded[1].reason.as_deref(), Some(RESTART_REASON));
@@ -132,7 +141,7 @@ fn restart_clears_live_alerts_only() {
     }
     assert_eq!(store.clear_peer_alerts(900).unwrap(), 1);
     let cleared: Vec<_> = store
-        .load_peer_messages(None, None, 10)
+        .load_peer_messages(None, None, 10, None)
         .unwrap()
         .into_iter()
         .map(|m| m.alert_cleared_at)
@@ -164,7 +173,13 @@ fn forgetting_a_task_drops_its_cursor_and_mute_but_keeps_records() {
         store.load_peer_controls(PeerControl::Pause).unwrap(),
         vec!["t_a"]
     );
-    assert_eq!(store.load_peer_messages(None, None, 10).unwrap().len(), 1);
+    assert_eq!(
+        store
+            .load_peer_messages(None, None, 10, None)
+            .unwrap()
+            .len(),
+        1
+    );
 }
 
 #[test]

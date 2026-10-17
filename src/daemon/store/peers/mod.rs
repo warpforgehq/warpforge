@@ -8,7 +8,14 @@ use rusqlite::{params, Connection, Row};
 
 use warpforge_protocol as wire;
 
+mod channels;
+
+pub use channels::StoredChannel;
+
 use super::Store;
+
+/// The feed filter value that names `#general`, the records with no channel.
+pub const GENERAL_CHANNEL: &str = "general";
 
 /// Why a record that was still queued when the daemon stopped was refused.
 pub const RESTART_REASON: &str = "daemon restarted";
@@ -30,7 +37,8 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
             alert_cleared_at INTEGER,
             mentions     TEXT,
             source_id    INTEGER,
-            started_task TEXT
+            started_task TEXT,
+            channel_id   TEXT
         );
         CREATE INDEX IF NOT EXISTS peer_messages_project_idx ON peer_messages(project, id);
         CREATE TABLE IF NOT EXISTS peer_cursors (
@@ -49,13 +57,14 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
         "mentions TEXT",
         "source_id INTEGER",
         "started_task TEXT",
+        "channel_id TEXT",
     ] {
         let _ = conn.execute(
             &format!("ALTER TABLE peer_messages ADD COLUMN {column}"),
             [],
         );
     }
-    Ok(())
+    channels::init(conn)
 }
 
 /// A persisted hold on peer messaging.
@@ -77,7 +86,7 @@ impl PeerControl {
 }
 
 const MESSAGE_COLUMNS: &str = "id, project, from_task, to_task, text, created_at, delivered_at, \
-     status, reason, alert, alert_cleared_at, mentions, source_id, started_task";
+     status, reason, alert, alert_cleared_at, mentions, source_id, started_task, channel_id";
 
 fn message_from_row(row: &Row<'_>) -> rusqlite::Result<wire::PeerMessage> {
     Ok(wire::PeerMessage {
@@ -98,6 +107,7 @@ fn message_from_row(row: &Row<'_>) -> rusqlite::Result<wire::PeerMessage> {
             .unwrap_or_default(),
         source_id: row.get::<_, Option<i64>>(12)?.map(|id| id as u64),
         started_task: row.get(13)?,
+        channel_id: row.get(14)?,
     })
 }
 
@@ -106,7 +116,7 @@ impl Store {
         self.conn.execute(
             &format!(
                 "INSERT OR REPLACE INTO peer_messages ({MESSAGE_COLUMNS}) \
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)"
             ),
             params![
                 message.id as i64,
@@ -124,6 +134,7 @@ impl Store {
                     .then(|| serde_json::to_string(&message.mentions).unwrap_or_default()),
                 message.source_id.map(|id| id as i64),
                 message.started_task,
+                message.channel_id,
             ],
         )?;
         Ok(())
@@ -133,20 +144,32 @@ impl Store {
     /// @param project only this project's records, when given
     /// @param before only records with a smaller id, when given
     /// @param limit the page size
+    /// @param channel only one channel's records: an id, or
+    /// [`GENERAL_CHANNEL`] for the records with none
     /// @returns at most `limit` records
     pub fn load_peer_messages(
         &self,
         project: Option<&str>,
         before: Option<u64>,
         limit: u32,
+        channel: Option<&str>,
     ) -> Result<Vec<wire::PeerMessage>> {
+        let general = channel == Some(GENERAL_CHANNEL);
+        let named = channel.filter(|c| *c != GENERAL_CHANNEL);
         let mut stmt = self.conn.prepare(&format!(
             "SELECT {MESSAGE_COLUMNS} FROM peer_messages \
              WHERE (?1 IS NULL OR project = ?1) AND (?2 IS NULL OR id < ?2) \
+             AND (?4 = 0 OR channel_id IS NULL) AND (?5 IS NULL OR channel_id = ?5) \
              ORDER BY id DESC LIMIT ?3"
         ))?;
         let rows = stmt.query_map(
-            params![project, before.map(|b| b as i64), limit as i64],
+            params![
+                project,
+                before.map(|b| b as i64),
+                limit as i64,
+                general,
+                named
+            ],
             message_from_row,
         )?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -166,12 +189,12 @@ impl Store {
     }
 
     /// The newest channel posts of every project, for the digests.
-    /// @param per_project how many to keep per project
-    /// @returns oldest first within each project
+    /// @param per_project how many to keep per project and channel
+    /// @returns oldest first within each project and channel
     pub fn load_recent_peer_posts(&self, per_project: u32) -> Result<Vec<wire::PeerMessage>> {
         let mut stmt = self.conn.prepare(&format!(
             "SELECT {MESSAGE_COLUMNS} FROM ( \
-                 SELECT *, ROW_NUMBER() OVER (PARTITION BY project ORDER BY id DESC) AS n \
+                 SELECT *, ROW_NUMBER() OVER (PARTITION BY project, channel_id ORDER BY id DESC) AS n \
                  FROM peer_messages WHERE status = 'posted' AND started_task IS NULL \
              ) WHERE n <= ?1 ORDER BY id"
         ))?;
