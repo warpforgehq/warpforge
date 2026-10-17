@@ -506,21 +506,28 @@ describe("sidebar mode", () => {
   });
 });
 
-describe("Smiths sidebar project and colours", () => {
+describe("Smiths sidebar project", () => {
   beforeEach(() => {
     localStorage.clear();
-    useUi.setState({ newSmithOpen: false, smithColors: {}, smithsProject: null });
+    useUi.setState({ newSmithOpen: false, smithsProject: null });
   });
 
-  it("remembers the picked project and colours across a restart, not the open dialog", () => {
+  it("remembers the picked project across a restart, not the open dialog", () => {
     useUi.getState().setSmithsProject("api");
-    useUi.getState().setSmithColor("sm_1", 4);
     useUi.getState().openNewSmith();
     const stored = JSON.parse(localStorage.getItem("wf-ui") ?? "{}") as {
       state: Record<string, unknown>;
     };
     expect(stored.state.smithsProject).toBe("api");
-    expect(stored.state.smithColors).toStrictEqual({ sm_1: 4 });
     expect(stored.state).not.toHaveProperty("newSmithOpen");
+  });
+
+  it("drops the per-device Smith colours a version 9 install kept", async () => {
+    localStorage.setItem(
+      "wf-ui",
+      JSON.stringify({ state: { smithColors: { sm_1: 4 }, view: "control" }, version: 9 }),
+    );
+    await useUi.persist.rehydrate();
+    expect(useUi.getState()).not.toHaveProperty("smithColors");
   });
 });

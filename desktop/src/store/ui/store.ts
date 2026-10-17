@@ -17,8 +17,8 @@ export const useUi = create<UiState>()(
     }),
     {
       name: "wf-ui",
-      // Next persisted-shape change must bump this to 10.
-      version: 9,
+      // Next persisted-shape change must bump this to 11.
+      version: 10,
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
         if (version === 0 && state && "sidebarWidth" in state) {
@@ -86,6 +86,11 @@ export const useUi = create<UiState>()(
         if (version < 9 && state) {
           const view = state.view;
           state = { ...state, sidebarMode: view === "inbox" || view === "team" ? view : "tasks" };
+        }
+        // Smith colours moved to the daemon; the per-device copy is dropped.
+        if (version < 10 && state && "smithColors" in state) {
+          const { smithColors: _smithColors, ...rest } = state;
+          state = rest;
         }
         return state;
       },

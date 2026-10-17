@@ -50,6 +50,9 @@ export interface TaskInfo {
   orchestrationGraph?: OrchGraphInfo | null;
   /** Live pipeline state when this task is a workflow parent. */
   workflowRun?: WorkflowRunInfo | null;
+  /** What the session says it is doing (`set_status_note`). In memory on the
+   *  daemon: empty after a restart. */
+  statusNote?: string | null;
   /** The Smith the task runs as: its thread, or one of its work sessions. */
   smithId?: string | null;
   /** Task that spawned this sub-agent through the orchestrator MCP. */

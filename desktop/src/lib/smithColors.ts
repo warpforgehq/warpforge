@@ -1,8 +1,9 @@
+import type { Smith } from "../protocol";
 import { CHART_COLORS } from "./themes";
 
 /**
- * A Smith's colour when none was picked: stable for its id, so it does not
- * change between renders, windows or restarts.
+ * A Smith's colour when the daemon sent none (an older daemon): stable for its
+ * id, and the same rule the daemon uses for rows without a colour.
  * @param id the Smith's id
  * @returns a palette index
  */
@@ -13,15 +14,14 @@ export function defaultSmithColor(id: string): number {
 }
 
 /**
- * @param id the Smith's id
- * @param picked the indices the user picked, by Smith id
+ * @param smith the Smith's id and stored colour
  * @returns its palette index, kept in range
  */
-export function smithColorIndex(id: string, picked: Readonly<Record<string, number>>): number {
-  const index = picked[id];
-  return Number.isInteger(index) && index! >= 0 && index! < CHART_COLORS
-    ? index!
-    : defaultSmithColor(id);
+export function smithColorIndex(smith: Pick<Smith, "id" | "color">): number {
+  const index = smith.color;
+  return index !== undefined && Number.isInteger(index) && index >= 0 && index < CHART_COLORS
+    ? index
+    : defaultSmithColor(smith.id);
 }
 
 /**
