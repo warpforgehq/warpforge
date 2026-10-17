@@ -113,7 +113,7 @@ async fn peers_of(daemon: &DaemonHandle, task_id: &str) -> Vec<wire::PeerInfo> {
             reply: tx,
         }))
         .await;
-    rx.await.unwrap().unwrap()
+    rx.await.unwrap().unwrap().unwrap_or_default()
 }
 
 async fn flush(daemon: &DaemonHandle) {

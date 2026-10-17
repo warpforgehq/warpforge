@@ -5,10 +5,11 @@ use warpforge_protocol as wire;
 type Reply<T> = oneshot::Sender<Result<T, String>>;
 
 pub enum PeerCommand {
-    /// The sessions `task_id` can see in its project.
+    /// The sessions `task_id` can see in its project; `None` when it is
+    /// hidden itself.
     List {
         task_id: String,
-        reply: Reply<Vec<wire::PeerInfo>>,
+        reply: Reply<Option<Vec<wire::PeerInfo>>>,
     },
     /// A page of feed records, newest first; read off the actor loop.
     Feed {

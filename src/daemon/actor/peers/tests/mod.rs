@@ -150,7 +150,7 @@ async fn a_hidden_caller_cannot_message_post_or_list_peers() {
         })
         .await
         .unwrap();
-        assert!(peers.is_empty(), "{caller}");
+        assert!(peers.is_none(), "{caller}");
     }
     let records = feed(&daemon).await;
     assert_eq!(records.len(), 4);
@@ -195,6 +195,7 @@ async fn the_list_holds_visible_peers_in_the_callers_project_with_their_notes() 
         reply,
     })
     .await
+    .unwrap()
     .unwrap();
     assert_eq!(peers.len(), 1);
     assert_eq!(peers[0].id, "t_b");

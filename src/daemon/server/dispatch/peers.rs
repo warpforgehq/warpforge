@@ -30,7 +30,7 @@ pub(super) async fn peers(
     match method {
         wire::Method::PeersList { task_id } => {
             let peers = ask(handle, |reply| PeerCommand::List { task_id, reply }).await?;
-            Ok(json!({ "peers": peers }))
+            Ok(json!({ "hidden": peers.is_none(), "peers": peers.unwrap_or_default() }))
         }
         wire::Method::PeersFeed {
             project,
