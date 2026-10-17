@@ -394,3 +394,63 @@ definitions), `src/mcp/handle/peers.rs`,
    `TurnStarted`.
 2. Overlap hint; cross-project opt-in setting.
 3. Smiths in the directory (`kind: smith`).
+
+## Addendum (2026-10-17): @mentions and starting a session from a post
+
+The owner wants Team to be where they hand out work, not only where they
+watch it. Two additions, owner-approved.
+
+**A mention in a user's post is the user's instruction to that session.** The
+user posts to the channel through `peers.userPost { project, text }`. The
+daemon resolves every `@` that starts a word against the project's visible
+peers (invariant 1): by label — the longest label the text after `@` starts
+with, case-insensitive, ending at a word boundary — or by task id, whole or a
+prefix of at least four characters of its hex part (`@t_ab12`, `@ab12`). Two
+sessions matching the same mention is an error that lists the candidates with
+their ids, and nothing is posted. An `@` that matches nobody is text — posts
+quote code and addresses. Each mentioned session gets the post as an ordinary
+prompt with initiator `User`: it wakes the session (resuming a saved one, as
+the chat does), reads as the user's instruction, is echoed as a `UserMessage`
+and resets that session's pair windows. Everyone else gets the post in its
+digest as before.
+
+**A mention in an agent's post is a direct peer message.** `message_agent
+("team", …)` with mentions records the post, then sends each mentioned peer
+the text through the direct path — guard, framing, `TurnInitiator::Peer`, its
+own record with `source_id` naming the post. A refused or held mention does
+not refuse the post. *Rejected:* waking a mentioned session as `User` from an
+agent's post — that would let one agent command another by `@`, the gap the
+framing exists to close.
+
+**One record links a post and what it caused.** `PeerMessage` gains
+`mentions` (the task ids the post reached: a `User` prompt accepted, or a
+direct message queued or held), `source_id` (the post a direct message or a
+start line came from) and `started_task`. A post does not ride the digest of a
+session it already reached through a mention.
+
+**The user can message one session from Team.** `peers.userMessage { task_id,
+text }` is the chat's prompt with initiator `User`, plus a record from the
+user. Its status is `delivered` once the session accepts the prompt — queued
+behind a turn or resuming — and `refused` with the error when it does not.
+It is not tracked to `TurnStarted`: a user prompt carries no peer record, so
+the peer delivery path stays the only one invariant 6 covers.
+
+**Start a session from a post.** The desktop creates the task with New Task's
+agent and model picking and the post text as its prompt, then calls
+`peers.userStarted { task_id, source_id }`, which records a channel line from
+the user with `started_task` set and status `posted`. The line is never in a
+digest: it tells the user where the work went, not the team.
+
+### Invariants (addendum)
+
+16. **A mention from the user is a `User` turn; a mention from an agent is a
+    peer DM.** (`actor/peers/mention.rs`) An agent's `@` goes through the
+    guard and the framing like any direct message, never as `User`.
+17. **A post without a mention still starts no turn.** (invariant 3) Mentions
+    are the only way a post wakes anyone, and only the sessions it names.
+18. **An ambiguous mention posts nothing.** The sender gets the candidates
+    and their ids; a post never reaches a session the sender did not pick.
+19. **One record per post.** The post's record carries `mentions`; a user
+    mention adds no record of its own, an agent mention adds the direct
+    message's record with `source_id`. The feed shows what a post caused
+    without reconstructing it.
