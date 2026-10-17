@@ -368,7 +368,12 @@ impl Daemon {
                 }
             }
             Command::AdoptTask { id } => {
-                if let Some(task) = self.tasks.get_mut(&id) {
+                // A Smith's thread stays hidden: on the board it would orphan
+                // the Smith (ADR 0027 invariant 6).
+                let thread = self.tasks.get(&id).is_some_and(|task| {
+                    task.origin.as_deref() == Some(crate::daemon::actor::smiths::SMITH_ORIGIN)
+                });
+                if let Some(task) = self.tasks.get_mut(&id).filter(|_| !thread) {
                     task.origin = None;
                     task.updated_at = crate::daemon::task::now_secs();
                     let updated = task.clone();

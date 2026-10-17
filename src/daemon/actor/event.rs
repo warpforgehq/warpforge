@@ -161,6 +161,11 @@ pub enum Event {
     RunnerRunUpdated(Box<wire::ItemRun>),
     /// A peer message record was written or its status changed (ADR 0026).
     PeerMessageUpdated(Box<wire::PeerMessage>),
+    /// A Smith was created or changed (ADR 0027).
+    SmithUpdated(Box<wire::Smith>),
+    SmithRemoved {
+        id: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

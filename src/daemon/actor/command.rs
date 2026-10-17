@@ -1104,4 +1104,6 @@ pub enum Command {
     Runner(crate::daemon::actor::runner::RunnerCommand),
     /// Peer sessions' commands, matched exhaustively in `actor/peers/`.
     Peers(crate::daemon::actor::peers::PeerCommand),
+    /// Smiths' commands, matched exhaustively in `actor/smiths/`.
+    Smiths(crate::daemon::actor::smiths::SmithCommand),
 }

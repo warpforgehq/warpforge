@@ -6,8 +6,8 @@
 use crate::{
     default_true, AdvisorPick, AgentConfig, AutomationPatch, AutomationTrigger, BacklogStorageMode,
     BootstrapAnswers, EntryRunLocation, FactoryCreate, HunkResolution, OrchestratorConfigDto,
-    PermissionOutcome, PromptAttachment, RunnerSettingsPatch, TextGenKind, WorkItemPriority,
-    WorkflowDecision, WorktreeBase, DEFAULT_MISSED_RUN_GRACE_MINUTES,
+    PermissionOutcome, PromptAttachment, RunnerSettingsPatch, SmithCreate, SmithPatch, TextGenKind,
+    WorkItemPriority, WorkflowDecision, WorktreeBase, DEFAULT_MISSED_RUN_GRACE_MINUTES,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -1590,4 +1590,32 @@ pub enum Method {
         #[serde(default)]
         source_id: Option<u64>,
     },
+
+    // ── Smiths (ADR 0027) ───────────────────────────────────────────────────
+    /// Returns `{ smiths: Smith[] }`.
+    #[serde(rename = "smiths.list")]
+    SmithsList {},
+    /// Returns [`crate::SmithDetail`].
+    #[serde(rename = "smiths.get")]
+    SmithsGet { id: String },
+    /// Returns [`crate::SmithDetail`].
+    #[serde(rename = "smiths.create")]
+    SmithsCreate(SmithCreate),
+    /// Returns [`crate::SmithDetail`].
+    #[serde(rename = "smiths.update")]
+    SmithsUpdate { id: String, patch: SmithPatch },
+    /// Returns [`crate::Smith`].
+    #[serde(rename = "smiths.setPaused")]
+    SmithsSetPaused { id: String, paused: bool },
+    /// Archives the thread and retires the identity repo; the journal stays.
+    #[serde(rename = "smiths.delete")]
+    SmithsDelete { id: String },
+    /// Commit an out-of-band edit of the identity files and lift the hold.
+    /// Returns [`crate::SmithDetail`].
+    #[serde(rename = "smiths.acceptIdentity")]
+    SmithsAcceptIdentity { id: String },
+    /// Throw an out-of-band edit away and lift the hold. Returns
+    /// [`crate::SmithDetail`].
+    #[serde(rename = "smiths.revertIdentity")]
+    SmithsRevertIdentity { id: String },
 }

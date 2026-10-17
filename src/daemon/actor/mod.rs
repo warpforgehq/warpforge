@@ -59,6 +59,7 @@ mod run;
 pub(crate) mod runner;
 mod service_start;
 mod session;
+pub(crate) mod smiths;
 mod spawn;
 mod start_mode;
 mod transcript;
@@ -86,6 +87,7 @@ pub use command::Command;
 pub use event::{ChildResult, Event, GitEffect, ProjectRemovalError};
 pub use handle::DaemonHandle;
 pub use peers::PeerCommand;
+pub use smiths::SmithCommand;
 
 pub struct Daemon {
     projects: Vec<ProjectEntry>,
@@ -234,6 +236,8 @@ pub struct Daemon {
     runner: runner::RunnerState,
     /// Peer messaging: mutes, pauses, digest cursors and the loop guard (ADR 0026).
     peers: peers::PeersState,
+    /// Smiths and where their identity repos live (ADR 0027).
+    smiths: smiths::SmithsState,
 }
 
 impl Daemon {
@@ -354,6 +358,7 @@ impl Daemon {
             }
             Command::Runner(cmd) => self.handle_runner_command(cmd).await,
             Command::Peers(cmd) => self.handle_peer_command(cmd).await,
+            Command::Smiths(cmd) => self.handle_smith_command(cmd).await,
             #[cfg(test)]
             Command::InjectAcpUpdate { task_id, update } => {
                 self.handle_acp_update(task_id, update).await

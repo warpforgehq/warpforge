@@ -28,6 +28,7 @@ mod runner;
 mod runtime;
 mod sessions;
 mod shelf;
+mod smiths;
 mod system;
 mod tasks;
 mod tracker;
@@ -51,6 +52,7 @@ pub(super) async fn dispatch(
         AutomationList { .. } | AutomationShow { .. } | AutomationCreate { .. } | AutomationUpdate { .. } | AutomationDelete { .. } | AutomationRunNow { .. } | AutomationRuns { .. } => automations::automations(handle, method).await,
         RunnerStatus { .. } | RunnerEnqueue { .. } | RunnerDequeue { .. } | RunnerReorder { .. } | RunnerStartNow { .. } | RunnerRetry { .. } | RunnerRetryCheckout { .. } | RunnerBrief { .. } | RunnerUpdateSettings { .. } | RunnerStop { .. } | RunnerRuns { .. } => runner::runner(handle, method).await,
         PeersList { .. } | PeersFeed { .. } | PeersControls {} | PeersAlerts {} | PeersSetMuted { .. } | PeersSetPaused { .. } | PeersSetStatusNote { .. } | SessionMessage { .. } | PeersUserPost { .. } | PeersUserMessage { .. } | PeersUserStarted { .. } => peers::peers(handle, method).await,
+        SmithsList {} | SmithsGet { .. } | SmithsCreate(..) | SmithsUpdate { .. } | SmithsSetPaused { .. } | SmithsDelete { .. } | SmithsAcceptIdentity { .. } | SmithsRevertIdentity { .. } => smiths::smiths(handle, method).await,
         RuntimeStopAll {} => runtime::runtime_stop_all(handle).await,
         LspStart { task_id, language, project, } => lsp::lsp_start(handle, task_id, language, project).await,
         LspSend { server_id, payload } => lsp::lsp_send(handle, server_id, payload).await,

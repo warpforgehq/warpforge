@@ -284,6 +284,8 @@ pub fn to_wire(ev: &Event) -> Option<wire::Event> {
         Event::PeerMessageUpdated(message) => {
             Some(wire::Event::PeerMessageUpdated((**message).clone()))
         }
+        Event::SmithUpdated(smith) => Some(wire::Event::SmithUpdated((**smith).clone())),
+        Event::SmithRemoved { id } => Some(wire::Event::SmithRemoved { id: id.clone() }),
         Event::ProjectAdded(info) => Some(wire::Event::ProjectAdded(info.clone())),
         Event::ProjectRemoved { name } => Some(wire::Event::ProjectRemoved { name: name.clone() }),
         Event::ProjectConfigChanged(state) => {

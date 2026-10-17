@@ -71,6 +71,8 @@ pub(super) fn method_runs_concurrently(method: &wire::Method) -> bool {
             | PeersList { .. }
             | PeersFeed { .. }
             | PeersControls {}
+            | SmithsList {}
+            | SmithsGet { .. }
             | TrackerPullsList { .. }
             | TrackerPullDetails { .. }
             | TrackerPullDiff { .. }
@@ -129,6 +131,8 @@ pub(super) fn method_is_mutation(method: &wire::Method) -> bool {
             | PeersList { .. }
             | PeersFeed { .. }
             | PeersControls {}
+            | SmithsList {}
+            | SmithsGet { .. }
             | TrackerPullsList { .. }
             | TrackerPullDetails { .. }
             | TrackerPullDiff { .. }
@@ -136,4 +140,52 @@ pub(super) fn method_is_mutation(method: &wire::Method) -> bool {
             | TrackerPullThread { .. }
             | TrackerPullChecks { .. }
     )
+}
+
+/// Methods that act as the user, for #120 to gate once the daemon can tell
+/// the desktop from an agent. Listed now, enforced nowhere yet (ADR 0027).
+pub(super) fn method_is_user_only(method: &wire::Method) -> bool {
+    use wire::Method::*;
+    matches!(
+        method,
+        SmithsCreate(..)
+            | SmithsUpdate { .. }
+            | SmithsSetPaused { .. }
+            | SmithsDelete { .. }
+            | SmithsAcceptIdentity { .. }
+            | SmithsRevertIdentity { .. }
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_smith_edit_is_user_only_and_reads_are_not() {
+        let id = || "sm_1".to_string();
+        for method in [
+            wire::Method::SmithsUpdate {
+                id: id(),
+                patch: Default::default(),
+            },
+            wire::Method::SmithsSetPaused {
+                id: id(),
+                paused: true,
+            },
+            wire::Method::SmithsDelete { id: id() },
+            wire::Method::SmithsAcceptIdentity { id: id() },
+            wire::Method::SmithsRevertIdentity { id: id() },
+        ] {
+            assert!(method_is_user_only(&method), "{method:?}");
+            assert!(method_is_mutation(&method), "{method:?}");
+        }
+        for method in [
+            wire::Method::SmithsList {},
+            wire::Method::SmithsGet { id: id() },
+        ] {
+            assert!(!method_is_user_only(&method), "{method:?}");
+            assert!(method_runs_concurrently(&method), "{method:?}");
+        }
+    }
 }
