@@ -1,4 +1,5 @@
 import type { PeerMessage, TaskInfo } from "../protocol";
+import { startsMention } from "./peerMentions";
 import { taskLabel } from "./taskLabel";
 
 /** How the feed names the user as a sender. */
@@ -157,7 +158,7 @@ export function mentionAtCaret(text: string, caret: number): MentionAtCaret | nu
   const before = text.slice(0, caret);
   const at = before.lastIndexOf("@");
   if (at < 0) return null;
-  if (at > 0 && !/\s/.test(before[at - 1]!)) return null;
+  if (!startsMention(Array.from(before.slice(0, at)).pop())) return null;
   const query = before.slice(at + 1);
   if (query.includes("\n") || query.length > MAX_QUERY) return null;
   return { query, start: at };
