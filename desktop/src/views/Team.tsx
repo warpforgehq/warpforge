@@ -192,7 +192,7 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
           hint="Add a project to see its sessions talk to each other here."
         />
       ) : area === "teammates" ? (
-        <Teammates snapshot={snapshot} label={label} onOpenTask={onOpenTask} />
+        <Teammates snapshot={snapshot} onOpenTask={onOpenTask} />
       ) : (
         <div className="flex min-h-0 flex-1 gap-3 px-1 pb-2">
           <ConversationList

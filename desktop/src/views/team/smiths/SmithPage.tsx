@@ -1,28 +1,24 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { MessageSquare, Pause, Pencil, Play, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Pause, Pencil, Play, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { daemon } from "@/daemon";
-import { type MentionCandidate, buildConversations, userThread } from "@/lib/peerFeed";
-import { smithStatus, smithWorkSessions } from "@/lib/smiths";
+import { injectionNote, smithStatus, smithWorkSessions } from "@/lib/smiths";
 import { taskLabel } from "@/lib/taskLabel";
 import type { BacklogItem, Smith, SmithDetail, Snapshot } from "@/protocol";
-import { usePeersStore } from "@/store/peers";
 
-import { Thread } from "../Thread";
 import { HeldBanner } from "./HeldBanner";
 import { smithDetailKey, useSmithItems } from "./queries";
+import { SmithChat } from "./SmithChat";
 import { SmithStatusBadge } from "./SmithStatusBadge";
 import { StartWorkDialog } from "./StartWorkDialog";
 
 interface Props {
   smith: Smith;
   snapshot: Snapshot;
-  candidates: MentionCandidate[];
-  label: (id: string | null | undefined) => string;
   onOpenTask: (id: string) => void;
   onEdit: () => void;
   onDeleted: () => void;
@@ -38,28 +34,14 @@ const DELETE_EXPLAINED =
  * A teammate's page: its status and controls, the conversation with it, its
  * open work and the board items assigned to it.
  */
-export function SmithPage({
-  smith,
-  snapshot,
-  candidates,
-  label,
-  onOpenTask,
-  onEdit,
-  onDeleted,
-}: Props) {
+export function SmithPage({ smith, snapshot, onOpenTask, onEdit, onDeleted }: Props) {
   const queryClient = useQueryClient();
-  const records = usePeersStore((state) => state.records);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [starting, setStarting] = useState<{ item: BacklogItem | null } | null>(null);
   const status = smithStatus(smith, snapshot.tasks);
   const sessions = smithWorkSessions(smith, snapshot.tasks);
   const { items, loading } = useSmithItems(smith);
   const paused = smith.held?.includes("paused") ?? false;
-
-  const conversation = useMemo(() => {
-    const empty = userThread(smith.homeProject, smith.threadTaskId);
-    return buildConversations(Object.values(records)).find((c) => c.key === empty.key) ?? empty;
-  }, [records, smith.homeProject, smith.threadTaskId]);
 
   const run = async (what: string, action: () => Promise<unknown>) => {
     try {
@@ -91,15 +73,6 @@ export function SmithPage({
             <Play className="size-3.5" />
             Start work
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => onOpenTask(smith.threadTaskId)}
-          >
-            <MessageSquare className="size-3.5" />
-            Open chat
-          </Button>
           <Button type="button" size="sm" variant="ghost" onClick={onEdit}>
             <Pencil className="size-3.5" />
             Edit
@@ -124,18 +97,15 @@ export function SmithPage({
         </div>
       </header>
 
+      {injectionNote(smith) && (
+        <p className="-mt-2 text-xs text-muted-foreground">{injectionNote(smith)}</p>
+      )}
+
       <HeldBanner smith={smith} onResolved={resolved} />
 
       <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="flex min-h-[24rem] min-w-0 flex-col">
-          <Thread
-            conversation={conversation}
-            candidates={candidates}
-            label={label}
-            onOpenTask={onOpenTask}
-            onStartSession={() => {}}
-            onMessageSession={() => {}}
-          />
+        <div className="flex h-[65vh] min-h-[24rem] min-w-0 flex-col">
+          <SmithChat smith={smith} snapshot={snapshot} onOpenTask={onOpenTask} />
         </div>
         <aside className="space-y-4 text-[13px]">
           <section aria-label="Open work" className="space-y-1">
