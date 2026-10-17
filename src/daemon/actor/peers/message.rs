@@ -96,6 +96,7 @@ impl Daemon {
             let _ = reply.send(result.map(|()| wire::PeerSendResult {
                 relation: wire::PeerRelation::Child,
                 message: None,
+                to_label: None,
                 notice: None,
             }));
         });
@@ -149,6 +150,7 @@ impl Daemon {
         Ok(wire::PeerSendResult {
             relation: wire::PeerRelation::Peer,
             message: Some(record),
+            to_label: Some(self.peers_label(Some(to))),
             notice,
         })
     }
@@ -226,6 +228,7 @@ impl Daemon {
         Ok(wire::PeerSendResult {
             relation: wire::PeerRelation::Team,
             message: Some(record),
+            to_label: None,
             notice: None,
         })
     }

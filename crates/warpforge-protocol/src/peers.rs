@@ -162,6 +162,9 @@ pub struct PeerSendResult {
     /// The feed record; `None` for a child, which is not peer messaging.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub message: Option<PeerMessage>,
+    /// The receiver's `peer_label`, for a direct message.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to_label: Option<String>,
     /// What the sender should know about delivery, when it is not immediate.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notice: Option<String>,
