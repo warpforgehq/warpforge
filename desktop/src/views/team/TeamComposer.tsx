@@ -1,5 +1,5 @@
 import { Play, Send } from "lucide-react";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,9 @@ interface Props {
   project: string;
   /** The named channel a post goes to; null for `#general`. */
   channel?: Channel | null;
+  /** Text to put in the box, e.g. from an empty channel's buttons; a new
+   *  nonce applies it again. */
+  prefill?: { nonce: number; text: string } | null;
   /** The sessions a channel post can @mention. */
   candidates: MentionCandidate[];
   /** Set for a direct thread: the sessions the user can message in it. */
@@ -33,7 +36,14 @@ interface Props {
  * Writes to the team: a channel post (each @mention is handed the post as the
  * user's prompt), or a direct message to one session of a thread.
  */
-export function TeamComposer({ project, channel, candidates, targets, onStartSession }: Props) {
+export function TeamComposer({
+  project,
+  channel,
+  prefill,
+  candidates,
+  targets,
+  onStartSession,
+}: Props) {
   const [text, setText] = useState("");
   const [caret, setCaret] = useState(0);
   const [active, setActive] = useState(0);
@@ -67,6 +77,14 @@ export function TeamComposer({ project, channel, candidates, targets, onStartSes
     ref.current?.setSelectionRange(pendingCaret.current, pendingCaret.current);
     pendingCaret.current = null;
   });
+
+  useEffect(() => {
+    if (!prefill) return;
+    setText(prefill.text);
+    setCaret(prefill.text.length);
+    pendingCaret.current = prefill.text.length;
+    ref.current?.focus();
+  }, [prefill]);
 
   const send = async () => {
     const body = text.trim();
