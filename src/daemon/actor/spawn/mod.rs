@@ -287,6 +287,9 @@ impl Daemon {
             event_tx,
             pulls: Default::default(),
         };
+        let _ = handle
+            .cmd_tx
+            .try_send(Command::Smiths(crate::daemon::actor::SmithCommand::Tick));
 
         // Detect installed agents in background so it doesn't block startup,
         // then emit setup_needed if no agents are configured yet.
