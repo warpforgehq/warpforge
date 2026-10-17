@@ -127,7 +127,7 @@ async fn an_address_outside_the_project_is_an_error_without_a_record() {
 }
 
 #[tokio::test]
-async fn a_hidden_caller_cannot_message_or_post() {
+async fn a_hidden_caller_cannot_message_post_or_list_peers() {
     let daemon = seeded(memory_store());
     for caller in ["t_hidden", "t_child"] {
         assert_eq!(
@@ -138,6 +138,13 @@ async fn a_hidden_caller_cannot_message_or_post() {
             send(&daemon, caller, "team", "hello").await.unwrap_err(),
             super::HIDDEN_SELF
         );
+        let peers = ask(&daemon, |reply| PeerCommand::List {
+            task_id: caller.into(),
+            reply,
+        })
+        .await
+        .unwrap();
+        assert!(peers.is_empty(), "{caller}");
     }
     let records = feed(&daemon).await;
     assert_eq!(records.len(), 4);
@@ -343,4 +350,31 @@ async fn an_accepted_peer_message_is_queued_before_delivery() {
             wire::PeerMessageStatus::Queued
         ]
     );
+}
+
+#[tokio::test]
+async fn a_muted_sessions_note_is_withheld_from_the_list() {
+    let daemon = seeded(memory_store());
+    ask(&daemon, |reply| PeerCommand::SetStatusNote {
+        task_id: "t_b".into(),
+        text: "reviewing auth".into(),
+        reply,
+    })
+    .await
+    .unwrap();
+    ask(&daemon, |reply| PeerCommand::SetMuted {
+        task_id: "t_b".into(),
+        muted: true,
+        reply,
+    })
+    .await
+    .unwrap();
+    let peers = ask(&daemon, |reply| PeerCommand::List {
+        task_id: "t_a".into(),
+        reply,
+    })
+    .await
+    .unwrap();
+    assert_eq!(peers[0].id, "t_b");
+    assert_eq!(peers[0].note, None);
 }

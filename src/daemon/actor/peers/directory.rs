@@ -65,18 +65,29 @@ pub(crate) fn clip_note(text: &str) -> Option<String> {
 }
 
 impl Daemon {
+    /// A hidden caller sees nobody, since nobody could answer it; a muted
+    /// session's note is withheld.
     pub(super) fn peers_list(&self, task_id: &str) -> Result<Vec<wire::PeerInfo>, String> {
         let caller = self
             .tasks
             .get(task_id)
             .ok_or_else(|| format!("unknown task {task_id}"))?;
+        if !is_peer_visible(caller) {
+            return Ok(Vec::new());
+        }
         let now = now_secs();
         let mut peers: Vec<wire::PeerInfo> = self
             .tasks
             .values()
             .filter(|task| task.id != caller.id && task.project == caller.project)
             .filter(|task| is_peer_visible(task))
-            .map(|task| peer_info(task, now))
+            .map(|task| {
+                let mut info = peer_info(task, now);
+                if self.peers.muted.contains(&task.id) {
+                    info.note = None;
+                }
+                info
+            })
             .collect();
         peers.sort_by_key(|peer| std::cmp::Reverse(peer.updated_at));
         Ok(peers)
