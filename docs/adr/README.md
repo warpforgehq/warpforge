@@ -38,3 +38,4 @@ stale and then misleads.
 | [0024](0024-workflow-verify-stage.md) | Workflows verify a change in the running app before review |
 | [0025](0025-inline-html-renders.md) | Agents show HTML pages inline, framed and served by the desktop |
 | [0026](0026-peer-sessions.md) | Parallel sessions see each other in a directory and message as peers |
+| [0027](0027-smiths.md) | A Smith is a persistent, named, universal agent that outlives its tasks |
