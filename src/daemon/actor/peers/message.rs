@@ -8,7 +8,7 @@ use tokio::sync::oneshot;
 
 use warpforge_protocol as wire;
 
-use super::directory::is_peer_visible;
+use super::directory::{is_peer_visible, peer_info};
 use super::guard::{check_length, MAX_TEXT_CHARS};
 use super::{HIDDEN_SELF, MUTED_SELF, PAUSED};
 use crate::daemon::actor::{Command, Daemon};
@@ -17,6 +17,15 @@ use crate::daemon::task::{now_secs, TaskStatus};
 pub(crate) const TEAM: &str = "team";
 
 type Reply = oneshot::Sender<Result<wire::PeerSendResult, String>>;
+
+/// How an accepted direct message reaches its peer.
+enum Delivery {
+    /// Into the live session's queue, as its own turn.
+    Queue,
+    /// Kept for the digest of the peer's next prompt; it has no live session
+    /// and is not woken for this.
+    Hold,
+}
 
 /// A refusal's text, and whether it raises the user's alert.
 struct Refused {
@@ -85,6 +94,7 @@ impl Daemon {
             let _ = reply.send(result.map(|()| wire::PeerSendResult {
                 relation: wire::PeerRelation::Child,
                 message: None,
+                notice: None,
             }));
         });
     }
@@ -107,8 +117,13 @@ impl Daemon {
             ));
         }
         let verdict = self.peers_admit(from, project, to, &text);
-        let record =
+        let mut record =
             self.peers_new_record(project, Some(from), Some(to), text, verdict.as_ref().err());
+        let held = matches!(verdict, Ok(Delivery::Hold));
+        if held {
+            record.status = wire::PeerMessageStatus::Held;
+            self.peers.guard.release(from, to);
+        }
         self.peers_record(&record);
         self.peers_end_alerts();
         if record.alert {
@@ -119,10 +134,23 @@ impl Daemon {
         if let Err(refused) = verdict {
             return Err(refused.reason);
         }
-        self.peers_submit(&record);
+        let notice = if held {
+            let label = self
+                .tasks
+                .get(to)
+                .map(|task| wire::peer_label(&peer_info(task, now_secs())))
+                .unwrap_or_else(|| to.to_string());
+            Some(format!(
+                "{label} is not running; it will see your message when it is next resumed."
+            ))
+        } else {
+            self.peers_submit(&record);
+            None
+        };
         Ok(wire::PeerSendResult {
             relation: wire::PeerRelation::Peer,
             message: Some(record),
+            notice,
         })
     }
 
@@ -147,7 +175,7 @@ impl Daemon {
         project: &str,
         to: &str,
         text: &str,
-    ) -> Result<(), Refused> {
+    ) -> Result<Delivery, Refused> {
         self.peers_sender_refusal(from, project, text)?;
         let target = self
             .tasks
@@ -162,12 +190,15 @@ impl Daemon {
         if target.status == TaskStatus::Blocked {
             return Err(format!("{to} is blocked and cannot take a message").into());
         }
-        if !self.sessions.contains_key(to) {
-            return Err(format!("{to} has no running agent session").into());
-        }
+        let delivery = if self.sessions.contains_key(to) {
+            Delivery::Queue
+        } else {
+            Delivery::Hold
+        };
         self.peers
             .guard
             .admit(from, to, text, Instant::now())
+            .map(|()| delivery)
             .map_err(|refusal| Refused {
                 reason: refusal.to_string(),
                 alert: refusal.alert(),
@@ -199,6 +230,7 @@ impl Daemon {
         Ok(wire::PeerSendResult {
             relation: wire::PeerRelation::Team,
             message: Some(record),
+            notice: None,
         })
     }
 

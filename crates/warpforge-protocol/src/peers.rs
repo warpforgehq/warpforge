@@ -71,6 +71,9 @@ pub enum PeerMessageStatus {
     Delivered,
     /// A channel post, accepted; peers read it with their next prompt.
     Posted,
+    /// Accepted for a peer with no live session; it reads the message with
+    /// its next prompt, once resumed.
+    Held,
     /// Refused; `reason` names the rule.
     Refused,
 }
@@ -82,6 +85,7 @@ impl PeerMessageStatus {
             Self::Queued => "queued",
             Self::Delivered => "delivered",
             Self::Posted => "posted",
+            Self::Held => "held",
             Self::Refused => "refused",
         }
     }
@@ -93,6 +97,7 @@ impl PeerMessageStatus {
             "queued" => Self::Queued,
             "delivered" => Self::Delivered,
             "posted" => Self::Posted,
+            "held" => Self::Held,
             _ => Self::Refused,
         }
     }
@@ -148,6 +153,9 @@ pub struct PeerSendResult {
     /// The feed record; `None` for a child, which is not peer messaging.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub message: Option<PeerMessage>,
+    /// What the sender should know about delivery, when it is not immediate.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notice: Option<String>,
 }
 
 /// The user's persisted holds on peer messaging.
