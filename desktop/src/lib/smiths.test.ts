@@ -61,8 +61,8 @@ describe("smithNameError", () => {
     expect(smithNameError(name)).toContain(message);
   });
 
-  it("refuses a name another teammate has, in any case", () => {
-    expect(smithNameError("ADA", [smith()])).toContain("already a teammate");
+  it("refuses a name another smith has, in any case", () => {
+    expect(smithNameError("ADA", [smith()])).toContain("already a smith");
   });
 });
 
@@ -77,7 +77,7 @@ describe("assignees", () => {
 
   it("shows a Smith by name, a gone one as removed, a person as written", () => {
     expect(assigneeLabel("smith:sm_1", smiths)).toBe("Ada");
-    expect(assigneeLabel("smith:sm_gone", smiths)).toBe("Removed teammate");
+    expect(assigneeLabel("smith:sm_gone", smiths)).toBe("Removed smith");
     expect(assigneeLabel("octocat", smiths)).toBe("octocat");
     expect(assigneeLabel(null, smiths)).toBeNull();
   });

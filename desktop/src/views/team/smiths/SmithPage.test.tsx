@@ -50,7 +50,7 @@ function show(injection?: "system_prompt" | "prefix") {
 }
 
 describe("SmithPage", () => {
-  it("talks to the teammate in its thread task's own chat, in the page", () => {
+  it("talks to the smith in its thread task's own chat, in the page", () => {
     show();
     expect(screen.getByTestId("chat").textContent).toBe("t_thread");
     expect(screen.queryByRole("button", { name: /Open chat/ })).toBeNull();

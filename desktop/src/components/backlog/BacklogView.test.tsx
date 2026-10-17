@@ -179,7 +179,7 @@ describe("BacklogView", () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
 
     await user.click(await screen.findByRole("combobox", { name: "Assignee" }));
-    expect(await screen.findByRole("option", { name: "Removed teammate" })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "Removed smith" })).toBeInTheDocument();
     await user.click(screen.getByRole("option", { name: "Ada" }));
 
     await vi.waitFor(() =>
