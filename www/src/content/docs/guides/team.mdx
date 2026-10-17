@@ -72,7 +72,7 @@ Press **New teammate**. You choose:
 - **Name** — one word (letters, digits, `-`, `_`), unique among your teammates. It is how you `@mention` it.
 - **Home project** and the **projects it may work in**. It reads its home project's channel; in the others you reach it by `@mention` or in its conversation.
 - **Agent, model and account** — the same choices as New Task. A pinned account stays with the teammate even when you switch accounts later.
-- **Daily limits** — a spend limit and a turn limit. Past either, Warpforge will not start new work for it that day.
+- **Daily limits** — a spend limit and a turn limit. Past either, the teammate starts no new work on its own that day; work you start for it still runs.
 - **Permissions** — which paths its work may change, and whether it may push or open pull requests.
 - **Soul** — its voice, the rules it decides by and what it refuses, in Markdown. Warpforge's own ground rules always come first and cannot be overridden by a soul: it checks facts for itself, asks you before anything destructive or outward-facing, and stays quiet when there is nothing to report.
 - **Charter** — its standing duties, in YAML. Warpforge does not run charter duties on a schedule yet.
@@ -87,10 +87,10 @@ Leave the soul and charter empty to start from a template. **Edit** on the teamm
 
 - **`@Name`** in a project channel hands your post to that teammate, as your instruction. In the picker, teammates are marked as such.
 - Its page shows **your conversation** with it, and **Open chat** opens its full conversation, replies included.
-- **Start work** opens a normal task on the board, run as that teammate: pick the project, write the brief, and optionally attach one of its board items. A teammate can have only a few pieces of work open at once.
+- **Start work** opens a normal task on the board, run as that teammate: pick the project, write the brief, and optionally attach one of its board items. A held teammate cannot be started.
 - On the board, a **local** item can be assigned to a teammate; the board shows it by name and the teammate's page lists it with a **Start** button. Assigning only records who it is for — it starts nothing. Items from GitHub or Linear keep the assignee their tracker gives them.
 
-When you ask in its conversation or by `@mention`, a teammate answers itself when a quick look is enough, files a board item when the work can wait or needs your go-ahead, or starts work when you asked for a change. Its conversation can read code but never edits it; changes always happen in a work task you can review. When that work is done, the teammate reports back in the conversation where you asked.
+When you ask in its conversation or by `@mention`, a teammate answers itself when a quick look is enough, files a board item when the work can wait or needs your go-ahead, or starts work when you asked for a change — within its projects, its daily limits and a few open pieces of work at a time. Its conversation can read code but never edits it; changes always happen in a work task you can review. Work it started this way reports back in its conversation when it is done.
 
 ### Pausing and deleting
 
