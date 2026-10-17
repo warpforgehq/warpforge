@@ -252,3 +252,52 @@ async fn a_smith_reads_its_channels_and_general_under_one_cursor() {
         assert!(!plain_next.contains(unseen), "#general only: {plain_next}");
     }
 }
+
+async fn members_in(daemon: &DaemonHandle, project: &str) -> Vec<wire::ChannelMember> {
+    peers(daemon, |reply| PeerCommand::ChannelsList {
+        project: Some(project.into()),
+        task_id: None,
+        reply,
+    })
+    .await
+    .unwrap()
+    .remove(0)
+    .members
+}
+
+async fn allow(daemon: &DaemonHandle, id: &str, projects: &[&str]) {
+    ask(daemon, |reply| SmithCommand::Update {
+        id: id.into(),
+        patch: Box::new(wire::SmithPatch {
+            allowed_projects: Some(projects.iter().map(|p| p.to_string()).collect()),
+            ..Default::default()
+        }),
+        reply,
+    })
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn a_project_taken_from_a_smith_takes_its_memberships_there() {
+    let home = home();
+    let daemon = spawn(&home, &[]);
+    let ada = create(&daemon, ada()).await.unwrap().smith;
+    let design = channel(&daemon, "demo", "design").await.unwrap();
+    let ops = channel(&daemon, "other", "ops").await.unwrap();
+    join(&daemon, &design.id, &ada.id).await.unwrap();
+    join(&daemon, &ops.id, &ada.id).await.unwrap();
+
+    allow(&daemon, &ada.id, &[]).await;
+    allow(&daemon, &ada.id, &["other"]).await;
+    assert!(
+        members_in(&daemon, "other").await.is_empty(),
+        "not resurrected"
+    );
+    assert_eq!(members_in(&daemon, "demo").await.len(), 1, "home stays");
+    flush(&daemon).await;
+
+    let restarted = spawn(&home, &[]);
+    assert!(members_in(&restarted, "other").await.is_empty());
+    assert_eq!(members_in(&restarted, "demo").await.len(), 1);
+}
