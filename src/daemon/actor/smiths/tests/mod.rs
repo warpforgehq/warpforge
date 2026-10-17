@@ -128,6 +128,18 @@ async fn flush(daemon: &DaemonHandle) {
     let _ = rx.await;
 }
 
+/// The first Smith once the startup check has held it.
+async fn held_soon(daemon: &DaemonHandle) -> wire::Smith {
+    for _ in 0..300 {
+        let smith = list(daemon).await.remove(0);
+        if !smith.held.is_empty() {
+            return smith;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    panic!("the Smith was never held");
+}
+
 fn repo(home: &Home, id: &str) -> PathBuf {
     identity::repo(&home.root, id)
 }
@@ -228,7 +240,7 @@ async fn an_outside_edit_holds_the_smith_until_reverted() {
     .unwrap();
 
     let restarted = spawn(&home, &[]);
-    let held = list(&restarted).await.remove(0);
+    let held = held_soon(&restarted).await;
     assert_eq!(held.held, vec![wire::SmithHold::IdentityChanged]);
     let refused = ask(&restarted, |reply| SmithCommand::Update {
         id: smith.id.clone(),
@@ -266,6 +278,7 @@ async fn an_outside_edit_can_be_accepted() {
     .unwrap();
 
     let restarted = spawn(&home, &[]);
+    held_soon(&restarted).await;
     let nothing = ask(&daemon, |reply| SmithCommand::AcceptIdentity {
         id: smith.id.clone(),
         reply,

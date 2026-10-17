@@ -132,12 +132,43 @@ pub fn read(dir: &Path) -> Result<Identity> {
 
 /// Whether the files are still what the daemon committed at `expected`: no
 /// uncommitted edit, no commit it did not make.
+/// What a check of the identity repo found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IdentityState {
+    Unchanged,
+    /// An edit or a commit the daemon did not make, or the repo is gone.
+    Changed,
+    /// git could not say; nothing is held for it.
+    Unknown(String),
+}
+
+/// Whether the files are still what the daemon committed at `expected`.
 /// @param dir the repo
 /// @param expected the revs the store recorded
-/// @returns false for an edit made outside the daemon, or a missing repo
+/// @returns the verdict; a failing git command is `Unknown`, not an edit
+pub fn check(dir: &Path, expected: &Revs) -> IdentityState {
+    if !dir.join(".git").exists() {
+        return IdentityState::Changed;
+    }
+    let status = match git(dir, &["status", "--porcelain"]) {
+        Ok(status) => status,
+        Err(error) => return IdentityState::Unknown(format!("{error:#}")),
+    };
+    if !status.is_empty() {
+        return IdentityState::Changed;
+    }
+    match revs(dir) {
+        Ok(now) if &now == expected => IdentityState::Unchanged,
+        Ok(_) => IdentityState::Changed,
+        Err(error) => IdentityState::Unknown(format!("{error:#}")),
+    }
+}
+
+/// @param dir the repo
+/// @param expected the revs the store recorded
+/// @returns whether `check` finds it unchanged
 pub fn is_unchanged(dir: &Path, expected: &Revs) -> bool {
-    let clean = git(dir, &["status", "--porcelain"]).is_ok_and(|s| s.is_empty());
-    clean && revs(dir).is_ok_and(|now| &now == expected)
+    check(dir, expected) == IdentityState::Unchanged
 }
 
 /// Keep an out-of-band edit: commit what is on disk.
@@ -160,6 +191,13 @@ pub fn revert(dir: &Path, expected: &Revs) -> Result<Revs> {
 
 /// The later of the two recorded commits — the one both files were at.
 fn newest(dir: &Path, expected: &Revs) -> Result<String> {
+    for sha in [&expected.soul, &expected.charter] {
+        if git(dir, &["cat-file", "-e", &format!("{sha}^{{commit}}")]).is_err() {
+            return Err(anyhow!(
+                "the recorded commit {sha} is not in the repo any more; accept the files as they are instead"
+            ));
+        }
+    }
     let soul_is_older = git(
         dir,
         &[
@@ -275,5 +313,28 @@ mod tests {
             .join(crate::daemon::smiths::DELETED_DIR)
             .join("sm_1-2")
             .exists());
+    }
+
+    #[test]
+    fn a_git_failure_is_unknown_and_a_lost_commit_cannot_be_reverted_to() {
+        let root = tempfile::tempdir().unwrap();
+        let dir = repo(root.path(), "sm_1");
+        let revs = create(&dir, &identity("# Ada\n")).unwrap();
+        assert_eq!(check(&dir, &revs), IdentityState::Unchanged);
+        let lost = Revs {
+            soul: "0".repeat(40),
+            charter: "0".repeat(40),
+        };
+        assert!(revert(&dir, &lost)
+            .unwrap_err()
+            .to_string()
+            .contains("accept"));
+        std::fs::write(dir.join(".git").join("HEAD"), "garbage").unwrap();
+        assert!(matches!(check(&dir, &revs), IdentityState::Unknown(_)));
+        assert_eq!(
+            check(&repo(root.path(), "sm_gone"), &revs),
+            IdentityState::Changed,
+            "a missing repo is never quietly fine"
+        );
     }
 }

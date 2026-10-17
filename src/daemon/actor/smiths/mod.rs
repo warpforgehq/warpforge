@@ -56,8 +56,8 @@ fn recorded(smith: &wire::Smith) -> Revs {
     }
 }
 
-/// Read the Smiths once at startup and hold every one whose identity files
-/// changed outside the daemon since it last committed them.
+/// Read the Smiths and their souls once at startup. The git check for an
+/// outside edit runs off the loop, on the first tick right after spawn.
 /// @param store the daemon's store, when it opened
 /// @param root the smiths root
 /// @returns the mirror the actor starts with
@@ -69,10 +69,8 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>, root: PathBuf) -> Sm
     let mut souls = HashMap::new();
     let smiths = rows
         .into_iter()
-        .map(|mut smith| {
+        .map(|smith| {
             let dir = identity::repo(&root, &smith.id);
-            let unchanged = identity::is_unchanged(&dir, &recorded(&smith));
-            set_hold(&mut smith, wire::SmithHold::IdentityChanged, !unchanged);
             if let Ok(files) = identity::read(&dir) {
                 souls.insert(smith.id.clone(), files.soul);
             }
@@ -221,7 +219,16 @@ impl Daemon {
             let changed = tokio::task::spawn_blocking(move || {
                 expected
                     .into_iter()
-                    .filter(|(id, revs)| !identity::is_unchanged(&identity::repo(&root, id), revs))
+                    .filter(
+                        |(id, revs)| match identity::check(&identity::repo(&root, id), revs) {
+                            identity::IdentityState::Changed => true,
+                            identity::IdentityState::Unchanged => false,
+                            identity::IdentityState::Unknown(why) => {
+                                eprintln!("[daemon] cannot check Smith {id}'s identity: {why}");
+                                false
+                            }
+                        },
+                    )
                     .collect::<Vec<_>>()
             })
             .await
