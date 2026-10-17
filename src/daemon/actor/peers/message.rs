@@ -178,8 +178,7 @@ impl Daemon {
         let mut record =
             self.peers_new_record(project, Some(from), None, text, verdict.as_ref().err());
         if verdict.is_ok() {
-            record.status = wire::PeerMessageStatus::Delivered;
-            record.delivered_at = Some(record.created_at);
+            record.status = wire::PeerMessageStatus::Posted;
         }
         self.peers_record(&record);
         verdict.map_err(|refused| refused.reason)?;
