@@ -56,6 +56,8 @@ export interface NavState {
   /** Unix seconds the Team view last showed the feed; newer records count as
    *  unread on its nav item. */
   teamSeenAt: number;
+  /** Unix seconds each teammate's page was last open, by Smith id. */
+  teamSmithSeenAt: Record<string, number>;
 
   setView: (v: GlobalView) => void;
   /** Land on the Tasks half of the sidebar: `validTaskId` if the caller found
@@ -84,6 +86,7 @@ export interface NavState {
   /** Forget every per-project memory — for a project that was removed. */
   clearProjectState: (project: string) => void;
   markTeamSeen: (at: number) => void;
+  markSmithSeen: (id: string, at: number) => void;
 }
 
 export const createNavSlice: UiSlice<NavState> = (set) => ({
@@ -103,6 +106,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   projectSurfaceByProject: {},
   backlogParamsByProject: {},
   teamSeenAt: 0,
+  teamSmithSeenAt: {},
 
   setView: (view) => set({ openTaskId: null, openTaskNav: null, view }),
   selectTasksSegment: (validTaskId) =>
@@ -140,6 +144,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       lastTaskId: openTaskId,
     }),
   clearOpenTaskNav: () => set({ openTaskNav: null }),
+  markSmithSeen: (id, at) => set((s) => ({ teamSmithSeenAt: { ...s.teamSmithSeenAt, [id]: at } })),
   markTeamSeen: (at) => set((s) => (at > s.teamSeenAt ? { teamSeenAt: at } : {})),
   focusAttentionTask: (attentionTargetId) =>
     set((s) => ({

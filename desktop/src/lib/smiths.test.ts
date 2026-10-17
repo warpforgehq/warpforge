@@ -4,11 +4,13 @@ import type { Smith, TaskInfo } from "@/protocol";
 
 import {
   assigneeLabel,
+  endedTurns,
   injectionNote,
   smithAssignee,
   smithIdFromAssignee,
   smithNameError,
   smithStatus,
+  smithUnread,
   smithWorkSessions,
 } from "./smiths";
 
@@ -114,5 +116,39 @@ describe("injectionNote", () => {
       "Soul delivered as opening message",
     );
     expect(injectionNote({ agent: "claude" })).toBeNull();
+  });
+});
+
+describe("smithUnread", () => {
+  const ada = smith();
+  const record = (id: number, fromTask: string, createdAt: number) => ({
+    createdAt,
+    fromTask,
+    id,
+    project: "demo",
+    status: "delivered" as const,
+    text: "",
+  });
+
+  it("counts replies since the page was open and its sessions' newer feed records", () => {
+    const tasks = [task("t_work", { smithId: "sm_1" }), task("t_other")];
+    const records = [
+      record(1, "t_thread", 50),
+      record(2, "t_thread", 150),
+      record(3, "t_work", 160),
+      record(4, "t_other", 170),
+    ];
+    expect(smithUnread(ada, records, tasks, 100, 2)).toBe(4);
+    expect(smithUnread(ada, records, tasks, 200, 0)).toBe(0);
+  });
+
+  it("counts ended turns in a transcript", () => {
+    expect(
+      endedTurns([
+        { kind: "agent_text", text: "hi" },
+        { kind: "turn_ended", stop_reason: "end_turn" },
+        { kind: "turn_ended", stop_reason: "end_turn" },
+      ]),
+    ).toBe(2);
   });
 });
