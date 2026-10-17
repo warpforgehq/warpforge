@@ -48,44 +48,6 @@ pub(super) fn defs() -> Value {
             "inputSchema": { "type": "object", "properties": {} }
         },
         {
-            "name": "message_agent",
-            "description": "Send a follow-up message to a previously spawned sub-agent, \
-                continuing the same session. The agent sees the full conversation \
-                history and can respond in context. Use this instead of spawn_agent \
-                when you want to continue a conversation with an agent you already \
-                started. Returns immediately; the agent's response will be delivered \
-                to your inbox when it finishes — then call read_inbox.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "task_id": {
-                        "type": "string",
-                        "description": "The task id returned by spawn_agent or a previous message_agent call."
-                    },
-                    "message": {
-                        "type": "string",
-                        "description": "The follow-up message / instruction to send to the agent."
-                    }
-                },
-                "required": ["task_id", "message"]
-            }
-        },
-        {
-            "name": "list_agents",
-            "description": "List sub-agent sessions spawned by this orchestrator. \
-                The result is scoped to your current orchestrator task, and can \
-                optionally be narrowed to a project.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "project": {
-                        "type": "string",
-                        "description": "Optional project name. Defaults to the orchestrator's project."
-                    }
-                }
-            }
-        },
-        {
             "name": "stop_agent",
             "description": "Hard-stop one sub-agent session owned by this orchestrator. \
                 The task remains in history so its result and context are not lost.",

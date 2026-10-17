@@ -13,6 +13,7 @@ mod backlog;
 mod browser;
 mod html;
 mod memory;
+mod peers;
 mod runner;
 mod runtime;
 mod spawn_workflow;
@@ -107,11 +108,13 @@ pub(crate) async fn handle_tool_call(
                 .await?
                 .ok_or_else(|| anyhow!("unknown tool: {name}"))
         }
+        "list_agents" | "message_agent" | "set_status_note" => {
+            peers::dispatch(name, client, parent_task, project, is_orchestrator, &args).await
+        }
         _ if !is_orchestrator => Err(anyhow!(
             "tool '{name}' is only available in an orchestrator session"
         )),
-        "list_agent_models" | "spawn_agent" | "read_inbox" | "message_agent" | "list_agents"
-        | "stop_agent" | "cleanup_agents" => {
+        "list_agent_models" | "spawn_agent" | "read_inbox" | "stop_agent" | "cleanup_agents" => {
             agents::dispatch(name, client, parent_task, project, &args).await
         }
         "spawn_workflow" | "pause_workflow" | "resume_workflow" | "answer_workflow"

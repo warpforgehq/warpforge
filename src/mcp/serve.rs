@@ -271,7 +271,7 @@ mod tests {
         let session = Session {
             parent_task: "t_1".into(),
             project: "demo".into(),
-            is_orchestrator: false,
+            is_orchestrator: mode == BridgeMode::Orchestrator,
             mode,
         };
         session_tools(&session)
@@ -293,6 +293,30 @@ mod tests {
         assert!(advisor.contains(&"read_service_logs".to_string()));
     }
 
+    #[test]
+    fn peer_tools_are_listed_in_every_working_session_but_never_for_an_advisor() {
+        let peer_tools = ["list_agents", "message_agent", "set_status_note"];
+        for mode in [
+            BridgeMode::Single,
+            BridgeMode::Advised,
+            BridgeMode::Orchestrator,
+        ] {
+            let names = tool_names(mode);
+            for tool in peer_tools {
+                assert_eq!(
+                    names.iter().filter(|name| *name == tool).count(),
+                    1,
+                    "{tool} once in {mode:?}"
+                );
+            }
+        }
+        let advisor = tool_names(BridgeMode::Advisor);
+        assert!(peer_tools
+            .iter()
+            .all(|tool| !advisor.contains(&tool.to_string())));
+        assert!(!tool_names(BridgeMode::Single).contains(&"stop_agent".to_string()));
+    }
+
     #[tokio::test]
     async fn an_advisor_cannot_call_a_tool_that_changes_anything() {
         let mut client = DaemonClient::new(Box::new(FakeDaemon::at("ws://a")));
@@ -304,9 +328,11 @@ mod tests {
         };
         let mut output = Vec::new();
         let input = format!(
-            "{}\n{}\n",
+            "{}\n{}\n{}\n{}\n",
             call(1, "service_restart"),
-            call(2, "ask_advisor")
+            call(2, "ask_advisor"),
+            call(3, "message_agent"),
+            call(4, "set_status_note")
         );
         serve(input.as_bytes(), &mut output, &mut client, &session)
             .await
