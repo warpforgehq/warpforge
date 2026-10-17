@@ -329,6 +329,7 @@ impl Daemon {
             self.persist(&updated);
             self.emit(Event::TaskUpdated(updated));
         }
+        self.smith_clear_yaml_assignees(format!("smith:{id}"));
         let root = self.smiths.root.clone();
         let id = id.to_string();
         self.emit(Event::SmithRemoved { id: id.clone() });
