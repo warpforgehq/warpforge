@@ -7,7 +7,8 @@ interface PeersState {
   records: Record<number, PeerMessage>;
   controls: PeerControls;
   loaded: boolean;
-  /** Replace the feed with a freshly loaded page. */
+  /** Replace the feed with a freshly loaded page; later records in the list
+   *  win on the same id. */
   load: (records: PeerMessage[], controls: PeerControls) => void;
   upsert: (record: PeerMessage) => void;
   setControls: (controls: PeerControls) => void;

@@ -19,6 +19,13 @@ export function PeerMethods<TBase extends Constructor<CoreClient>>(Base: TBase) 
       return Array.isArray(messages) ? messages : [];
     }
 
+    /** Every record whose message-limit alert is live, however old. */
+    async peerAlerts(): Promise<PeerMessage[]> {
+      const result = await this.request("peers.alerts", {});
+      const messages = (result as { messages?: PeerMessage[] })?.messages;
+      return Array.isArray(messages) ? messages : [];
+    }
+
     async peerControls(): Promise<PeerControls> {
       return (await this.request("peers.controls", {})) as PeerControls;
     }
