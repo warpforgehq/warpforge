@@ -450,3 +450,47 @@ async fn a_turn_start_from_a_replaced_session_delivers_nothing() {
         "the stale start changed nothing"
     );
 }
+
+/// The caller's own sub-agent gets today's follow-up, outside the feed.
+#[tokio::test]
+async fn a_message_to_the_callers_child_is_a_plain_follow_up() {
+    let dir = tempfile::tempdir().unwrap();
+    let agent = peer_agent(&dir, false);
+    let daemon = seeded(memory_store());
+    let child = daemon
+        .create_task(
+            "demo",
+            "child work",
+            &agent.command,
+            vec![],
+            false,
+            false,
+            Some("t_a".into()),
+            vec![],
+            None,
+            Default::default(),
+            None,
+        )
+        .await;
+    let log = agent.log.clone();
+    eventually("the child starts", || !prompt_texts(&log).is_empty()).await;
+    wait_idle(&daemon, &child).await;
+
+    let sent = send(&daemon, "t_a", &child, "next step").await.unwrap();
+    assert_eq!(sent.relation, wire::PeerRelation::Child);
+    assert!(sent.message.is_none());
+    eventually("the follow-up arrives", || prompt_texts(&log).len() == 2).await;
+    let followup = &prompt_texts(&agent.log)[1];
+    assert!(followup.contains("next step"));
+    assert!(
+        !followup.contains("<peer_messages>"),
+        "a child's message is not a peer's"
+    );
+    assert!(feed(&daemon).await.is_empty());
+
+    let refused = send(&daemon, "t_b", &child, "not yours").await.unwrap_err();
+    assert!(
+        refused.contains("not this session's sub-agent or a peer"),
+        "{refused}"
+    );
+}
