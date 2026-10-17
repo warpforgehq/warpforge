@@ -11,6 +11,8 @@ use crate::{TaskBlockedKind, TaskStatus};
 pub enum PeerKind {
     /// A top-level task session.
     Task,
+    /// A Smith's thread (ADR 0027): `name` is the Smith's.
+    Smith,
 }
 
 /// A session in another session's directory. Metadata only: a new field must
@@ -55,9 +57,10 @@ pub struct PeerInfo {
 /// @param peer the directory entry
 /// @returns the label to show
 pub fn peer_label(peer: &PeerInfo) -> String {
-    match &peer.name {
-        Some(name) => format!("{name} · {}", peer.title),
-        None => peer.title.clone(),
+    match (&peer.name, peer.kind) {
+        (Some(name), PeerKind::Smith) => name.clone(),
+        (Some(name), PeerKind::Task) => format!("{name} · {}", peer.title),
+        (None, _) => peer.title.clone(),
     }
 }
 
