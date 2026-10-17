@@ -331,6 +331,7 @@ impl Daemon {
                     // in Running until the stale-run sweep finds it.
                     self.automation_task_deleted(&id);
                     self.runner_task_deleted(&id);
+                    self.peers_task_deleted(&id);
                     // Awaited, not queued: a failed delete is reported to the
                     // user, and dropping the error would leave a task that
                     // reappears on the next start with no explanation.

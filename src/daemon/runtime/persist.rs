@@ -70,6 +70,8 @@ pub enum Write {
         key: String,
         on: bool,
     },
+    /// A deleted task's cursor and mute.
+    PeerForgetTask(String),
 }
 
 impl Write {
@@ -106,6 +108,7 @@ impl Write {
             Write::PeerMessage(message) => store.upsert_peer_message(&message),
             Write::PeerCursor { task_id, last_seen } => store.save_peer_cursor(&task_id, last_seen),
             Write::PeerControl { kind, key, on } => store.set_peer_control(kind, &key, on),
+            Write::PeerForgetTask(task_id) => store.forget_peer_task(&task_id),
         }
     }
 }

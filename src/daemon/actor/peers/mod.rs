@@ -139,6 +139,17 @@ impl Daemon {
         }
     }
 
+    /// Drop a deleted task's cursor, mute and counters; its records stay.
+    /// @param task_id the deleted task
+    pub(crate) fn peers_task_deleted(&mut self, task_id: &str) {
+        self.peers.cursors.remove(task_id);
+        self.peers.muted.remove(task_id);
+        self.peers.guard.forget(task_id);
+        self.peers_end_alerts();
+        self.persist
+            .write(PersistWrite::PeerForgetTask(task_id.to_string()));
+    }
+
     /// Stamp the record of every alert whose window ended and announce it,
     /// so a client can clear the attention item without a new message.
     fn peers_end_alerts(&mut self) {

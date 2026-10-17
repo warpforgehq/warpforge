@@ -163,6 +163,20 @@ impl Store {
         )?)
     }
 
+    /// Drop a deleted task's cursor and mute; its records stay in the feed.
+    /// @param task_id the deleted task
+    pub fn forget_peer_task(&self, task_id: &str) -> Result<()> {
+        self.conn.execute(
+            "DELETE FROM peer_cursors WHERE task_id = ?1",
+            params![task_id],
+        )?;
+        self.conn.execute(
+            "DELETE FROM peer_controls WHERE kind = ?1 AND key = ?2",
+            params![PeerControl::Mute.as_str(), task_id],
+        )?;
+        Ok(())
+    }
+
     pub fn save_peer_cursor(&self, task_id: &str, last_seen: u64) -> Result<()> {
         self.conn.execute(
             "INSERT OR REPLACE INTO peer_cursors (task_id, last_seen) VALUES (?1, ?2)",
@@ -351,5 +365,32 @@ mod tests {
             .map(|m| m.alert_cleared_at)
             .collect();
         assert_eq!(cleared, vec![None, Some(50), Some(900)]);
+    }
+
+    #[test]
+    fn forgetting_a_task_drops_its_cursor_and_mute_but_keeps_records() {
+        let store = store();
+        store
+            .upsert_peer_message(&record(1, "demo", wire::PeerMessageStatus::Queued))
+            .unwrap();
+        store.save_peer_cursor("t_a", 1).unwrap();
+        store.save_peer_cursor("t_b", 1).unwrap();
+        store
+            .set_peer_control(PeerControl::Mute, "t_a", true)
+            .unwrap();
+        store
+            .set_peer_control(PeerControl::Pause, "t_a", true)
+            .unwrap();
+        store.forget_peer_task("t_a").unwrap();
+        assert_eq!(store.load_peer_cursors().unwrap(), vec![("t_b".into(), 1)]);
+        assert!(store
+            .load_peer_controls(PeerControl::Mute)
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            store.load_peer_controls(PeerControl::Pause).unwrap(),
+            vec!["t_a"]
+        );
+        assert_eq!(store.load_peer_messages(None, None, 10).unwrap().len(), 1);
     }
 }
