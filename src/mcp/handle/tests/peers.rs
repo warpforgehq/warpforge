@@ -109,6 +109,21 @@ async fn list_agents_names_general_and_the_callers_channels() {
 }
 
 #[tokio::test]
+async fn a_hidden_caller_gets_no_channels_section() {
+    let daemon = FakeDaemon::at("ws://a");
+    script(
+        &daemon,
+        "peers.list",
+        json!({ "peers": [], "hidden": true }),
+    );
+    let text = call(&daemon, false, "list_agents", json!({})).await;
+
+    assert_eq!(methods(&daemon), vec!["peers.list"]);
+    assert!(!text.contains("## Channels"), "{text}");
+    assert!(!text.contains("message_agent"), "{text}");
+}
+
+#[tokio::test]
 async fn a_post_to_a_named_channel_is_reported_by_its_name() {
     let daemon = FakeDaemon::at("ws://a");
     script(&daemon, "session.message", json!({ "relation": "team" }));

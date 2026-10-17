@@ -39,6 +39,9 @@ pub(super) async fn dispatch(
                 serde_json::from_value(result.get("peers").cloned().unwrap_or_default())?;
             out.push_str("## Peers (relation: peer)\n\n");
             out.push_str(&render_peers(&peers));
+            if result.get("hidden").and_then(Value::as_bool) == Some(true) {
+                return Ok(out);
+            }
             let result = client
                 .request("channels.list", json!({ "task_id": caller }))
                 .await?;

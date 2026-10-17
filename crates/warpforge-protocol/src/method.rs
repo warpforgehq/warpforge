@@ -1551,7 +1551,8 @@ pub enum Method {
 
     // ── Peer sessions (ADR 0026) ────────────────────────────────────────────
     /// The sessions `task_id` can see in its project, never itself. Returns
-    /// `{ peers: PeerInfo[] }`.
+    /// `{ peers: PeerInfo[], hidden: bool }`; `hidden` = `task_id` is not in
+    /// the directory itself, so `peers` is empty.
     #[serde(rename = "peers.list")]
     PeersList { task_id: String },
     /// Feed records, newest first, older than `before` when given. Returns

@@ -25,6 +25,7 @@ async fn a_muted_sessions_note_is_withheld_from_the_list() {
         reply,
     })
     .await
+    .unwrap()
     .unwrap();
     assert_eq!(peers[0].id, "t_b");
     assert_eq!(peers[0].note, None);

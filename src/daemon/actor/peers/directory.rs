@@ -83,13 +83,14 @@ impl Daemon {
 
     /// A hidden caller sees nobody, since nobody could answer it; a muted
     /// session's note is withheld.
-    pub(super) fn peers_list(&self, task_id: &str) -> Result<Vec<wire::PeerInfo>, String> {
+    /// @returns `None` for a hidden caller
+    pub(super) fn peers_list(&self, task_id: &str) -> Result<Option<Vec<wire::PeerInfo>>, String> {
         let caller = self
             .tasks
             .get(task_id)
             .ok_or_else(|| format!("unknown task {task_id}"))?;
         if !self.peer_visible(caller, &caller.project) {
-            return Ok(Vec::new());
+            return Ok(None);
         }
         let now = now_secs();
         let mut peers: Vec<wire::PeerInfo> = self
@@ -106,7 +107,7 @@ impl Daemon {
             })
             .collect();
         peers.sort_by_key(|peer| std::cmp::Reverse(peer.updated_at));
-        Ok(peers)
+        Ok(Some(peers))
     }
 
     pub(super) fn peers_set_status_note(
