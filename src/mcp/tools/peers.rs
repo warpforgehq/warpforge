@@ -31,7 +31,8 @@ pub(super) fn defs() -> Vec<Value> {
                 — a busy peer when it is free, an idle one when it is next resumed — and \
                 answers with message_agent if it wants to. task_id \"team\" posts to the \
                 project's team channel instead: it wakes nobody, and every peer reads it with \
-                its next prompt. The daemon limits how often sessions message each other; a \
+                its next prompt; a peer the post @mentions (by title or task id) is also sent it \
+                as a direct message. The daemon limits how often sessions message each other; a \
                 refusal names the rule — do not retry it.",
             "inputSchema": {
                 "type": "object",

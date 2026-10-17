@@ -128,8 +128,26 @@ fn sent_text(to: &str, sent: &wire::PeerSendResult) -> String {
              notified when its result is waiting — then call read_inbox."
         ),
         wire::PeerRelation::Team => {
-            "Posted to the team channel. Nobody is woken; each peer reads it with its next prompt."
-                .into()
+            let mentions = sent
+                .message
+                .as_ref()
+                .map(|post| post.mentions.as_slice())
+                .unwrap_or_default();
+            let mut text = if mentions.is_empty() {
+                "Posted to the team channel. Nobody is woken; each peer reads it with its next prompt."
+                    .to_string()
+            } else {
+                format!(
+                    "Posted to the team channel, and sent as a direct message to {}. The other \
+                     peers read it with their next prompt.",
+                    mentions.join(", ")
+                )
+            };
+            if let Some(notice) = &sent.notice {
+                text.push('\n');
+                text.push_str(notice);
+            }
+            text
         }
         wire::PeerRelation::Peer => match &sent.notice {
             Some(notice) => notice.clone(),
