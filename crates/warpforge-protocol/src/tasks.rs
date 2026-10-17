@@ -99,6 +99,9 @@ pub struct TaskInfo {
     /// The advisor this task's agent consults, when one was picked.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub advisor: Option<TaskAdvisor>,
+    /// The Smith the task runs as: its thread, or one of its work sessions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub smith_id: Option<String>,
 }
 
 /// One message waiting behind the running turn.

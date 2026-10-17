@@ -111,6 +111,42 @@ pub struct Task {
     /// What the session says it is doing, for its peers (ADR 0026). Live
     /// state, like `queued_prompts`, so it is never persisted.
     pub status_note: Option<String>,
+    /// Set when the task runs as a Smith: its thread, or a work session.
+    pub smith: Option<TaskSmith>,
+}
+
+/// What a Smith task's sessions were given (ADR 0027), so a resume sends the
+/// same system prompt and later prompts send only what changed.
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+pub struct TaskSmith {
+    pub smith_id: String,
+    /// Constitution and soul, fixed at the first session start; `_meta` and
+    /// resumes reuse it byte for byte (invariant 4).
+    #[serde(default)]
+    pub prompt: Option<String>,
+    /// The prompt goes as `_meta.systemPrompt` rather than an opening prefix.
+    #[serde(default)]
+    pub via_meta: bool,
+    /// The soul commit the session has heard last.
+    #[serde(default)]
+    pub soul_rev: Option<String>,
+    /// `created_at` of the newest journal entry the session has been given.
+    #[serde(default)]
+    pub journal_seen: u64,
+    /// The daemon's settle entry was written to the journal.
+    #[serde(default)]
+    pub journaled: bool,
+}
+
+impl TaskSmith {
+    /// @param smith_id the Smith the task runs as
+    /// @returns a record with nothing given yet
+    pub fn new(smith_id: &str) -> Self {
+        Self {
+            smith_id: smith_id.to_string(),
+            ..Default::default()
+        }
+    }
 }
 
 /// A fresh task id, for a caller that has to name the task before it exists.
@@ -154,6 +190,7 @@ impl Task {
             queued_prompts: Vec::new(),
             advisor: None,
             status_note: None,
+            smith: None,
         }
     }
 
