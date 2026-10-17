@@ -152,20 +152,29 @@ record id rides on the queued prompt and comes back on `TurnStarted`, which sets
 with `to_task` null and wakes nobody. Each visible peer receives unseen posts,
 and direct messages held for it, passively: when the actor prepares that peer's next prompt
 (`Command::SessionPrompt`, and the opening prompt in `start_session`), it
-prepends a short digest — at most 10 posts or 2,000 characters, newest kept,
-"N older posts omitted" (to tune). A per-task cursor, persisted next to the
-records, advances when that prompt's turn starts, not when it was prepared; a
-turn that never starts leaves the posts unseen. Posts made while a prompt sits
-in the queue go out with the next one. *Rejected:* waking every peer on a post
+prepends a short digest — at most 10 items or 2,000 characters, newest kept,
+"N older messages omitted" (to tune). A prompt with no content of its own
+gets none. A task's first digest starts at posts made since it was created;
+the actor keeps the last 100 posts per project for this. A held message the
+digest has no room for is refused ("left out of a full digest"). A per-task
+cursor, persisted next to the records, advances when that prompt's turn
+starts, not when it was prepared; a turn that never starts leaves the posts
+unseen. What a waiting prompt carries is reserved so a second queued prompt
+does not repeat it; the reservation lapses when the task goes idle with
+nothing queued, or its session goes away. Posts made while a prompt sits in
+the queue go out with the next one. *Rejected:* waking every peer on a post
 — a broadcast that starts N turns multiplies cost by N, and most posts are
 "for your information".
 
 **The transcript references the record.** New
-`SessionUpdate::PeerMessage { message_ids, from_task, from_label, text,
-direction }`, `direction` one of `sent` / `received` / `digest`. The
-receiver's `received` (or `digest`) entry is written at `TurnStarted`, from the
-echo, as every prompt is (ADR 0011 invariant 12); the sender's `sent` entry
-when the tool call succeeds. The desktop renders one compact attributed line
+`SessionUpdate::PeerMessage { message_ids, from_task, from_label, to_task,
+to_label, text, direction }`, `direction` one of `sent` / `received` /
+`digest`. The receiver's `received` (or `digest`) entry is written at
+`TurnStarted`, carried on the prompt as every echo is (ADR 0011 invariant 12);
+the sender's `sent` entry, with the receiver (or `team`) as `to_*`, when
+routing accepts the message, queued or held. A queued `Peer` prompt names its
+record in `QueuedPrompt.peer_message_id`; removed from the queue, or dropped
+with the session, the record is refused and the sender's slot freed. The desktop renders one compact attributed line
 with a click-through to the other task, as `WorkflowEventLine` does. `System`
 turns stay un-echoed.
 
@@ -300,9 +309,10 @@ definitions), `src/mcp/handle/peers.rs`,
    (`src/daemon/acp/session/turn.rs`) The partition keeps `User` only; a merge
    would file a peer's text as the user's (ADR 0011 invariant 10).
 5. **A `Peer` turn feeds no automation run.** (`actor/commands/task.rs`,
-   `actor/acp_update.rs`) Both sites test `initiator != User`; with `Peer`
-   added they must test for `Automation`, or a peer message closes or fails a
-   `reuse_session` run with its own answer.
+   `actor/acp_update.rs`) Both sites ask `TurnInitiator::feeds_automation`:
+   `Automation` or `Initial` — a run in a task it created ends on its opening
+   turn. A test for `!= User` lets a peer's answer close or fail a
+   `reuse_session` run.
 6. **Delivery is marked at `TurnStarted` only.** (`actor/acp_update.rs`)
    `delivered_at`, the digest cursor and the receiver's transcript entry all
    move there. A queued message has been said to nobody.
