@@ -14,14 +14,14 @@ const FIXTURE: &str = concat!(
     "/tests/fixtures/mock-acp-smith.mjs"
 );
 
-struct Agent {
-    command: String,
-    log: PathBuf,
+pub(super) struct Agent {
+    pub(super) command: String,
+    pub(super) log: PathBuf,
 }
 
 /// The mock agent, run directly or through a script named like the Claude
 /// adapter so the `_meta` path is taken.
-fn agent(dir: &Path, as_claude: bool) -> Agent {
+pub(super) fn agent(dir: &Path, as_claude: bool) -> Agent {
     let log = dir.join("acp.log");
     let direct = format!("node {FIXTURE} {}", log.display());
     if !as_claude {
@@ -41,7 +41,7 @@ fn agent(dir: &Path, as_claude: bool) -> Agent {
     }
 }
 
-fn requests(log: &Path, method: &str) -> Vec<Value> {
+pub(super) fn requests(log: &Path, method: &str) -> Vec<Value> {
     std::fs::read_to_string(log)
         .unwrap_or_default()
         .lines()
@@ -51,7 +51,7 @@ fn requests(log: &Path, method: &str) -> Vec<Value> {
         .collect()
 }
 
-fn prompt_texts(log: &Path) -> Vec<String> {
+pub(super) fn prompt_texts(log: &Path) -> Vec<String> {
     requests(log, "session/prompt")
         .iter()
         .map(|params| {
@@ -65,7 +65,7 @@ fn prompt_texts(log: &Path) -> Vec<String> {
         .collect()
 }
 
-async fn wait(what: &str, check: impl Fn() -> bool) {
+pub(super) async fn wait(what: &str, check: impl Fn() -> bool) {
     tokio::time::timeout(Duration::from_secs(10), async {
         while !check() {
             tokio::time::sleep(Duration::from_millis(20)).await;
@@ -75,7 +75,7 @@ async fn wait(what: &str, check: impl Fn() -> bool) {
     .unwrap_or_else(|_| panic!("timed out waiting for {what}"));
 }
 
-async fn wait_idle(daemon: &DaemonHandle, task_id: &str) {
+pub(super) async fn wait_idle(daemon: &DaemonHandle, task_id: &str) {
     tokio::time::timeout(Duration::from_secs(10), async {
         loop {
             let idle = daemon.tasks().await.iter().any(|t| {
@@ -91,7 +91,7 @@ async fn wait_idle(daemon: &DaemonHandle, task_id: &str) {
     .expect("the task goes idle");
 }
 
-fn ada_on(agent: &Agent) -> wire::SmithCreate {
+pub(super) fn ada_on(agent: &Agent) -> wire::SmithCreate {
     let mut create = ada();
     create.agent = agent.command.clone();
     create.soul = Some("# Ada\n\nTerse. Never guesses.\n".into());

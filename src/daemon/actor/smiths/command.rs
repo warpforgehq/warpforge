@@ -59,6 +59,16 @@ pub enum SmithCommand {
     IdentityChecked {
         changed: Vec<(String, Revs)>,
     },
+    /// `start_work` from a Smith's session, within the daemon's limits.
+    StartWorkFrom {
+        from: String,
+        target: String,
+        project: String,
+        brief: String,
+        backlog_item_id: Option<String>,
+        worktree: bool,
+        reply: Reply<(String, String)>,
+    },
     /// Test-only: give the daemon a throwaway memory store.
     #[cfg(test)]
     UseMemory {

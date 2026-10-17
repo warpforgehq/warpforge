@@ -228,6 +228,7 @@ impl Daemon {
                                 self.tasks.insert(task_id.clone(), updated.clone());
                                 self.emit(Event::TaskUpdated(updated));
                                 self.smith_task_settled(&task_id);
+                                self.smith_report_back(&task_id);
                                 Ok(())
                             }
                             Ok(None) => Ok(()), // true no-op

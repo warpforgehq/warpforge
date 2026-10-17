@@ -16,6 +16,7 @@ mod memory;
 mod peers;
 mod runner;
 mod runtime;
+mod smiths;
 mod spawn_workflow;
 #[cfg(test)]
 mod tests;
@@ -108,6 +109,7 @@ pub(crate) async fn handle_tool_call(
                 .await?
                 .ok_or_else(|| anyhow!("unknown tool: {name}"))
         }
+        "start_work" => smiths::dispatch(client, parent_task, project, &args).await,
         "list_agents" | "message_agent" | "set_status_note" => {
             peers::dispatch(name, client, parent_task, project, is_orchestrator, &args).await
         }

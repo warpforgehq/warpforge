@@ -1637,4 +1637,19 @@ pub enum Method {
         #[serde(default = "default_true")]
         worktree: bool,
     },
+    /// `start_work` from a Smith's own session (`from_task_id`): a work
+    /// session as `smith` — "self", a name or an id — within the daemon's
+    /// limits. It reports back to the caller once, when it settles. Returns
+    /// `{ taskId, smith }`.
+    #[serde(rename = "smiths.startWorkFrom")]
+    SmithsStartWorkFrom {
+        from_task_id: String,
+        smith: String,
+        project: String,
+        brief: String,
+        #[serde(default)]
+        backlog_item_id: Option<String>,
+        #[serde(default = "default_true")]
+        worktree: bool,
+    },
 }

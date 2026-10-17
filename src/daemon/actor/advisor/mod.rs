@@ -132,6 +132,8 @@ impl Daemon {
             BridgeMode::Advisor
         } else if task.origin.as_deref() == Some(crate::daemon::actor::smiths::SMITH_ORIGIN) {
             BridgeMode::Thread
+        } else if task.smith.is_some() && task.advisor.is_none() {
+            BridgeMode::Work
         } else if task.advisor.is_some() {
             BridgeMode::Advised
         } else {

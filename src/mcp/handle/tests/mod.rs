@@ -8,6 +8,7 @@ mod assignee;
 mod backlog_tracker;
 mod peer_self;
 mod peers;
+mod smiths;
 mod spawn_workflow;
 
 async fn call_single(daemon: &FakeDaemon, project: &str, name: &str, args: Value) -> String {

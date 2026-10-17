@@ -36,6 +36,8 @@ pub(crate) enum BridgeMode {
     Advisor,
     /// A Smith's thread: read-only tools plus the ones it coordinates with.
     Thread,
+    /// A Smith's work session: a single session that may also `start_work`.
+    Work,
 }
 
 impl BridgeMode {
@@ -48,6 +50,7 @@ impl BridgeMode {
             BridgeMode::Advised => "advised",
             BridgeMode::Advisor => "advisor",
             BridgeMode::Thread => "thread",
+            BridgeMode::Work => "work",
         }
     }
 
@@ -57,6 +60,7 @@ impl BridgeMode {
             Some("advised") => BridgeMode::Advised,
             Some("advisor") => BridgeMode::Advisor,
             Some("thread") => BridgeMode::Thread,
+            Some("work") => BridgeMode::Work,
             _ => BridgeMode::Single,
         }
     }

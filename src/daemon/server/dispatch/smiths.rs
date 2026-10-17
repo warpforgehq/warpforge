@@ -85,6 +85,26 @@ pub(super) async fn smiths(
             .await?;
             Ok(json!({ "taskId": task_id }))
         }
+        wire::Method::SmithsStartWorkFrom {
+            from_task_id,
+            smith,
+            project,
+            brief,
+            backlog_item_id,
+            worktree,
+        } => {
+            let started = ask(handle, |reply| SmithCommand::StartWorkFrom {
+                from: from_task_id,
+                target: smith,
+                project,
+                brief,
+                backlog_item_id,
+                worktree,
+                reply,
+            })
+            .await?;
+            Ok(json!({ "taskId": started[0], "smith": started[1] }))
+        }
         _ => Err(wire::RpcError {
             code: wire::ErrorCode::InvalidRequest,
             message: "not a Smith method".into(),

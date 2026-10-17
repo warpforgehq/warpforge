@@ -11,6 +11,7 @@ mod orchestrator;
 mod peers;
 mod runner;
 mod runtime;
+mod smiths;
 
 pub(crate) fn tool_defs(is_orchestrator: bool) -> Value {
     let mut tools: Vec<Value> = Vec::new();
@@ -39,6 +40,12 @@ pub(crate) fn advisor_tool_defs() -> Vec<Value> {
 }
 
 pub(crate) use advisor::{READ_ONLY_TOOLS, THREAD_TOOLS};
+
+/// `start_work`, offered to a Smith's sessions.
+/// @returns the tool definitions
+pub(crate) fn smith_tool_defs() -> Vec<Value> {
+    smiths::defs()
+}
 
 /// The browser tools, offered to sessions bound to a project.
 /// @returns the tool definitions

@@ -5,6 +5,7 @@ use warpforge_protocol as wire;
 mod assign;
 mod journal;
 mod sessions;
+mod work;
 
 use super::{SmithCommand, SMITH_ORIGIN};
 use crate::daemon::actor::{Command, Daemon, DaemonHandle, PeerCommand};

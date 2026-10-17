@@ -100,6 +100,7 @@ impl Daemon {
             }
             AcpUpdate::Usage { used, size, cost } => {
                 self.advisor_usage(&task_id, cost.as_ref());
+                self.smith_note_cost(&task_id, cost.as_ref());
                 self.emit_session_unless_last_duplicate(
                     &task_id,
                     wire::SessionUpdate::Usage { used, size, cost },
@@ -183,6 +184,7 @@ impl Daemon {
                 self.advisor_turn_started(&task_id);
                 self.peers_turn_started(&task_id, initiator, peer);
                 self.smith_turn_started(&task_id, smith);
+                self.smith_note_turn(&task_id);
                 if let Some(echo) = echo {
                     // A reconnect retry can submit the same text again after
                     // the first attempt was already recorded; drop only that

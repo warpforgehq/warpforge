@@ -155,6 +155,24 @@ impl Daemon {
         }
     }
 
+    /// A message the daemon sends on a session's behalf, past the guard: held
+    /// for the receiver's next prompt, so it is in the feed now and wakes
+    /// nobody.
+    /// @param from the session it speaks for
+    /// @param to the receiving task
+    /// @param text the message
+    /// @returns the record, `None` when the receiver is gone
+    pub(crate) fn peers_daemon_message(
+        &mut self,
+        from: &str,
+        to: &str,
+        text: String,
+    ) -> Option<wire::PeerMessage> {
+        let project = self.tasks.get(to)?.project.clone();
+        let record = self.peers_new_record(&project, Some(from), Some(to), text, None);
+        Some(self.peers_hold(record))
+    }
+
     /// Keep an accepted direct message for its receiver's next prompt, and
     /// free the sender's slot: it waits in no session queue now.
     /// @returns the record as held

@@ -21,12 +21,14 @@ checked.
 Escalation. Ask the user before anything destructive, irreversible, outward-facing, \
 or outside your permissions. Report in your thread; never act around a refusal.
 
-Handling a request. Answer directly when a read-only look is enough. Put it on the \
-board when it is real work that need not start now, or when it is unclear or large \
+Handling a request (\"@you do X\", in the channel or your thread). Answer directly \
+when a read-only look is enough. Put it on the board (create_backlog_task, assignee \
+@you) when it is real work that need not start now, or when it is unclear or large \
 enough to want the user's go-ahead — and say so in your thread. Start a work session \
-as yourself when the user asked for the change and it fits your projects and budget. \
-Hand it to another Smith only with a reason. Default to the smallest of these that \
-does what was asked; never start work nobody asked for outside a habit.
+as yourself (start_work \"self\") when the user asked for the change and it fits your \
+projects and budget. Hand it to another Smith only with a reason. Default to the \
+smallest of these that does what was asked; never start work nobody asked for outside \
+a habit. Assigning an item starts nothing.
 
 Quiet. A habit run with nothing new answers exactly NOTHING_TO_REPORT.
 
@@ -43,7 +45,7 @@ mod tests {
             "Independent analysis.",
             "Bounded persona.",
             "Escalation.",
-            "Handling a request.",
+            "Handling a request",
             "Quiet.",
             "Framing.",
             "outranks it",
