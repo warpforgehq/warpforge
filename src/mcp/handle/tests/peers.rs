@@ -47,9 +47,10 @@ async fn a_plain_session_lists_only_its_peers() {
         "peers.list",
         json!({ "peers": [peer("t_b", "Fix login", Some("reviewing auth | tokens"))] }),
     );
+    script(&daemon, "channels.list", json!({ "channels": [] }));
     let text = call(&daemon, false, "list_agents", json!({})).await;
 
-    assert_eq!(methods(&daemon), vec!["peers.list"]);
+    assert_eq!(methods(&daemon), vec!["peers.list", "channels.list"]);
     assert_eq!(daemon.state().sent[0]["params"]["task_id"], "t_me");
     assert!(!text.contains("relation: child"), "{text}");
     assert!(text.contains("## Peers (relation: peer)"), "{text}");
@@ -64,11 +65,12 @@ async fn an_orchestrator_lists_its_children_before_its_peers() {
     let daemon = FakeDaemon::at("ws://a");
     script(&daemon, "orchestrator.listAgents", json!({ "agents": [] }));
     script(&daemon, "peers.list", json!({ "peers": [] }));
+    script(&daemon, "channels.list", json!({ "channels": [] }));
     let text = call(&daemon, true, "list_agents", json!({})).await;
 
     assert_eq!(
         methods(&daemon),
-        vec!["orchestrator.listAgents", "peers.list"]
+        vec!["orchestrator.listAgents", "peers.list", "channels.list"]
     );
     let children = text
         .find("## Sub-agents (relation: child)")
@@ -77,6 +79,47 @@ async fn an_orchestrator_lists_its_children_before_its_peers() {
     assert!(children < peers, "{text}");
     assert!(text.contains("No sub-agent sessions"), "{text}");
     assert!(text.contains("No other Warpforge sessions"), "{text}");
+}
+
+#[tokio::test]
+async fn list_agents_names_general_and_the_callers_channels() {
+    let daemon = FakeDaemon::at("ws://a");
+    script(&daemon, "peers.list", json!({ "peers": [] }));
+    script(
+        &daemon,
+        "channels.list",
+        json!({ "channels": [{ "id": "ch_1", "project": "demo", "name": "design",
+                               "members": [{ "smithId": "sm_1", "name": "Ada" },
+                                           { "smithId": "sm_2", "name": "Bo" }],
+                               "createdAt": 0, "lastPostAt": 1 }] }),
+    );
+    let text = call(&daemon, false, "list_agents", json!({})).await;
+
+    assert_eq!(
+        daemon.state().sent[1]["params"],
+        json!({ "task_id": "t_me" })
+    );
+    let channels = text.find("## Channels").expect("channels");
+    assert!(text.find("## Peers").unwrap() < channels, "{text}");
+    assert!(
+        text.contains("| #general | every session in this project | |"),
+        "{text}"
+    );
+    assert!(text.contains("| #design (demo) | Ada, Bo | "), "{text}");
+}
+
+#[tokio::test]
+async fn a_post_to_a_named_channel_is_reported_by_its_name() {
+    let daemon = FakeDaemon::at("ws://a");
+    script(&daemon, "session.message", json!({ "relation": "team" }));
+    let text = call(
+        &daemon,
+        false,
+        "message_agent",
+        json!({ "task_id": "#design", "message": "hi" }),
+    )
+    .await;
+    assert!(text.starts_with("Posted to #design."), "{text}");
 }
 
 #[tokio::test]
