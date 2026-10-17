@@ -67,3 +67,37 @@ describe("TeamComposer", () => {
     expect(onStartSession).toHaveBeenCalledWith("write the docs");
   });
 });
+
+describe("TeamComposer mention hints", () => {
+  beforeEach(() => postToTeam.mockClear());
+
+  it("warns about an @word that names nobody, then posts it as text on the second send", async () => {
+    render(
+      <TeamComposer
+        project="demo"
+        candidates={candidates}
+        onStartSession={vi.fn<(text: string) => void>()}
+      />,
+    );
+    const box = screen.getByRole("textbox", { name: "Post to the team" });
+    await userEvent.type(box, "ask @Docz now{Enter}");
+    expect(postToTeam).not.toHaveBeenCalled();
+    expect(screen.getByRole("status").textContent).toContain("@Docz matches no session");
+    await userEvent.keyboard("{Enter}");
+    expect(postToTeam).toHaveBeenCalledWith("demo", "ask @Docz now");
+  });
+
+  it("does not send a mention two sessions share", async () => {
+    render(
+      <TeamComposer
+        project="demo"
+        candidates={[...candidates, { id: "t_33333333", label: "Docs" }]}
+        onStartSession={vi.fn<(text: string) => void>()}
+      />,
+    );
+    const box = screen.getByRole("textbox", { name: "Post to the team" });
+    await userEvent.type(box, "x (@Docs){Escape}{Enter}{Enter}");
+    expect(postToTeam).not.toHaveBeenCalled();
+    expect(screen.getByRole("status").textContent).toContain("more than one session");
+  });
+});

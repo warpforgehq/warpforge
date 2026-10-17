@@ -99,6 +99,9 @@ describe("mentions", () => {
   it("finds the mention being typed, spaces included, only at a word start", () => {
     expect(mentionAtCaret("ask @Fix lo", 11)).toStrictEqual({ query: "Fix lo", start: 4 });
     expect(mentionAtCaret("mail me@x", 9)).toBeNull();
+    expect(mentionAtCaret("see (@fi", 8)).toStrictEqual({ query: "fi", start: 5 });
+    expect(mentionAtCaret("a/@fi", 5)).toStrictEqual({ query: "fi", start: 2 });
+    expect(mentionAtCaret("@@fi", 4)).toBeNull();
     expect(mentionAtCaret("@a\nb", 4)).toBeNull();
     expect(mentionAtCaret("no mention", 10)).toBeNull();
   });

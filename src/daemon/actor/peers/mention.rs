@@ -208,6 +208,45 @@ mod tests {
         .collect()
     }
 
+    /// The vectors the desktop's mirror (`desktop/src/lib/peerMentions.ts`) runs too.
+    #[test]
+    fn the_shared_vectors_resolve_as_written() {
+        let vectors: serde_json::Value = serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/mention-vectors.json"
+        )))
+        .unwrap();
+        let candidates: Vec<Candidate> = vectors["candidates"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| Candidate {
+                id: c["id"].as_str().unwrap().into(),
+                label: c["label"].as_str().unwrap().into(),
+            })
+            .collect();
+        let ids = |value: &serde_json::Value| -> Vec<String> {
+            value
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|id| id.as_str().unwrap().to_string())
+                .collect()
+        };
+        for case in vectors["cases"].as_array().unwrap() {
+            let text = case["text"].as_str().unwrap();
+            let result = resolve_mentions(text, &candidates);
+            if case.get("ambiguous").is_some() {
+                let error = result.unwrap_err();
+                for id in ids(&case["ambiguous"]) {
+                    assert!(error.contains(&id), "{text}: {error}");
+                }
+            } else {
+                assert_eq!(result, Ok(ids(&case["found"])), "{text}");
+            }
+        }
+    }
+
     #[test]
     fn the_longest_label_wins_case_insensitive() {
         let found = resolve_mentions("@fix LOGIN please, and @Fix too", &candidates()).unwrap();

@@ -12,6 +12,7 @@ import {
   mentionText,
   rankCandidates,
 } from "@/lib/peerFeed";
+import { resolveMentions } from "@/lib/peerMentions";
 import { cn } from "@/lib/utils";
 
 const MENU_LIMIT = 8;
@@ -35,6 +36,8 @@ export function TeamComposer({ project, candidates, targets, onStartSession }: P
   const [active, setActive] = useState(0);
   const [sending, setSending] = useState(false);
   const [target, setTarget] = useState<string | null>(null);
+  /** A warning about the post's mentions, and the text it was given for. */
+  const [hint, setHint] = useState<{ body: string; text: string } | null>(null);
   const ref = useRef<HTMLTextAreaElement>(null);
   const pendingCaret = useRef<number | null>(null);
   const direct = targets !== undefined;
@@ -65,6 +68,20 @@ export function TeamComposer({ project, candidates, targets, onStartSession }: P
   const send = async () => {
     const body = text.trim();
     if (!body || sending || (direct && !to)) return;
+    if (!direct) {
+      const resolved = resolveMentions(body, candidates);
+      const warning = resolved.ambiguous
+        ? `@${resolved.ambiguous.mention} matches more than one session. Pick one from the list, which uses its id.`
+        : resolved.unmatched.length > 0
+          ? `${resolved.unmatched.join(", ")} ${resolved.unmatched.length === 1 ? "matches" : "match"} no session and will be posted as text. Send again to post it anyway.`
+          : null;
+      const confirmed = hint?.body === body && !resolved.ambiguous;
+      if (warning && !confirmed) {
+        setHint({ body, text: warning });
+        return;
+      }
+    }
+    setHint(null);
     setSending(true);
     try {
       const result = to
@@ -165,12 +182,18 @@ export function TeamComposer({ project, candidates, targets, onStartSession }: P
         }
         onChange={(event) => {
           setText(event.target.value);
+          setHint(null);
           setCaret(event.target.selectionStart);
           setActive(0);
         }}
         onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
         onKeyDown={onKeyDown}
       />
+      {hint && (
+        <p role="status" className="text-xs text-warn">
+          {hint.text}
+        </p>
+      )}
       <div className="flex items-center justify-end gap-2">
         {!direct && (
           <Button

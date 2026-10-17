@@ -1,0 +1,22 @@
+{
+  "candidates": [
+    { "id": "t_ab12cd34", "label": "Fix login" },
+    { "id": "t_ab99ffff", "label": "Fix" },
+    { "id": "t_0000aaaa", "label": "Docs" },
+    { "id": "t_1111bbbb", "label": "Docs" },
+    { "id": "t_2222cccc", "label": "Перевірка" }
+  ],
+  "cases": [
+    { "text": "@fix LOGIN please, and @Fix too", "found": ["t_ab12cd34", "t_ab99ffff"] },
+    { "text": "@Fixer", "found": [] },
+    { "text": "@t_ab12 and @0000aa", "found": ["t_ab12cd34", "t_0000aaaa"] },
+    { "text": "@ab1", "found": [] },
+    { "text": "ask @Docs", "ambiguous": ["t_0000aaaa", "t_1111bbbb"] },
+    { "text": "mail me@Fix.dev or use @tauri-apps/api", "found": [] },
+    { "text": "(@fix login) and x/@t_0000aaaa", "found": ["t_ab12cd34", "t_0000aaaa"] },
+    { "text": "@@Fix", "found": [] },
+    { "text": "@Fix… no, @t_0000 @t_0000aaaa", "found": ["t_ab99ffff", "t_0000aaaa"] },
+    { "text": "ping @перевірка now", "found": ["t_2222cccc"] },
+    { "text": "@Fix_login", "found": [] }
+  ]
+}
