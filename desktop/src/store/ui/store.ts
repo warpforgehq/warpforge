@@ -105,6 +105,7 @@ export const useUi = create<UiState>()(
         pullFilesPanelCollapsed: _pullFilesPanelCollapsed,
         inboxSelectedKey: _inboxSelectedKey,
         teamSelection: _teamSelection,
+        newSmithOpen: _newSmithOpen,
         inboxFilters,
         backlogParamsByProject,
         ...rest

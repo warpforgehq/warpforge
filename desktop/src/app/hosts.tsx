@@ -13,6 +13,10 @@ import { useChannelsSync, usePeerFeedSync } from "@/hooks/usePeerFeed";
 import { usePrAssistantLifecycle } from "@/hooks/usePrAssistantLifecycle";
 import { useSmithsSync } from "@/hooks/useSmiths";
 import { runOnIdle } from "@/lib/idle";
+import { resolveSmithsProject } from "@/lib/smithsProject";
+import type { Snapshot } from "@/protocol";
+import { useUi } from "@/store/ui";
+import { NewSmithDialog } from "@/views/team/smiths/NewSmithDialog";
 
 export const getSnapshot = () => daemon.getState().snapshot;
 export const getConnection = () => daemon.getState().connection;
@@ -52,6 +56,23 @@ export function PeerFeedHost() {
   usePeerFeedSync();
   useChannelsSync();
   return null;
+}
+
+/** The New smith dialog, opened from anywhere through the UI store. */
+export function NewSmithHost({ snapshot }: { snapshot: Snapshot }) {
+  const open = useUi((state) => state.newSmithOpen);
+  const close = useUi((state) => state.closeNewSmith);
+  const picked = useUi((state) => state.smithsProject);
+  const selectedProjectId = useUi((state) => state.selectedProjectId);
+  if (!open) return null;
+  const projects = snapshot.projects.map((p) => p.name);
+  return (
+    <NewSmithDialog
+      snapshot={snapshot}
+      project={resolveSmithsProject(picked, projects, selectedProjectId)}
+      onClose={close}
+    />
+  );
 }
 
 /** Keeps the Smiths live app-wide, for Team, the feed and the board. */

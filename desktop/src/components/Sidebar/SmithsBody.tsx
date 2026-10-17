@@ -1,11 +1,26 @@
-import { Hash, PauseCircle, Plus } from "lucide-react";
+import { Hash, MessageSquarePlus, Plus } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 
+import { SmithAvatar } from "@/components/SmithAvatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { daemon } from "@/daemon";
 import { useSmithUnread, useSmiths } from "@/hooks/useSmiths";
-import { buildConversations } from "@/lib/peerFeed";
+import { buildConversations, mentionCandidates, userThread } from "@/lib/peerFeed";
 import { smithStatus } from "@/lib/smiths";
+import { resolveSmithsProject } from "@/lib/smithsProject";
 import { channelKey, channelUnread, projectChannels } from "@/lib/teamChannels";
 import { cn } from "@/lib/utils";
 import type { Smith, TaskInfo } from "@/protocol";
@@ -21,24 +36,54 @@ interface Props {
 }
 
 const ROW =
-  "flex w-full min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left text-[13px] transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring";
+  "flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left text-[13px] transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring";
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <section aria-label={title} className="space-y-px">
-      <h2 className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h2>
+      <div className="flex items-center justify-between px-2 pb-1">
+        <h2 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          {title}
+        </h2>
+        {action}
+      </div>
       {children}
     </section>
   );
 }
 
-const DOT: Record<ReturnType<typeof smithStatus>["kind"], string> = {
-  held: "bg-warn",
-  idle: "bg-muted-foreground/40",
-  working: "bg-ok",
-};
+function HeaderButton({ label, onClick }: { label: string; onClick?: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="grid size-5 place-items-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    >
+      <Plus className="size-3.5" />
+    </button>
+  );
+}
+
+function Unread({ count }: { count: number }) {
+  return (
+    <span
+      aria-label={`${count} unread`}
+      className="tnum ml-auto shrink-0 rounded-full bg-primary px-1.5 text-[11px] font-medium text-primary-foreground"
+    >
+      {count}
+    </span>
+  );
+}
 
 function SmithRow({
   smith,
@@ -53,7 +98,12 @@ function SmithRow({
 }) {
   const status = smithStatus(smith, tasks);
   const unread = useSmithUnread(smith, tasks);
-  const statusText = status.kind === "held" ? `held: ${status.reasons.join("; ")}` : status.kind;
+  const note =
+    status.kind === "held"
+      ? `held: ${status.reasons[0]}`
+      : status.kind === "waiting" || status.kind === "working"
+        ? status.note
+        : null;
   return (
     <button
       type="button"
@@ -61,73 +111,102 @@ function SmithRow({
       onClick={onSelect}
       className={cn(ROW, active && "bg-accent", unread > 0 && "font-semibold")}
     >
-      <span
-        role="img"
-        aria-label={statusText}
-        title={statusText}
-        className={cn("size-2 shrink-0 rounded-full", DOT[status.kind])}
-      />
-      <span className="truncate">{smith.name}</span>
-      {unread > 0 && (
-        <span
-          aria-label={`${unread} unread`}
-          className="tnum ml-auto shrink-0 rounded-full bg-primary px-1.5 text-[11px] font-medium text-primary-foreground"
-        >
-          {unread}
-        </span>
+      <SmithAvatar smith={smith} status={status} />
+      <span className="shrink-0">{smith.name}</span>
+      {unread > 0 ? (
+        <Unread count={unread} />
+      ) : (
+        note && (
+          <span
+            title={note}
+            className={cn(
+              "ml-auto min-w-0 truncate text-xs font-normal",
+              status.kind === "waiting" ? "text-warn" : "text-muted-foreground",
+            )}
+          >
+            {note}
+          </span>
+        )
       )}
     </button>
   );
 }
 
 /**
- * The sidebar body in Smiths mode: the Smiths, each project's channels, and
- * the direct threads. Named channels slot in under their project once the
- * daemon serves them (backlog #126).
+ * The sidebar body in Smiths mode, for one project at a time: its Smiths, its
+ * channels and the direct threads in it.
  */
 export function SmithsBody({ projects, tasks }: Props) {
-  const smiths = useSmiths();
+  const allSmiths = useSmiths();
   const smithsById = useSmithsStore((state) => state.smiths);
   const records = usePeersStore((state) => state.records);
-  const paused = usePeersStore((state) => state.controls.pausedProjects);
+  const channels = usePeersStore((state) => state.channels);
   const view = useUi((state) => state.view);
   const openTaskId = useUi((state) => state.openTaskId);
+  const selectedProjectId = useUi((state) => state.selectedProjectId);
+  const picked = useUi((state) => state.smithsProject);
+  const setSmithsProject = useUi((state) => state.setSmithsProject);
   const stored = useUi((state) => state.teamSelection);
   const openTeam = useUi((state) => state.openTeam);
+  const openNewSmith = useUi((state) => state.openNewSmith);
+  const channelSeenAt = useUi((state) => state.teamChannelSeenAt);
+  const teamSeenAt = useUi((state) => state.teamSeenAt);
+  const [creatingChannel, setCreatingChannel] = useState(false);
+
+  const openTaskProject = tasks.find((t) => t.id === openTaskId)?.project ?? null;
+  const project = resolveSmithsProject(picked, projects, selectedProjectId ?? openTaskProject);
   // Nothing is highlighted while the main area shows something else.
   const selection: TeamSelection | null = view === "team" && !openTaskId ? stored : null;
+  const isConversation = (key: string) =>
+    selection?.kind === "conversation" && selection.key === key;
 
+  const smiths = allSmiths.filter((smith) => project && smith.allowedProjects.includes(project));
   const label = useMemo(
     () => labeller(new Map(tasks.map((task) => [task.id, task])), smithsById),
     [smithsById, tasks],
   );
   const dms = useMemo(
-    () => buildConversations(Object.values(records)).filter((c) => c.kind === "dm"),
-    [records],
+    () => buildConversations(Object.values(records), project).filter((c) => c.kind === "dm"),
+    [project, records],
   );
-  const channels = usePeersStore((state) => state.channels);
-  const channelSeenAt = useUi((state) => state.teamChannelSeenAt);
-  const teamSeenAt = useUi((state) => state.teamSeenAt);
-  const [creating, setCreating] = useState<string | null>(null);
-  const isConversation = (key: string) =>
-    selection?.kind === "conversation" && selection.key === key;
+  const dmTargets = useMemo(
+    () => (project ? mentionCandidates(tasks, project, allSmiths) : []),
+    [allSmiths, project, tasks],
+  );
+
+  if (!project) {
+    return <p className="px-4 py-3 text-[13px] text-muted-foreground">Add a project first.</p>;
+  }
 
   return (
     <nav aria-label="Smiths" className="flex flex-col gap-4 px-2 py-3">
-      {smiths.length === 0 ? (
-        <div className="space-y-3 px-2 py-1">
-          <p className="text-[13px] text-muted-foreground">
-            Smiths are your AI teammates. They remember past work, take tasks from the board and
-            talk to each other.
-          </p>
-          <Button type="button" size="sm" onClick={() => openTeam({ kind: "newTeammate" })}>
-            <Plus aria-hidden className="size-3.5" />
-            Create your first smith
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-px">
-          {smiths.map((smith) => (
+      <Select value={project} onValueChange={setSmithsProject}>
+        <SelectTrigger aria-label="Project" className="h-8 w-full text-[13px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {projects.map((name) => (
+            <SelectItem key={name} value={name}>
+              {name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Section title="Smiths" action={<HeaderButton label="New smith" onClick={openNewSmith} />}>
+        {smiths.length === 0 ? (
+          <div className="space-y-3 px-2 py-1">
+            <p className="text-[13px] text-muted-foreground">
+              Smiths are your AI teammates. They remember past work, take tasks from the board and
+              talk to each other.
+            </p>
+            <Button type="button" size="sm" onClick={openNewSmith}>
+              <Plus aria-hidden className="size-3.5" />
+              Create your first smith
+            </Button>
+          </div>
+        ) : (
+          smiths.map((smith) => (
             <SmithRow
               key={smith.id}
               smith={smith}
@@ -135,106 +214,109 @@ export function SmithsBody({ projects, tasks }: Props) {
               active={selection?.kind === "teammate" && selection.id === smith.id}
               onSelect={() => openTeam({ id: smith.id, kind: "teammate" })}
             />
-          ))}
-          <button
-            type="button"
-            onClick={() => openTeam({ kind: "newTeammate" })}
-            className={cn(
-              ROW,
-              "text-muted-foreground",
-              selection?.kind === "newTeammate" && "bg-accent",
-            )}
-          >
-            <Plus aria-hidden className="size-3.5 shrink-0" />
-            New smith
-          </button>
-        </div>
-      )}
+          ))
+        )}
+      </Section>
 
-      <Section title="Channels">
-        {projects.map((project) => (
-          <div key={project} className="space-y-px">
-            <div className="flex items-center gap-1.5 px-2 pt-1 text-xs text-muted-foreground">
-              <span className="truncate">{project}</span>
-              {paused.includes(project) && (
-                <PauseCircle aria-label="Paused" className="size-3 shrink-0 text-warn" />
-              )}
-            </div>
-            {projectChannels(project, Object.values(channels)).map((channel) => {
-              const unread = channelUnread(
+      <Section
+        title="Channels"
+        action={<HeaderButton label="New channel" onClick={() => setCreatingChannel(true)} />}
+      >
+        {projectChannels(project, Object.values(channels)).map((channel) => {
+          const unread = isConversation(channel.key)
+            ? 0
+            : channelUnread(
                 Object.values(records),
                 channel.key,
                 channelSeenAt[channel.key] ?? teamSeenAt,
               );
-              return (
-                <button
-                  key={channel.key}
-                  type="button"
-                  aria-current={isConversation(channel.key) ? "true" : undefined}
-                  onClick={() => openTeam({ key: channel.key, kind: "conversation" })}
-                  className={cn(
-                    ROW,
-                    "pl-4",
-                    isConversation(channel.key) && "bg-accent",
-                    unread > 0 && "font-semibold",
-                  )}
-                >
-                  <Hash aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="truncate">{channel.name}</span>
-                  {unread > 0 && !isConversation(channel.key) && (
-                    <span
-                      aria-label={`${unread} unread`}
-                      className="tnum ml-auto shrink-0 text-[11px] text-muted-foreground"
-                    >
-                      {unread}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          return (
             <button
+              key={channel.key}
               type="button"
-              onClick={() => setCreating(project)}
-              className={cn(ROW, "pl-4 text-muted-foreground")}
+              aria-current={isConversation(channel.key) ? "true" : undefined}
+              onClick={() => openTeam({ key: channel.key, kind: "conversation" })}
+              className={cn(
+                ROW,
+                isConversation(channel.key) && "bg-accent",
+                unread > 0 && "font-semibold",
+              )}
             >
-              <Plus aria-hidden className="size-3.5 shrink-0" />
-              New channel
+              <Hash aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate">{channel.name}</span>
+              {unread > 0 && <Unread count={unread} />}
             </button>
-          </div>
+          );
+        })}
+      </Section>
+
+      <Section
+        title="Direct"
+        action={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="New direct message"
+                title="New direct message"
+                className="grid size-5 place-items-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <Plus className="size-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-h-72 w-56 overflow-y-auto">
+              {dmTargets.length === 0 && (
+                <DropdownMenuItem disabled className="text-[13px]">
+                  No sessions in this project
+                </DropdownMenuItem>
+              )}
+              {dmTargets.map((target) => (
+                <DropdownMenuItem
+                  key={target.id}
+                  className="text-[13px]"
+                  onSelect={() =>
+                    openTeam({ key: userThread(project, target.id).key, kind: "conversation" })
+                  }
+                >
+                  <span className="truncate">{target.label || target.id}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      >
+        {dms.length === 0 && (
+          <p className="flex items-center gap-1.5 px-2 text-xs text-muted-foreground">
+            <MessageSquarePlus aria-hidden className="size-3.5" />
+            Messages between sessions show up here.
+          </p>
+        )}
+        {dms.map((dm) => (
+          <button
+            key={dm.key}
+            type="button"
+            aria-current={isConversation(dm.key) ? "true" : undefined}
+            onClick={() => openTeam({ key: dm.key, kind: "conversation" })}
+            className={cn(ROW, isConversation(dm.key) && "bg-accent")}
+          >
+            <span className="truncate">
+              {label(dm.parties?.[0])} ↔ {label(dm.parties?.[1])}
+            </span>
+          </button>
         ))}
       </Section>
 
-      {dms.length > 0 && (
-        <Section title="Direct messages">
-          {dms.map((dm) => (
-            <button
-              key={dm.key}
-              type="button"
-              aria-current={isConversation(dm.key) ? "true" : undefined}
-              onClick={() => openTeam({ key: dm.key, kind: "conversation" })}
-              className={cn(ROW, isConversation(dm.key) && "bg-accent")}
-            >
-              <span className="truncate">
-                {label(dm.parties?.[0])} ↔ {label(dm.parties?.[1])}
-              </span>
-              <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
-                {dm.project}
-              </span>
-            </button>
-          ))}
-        </Section>
-      )}
-      {creating && (
+      {creatingChannel && (
         <ChannelNameDialog
-          project={creating}
+          project={project}
           taken={Object.values(channels)
-            .filter((c) => c.project === creating)
+            .filter((c) => c.project === project)
             .map((c) => c.name)}
-          onOpenChange={(open) => !open && setCreating(null)}
+          onOpenChange={setCreatingChannel}
           onSave={async (name) => {
-            const channel = await daemon.createChannel(creating, name);
+            const channel = await daemon.createChannel(project, name);
             usePeersStore.getState().upsertChannel(channel);
-            openTeam({ key: channelKey(creating, channel.id), kind: "conversation" });
+            openTeam({ key: channelKey(project, channel.id), kind: "conversation" });
           }}
         />
       )}

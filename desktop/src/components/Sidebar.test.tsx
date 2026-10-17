@@ -413,7 +413,7 @@ describe("Sidebar modes", () => {
   it("shows the Smiths body in Smiths mode", () => {
     renderSidebar(makeState([task("a", { prompt: "Task A" })]), { mode: "team" });
     expect(screen.getByRole("navigation", { name: "Smiths" })).toBeInTheDocument();
-    expect(screen.queryByText("Task A")).not.toBeInTheDocument();
+    expect(taskRows("a")).toHaveLength(0);
   });
 
   it("counts what needs you on Tasks", () => {
