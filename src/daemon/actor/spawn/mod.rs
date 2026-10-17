@@ -391,6 +391,8 @@ impl Daemon {
                 let _ = automation_tx.send(Command::Runner(runner_tick)).await;
                 let peers_tick = crate::daemon::actor::PeerCommand::Tick;
                 let _ = automation_tx.send(Command::Peers(peers_tick)).await;
+                let smiths_tick = crate::daemon::actor::SmithCommand::Tick;
+                let _ = automation_tx.send(Command::Smiths(smiths_tick)).await;
                 tick.tick().await;
             }
         });

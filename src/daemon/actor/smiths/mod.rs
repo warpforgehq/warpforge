@@ -142,6 +142,8 @@ impl Daemon {
                     .await;
                 let _ = reply.send(result);
             }
+            SmithCommand::Tick => self.smith_check_identities(),
+            SmithCommand::IdentityChecked { changed } => self.smith_identities_checked(changed),
             #[cfg(test)]
             SmithCommand::UseMemory { path } => {
                 if let Ok(memory) = crate::daemon::memory::MemoryStore::open_at(&path) {
@@ -170,6 +172,60 @@ impl Daemon {
             .write(PersistWrite::Smith(Box::new(smith.clone())));
         self.emit(Event::SmithUpdated(Box::new(smith.clone())));
         self.smiths.smiths.insert(smith.id.clone(), smith);
+    }
+
+    /// Compare every Smith's identity repo with its recorded revs off the
+    /// loop. Smiths with a write in flight are skipped: their revs are moving.
+    fn smith_check_identities(&self) {
+        let root = self.smiths.root.clone();
+        let expected: Vec<(String, Revs)> = self
+            .smiths
+            .smiths
+            .values()
+            .filter(|smith| !self.smiths.busy.contains(&smith.id))
+            .filter(|smith| !smith.held.contains(&wire::SmithHold::IdentityChanged))
+            .map(|smith| (smith.id.clone(), recorded(smith)))
+            .collect();
+        if expected.is_empty() {
+            return;
+        }
+        let tx = self.cmd_tx.clone();
+        tokio::spawn(async move {
+            let changed = tokio::task::spawn_blocking(move || {
+                expected
+                    .into_iter()
+                    .filter(|(id, revs)| !identity::is_unchanged(&identity::repo(&root, id), revs))
+                    .collect::<Vec<_>>()
+            })
+            .await
+            .unwrap_or_default();
+            if !changed.is_empty() {
+                let _ = tx
+                    .send(crate::daemon::actor::Command::Smiths(
+                        SmithCommand::IdentityChecked { changed },
+                    ))
+                    .await;
+            }
+        });
+    }
+
+    /// Hold each Smith whose files changed, unless an edit of ours landed
+    /// since the check began: then the revs it was checked against are stale.
+    fn smith_identities_checked(&mut self, changed: Vec<(String, Revs)>) {
+        for (id, checked) in changed {
+            if self.smiths.busy.contains(&id) {
+                continue;
+            }
+            let Some(mut smith) = self.smiths.smiths.get(&id).cloned() else {
+                continue;
+            };
+            if recorded(&smith) != checked || smith.held.contains(&wire::SmithHold::IdentityChanged)
+            {
+                continue;
+            }
+            set_hold(&mut smith, wire::SmithHold::IdentityChanged, true);
+            self.smith_put(smith);
+        }
     }
 
     /// @param task_id a task
