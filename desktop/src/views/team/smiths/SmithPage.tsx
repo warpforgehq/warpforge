@@ -68,7 +68,7 @@ export function SmithPage({ smith, snapshot, tab = "chat", onOpenTask, onDeleted
   return (
     <section
       aria-label={smith.name}
-      className="mx-auto flex min-h-0 w-full min-w-0 max-w-[920px] flex-1 flex-col px-8 pt-6"
+      className="mx-auto flex min-h-0 w-full min-w-0 flex-1 flex-col p-2"
     >
       <header className="flex items-center gap-3.5">
         <SmithAvatar smith={smith} size="size-10" className="[&>span]:text-base" />
