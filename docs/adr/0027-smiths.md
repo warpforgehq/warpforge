@@ -183,7 +183,20 @@ it: adopting would make it a board task and orphan the Smith.
 **The thread coordinates; it never edits code.** The thread session runs with
 the advisor's read-only enforcement for file and shell writes (ADR 0022's four
 places), and its bridge runs as `WF_MODE=thread`: the advisor's read-only tools
-plus the coordinating ones below. It starts on its first message. Code changes happen only in a work session. This is the delegation
+plus the coordinating ones below. It starts on its first message.
+
+*Amended (2026-10-18):* the thread does not take the advisor's harness plan
+mode. A plan mode's own prompt makes the model refuse `start_work` and the
+board tools as "changes" (seen live on opencode and Claude), which leaves a
+thread that cannot act. Each harness runs in the mode where it asks before an
+edit or a command, and the daemon denies the ask: Claude `default` (not the
+`auto` a fresh task gets), Codex `read-only` (its sandbox keeps the shell
+read-only), opencode `build` with `permission.edit` and `permission.bash` set
+to `ask` through `OPENCODE_CONFIG_CONTENT`. A permission request for a
+warpforge tool the thread's bridge serves is allowed; everything else is
+denied, and `fs/write_text_file` is refused as before. Residual risk: a
+command the user's own Claude settings allow without asking runs without a
+request to deny. Code changes happen only in a work session. This is the delegation
 rule MonoCode wrote into prompts, enforced in code: a thread cannot do the work
 itself, however it is worded. What the thread can do, all P1:
 
@@ -438,6 +451,9 @@ rewrite a soul is the case #120 exists for.
 14. **Every work session the thread started reports back to it once, on
     settle.** (`actor/smiths/`) The user asked there; a result that lands only
     on the board is a result they have to go looking for.
+15. **A thread never runs in a harness plan mode.** (`advisor/prompt.rs`
+    `thread_mode`) Read-only comes from the harness asking and the daemon
+    denying; a plan mode turns the thread's own tools into refusals.
 
 ## Consequences
 

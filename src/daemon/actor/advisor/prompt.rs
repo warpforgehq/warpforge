@@ -147,6 +147,26 @@ pub(crate) fn read_only_mode(options: &[wire::ConfigOption]) -> Option<(String, 
     })
 }
 
+/// The session mode a Smith's thread runs in. A plan mode is never picked:
+/// its harness prompt makes the model refuse `start_work` and the board tools.
+/// Codex `read-only` keeps its shell sandboxed; Claude `default` asks before
+/// every edit and command, which the daemon denies; opencode runs `build` with
+/// asking permissions (`smiths::permissions::thread_env`).
+/// @param options the selectors the agent reported
+/// @returns the config id and value to set, if any fits
+pub(crate) fn thread_mode(options: &[wire::ConfigOption]) -> Option<(String, String)> {
+    const THREAD: [&str; 5] = ["read-only", "read_only", "readonly", "default", "build"];
+    let mode = options
+        .iter()
+        .find(|o| o.category.as_deref() == Some("mode") || o.id == "mode")?;
+    THREAD.iter().find_map(|wanted| {
+        mode.options
+            .iter()
+            .find(|choice| choice.value.eq_ignore_ascii_case(wanted))
+            .map(|choice| (mode.id.clone(), choice.value.clone()))
+    })
+}
+
 fn section(out: &mut String, heading: &str, items: &[String]) {
     if items.is_empty() {
         return;
@@ -278,9 +298,8 @@ mod tests {
         assert!(later.contains("tried nom"));
     }
 
-    #[test]
-    fn a_read_only_mode_is_picked_from_what_the_agent_advertises() {
-        let mode = |values: &[&str]| wire::ConfigOption {
+    fn mode(values: &[&str]) -> wire::ConfigOption {
+        wire::ConfigOption {
             id: "mode".into(),
             name: "Mode".into(),
             category: Some("mode".into()),
@@ -292,7 +311,11 @@ mod tests {
                     name: (*v).into(),
                 })
                 .collect(),
-        };
+        }
+    }
+
+    #[test]
+    fn a_read_only_mode_is_picked_from_what_the_agent_advertises() {
         let codex = [mode(&["auto", "read-only", "full-access"])];
         assert_eq!(
             read_only_mode(&codex),
@@ -302,5 +325,16 @@ mod tests {
         assert_eq!(read_only_mode(&claude).unwrap().1, "plan");
         assert_eq!(read_only_mode(&[mode(&["build", "yolo"])]), None);
         assert_eq!(read_only_mode(&[]), None);
+    }
+
+    #[test]
+    fn a_thread_never_runs_in_a_plan_mode() {
+        let codex = [mode(&["auto", "read-only", "full-access"])];
+        assert_eq!(thread_mode(&codex).unwrap().1, "read-only");
+        let claude = [mode(&["default", "acceptEdits", "plan", "auto"])];
+        assert_eq!(thread_mode(&claude).unwrap().1, "default");
+        let opencode = [mode(&["build", "plan"])];
+        assert_eq!(thread_mode(&opencode).unwrap().1, "build");
+        assert_eq!(thread_mode(&[mode(&["plan"])]), None);
     }
 }

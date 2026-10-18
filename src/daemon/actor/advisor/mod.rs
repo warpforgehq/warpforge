@@ -147,8 +147,9 @@ impl Daemon {
         self.task_repo_path(&self.advisor_executor_of(task_id)?)
     }
 
-    /// Add the harness's read-only session mode to an advisor's start. Every
-    /// start goes through here, a resume included.
+    /// Add the harness's read-only session mode to an advisor's start, and a
+    /// Smith thread's mode (`prompt::thread_mode`). Every start goes through
+    /// here, a resume included.
     pub(crate) fn advisor_overrides(
         &self,
         task_id: &str,
@@ -165,7 +166,12 @@ impl Daemon {
             .find(|candidate| candidate.id == agent_id)
             .map(|candidate| candidate.models.as_slice())
             .unwrap_or_default();
-        if let Some((id, value)) = prompt::read_only_mode(options) {
+        let mode = if self.is_thread_task(task_id) {
+            prompt::thread_mode(options)
+        } else {
+            prompt::read_only_mode(options)
+        };
+        if let Some((id, value)) = mode {
             overrides.insert(id, value);
         }
         overrides
