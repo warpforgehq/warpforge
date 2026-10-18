@@ -18,13 +18,14 @@ import { daemonQuery } from "../../query";
 import { useUi } from "../../store/ui";
 import { AdvisorPicker } from "./AdvisorPicker";
 import { BasePicker } from "./BasePicker";
-import { ChipDivider, HarnessChip, ProjectChip, ToggleChip } from "./chips";
+import { ChipDivider, HarnessChip, ProjectChip, SmithLockedChips, ToggleChip } from "./chips";
 import { FactoryItems } from "./FactoryItems";
 import { FactoryLocationNote, FactoryOptions } from "./FactoryOptions";
 import { ModeSelector } from "./ModeSelector";
 import { useAdvisorPick } from "./useAdvisorPick";
 import { type FactorySeed, useFactoryBatch } from "./useFactoryBatch";
 import { useFactoryOptions } from "./useFactoryOptions";
+import { useSmithStart } from "./useSmithStart";
 import { splitConfigPicks, useTaskCreation } from "./useTaskCreation";
 import { useTaskSelection } from "./useTaskSelection";
 
@@ -71,6 +72,7 @@ export default function NewTaskDialog({
     changeAgent,
     changeMode,
     changeProject,
+    changeSmith,
     changeWorkflow,
     configPicks,
     currentAgent,
@@ -80,8 +82,10 @@ export default function NewTaskDialog({
     mode,
     probeLoading,
     project,
+    projectSmiths,
     selectedWorkflow,
     setConfigPicks,
+    smith,
     workflow,
     workflows,
   } = useTaskSelection({
@@ -165,6 +169,15 @@ export default function NewTaskDialog({
     worktreeBase,
   });
 
+  const startAsSmith = useSmithStart({
+    backlogItemId,
+    close,
+    onCreated,
+    project,
+    smith,
+    useWorktree,
+  });
+
   const startBatch = async () => {
     if (!workflow) return;
     const ids = await batch.resolveIds();
@@ -193,7 +206,9 @@ export default function NewTaskDialog({
       ? "Start in Factory"
       : mode === "orchestrator"
         ? "Start orchestrator"
-        : "Start task";
+        : smith
+          ? `Start as ${smith.name}`
+          : "Start task";
   const workspaceLine = inFactory ? (
     <FactoryLocationNote options={factory} />
   ) : mode === "orchestrator" ? (
@@ -229,23 +244,33 @@ export default function NewTaskDialog({
           currentAgent ? "Runs " + currentAgent.acpCommand + " for this task" : "Choose a harness"
         }
         onChange={changeAgent}
+        smiths={mode === "single" && !factorySeed ? projectSmiths : undefined}
+        smith={smith}
+        onSmith={changeSmith}
       />
       <ChipDivider />
-      <AgentConfigBar
-        options={agentOptions.map((opt) =>
-          configRole(opt) === "model" && currentAgent?.lastModel
-            ? ({ ...opt, inheritedValue: currentAgent.lastModel } as typeof opt & {
-                inheritedValue: string;
-              })
-            : opt,
-        )}
-        picks={configPicks}
-        loading={probeLoading}
-        onSelect={(option, value) =>
-          setConfigPicks((previous) => ({ ...previous, [option.id]: value }))
-        }
-      />
-      {!factorySeed && (
+      {smith ? (
+        <SmithLockedChips
+          smith={smith}
+          accountLabel={snapshot.accounts?.find((a) => a.id === smith.accountId)?.label}
+        />
+      ) : (
+        <AgentConfigBar
+          options={agentOptions.map((opt) =>
+            configRole(opt) === "model" && currentAgent?.lastModel
+              ? ({ ...opt, inheritedValue: currentAgent.lastModel } as typeof opt & {
+                  inheritedValue: string;
+                })
+              : opt,
+          )}
+          picks={configPicks}
+          loading={probeLoading}
+          onSelect={(option, value) =>
+            setConfigPicks((previous) => ({ ...previous, [option.id]: value }))
+          }
+        />
+      )}
+      {!factorySeed && !smith && (
         <>
           <ChipDivider />
           <AdvisorPicker agents={agentChoices} available={mode === "single"} state={advisor} />
@@ -274,7 +299,7 @@ export default function NewTaskDialog({
           onChange={setWorktreeBase}
         />
       )}
-      {!factorySeed && (
+      {!factorySeed && !smith && (
         <ToggleChip
           active={shareContext}
           icon={Share2}
@@ -352,14 +377,16 @@ export default function NewTaskDialog({
                 filesLoading={filesQuery.isLoading}
                 imageSupported
                 hideSendButton
-                onSend={create}
+                onSend={smith ? startAsSmith : create}
                 toolbar={toolbar}
                 placeholder={
                   selectedWorkflow
                     ? "What should the " + selectedWorkflow.name + " Factory task work on?"
                     : mode === "orchestrator"
                       ? "What should the orchestrator coordinate?"
-                      : "What should the agent do?"
+                      : smith
+                        ? `What should ${smith.name} work on?`
+                        : "What should the agent do?"
                 }
               />
             )}
@@ -396,16 +423,20 @@ export default function NewTaskDialog({
                   </>
                 )}
               </p>
-              <label htmlFor="task-tags" className="sr-only">
-                Tags
-              </label>
-              <input
-                id="task-tags"
-                value={tags}
-                onChange={(event) => setTags(event.target.value)}
-                placeholder="Tags"
-                className="h-8 w-28 shrink-0 rounded-md bg-transparent px-2 text-[13px] transition-colors placeholder:text-muted-foreground/70 hover:bg-secondary/60 focus-visible:bg-secondary/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
+              {!smith && (
+                <>
+                  <label htmlFor="task-tags" className="sr-only">
+                    Tags
+                  </label>
+                  <input
+                    id="task-tags"
+                    value={tags}
+                    onChange={(event) => setTags(event.target.value)}
+                    placeholder="Tags"
+                    className="h-8 w-28 shrink-0 rounded-md bg-transparent px-2 text-[13px] transition-colors placeholder:text-muted-foreground/70 hover:bg-secondary/60 focus-visible:bg-secondary/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </>
+              )}
               <Button
                 type="button"
                 size="sm"
@@ -424,7 +455,7 @@ export default function NewTaskDialog({
               re-centres the column above it. */}
           <div className="min-h-[4.5rem]">
             <RunPreview
-              agent={agent}
+              agent={smith?.agent ?? agent}
               agents={agentChoices}
               mode={mode}
               workflow={selectedWorkflow}

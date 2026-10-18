@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useRunnerStatus } from "@/hooks/useRunner";
+import { useSmiths } from "@/hooks/useSmiths";
+import { useUi } from "@/store/ui";
 
 import type { TaskMode } from "../../components/TaskComposeBar";
 import { daemon } from "../../daemon";
@@ -41,6 +43,17 @@ export function useTaskSelection({
   const [configPicks, setConfigPicks] = useState<Record<string, string | undefined>>({});
   const [mode, setMode] = useState<TaskMode>(initialMode);
   const [workflow, setWorkflow] = useState<string | null>(null);
+  const smiths = useSmiths();
+  const storedSmith = useUi((state) => state.newTaskSmith);
+  const setStoredSmith = useUi((state) => state.setNewTaskSmith);
+  /** The Smiths allowed in the project; New Task can start work as one. */
+  const projectSmiths = useMemo(
+    () => smiths.filter((candidate) => candidate.allowedProjects.includes(project)),
+    [smiths, project],
+  );
+  // Single agent only for now; a pick that no longer fits falls back to the agent.
+  const smith =
+    mode === "single" ? projectSmiths.find((candidate) => candidate.id === storedSmith) : undefined;
 
   const agent = enabledAgents.some((candidate) => candidate.id === selectedAgent)
     ? selectedAgent
@@ -103,9 +116,12 @@ export function useTaskSelection({
   const changeAgent = (nextAgent: string) => {
     setAgentPicked(true);
     setSelectedAgent(nextAgent);
+    setStoredSmith(null);
     // Config options are the harness's own selectors, so these cannot survive.
     setConfigPicks({});
   };
+
+  const changeSmith = (id: string) => setStoredSmith(id);
 
   const changeWorkflow = (nextWorkflow: string | null) => {
     setWorkflow(nextWorkflow);
@@ -149,6 +165,7 @@ export function useTaskSelection({
     changeAgent,
     changeMode,
     changeProject,
+    changeSmith,
     changeWorkflow,
     configPicks,
     currentAgent,
@@ -158,8 +175,10 @@ export function useTaskSelection({
     mode,
     probeLoading,
     project,
+    projectSmiths,
     selectedWorkflow,
     setConfigPicks,
+    smith,
     workflow,
     workflows,
   };
