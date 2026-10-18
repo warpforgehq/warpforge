@@ -454,6 +454,11 @@ rewrite a soul is the case #120 exists for.
 15. **A thread never runs in a harness plan mode.** (`advisor/prompt.rs`
     `thread_mode`) Read-only comes from the harness asking and the daemon
     denying; a plan mode turns the thread's own tools into refusals.
+16. **An orchestrator lead run as a Smith gets both tool sets; its workers
+    carry no persona.** (`mcp/identity.rs` `BridgeMode::SmithOrchestrator`,
+    `actor/smiths/work.rs`) A lead that loses either set either cannot
+    delegate or cannot `start_work`; a worker that inherits the Smith turns
+    one persona into many.
 
 ## Consequences
 
@@ -499,3 +504,27 @@ rewrite a soul is the case #120 exists for.
    handoff rotation, evals and health.
 
 Out of scope, not planned: running habits while the app is closed.
+
+## Addendum (2026-10-18): a Smith as an orchestrator lead
+
+New Task can start a Smith in Orchestrator mode as well as Single agent.
+`smiths.startWork` takes `orchestrator: true`: the work session is created
+through the same `CreateTask` path, tagged `orchestrator-chat` like any lead,
+with the Smith attached — its constitution, soul and journal, its agent,
+model and account, `smithId` for the avatar. It is a work session, not the
+thread: it edits files like any lead, and its `start_work` depth starts at 0,
+so the usual limits apply below it.
+
+Its bridge runs as `WF_MODE=smith-orchestrator` (`BridgeMode::SmithOrchestrator`):
+every orchestrator tool plus `start_work`. The combination is its own mode
+rather than one flag winning over the other — `session_bridge_mode` used to
+return `Orchestrator` for any `orchestrator-chat` task, which would have
+dropped `start_work` without a word. `is_orchestrator()` and
+`may_start_work()` on the mode are the two questions every caller asks.
+
+Workers it spawns with `spawn_agent` are plain agents: no persona, no
+journal, no Smith limits. *Limitation:* the Smith's permissions (write paths,
+push, pull requests) bind the lead only; a worker it spawns is not held to
+them. A Smith that must stay inside those limits should use `start_work`,
+whose sessions run as a Smith. Factory mode stays without Smiths.
+
