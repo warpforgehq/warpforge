@@ -1,5 +1,6 @@
 //! A work session's write paths (ADR 0027): where the daemon sees a write —
-//! ACP `fs/write_text_file` — a path outside them is refused.
+//! ACP `fs/write_text_file` — a path outside them is refused. And how a
+//! thread's harness is kept asking before it edits or runs a command.
 
 use std::path::{Component, Path, PathBuf};
 
@@ -42,7 +43,30 @@ pub(crate) fn write_allowed(cwd: &Path, path: &str, prefixes: &[String]) -> bool
         .any(|prefix| relative.starts_with(prefix.trim_start_matches("./")))
 }
 
+/// opencode's permissions for a Smith's thread, merged over the user's own
+/// config: every edit and command asks, and the daemon denies the ask. Its
+/// `build` mode allows both silently, and its `plan` mode refuses `start_work`.
+const OPENCODE_THREAD_CONFIG: &str = r#"{"permission":{"edit":"ask","bash":"ask"}}"#;
+
 impl Daemon {
+    /// Add what keeps a thread's harness asking to its process environment.
+    /// @param task_id the task starting
+    /// @param agent the agent it runs on
+    /// @param env the agent process's environment
+    pub(crate) fn smith_thread_env(
+        &self,
+        task_id: &str,
+        agent: &str,
+        env: &mut crate::daemon::accounts::AgentEnv,
+    ) {
+        if self.is_smith_thread(task_id) && self.agent_id_of(agent) == "opencode" {
+            env.set.insert(
+                "OPENCODE_CONFIG_CONTENT".into(),
+                OPENCODE_THREAD_CONFIG.into(),
+            );
+        }
+    }
+
     /// Refuse a Smith work session's file write outside its write paths.
     /// @param ctx the policy check
     /// @returns the denial, if the write is outside them
