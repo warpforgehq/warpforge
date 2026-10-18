@@ -38,11 +38,12 @@ pub(crate) struct ChannelCaps {
 }
 
 impl ChannelCaps {
-    /// Count one agent-originated wake in `channel`.
+    /// Whether `channel` takes one more agent-originated wake; counts
+    /// nothing, so a wake another rule refuses is not spent.
     /// @param channel the channel id
     /// @param now the current instant
     /// @returns why it is over the cap
-    pub(crate) fn admit(&mut self, channel: &str, now: Instant) -> Result<(), CapReached> {
+    pub(crate) fn check(&mut self, channel: &str, now: Instant) -> Result<(), CapReached> {
         let window = self.windows.entry(channel.to_string()).or_default();
         drain(window, now);
         if window.wakes.len() >= CHANNEL_WAKES {
@@ -50,8 +51,18 @@ impl ChannelCaps {
             window.alerted = true;
             return Err(CapReached { alert });
         }
-        window.wakes.push_back(now);
         Ok(())
+    }
+
+    /// Count one agent-originated wake in `channel`.
+    /// @param channel the channel id
+    /// @param now the current instant
+    pub(crate) fn count(&mut self, channel: &str, now: Instant) {
+        self.windows
+            .entry(channel.to_string())
+            .or_default()
+            .wakes
+            .push_back(now);
     }
 
     /// The user posted in `channel`: its window starts over.
@@ -95,22 +106,24 @@ mod tests {
     fn the_cap_alerts_once_and_a_reset_or_time_lifts_it() {
         let mut caps = ChannelCaps::default();
         let start = Instant::now();
+        assert!(caps.check("ch_1", start).is_ok());
+        assert!(caps.check("ch_1", start).is_ok(), "a check counts nothing");
         for _ in 0..CHANNEL_WAKES {
-            caps.admit("ch_1", start).unwrap();
+            caps.count("ch_1", start);
         }
-        assert_eq!(caps.admit("ch_1", start), Err(CapReached { alert: true }));
-        assert_eq!(caps.admit("ch_1", start), Err(CapReached { alert: false }));
-        assert!(caps.admit("ch_2", start).is_ok(), "per channel");
+        assert_eq!(caps.check("ch_1", start), Err(CapReached { alert: true }));
+        assert_eq!(caps.check("ch_1", start), Err(CapReached { alert: false }));
+        assert!(caps.check("ch_2", start).is_ok(), "per channel");
 
         caps.reset("ch_1");
-        assert!(caps.admit("ch_1", start).is_ok());
+        assert!(caps.check("ch_1", start).is_ok());
 
-        for _ in 1..CHANNEL_WAKES {
-            caps.admit("ch_1", start).unwrap();
+        for _ in 0..CHANNEL_WAKES {
+            caps.count("ch_1", start);
         }
-        assert!(caps.admit("ch_1", start).is_err());
+        assert!(caps.check("ch_1", start).is_err());
         let later = start + CHANNEL_WINDOW;
         assert_eq!(caps.expire(later), vec!["ch_1".to_string()]);
-        assert!(caps.admit("ch_1", later).is_ok());
+        assert!(caps.check("ch_1", later).is_ok());
     }
 }

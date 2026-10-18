@@ -158,7 +158,7 @@ impl Daemon {
                     continue;
                 }
                 if !self.peers.conversations.is_waiting(&thread, &channel_id) {
-                    if let Err(reached) = self.peers.conversations.caps.admit(&channel_id, now) {
+                    if let Err(reached) = self.peers.conversations.caps.check(&channel_id, now) {
                         if reached.alert {
                             cap_alert = Some(reached.to_string());
                         }
@@ -174,6 +174,7 @@ impl Daemon {
                         }
                         continue;
                     }
+                    self.peers.conversations.caps.count(&channel_id, now);
                 }
             }
             self.peers
