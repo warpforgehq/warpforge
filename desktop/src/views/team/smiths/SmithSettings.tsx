@@ -65,24 +65,26 @@ function SoulCard({ detail }: { detail: SmithDetail }) {
   const voice = voiceOf(form.values.soul);
   return (
     <SettingsCard
-      title="Soul"
-      description="How it talks and decides. It's given to every session the smith runs, so a change shows from its next session on. Warpforge's own ground rules always come first."
+      title="Personality"
+      description={`How ${detail.smith.name} talks and when it acts on its own: Voice, Decision rules and Refusals. Takes effect from its next session; Warpforge's own ground rules always come first.`}
       guide="soul"
       form={form}
+      footer={
+        defaults.data && (
+          <button
+            type="button"
+            className="underline-offset-2 hover:text-foreground hover:underline"
+            onClick={() =>
+              form.set("soul", applyName(defaults.data.soul, form.values.name || detail.smith.name))
+            }
+          >
+            Reset to default
+          </button>
+        )
+      }
     >
-      <dl className="grid gap-x-3 gap-y-0.5 text-xs sm:grid-cols-[auto_1fr]">
-        <dt className="font-medium">Voice</dt>
-        <dd className="text-muted-foreground">how it writes — tone, length, what it leads with</dd>
-        <dt className="font-medium">Decision rules</dt>
-        <dd className="text-muted-foreground">
-          when it acts on its own, when it asks you, when it waits
-        </dd>
-        <dt className="font-medium">Refusals</dt>
-        <dd className="text-muted-foreground">what it won't do, whoever asks</dd>
-      </dl>
       {defaults.data && (
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-muted-foreground">Voice:</span>
+        <div className="flex flex-wrap items-center gap-1.5">
           {defaults.data.presets.map((preset) => (
             <button
               key={preset.id}
@@ -91,7 +93,7 @@ function SoulCard({ detail }: { detail: SmithDetail }) {
               title={preset.description}
               onClick={() => form.set("soul", applyVoice(form.values.soul, preset.voice))}
               className={cn(
-                "rounded-full border px-2 py-0.5 transition-colors",
+                "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
                 voice === preset.voice
                   ? "border-primary bg-primary/10 text-foreground"
                   : "border-border text-muted-foreground hover:text-foreground",
@@ -100,15 +102,6 @@ function SoulCard({ detail }: { detail: SmithDetail }) {
               {preset.label}
             </button>
           ))}
-          <button
-            type="button"
-            className="ml-auto text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-            onClick={() =>
-              form.set("soul", applyName(defaults.data.soul, form.values.name || detail.smith.name))
-            }
-          >
-            Restore default
-          </button>
         </div>
       )}
       <IdentityEditor
@@ -338,9 +331,21 @@ function PermissionsCard({ detail }: { detail: SmithDetail }) {
   );
 }
 
-/** The Smith page's Settings tab: one card per concern, each saved alone. */
+const SECTIONS = [
+  { id: "identity", label: "Identity" },
+  { id: "personality", label: "Personality" },
+  { id: "projects", label: "Projects" },
+  { id: "model", label: "Model & limits" },
+  { id: "permissions", label: "Permissions" },
+  { id: "habits", label: "Habits", note: "soon" },
+] as const;
+
+type SectionId = (typeof SECTIONS)[number]["id"];
+
+/** The Smith page's Settings tab: one section at a time, each saved alone. */
 export function SmithSettings({ smithId, snapshot }: { smithId: string; snapshot: Snapshot }) {
   const detail = useSmithDetail(smithId);
+  const [section, setSection] = useState<SectionId>("identity");
   if (!detail.data) {
     return (
       <div className="flex items-center gap-2 p-4 text-[13px] text-muted-foreground">
@@ -349,17 +354,44 @@ export function SmithSettings({ smithId, snapshot }: { smithId: string; snapshot
       </div>
     );
   }
+  const data = detail.data;
   return (
-    <div className="grid gap-3 pb-4 xl:grid-cols-2">
-      <IdentityCard detail={detail.data} />
-      <ModelCard detail={detail.data} snapshot={snapshot} />
-      <div className="xl:col-span-2">
-        <SoulCard detail={detail.data} />
+    <div className="grid gap-6 pb-4 md:grid-cols-[180px_minmax(0,1fr)]">
+      <nav
+        aria-label="Settings sections"
+        className="flex flex-col gap-px md:sticky md:top-0 md:self-start"
+      >
+        {SECTIONS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            aria-current={section === item.id ? "page" : undefined}
+            onClick={() => setSection(item.id)}
+            className={cn(
+              "rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors",
+              section === item.id
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+            )}
+          >
+            {item.label}
+            {"note" in item && <span className="ml-1 opacity-60">· {item.note}</span>}
+          </button>
+        ))}
+      </nav>
+      <div className="min-w-0 max-w-3xl space-y-10">
+        {section === "identity" && <IdentityCard detail={data} />}
+        {section === "personality" && <SoulCard detail={data} />}
+        {section === "projects" && <ProjectsCard detail={data} snapshot={snapshot} />}
+        {section === "model" && (
+          <>
+            <ModelCard detail={data} snapshot={snapshot} />
+            <LimitsCard detail={data} />
+          </>
+        )}
+        {section === "permissions" && <PermissionsCard detail={data} />}
+        {section === "habits" && <HabitsCard />}
       </div>
-      <ProjectsCard detail={detail.data} snapshot={snapshot} />
-      <LimitsCard detail={detail.data} />
-      <PermissionsCard detail={detail.data} />
-      <HabitsCard />
     </div>
   );
 }
