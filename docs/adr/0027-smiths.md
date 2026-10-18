@@ -455,10 +455,16 @@ rewrite a soul is the case #120 exists for.
     `thread_mode`) Read-only comes from the harness asking and the daemon
     denying; a plan mode turns the thread's own tools into refusals.
 16. **An orchestrator lead run as a Smith gets both tool sets; its workers
-    carry no persona.** (`mcp/identity.rs` `BridgeMode::SmithOrchestrator`,
-    `actor/smiths/work.rs`) A lead that loses either set either cannot
-    delegate or cannot `start_work`; a worker that inherits the Smith turns
-    one persona into many.
+    carry no persona but inherit the lead's write limits.**
+    (`mcp/identity.rs` `BridgeMode::SmithOrchestrator`,
+    `actor/smiths/permissions.rs` `inherited_write_limit`) A lead that loses
+    either set cannot delegate or cannot `start_work`. A worker — a
+    `spawn_agent` child, a workflow it starts and that workflow's stages, a
+    Factory task it queues, and anything spawned below them — gets no
+    `smith_id`, soul, constitution or journal, but carries the lead Smith's
+    write paths as `write_limit`, enforced by the same `fs/write_text_file`
+    check. A worker with the persona turns one Smith into many; a worker
+    without the limit is the way around it.
 
 ## Consequences
 
@@ -522,9 +528,17 @@ return `Orchestrator` for any `orchestrator-chat` task, which would have
 dropped `start_work` without a word. `is_orchestrator()` and
 `may_start_work()` on the mode are the two questions every caller asks.
 
-Workers it spawns with `spawn_agent` are plain agents: no persona, no
-journal, no Smith limits. *Limitation:* the Smith's permissions (write paths,
-push, pull requests) bind the lead only; a worker it spawns is not held to
-them. A Smith that must stay inside those limits should use `start_work`,
-whose sessions run as a Smith. Factory mode stays without Smiths.
+Workers are plain agents: no persona, no journal, their own model. The
+lead's brief is what a worker needs; a persona would bloat every worker
+prompt, flood the Smith's journal, blur who did what and erase the model
+diversity workers and reviewers are chosen for. The only way a Smith gets
+"another itself" stays explicit: `start_work "self"`, within its limits.
+
+What a worker does inherit is the lead's write paths. At creation a task
+under a Smith session — or under a task that already carries a limit —
+copies them into `tasks.write_limit` (snapshotted, so a later edit to the
+Smith does not move running workers), and the fs-write check refuses a
+write outside them as it does for a work session. `push` and `create_pr`
+stay unenforced for workers, as for plain tasks, until #120. Factory mode
+stays without Smiths.
 
