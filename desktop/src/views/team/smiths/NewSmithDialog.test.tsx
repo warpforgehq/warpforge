@@ -128,4 +128,26 @@ describe("NewSmithDialog", () => {
     expect(screen.getByRole("alert").textContent).toContain("already");
     expect(daemonMock.createSmith).not.toHaveBeenCalled();
   });
+
+  it("works in several projects, the first picked as home, and needs at least one", async () => {
+    daemonMock.createSmith.mockResolvedValue({
+      charter: "",
+      smith: smithFixture({ id: "sm_9", name: "Grace" }),
+      soul: "",
+    });
+    show();
+    await screen.findByRole("radio", { name: /Careful/ });
+    await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "Grace");
+    await userEvent.click(screen.getByRole("checkbox", { name: /api/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Create Grace" }));
+    expect(screen.getByRole("alert").textContent).toContain("at least one project");
+    expect(daemonMock.createSmith).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: /warpforge/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /api/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Create Grace" }));
+    expect(daemonMock.createSmith).toHaveBeenCalledWith(
+      expect.objectContaining({ allowedProjects: ["warpforge", "api"], homeProject: "warpforge" }),
+    );
+  });
 });

@@ -188,7 +188,12 @@ export function SmithsBody({ projects, tasks }: Props) {
           aria-label="Project"
           className="h-9 w-full bg-card px-2 font-medium transition-colors hover:bg-accent/60"
         >
-          <SelectValue />
+          <SelectValue>
+            <span className="flex min-w-0 items-center gap-2">
+              <ProjectBadge name={project} />
+              <span className="truncate">{project}</span>
+            </span>
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {projects.map((name) => (

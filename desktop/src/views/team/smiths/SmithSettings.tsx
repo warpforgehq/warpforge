@@ -1,12 +1,7 @@
-import { ChevronDown, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { useState } from "react";
 
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { ProjectMultiSelect } from "@/components/ProjectMultiSelect";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -142,78 +137,20 @@ function CharterCard({ detail }: { detail: SmithDetail }) {
 
 function ProjectsCard({ detail, snapshot }: { detail: SmithDetail; snapshot: Snapshot }) {
   const form = useCardForm(detail, ["allowedProjects"]);
-  const projects = snapshot.projects.map((p) => p.name);
   const home = form.values.homeProject;
-  const extra = form.values.allowedProjects.filter((p) => p !== home);
   return (
     <SettingsCard
       title="Projects"
-      description="Where it may work. It reads its home project's #general."
+      description="Where it may work. It reads its home project's #general; the home project is set when the smith is created."
       form={form}
     >
-      <div className="space-y-2 text-[13px]">
-        <p>
-          <span className="text-muted-foreground">Home: </span>
-          {home}
-        </p>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-muted-foreground">Also in:</span>
-          {extra.length === 0 && <span className="text-muted-foreground">no other project</span>}
-          {extra.map((project) => (
-            <span
-              key={project}
-              className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs"
-            >
-              {project}
-              <button
-                type="button"
-                aria-label={`Remove ${project}`}
-                className="text-muted-foreground hover:text-foreground"
-                onClick={() =>
-                  form.set(
-                    "allowedProjects",
-                    form.values.allowedProjects.filter((p) => p !== project),
-                  )
-                }
-              >
-                <X className="size-3" />
-              </button>
-            </span>
-          ))}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
-              >
-                Projects
-                <ChevronDown className="size-3" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
-              {projects
-                .filter((p) => p !== home)
-                .map((project) => (
-                  <DropdownMenuCheckboxItem
-                    key={project}
-                    className="text-[13px]"
-                    checked={form.values.allowedProjects.includes(project)}
-                    onCheckedChange={(checked) =>
-                      form.set(
-                        "allowedProjects",
-                        checked
-                          ? [...form.values.allowedProjects, project]
-                          : form.values.allowedProjects.filter((p) => p !== project),
-                      )
-                    }
-                  >
-                    {project}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+      <ProjectMultiSelect
+        label="Projects it may work in"
+        projects={snapshot.projects.map((p) => p.name)}
+        value={{ home, projects: [home, ...form.values.allowedProjects.filter((p) => p !== home)] }}
+        homeEditable={false}
+        onChange={(next) => form.set("allowedProjects", next.projects)}
+      />
     </SettingsCard>
   );
 }
