@@ -79,7 +79,7 @@ export function useCardForm(detail: SmithDetail, fields: (keyof SmithFormValues)
 
 /**
  * One Settings section: a heading with what it changes in plain words, its
- * fields, and a footer with Discard and Save that light up once it changes.
+ * fields, and a bar with Discard and Save that appears only once it changes.
  */
 export function SettingsCard({
   title,
@@ -94,22 +94,22 @@ export function SettingsCard({
   /** The Smiths guide's heading anchor for this setting. */
   guide?: string;
   form?: Pick<ReturnType<typeof useCardForm>, "dirty" | "save" | "saving" | "reset">;
-  /** Extra actions at the footer's left, e.g. Reset to default. */
+  /** Extra actions under the fields, e.g. Reset to default. */
   footer?: ReactNode;
   children?: ReactNode;
 }) {
   return (
-    <section aria-label={title} className="space-y-5">
-      <header className="space-y-1">
-        <h3 className="text-[15px] font-semibold">{title}</h3>
+    <section aria-label={title} className="space-y-6">
+      <header className="space-y-1.5">
+        <h3 className="text-lg font-semibold leading-tight">{title}</h3>
         {(description || guide) && (
-          <p className="text-[12.5px] text-muted-foreground">
+          <p className="max-w-xl text-[13px] text-muted-foreground">
             {description}{" "}
             {guide && (
               <button
                 type="button"
                 onClick={() => void openExternalLink(smithsGuideUrl(guide))}
-                className="whitespace-nowrap underline-offset-2 hover:text-foreground hover:underline"
+                className="whitespace-nowrap underline underline-offset-2 hover:text-foreground"
               >
                 Learn more
               </button>
@@ -118,31 +118,17 @@ export function SettingsCard({
         )}
       </header>
       {children}
-      {(form || footer) && (
-        <footer className="flex items-center justify-between gap-3 border-t border-border pt-3">
-          <div className="text-[12.5px] text-muted-foreground">{footer}</div>
-          {form && (
-            <div className="flex shrink-0 gap-1.5">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!form.dirty}
-                onClick={form.reset}
-              >
-                Discard
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                disabled={!form.dirty || form.saving}
-                onClick={() => void form.save()}
-              >
-                Save
-              </Button>
-            </div>
-          )}
-        </footer>
+      {footer && <div className="text-[12.5px] text-muted-foreground">{footer}</div>}
+      {form?.dirty && (
+        <div className="sticky bottom-0 z-10 -mx-1 flex items-center gap-2 border-t border-border bg-background px-1 py-3">
+          <span className="mr-auto text-[12.5px] text-muted-foreground">Unsaved changes</span>
+          <Button type="button" variant="outline" size="sm" onClick={form.reset}>
+            Discard
+          </Button>
+          <Button type="button" size="sm" disabled={form.saving} onClick={() => void form.save()}>
+            Save
+          </Button>
+        </div>
       )}
     </section>
   );

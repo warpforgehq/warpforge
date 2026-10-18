@@ -48,11 +48,7 @@ function IdentityCard({ detail }: { detail: SmithDetail }) {
         </label>
         <div className="space-y-1.5">
           <span className="text-xs text-muted-foreground">Colour</span>
-          <ColorPicker
-            value={form.values.color}
-            name={form.values.name}
-            onChange={(index) => form.set("color", index)}
-          />
+          <ColorPicker value={form.values.color} onChange={(index) => form.set("color", index)} />
         </div>
       </div>
     </SettingsCard>
@@ -66,7 +62,7 @@ function SoulCard({ detail }: { detail: SmithDetail }) {
   return (
     <SettingsCard
       title="Personality"
-      description={`How ${detail.smith.name} talks and when it acts on its own: Voice, Decision rules and Refusals. Takes effect from its next session; Warpforge's own ground rules always come first.`}
+      description={`How ${detail.smith.name} talks and when it acts on its own. Applies from its next session.`}
       guide="soul"
       form={form}
       footer={
@@ -84,32 +80,41 @@ function SoulCard({ detail }: { detail: SmithDetail }) {
       }
     >
       {defaults.data && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {defaults.data.presets.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              aria-pressed={voice === preset.voice}
-              title={preset.description}
-              onClick={() => form.set("soul", applyVoice(form.values.soul, preset.voice))}
-              className={cn(
-                "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
-                voice === preset.voice
-                  ? "border-primary bg-primary/10 text-foreground"
-                  : "border-border text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {preset.label}
-            </button>
-          ))}
+        <div className="space-y-2">
+          <p className="text-[12.5px] font-medium">Start from</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {defaults.data.presets.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                aria-pressed={voice === preset.voice}
+                title={preset.description}
+                onClick={() => form.set("soul", applyVoice(form.values.soul, preset.voice))}
+                className={cn(
+                  "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+                  voice === preset.voice
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
-      <IdentityEditor
-        label="Soul"
-        language="markdown"
-        value={form.values.soul}
-        onChange={(next) => form.set("soul", next)}
-      />
+      <div className="space-y-2">
+        <p className="text-[12.5px] font-medium">Soul</p>
+        <IdentityEditor
+          label="Soul"
+          language="markdown"
+          value={form.values.soul}
+          onChange={(next) => form.set("soul", next)}
+        />
+        <p className="text-xs text-muted-foreground">
+          Markdown. Voice, Decision rules and Refusals are the sections {detail.smith.name} reads.
+        </p>
+      </div>
     </SettingsCard>
   );
 }
@@ -356,7 +361,7 @@ export function SmithSettings({ smithId, snapshot }: { smithId: string; snapshot
   }
   const data = detail.data;
   return (
-    <div className="grid gap-6 pb-4 md:grid-cols-[180px_minmax(0,1fr)]">
+    <div className="grid gap-10 pb-4 md:grid-cols-[168px_minmax(0,1fr)]">
       <nav
         aria-label="Settings sections"
         className="flex flex-col gap-px md:sticky md:top-0 md:self-start"
@@ -379,7 +384,7 @@ export function SmithSettings({ smithId, snapshot }: { smithId: string; snapshot
           </button>
         ))}
       </nav>
-      <div className="min-w-0 max-w-3xl space-y-10">
+      <div className="min-w-0 space-y-12">
         {section === "identity" && <IdentityCard detail={data} />}
         {section === "personality" && <SoulCard detail={data} />}
         {section === "projects" && <ProjectsCard detail={data} snapshot={snapshot} />}
