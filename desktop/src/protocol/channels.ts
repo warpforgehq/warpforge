@@ -15,4 +15,6 @@ export interface Channel {
   createdAt: number;
   /** When the newest post the daemon still holds was made. */
   lastPostAt?: number;
+  /** Members on a turn this channel started, by Smith id. */
+  working?: string[];
 }

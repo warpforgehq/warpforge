@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { daemon } from "@/daemon";
 import { useSmiths } from "@/hooks/useSmiths";
 import { type Conversation, type MentionCandidate, userWritesIn } from "@/lib/peerFeed";
-import type { PeerControls, PeerMessage } from "@/protocol";
+import type { Channel, PeerControls, PeerMessage } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
 
 import { ChannelEmpty } from "./channels/ChannelEmpty";
@@ -37,6 +37,20 @@ export async function changeControls(run: () => Promise<PeerControls>) {
   }
 }
 
+/** Who is answering in a named channel right now. */
+function WorkingLine({ channel }: { channel: Channel | undefined }) {
+  const names = (channel?.working ?? [])
+    .map((id) => channel?.members.find((member) => member.smithId === id)?.name)
+    .filter((name): name is string => !!name);
+  if (names.length === 0) return null;
+  const who = names.length === 1 ? `${names[0]} is` : `${names.join(", ")} are`;
+  return (
+    <p role="status" className="shrink-0 animate-pulse px-1 pb-1 text-xs text-muted-foreground">
+      {who} replying…
+    </p>
+  );
+}
+
 /** One thread of the Team view: its records oldest first, its controls, and
  *  the composer. */
 export function Thread({
@@ -49,9 +63,10 @@ export function Thread({
 }: Props) {
   const controls = usePeersStore((state) => state.controls);
   const [prefill, setPrefill] = useState<{ nonce: number; text: string } | null>(null);
-  const firstSmith = useSmiths().find((smith) =>
-    smith.allowedProjects.includes(conversation.project),
-  );
+  const smiths = useSmiths();
+  const firstSmith = smiths.find((smith) => smith.allowedProjects.includes(conversation.project));
+  const smithOfThread = (taskId: string | undefined) =>
+    taskId ? smiths.find((smith) => smith.threadTaskId === taskId) : undefined;
   const channel = usePeersStore((state) =>
     conversation.channelId ? state.channels[conversation.channelId] : undefined,
   );
@@ -155,9 +170,11 @@ export function Thread({
             label={label}
             onOpenTask={onOpenTask}
             onStartSession={startFrom}
+            smith={smithOfThread(record.fromTask)}
           />
         ))}
       </ol>
+      <WorkingLine channel={channel} />
       {userWritesIn(conversation) ? (
         <TeamComposer
           key={conversation.key}
