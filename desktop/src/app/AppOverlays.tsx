@@ -117,7 +117,7 @@ export function AppOverlays({
                   summary="Agent is writing .warpforge.yaml in background"
                   onDismiss={() => toast.dismiss(sonnerId)}
                   onOpen={() => {
-                    useUi.getState().openTask(taskId);
+                    useUi.getState().revealTask(taskId);
                     toast.dismiss(sonnerId);
                   }}
                 />

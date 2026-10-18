@@ -1,5 +1,6 @@
 import { type BacklogParams, DEFAULT_BACKLOG_PARAMS } from "@/components/backlog/types";
 import { forgetProject } from "@/lib/sessionStore";
+import { useSmithsStore } from "@/store/smiths";
 import { browser } from "@/views/task-detail/browser/browserClient";
 import { clearBrowserSession } from "@/views/task-detail/browser/browserSession";
 
@@ -81,6 +82,13 @@ export interface NavState {
   /** Make a project the subject the content column is showing. */
   openProject: (id: string) => void;
   focusAttentionTask: (id: string) => void;
+  /**
+   * Open a task from outside the sidebar body (a notification, toast, Mission
+   * Control, a link) and switch the sidebar to the mode that shows it: a
+   * Smith's thread opens that Smith in Smiths mode, any other task opens in
+   * Tasks mode, revealed in the tree. Clicks inside the body use `openTask`.
+   */
+  revealTask: (id: string, nav?: TaskOpenNav) => void;
   setRepositoryOperation: (operation: RepositoryOperation | null) => void;
   toggleChat: () => void;
   toggleDiff: () => void;
@@ -178,6 +186,31 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   openTeam: (teamSelection) =>
     set({ openTaskId: null, openTaskNav: null, teamSelection, view: "team" }),
   markTeamSeen: (at) => set((s) => (at > s.teamSeenAt ? { teamSeenAt: at } : {})),
+  revealTask: (id, nav) => {
+    const smith = Object.values(useSmithsStore.getState().smiths).find(
+      (candidate) => candidate.threadTaskId === id,
+    );
+    if (smith) {
+      set({
+        openTaskId: null,
+        openTaskNav: null,
+        sidebarMode: "team",
+        teamSelection: { id: smith.id, kind: "teammate" },
+        view: "team",
+      });
+      return;
+    }
+    set((s) => ({
+      activeSurface: nav?.surface ?? DEFAULT_TASK_SURFACE,
+      attentionTargetId: id,
+      attentionTargetNonce: s.attentionTargetNonce + 1,
+      lastTaskId: id,
+      openTaskId: id,
+      openTaskNav: nav ?? null,
+      rightPanel: null,
+      sidebarMode: "tasks",
+    }));
+  },
   focusAttentionTask: (attentionTargetId) =>
     set((s) => ({
       attentionTargetId,

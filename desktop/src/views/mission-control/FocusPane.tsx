@@ -159,7 +159,7 @@ function FocusPane({
   const imageSupported = capability?.kind === "prompt_capabilities" ? capability.image : false;
   const activity = sessionActivity(task, stream);
   const openTask = useUi((s) => s.openTask);
-  const openTaskWithNav = useUi((s) => s.openTaskWithNav);
+  const revealTask = useUi((s) => s.revealTask);
   const composerRef = useRef<import("../../components/Composer").ComposerHandle>(null);
   const knownFilePaths = useMemo(
     () => new Set(projectFiles.map((file) => file.path)),
@@ -176,13 +176,12 @@ function FocusPane({
     [knownFilePaths],
   );
   const openFile = useCallback(
-    (path: string) => openTaskWithNav(task.id, { surface: "files", path }),
-    [openTaskWithNav, task.id],
+    (path: string) => revealTask(task.id, { surface: "files", path }),
+    [revealTask, task.id],
   );
   const openFileDiff = useCallback(
-    (path: string, hunks?: EditHunk[]) =>
-      openTaskWithNav(task.id, { surface: "diff", path, hunks }),
-    [openTaskWithNav, task.id],
+    (path: string, hunks?: EditHunk[]) => revealTask(task.id, { surface: "diff", path, hunks }),
+    [revealTask, task.id],
   );
 
   return (
