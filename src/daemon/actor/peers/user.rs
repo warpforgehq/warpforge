@@ -46,7 +46,6 @@ impl Daemon {
             Some(id) => self.conversation_members(id, None),
             None => Vec::new(),
         };
-        self.conversation_wake(&mut record).await;
 
         let mut reached = Vec::new();
         let mut notices = Vec::new();
@@ -61,6 +60,7 @@ impl Daemon {
             }
         }
         self.peers_set_mentions(&mut record, reached);
+        self.conversation_wake(&mut record).await;
         Ok(wire::PeerSendResult {
             relation: wire::PeerRelation::Team,
             message: Some(record),
