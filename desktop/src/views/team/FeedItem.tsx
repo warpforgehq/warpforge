@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { type MentionLook, remarkMentions } from "@/lib/markdownMentions";
 import type { MentionCandidate } from "@/lib/peerFeed";
 import { smithColor } from "@/lib/smithColors";
+import { cn } from "@/lib/utils";
 import type { PeerMessage } from "@/protocol";
 
 import { HELD_HINT, STATUS_META, feedTime, isUserPost } from "./labels";
@@ -28,22 +29,28 @@ interface Props {
 
 const SESSION_MENTION = "rounded bg-secondary px-1 font-medium text-foreground";
 const SMITH_MENTION = "rounded px-1 font-medium";
+const AUTHOR = "text-sm font-semibold";
 
 function TaskLink({
   id,
   label,
   onOpenTask,
+  className = "font-medium",
 }: {
   id: string | undefined;
   label: (id: string | null | undefined) => string;
   onOpenTask: (id: string) => void;
+  className?: string;
 }): ReactNode {
-  if (!id) return <span className="font-medium text-foreground">{label(id)}</span>;
+  if (!id) return <span className={cn("text-foreground", className)}>{label(id)}</span>;
   return (
     <button
       type="button"
       onClick={() => onOpenTask(id)}
-      className="min-w-0 truncate font-medium text-foreground hover:text-primary hover:underline"
+      className={cn(
+        "min-w-0 truncate text-foreground hover:text-primary hover:underline",
+        className,
+      )}
     >
       {label(id)}
     </button>
@@ -89,11 +96,11 @@ export function FeedItem({
     <li className="group space-y-1 rounded-md px-1 py-1.5">
       <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
         {smith && <SmithAvatar smith={smith} size="size-5" />}
-        <TaskLink id={record.fromTask} label={label} onOpenTask={onOpenTask} />
+        <TaskLink id={record.fromTask} label={label} onOpenTask={onOpenTask} className={AUTHOR} />
         {record.toTask && (
           <>
             <ArrowRight aria-hidden className="size-3 shrink-0" />
-            <TaskLink id={record.toTask} label={label} onOpenTask={onOpenTask} />
+            <TaskLink id={record.toTask} label={label} onOpenTask={onOpenTask} className={AUTHOR} />
           </>
         )}
         <span className="shrink-0 text-xs">{feedTime(record.createdAt)}</span>
