@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 import type { AgentConfig, WorkflowMeta } from "../protocol";
 import { AgentLogo } from "./AgentLogo";
+import { SmithAvatar } from "./SmithAvatar";
 import type { TaskMode } from "./TaskComposeBar";
 
 /**
@@ -29,6 +30,7 @@ export function RunPreview({
   mode,
   workflow,
   deliver = false,
+  smith,
 }: {
   agent: string;
   agents: AgentConfig[];
@@ -36,8 +38,14 @@ export function RunPreview({
   workflow: WorkflowMeta | null;
   /** Factory mode opens a draft PR when the run succeeds. */
   deliver?: boolean;
+  /** The Smith the session runs as, in place of the agent's name and logo. */
+  smith?: { id: string; name: string; color?: number };
 }) {
-  const agentName = agentDisplayName(agent, agents.find((a) => a.id === agent)?.displayName);
+  const agentName =
+    smith?.name ?? agentDisplayName(agent, agents.find((a) => a.id === agent)?.displayName);
+  const leadIcon = smith ? (
+    <SmithAvatar smith={smith} size="size-4" className="[&>span]:text-[9px]" />
+  ) : null;
   const logo = (id: string) => (
     <AgentLogo
       agentId={id}
@@ -110,7 +118,7 @@ export function RunPreview({
         <Node
           className="w-56 flex-none"
           lead
-          icon={logo(agent)}
+          icon={leadIcon ?? logo(agent)}
           title={agentName + " leads"}
           caption="your conversation"
         />
@@ -135,7 +143,11 @@ export function RunPreview({
         caption="plus any files you @mention"
       />
       <Arrow />
-      <Node icon={logo(agent)} title={agentName} caption="works until the task is done" />
+      <Node
+        icon={leadIcon ?? logo(agent)}
+        title={agentName}
+        caption="works until the task is done"
+      />
       <Arrow />
       <Node
         icon={<FileDiff aria-hidden className="size-4 shrink-0 text-muted-foreground" />}

@@ -51,9 +51,11 @@ export function useTaskSelection({
     () => smiths.filter((candidate) => candidate.allowedProjects.includes(project)),
     [smiths, project],
   );
-  // Single agent only for now; a pick that no longer fits falls back to the agent.
+  // Not in Factory; a pick that no longer fits falls back to the agent.
   const smith =
-    mode === "single" ? projectSmiths.find((candidate) => candidate.id === storedSmith) : undefined;
+    mode === "factory"
+      ? undefined
+      : projectSmiths.find((candidate) => candidate.id === storedSmith);
 
   const agent = enabledAgents.some((candidate) => candidate.id === selectedAgent)
     ? selectedAgent

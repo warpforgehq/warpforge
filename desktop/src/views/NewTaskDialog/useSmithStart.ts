@@ -10,6 +10,7 @@ import { useUi } from "../../store/ui";
  * @param props.smith the Smith picked, if any
  * @param props.project the project to work in
  * @param props.useWorktree whether to work in an isolated worktree
+ * @param props.orchestrator whether it leads as an orchestrator
  * @param props.backlogItemId the backlog item the work comes from, if any
  * @param props.close closes New Task
  * @param props.onCreated called with the new task's id
@@ -19,6 +20,7 @@ export function useSmithStart({
   smith,
   project,
   useWorktree,
+  orchestrator,
   backlogItemId,
   close,
   onCreated,
@@ -26,6 +28,7 @@ export function useSmithStart({
   smith: Smith | undefined;
   project: string;
   useWorktree: boolean;
+  orchestrator: boolean;
   backlogItemId?: string | null;
   close: () => void;
   onCreated?: (taskId: string) => void;
@@ -45,8 +48,10 @@ export function useSmithStart({
       taskId = await daemon.startSmithWork(smith.id, {
         backlogItemId,
         brief,
+        orchestrator,
         project,
-        worktree: useWorktree,
+        // A lead and its workers share the checkout, as for any orchestrator.
+        worktree: orchestrator ? false : useWorktree,
       });
     } catch (error) {
       toast.error(`Could not start ${smith.name}'s work`, {
@@ -56,7 +61,9 @@ export function useSmithStart({
     }
     onCreated?.(taskId);
     revealTask(taskId);
-    toast.success(`${smith.name} started`, { description: `Work session in ${project}` });
+    toast.success(`${smith.name} started`, {
+      description: orchestrator ? `Leading in ${project}` : `Work session in ${project}`,
+    });
     close();
   };
 }

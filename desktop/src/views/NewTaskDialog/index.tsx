@@ -173,6 +173,7 @@ export default function NewTaskDialog({
     backlogItemId,
     close,
     onCreated,
+    orchestrator: mode === "orchestrator",
     project,
     smith,
     useWorktree,
@@ -205,7 +206,9 @@ export default function NewTaskDialog({
     : inFactory
       ? "Start in Factory"
       : mode === "orchestrator"
-        ? "Start orchestrator"
+        ? smith
+          ? `Start ${smith.name} as orchestrator`
+          : "Start orchestrator"
         : smith
           ? `Start as ${smith.name}`
           : "Start task";
@@ -244,7 +247,7 @@ export default function NewTaskDialog({
           currentAgent ? "Runs " + currentAgent.acpCommand + " for this task" : "Choose a harness"
         }
         onChange={changeAgent}
-        smiths={mode === "single" && !factorySeed ? projectSmiths : undefined}
+        smiths={mode !== "factory" && !factorySeed ? projectSmiths : undefined}
         smith={smith}
         onSmith={changeSmith}
       />
@@ -383,7 +386,9 @@ export default function NewTaskDialog({
                   selectedWorkflow
                     ? "What should the " + selectedWorkflow.name + " Factory task work on?"
                     : mode === "orchestrator"
-                      ? "What should the orchestrator coordinate?"
+                      ? smith
+                        ? `What should ${smith.name} coordinate?`
+                        : "What should the orchestrator coordinate?"
                       : smith
                         ? `What should ${smith.name} work on?`
                         : "What should the agent do?"
@@ -460,6 +465,7 @@ export default function NewTaskDialog({
               mode={mode}
               workflow={selectedWorkflow}
               deliver={inFactory && factory.deliver}
+              smith={smith}
             />
           </div>
         </div>
