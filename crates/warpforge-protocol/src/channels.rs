@@ -24,4 +24,7 @@ pub struct Channel {
     /// When the newest post the daemon still holds was made.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_post_at: Option<u64>,
+    /// Members on a turn this channel started, by Smith id.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub working: Vec<String>,
 }

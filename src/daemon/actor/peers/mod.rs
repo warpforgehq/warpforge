@@ -5,6 +5,7 @@
 mod channels;
 mod command;
 mod controls;
+mod conversation;
 mod delivery;
 mod digest;
 mod directory;
@@ -27,6 +28,8 @@ use crate::daemon::store::{PeerControl, Store, StoredChannel};
 use crate::daemon::task::now_secs;
 
 pub use command::PeerCommand;
+#[cfg(test)]
+pub(crate) use conversation::CHANNEL_WAKES;
 pub(crate) use directory::{is_peer_visible, peer_info};
 
 pub(crate) const MUTED_SELF: &str = "the user muted this session's peer messages";
@@ -54,6 +57,8 @@ pub(crate) struct PeersState {
     posts: HashMap<(String, Option<String>), VecDeque<wire::PeerMessage>>,
     /// Named channels, by id.
     channels: HashMap<String, StoredChannel>,
+    /// Channel turns waiting for and given to Smith threads.
+    conversations: conversation::Conversations,
     /// Records already carried by a prompt whose turn has not started, per
     /// receiving task, so a second queued prompt does not repeat them.
     reserved: HashMap<String, HashSet<u64>>,
@@ -77,6 +82,7 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>) -> PeersState {
         held: Vec::new(),
         posts: HashMap::new(),
         channels: HashMap::new(),
+        conversations: Default::default(),
         reserved: HashMap::new(),
         removing: HashSet::new(),
     };
@@ -144,8 +150,15 @@ impl Daemon {
                 reply,
             } => self.peers_feed(project, before, limit, channel, reply),
             PeerCommand::Alerts { reply } => {
-                let mut alerts: Vec<_> = self.peers.alerts.values().cloned().collect();
+                let mut alerts: Vec<_> = self
+                    .peers
+                    .alerts
+                    .values()
+                    .chain(self.peers.conversations.alerts())
+                    .cloned()
+                    .collect();
                 alerts.sort_by_key(|record| record.id);
+                alerts.dedup_by_key(|record| record.id);
                 let _ = reply.send(Ok(alerts));
             }
             PeerCommand::Controls { reply } => {
@@ -237,6 +250,7 @@ impl Daemon {
             PeerCommand::Tick => {
                 self.peers.guard.expire(Instant::now());
                 self.peers_end_alerts();
+                self.conversation_tick();
             }
         }
     }

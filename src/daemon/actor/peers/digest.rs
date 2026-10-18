@@ -128,6 +128,9 @@ impl Daemon {
             prompt.content.insert(0, PromptContent::Context(block));
             prompt.peer.absorb(delivery);
         }
+        if let Some(turn) = self.peers.conversations.unstarted(task_id) {
+            prompt.peer.cursor = prompt.peer.cursor.max(Some(turn.newest));
+        }
         prompt
     }
 
@@ -148,13 +151,19 @@ impl Daemon {
                 && !reserved.is_some_and(|r| r.contains(&post.id))
         };
         let rooms = self.channels_of(task_id);
+        // A channel turn's own prompt already shows that channel's posts.
+        let shown = self
+            .peers
+            .conversations
+            .unstarted(task_id)
+            .map(|turn| turn.channel_id.as_str());
         let posts: Vec<wire::PeerMessage> = self
             .peers
             .posts
             .iter()
             .filter(|((p, channel), _)| match channel {
                 None => *p == project,
-                Some(id) => rooms.contains_key(id),
+                Some(id) => rooms.contains_key(id) && shown != Some(id.as_str()),
             })
             .flat_map(|(_, posts)| posts)
             .filter(unseen_post)

@@ -157,7 +157,14 @@ impl Daemon {
     ) -> Result<wire::PeerSendResult, String> {
         let candidates = self.peers_mention_candidates(project, Some(from));
         let mentions = resolve_mentions(&text, &candidates)?;
+        let woken = match channel.as_deref() {
+            Some(id) => self.conversation_members(id, Some(from)),
+            None => Vec::new(),
+        };
         let mut result = self.peers_post(from, project, text.clone(), mentions.clone(), channel)?;
+        if let Some(post) = result.message.as_mut() {
+            self.conversation_wake(post).await;
+        }
         if mentions.is_empty() {
             return Ok(result);
         }
@@ -165,6 +172,10 @@ impl Daemon {
         let mut reached = Vec::new();
         let mut notices = Vec::new();
         for to in mentions {
+            if woken.contains(&to) {
+                reached.push(to);
+                continue;
+            }
             match self
                 .peers_direct(from, project, &to, text.clone(), post_id)
                 .await

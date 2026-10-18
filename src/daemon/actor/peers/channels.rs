@@ -242,7 +242,7 @@ impl Daemon {
         view
     }
 
-    fn channel_view(&self, channel: &StoredChannel) -> wire::Channel {
+    pub(super) fn channel_view(&self, channel: &StoredChannel) -> wire::Channel {
         let members = channel
             .members
             .iter()
@@ -259,6 +259,14 @@ impl Daemon {
             .get(&key)
             .and_then(|posts| posts.back())
             .map(|p| p.created_at);
+        let working = self
+            .peers
+            .conversations
+            .working_in(&channel.id)
+            .iter()
+            .filter_map(|thread| self.smith_of_thread(thread))
+            .map(|smith| smith.id.clone())
+            .collect();
         wire::Channel {
             id: channel.id.clone(),
             project: channel.project.clone(),
@@ -266,6 +274,7 @@ impl Daemon {
             members,
             created_at: channel.created_at,
             last_post_at,
+            working,
         }
     }
 }

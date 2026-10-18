@@ -4,7 +4,7 @@
 use super::sessions::{ada_on, agent, prompt_texts, wait, wait_idle};
 use super::*;
 
-async fn peers<T>(
+pub(super) async fn peers<T>(
     daemon: &DaemonHandle,
     build: impl FnOnce(tokio::sync::oneshot::Sender<Result<T, String>>) -> PeerCommand,
 ) -> Result<T, String> {
@@ -13,7 +13,7 @@ async fn peers<T>(
     rx.await.unwrap()
 }
 
-async fn channel(
+pub(super) async fn channel(
     daemon: &DaemonHandle,
     project: &str,
     name: &str,
@@ -26,7 +26,11 @@ async fn channel(
     .await
 }
 
-async fn join(daemon: &DaemonHandle, id: &str, smith_id: &str) -> Result<wire::Channel, String> {
+pub(super) async fn join(
+    daemon: &DaemonHandle,
+    id: &str,
+    smith_id: &str,
+) -> Result<wire::Channel, String> {
     peers(daemon, |reply| PeerCommand::ChannelsSetMember {
         id: id.into(),
         smith_id: smith_id.into(),
@@ -36,7 +40,7 @@ async fn join(daemon: &DaemonHandle, id: &str, smith_id: &str) -> Result<wire::C
     .await
 }
 
-async fn send(
+pub(super) async fn send(
     daemon: &DaemonHandle,
     from: &str,
     to: &str,
@@ -51,7 +55,7 @@ async fn send(
     .await
 }
 
-async fn post(daemon: &DaemonHandle, project: &str, channel: Option<&str>, text: &str) {
+pub(super) async fn post(daemon: &DaemonHandle, project: &str, channel: Option<&str>, text: &str) {
     peers(daemon, |reply| PeerCommand::UserPost {
         project: project.into(),
         text: text.into(),
@@ -62,7 +66,7 @@ async fn post(daemon: &DaemonHandle, project: &str, channel: Option<&str>, text:
     .unwrap();
 }
 
-async fn feed(daemon: &DaemonHandle, channel: Option<&str>) -> Vec<wire::PeerMessage> {
+pub(super) async fn feed(daemon: &DaemonHandle, channel: Option<&str>) -> Vec<wire::PeerMessage> {
     peers(daemon, |reply| PeerCommand::Feed {
         project: None,
         before: None,
@@ -200,13 +204,14 @@ async fn a_smith_reads_its_channels_and_general_under_one_cursor() {
     let design = channel(&daemon, "demo", "design").await.unwrap();
     let ops = channel(&daemon, "other", "ops").await.unwrap();
     let secret = channel(&daemon, "demo", "secret").await.unwrap();
-    join(&daemon, &design.id, &ada.id).await.unwrap();
-    join(&daemon, &ops.id, &ada.id).await.unwrap();
     send(&daemon, "t_a", "team", "general-one").await.unwrap();
     post(&daemon, "demo", Some(&design.id), "design-one").await;
     post(&daemon, "other", Some(&ops.id), "ops-one").await;
     post(&daemon, "demo", Some(&secret.id), "secret-one").await;
     post(&daemon, "other", None, "other-general").await;
+    // Joined after the posts, so they wake nobody and wait for the digest.
+    join(&daemon, &design.id, &ada.id).await.unwrap();
+    join(&daemon, &ops.id, &ada.id).await.unwrap();
 
     daemon
         .session_prompt(&ada.thread_task_id, "catch up", vec![])
@@ -229,14 +234,14 @@ async fn a_smith_reads_its_channels_and_general_under_one_cursor() {
     }
     wait_idle(&daemon, &ada.thread_task_id).await;
 
-    post(&daemon, "other", Some(&ops.id), "ops-two").await;
+    send(&daemon, "t_a", "team", "general-two").await.unwrap();
     daemon
         .session_prompt(&ada.thread_task_id, "again", vec![])
         .await
         .unwrap();
     wait("the thread's next prompt", || prompt_texts(&log).len() == 2).await;
     let next = &prompt_texts(&thread_agent.log)[1];
-    assert!(next.contains("ops-two"), "{next}");
+    assert!(next.contains("general-two"), "{next}");
     for seen in ["general-one", "design-one", "ops-one"] {
         assert!(!next.contains(seen), "one cursor across channels: {next}");
     }
