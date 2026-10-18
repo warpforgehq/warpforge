@@ -113,6 +113,7 @@ impl Daemon {
         tags.push(RUNNER_TAG.to_string());
         tags.push(format!("workflow:{workflow}"));
         let mut task = Task::new(&new.project, &prompt, &agent, tags);
+        task.write_limit = self.inherited_write_limit(new.origin_task.as_deref());
         task.title = match item {
             Some(item) => item.title.trim().to_string(),
             None => derive_title(&new.prompt),

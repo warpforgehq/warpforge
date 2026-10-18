@@ -6,7 +6,7 @@ use warpforge_protocol as wire;
 
 use super::snapshot::MAX_SESSION_SNAPSHOT_UPDATES;
 use super::{Store, StoredAccount};
-use crate::daemon::task::{Task, TaskStatus};
+use crate::daemon::task::{Task, TaskStatus, TaskWriteLimit};
 
 #[test]
 fn roundtrip_and_interrupted_recovery() {
@@ -847,4 +847,28 @@ fn a_smith_assignee_filter_is_exact_and_a_login_filter_a_substring() {
         vec!["b1", "b2"],
         "a bare substring still matches both"
     );
+}
+
+#[test]
+fn an_inherited_write_limit_survives_a_restart() {
+    let store = Store::open_at(std::path::Path::new(":memory:")).unwrap();
+    let mut task = Task::new("demo", "migrate", "codex", vec![]);
+    task.write_limit = Some(TaskWriteLimit {
+        smith_id: "sm_1".into(),
+        paths: vec!["src/".into()],
+    });
+    let plain = Task::new("demo", "other", "codex", vec![]);
+    store.upsert_task(&task).unwrap();
+    store.upsert_task(&plain).unwrap();
+    let loaded = store.load_tasks().unwrap();
+    let find = |id: &str| {
+        loaded
+            .iter()
+            .find(|t| t.id == id)
+            .unwrap()
+            .write_limit
+            .clone()
+    };
+    assert_eq!(find(&task.id), task.write_limit);
+    assert_eq!(find(&plain.id), None);
 }

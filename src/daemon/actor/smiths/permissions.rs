@@ -4,7 +4,9 @@
 
 use std::path::{Component, Path, PathBuf};
 
+use super::SMITH_ORIGIN;
 use crate::daemon::actor::Daemon;
+use crate::daemon::task::TaskWriteLimit;
 use crate::policies::{PolicyContext, PolicyResult};
 
 /// `path` relative to `cwd`, with `.` and `..` resolved lexically; `None`
@@ -67,23 +69,64 @@ impl Daemon {
         }
     }
 
-    /// Refuse a Smith work session's file write outside its write paths.
+    /// The write paths `task_id` is held to: its own Smith's, for a work
+    /// session or a Smith-led lead, else the ones it inherited when spawned.
+    /// @param task_id a task
+    /// @returns the limit, `None` for a task that may write anywhere
+    pub(crate) fn task_write_limit(&self, task_id: &str) -> Option<TaskWriteLimit> {
+        let task = self.tasks.get(task_id)?;
+        if task.origin.as_deref() == Some(SMITH_ORIGIN) {
+            return None;
+        }
+        if let Some(record) = &task.smith {
+            let smith = self.smiths.smiths.get(&record.smith_id)?;
+            let paths = &smith.permissions.write_paths;
+            return (!paths.is_empty()).then(|| TaskWriteLimit {
+                smith_id: smith.id.clone(),
+                paths: paths.clone(),
+            });
+        }
+        task.write_limit.clone()
+    }
+
+    /// What a task created under `parent` inherits: the parent's write limit,
+    /// never its Smith (ADR 0027 invariant 16).
+    /// @param parent the task it is spawned under, if any
+    /// @returns the limit to copy onto the new task
+    pub(crate) fn inherited_write_limit(&self, parent: Option<&str>) -> Option<TaskWriteLimit> {
+        self.task_write_limit(parent?)
+    }
+
+    /// Refuse a file write outside the task's write limit: a Smith work
+    /// session's own, or one inherited from the Smith session it was spawned under.
     /// @param ctx the policy check
     /// @returns the denial, if the write is outside them
     pub(crate) fn smith_policy_denial(&self, ctx: &PolicyContext) -> Option<PolicyResult> {
         if ctx.tool_name.as_deref() != Some("fs/write_text_file") {
             return None;
         }
-        let smith_id = self.task_smith_id(&ctx.task_id)?;
-        let smith = self.smiths.smiths.get(&smith_id)?;
+        let limit = self.task_write_limit(&ctx.task_id)?;
         let path = ctx.tool_input.as_ref()?.get("path")?.as_str()?;
-        if write_allowed(&ctx.cwd, path, &smith.permissions.write_paths) {
+        if write_allowed(&ctx.cwd, path, &limit.paths) {
             return None;
         }
+        let who = self
+            .smiths
+            .smiths
+            .get(&limit.smith_id)
+            .map_or("this Smith", |smith| smith.name.as_str());
+        let inherited = self
+            .tasks
+            .get(&ctx.task_id)
+            .is_some_and(|task| task.smith.is_none());
         Some(PolicyResult::deny(format!(
-            "{} may write only under {}",
-            smith.name,
-            smith.permissions.write_paths.join(", ")
+            "{}{who} may write only under {}",
+            if inherited {
+                "spawned under a Smith: "
+            } else {
+                ""
+            },
+            limit.paths.join(", ")
         )))
     }
 }
