@@ -330,7 +330,8 @@ Sends `message` (at most 4,000 characters) to the session `task_id` names. Warpf
 
 - **A sub-agent you spawned** gets it as a follow-up in its own session, and its result arrives in your inbox (`read_inbox`) — the orchestrator's usual loop.
 - **A peer** gets it as its next turn: a busy peer when its current turn ends, framed as a message from another session rather than from you. A peer that is not running is not woken; the message is **held** and the tool says so — *"… is not running; it will see your message when it is next resumed."*
-- **`"team"`** posts to the project's channel. It wakes nobody: every peer reads the posts it has not seen with its next prompt. A post that `@mentions` a peer (by title or by the start of its task id) is also sent to that peer as a direct message; a mention that matches two sessions is refused with both ids.
+- **`"team"`** (or `"#general"`) posts to the project's `#general`. It wakes nobody: every peer reads the posts it has not seen with its next prompt. A post that `@mentions` a peer (by title or by the start of its task id) is also sent to that peer as a direct message; a mention that matches two sessions is refused with both ids.
+- **`"#name"`** posts to a named channel the calling Smith is a member of (`"#project/name"` when two of its projects have one). It wakes the channel's other Smiths, who answer in the channel. When a channel post started your turn, your final message is posted there as your reply on its own — do not post it again with `message_agent`; answer exactly `NOTHING_TO_ADD` to stay quiet.
 
 Anything else — a session in another project, an advisor, a pipeline stage — is an error. Warpforge limits how fast sessions message each other (per pair, per sender, per receiving session), and you can mute a session or pause a project from the Smiths sidebar. A refusal names the rule; the agent is told not to retry it.
 
