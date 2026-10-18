@@ -3,7 +3,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { daemon } from "@/daemon";
 import {
   type MentionCandidate,
@@ -17,6 +16,7 @@ import { cn } from "@/lib/utils";
 import type { Channel } from "@/protocol";
 
 const MENU_LIMIT = 8;
+const START_LABEL = "Start a session with this text";
 
 interface Props {
   project: string;
@@ -195,52 +195,59 @@ export function TeamComposer({
           ))}
         </div>
       )}
-      <Textarea
-        ref={ref}
-        value={text}
-        rows={3}
-        aria-label={direct ? "Message" : "Post to the channel"}
-        placeholder={
-          direct
-            ? `Message ${to?.label ?? "the session"} — it arrives as your prompt`
-            : `Post to #${channel?.name ?? "general"}. @mention a session or a smith to hand it the work.`
-        }
-        onChange={(event) => {
-          setText(event.target.value);
-          setHint(null);
-          setCaret(event.target.selectionStart);
-          setActive(0);
-        }}
-        onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
-        onKeyDown={onKeyDown}
-      />
-      {hint && (
-        <p role="status" className="text-xs text-warn">
-          {hint.text}
-        </p>
-      )}
-      <div className="flex items-center justify-end gap-2">
-        {!direct && (
+      <div className="bg-deep-surface relative flex flex-col rounded-lg border border-input transition-colors focus-within:border-ring">
+        <textarea
+          ref={ref}
+          value={text}
+          rows={2}
+          aria-label={direct ? "Message" : "Post to the channel"}
+          placeholder={
+            direct
+              ? `Message ${to?.label ?? "the session"} — it arrives as your prompt`
+              : `Post to #${channel?.name ?? "general"}. @mention a session or a smith to hand it the work.`
+          }
+          onChange={(event) => {
+            setText(event.target.value);
+            setHint(null);
+            setCaret(event.target.selectionStart);
+            setActive(0);
+          }}
+          onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
+          onKeyDown={onKeyDown}
+          className="max-h-[220px] min-h-[76px] resize-none bg-transparent px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none"
+        />
+        {hint && (
+          <p role="status" className="px-3 pb-1 text-xs text-warn">
+            {hint.text}
+          </p>
+        )}
+        <div className="flex items-center gap-1.5 px-2 pb-2 text-[11px] text-muted-foreground">
+          {!direct && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-5 [&_svg]:size-3"
+              aria-label={START_LABEL}
+              title={START_LABEL}
+              disabled={!text.trim()}
+              onClick={() => onStartSession(text.trim())}
+            >
+              <Play />
+            </Button>
+          )}
+          <span className="ml-auto shrink-0">⇧↵ newline</span>
           <Button
             type="button"
-            variant="outline"
-            size="sm"
-            disabled={!text.trim()}
-            onClick={() => onStartSession(text.trim())}
+            size="icon"
+            aria-label={direct ? "Send" : "Post"}
+            className="size-6 shrink-0"
+            disabled={!text.trim() || sending}
+            onClick={() => void send()}
           >
-            <Play className="size-3.5" />
-            Start a session
+            <Send className="size-3" />
           </Button>
-        )}
-        <Button
-          type="button"
-          size="sm"
-          disabled={!text.trim() || sending}
-          onClick={() => void send()}
-        >
-          <Send className="size-3.5" />
-          {direct ? "Send" : "Post"}
-        </Button>
+        </div>
       </div>
     </div>
   );

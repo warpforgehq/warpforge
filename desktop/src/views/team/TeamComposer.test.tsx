@@ -61,11 +61,29 @@ describe("TeamComposer", () => {
     expect(postToTeam).not.toHaveBeenCalled();
   });
 
+  it("keeps both actions inside the box, idle until there is text", async () => {
+    render(
+      <TeamComposer
+        project="demo"
+        candidates={candidates}
+        onStartSession={vi.fn<(text: string) => void>()}
+      />,
+    );
+    const start = screen.getByRole("button", { name: "Start a session with this text" });
+    const post = screen.getByRole("button", { name: "Post" });
+    expect(start).toHaveProperty("disabled", true);
+    expect(post).toHaveProperty("disabled", true);
+    await userEvent.type(screen.getByRole("textbox"), "hello");
+    expect(start).toHaveProperty("disabled", false);
+    expect(post).toHaveProperty("disabled", false);
+    expect(start.getAttribute("title")).toBe("Start a session with this text");
+  });
+
   it("hands the text to New Task to start a session", async () => {
     const onStartSession = vi.fn<(text: string) => void>();
     render(<TeamComposer project="demo" candidates={candidates} onStartSession={onStartSession} />);
     await userEvent.type(screen.getByRole("textbox"), "write the docs");
-    await userEvent.click(screen.getByRole("button", { name: "Start a session" }));
+    await userEvent.click(screen.getByRole("button", { name: "Start a session with this text" }));
     expect(onStartSession).toHaveBeenCalledWith("write the docs");
   });
 });
