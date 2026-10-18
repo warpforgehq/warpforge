@@ -86,6 +86,10 @@ pub(super) fn spawn_reader(
                 }
                 "session/request_permission" => {
                     let Some(agent_id) = id else { continue };
+                    let warpforge_tool = params
+                        .pointer("/toolCall/title")
+                        .and_then(|t| t.as_str())
+                        .and_then(crate::daemon::acp::tool::warpforge_tool_name);
                     let (title, options, map, tool_call_id) = parse_permission(&params);
                     let request_id = format!(
                         "{}:{}:{}",
@@ -107,6 +111,7 @@ pub(super) fn spawn_reader(
                             title,
                             options,
                             tool_call_id,
+                            warpforge_tool,
                         },
                     ));
                     // reply is deferred until the human answers

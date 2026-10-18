@@ -81,7 +81,9 @@ where
     }
 }
 
-fn thread_may_call(name: &str) -> bool {
+/// @param name a warpforge tool
+/// @returns whether a Smith's thread bridge serves it
+pub(crate) fn thread_may_call(name: &str) -> bool {
     READ_ONLY_TOOLS.contains(&name) || THREAD_TOOLS.contains(&name)
 }
 
