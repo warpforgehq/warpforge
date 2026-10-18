@@ -162,10 +162,10 @@ impl Daemon {
             None => Vec::new(),
         };
         let mut result = self.peers_post(from, project, text.clone(), mentions.clone(), channel)?;
-        if let Some(post) = result.message.as_mut() {
-            self.conversation_wake(post).await;
-        }
         if mentions.is_empty() {
+            if let Some(post) = result.message.as_mut() {
+                self.conversation_wake(post).await;
+            }
             return Ok(result);
         }
         let post_id = result.message.as_ref().map(|m| m.id);
@@ -189,6 +189,7 @@ impl Daemon {
         }
         if let Some(post) = result.message.as_mut() {
             self.peers_set_mentions(post, reached);
+            self.conversation_wake(post).await;
         }
         result.notice = (!notices.is_empty()).then(|| notices.join("\n"));
         Ok(result)
