@@ -51,6 +51,22 @@ describe("FeedItem", () => {
     expect(onOpenTask).toHaveBeenCalledWith("t_b");
   });
 
+  it("renders the post as markdown", () => {
+    show(
+      record({
+        status: "posted",
+        text: "**done** with `cargo test`\n\n- one\n- two",
+        toTask: undefined,
+      }),
+    );
+    expect(document.querySelector("strong")?.textContent).toBe("done");
+    expect(document.querySelector("code")?.textContent).toBe("cargo test");
+    expect([...document.querySelectorAll("li li")].map((li) => li.textContent)).toEqual([
+      "one",
+      "two",
+    ]);
+  });
+
   it("explains a held message", () => {
     show(record({ status: "held" }));
     expect(screen.getByText(/not running/)).toBeTruthy();

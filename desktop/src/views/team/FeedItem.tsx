@@ -1,6 +1,7 @@
 import { AlertTriangle, ArrowRight, Play } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { CollapsibleMarkdown } from "@/components/Markdown";
 import { SmithAvatar } from "@/components/SmithAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,7 @@ export function FeedItem({ record, label, onOpenTask, onStartSession, smith }: P
           </Button>
         )}
       </div>
-      <p className="whitespace-pre-wrap break-words text-sm text-foreground">{record.text}</p>
+      <CollapsibleMarkdown className="text-sm text-foreground">{record.text}</CollapsibleMarkdown>
       {reason && <p className="text-xs text-muted-foreground">{reason}</p>}
       {record.mentions && record.mentions.length > 0 && (
         <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
