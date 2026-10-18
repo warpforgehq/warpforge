@@ -174,12 +174,52 @@ describe("NewTaskDialog with a Smith", () => {
     expect(useUi.getState().newTaskSmith).toBeNull();
   });
 
-  it("offers no Smith outside Single agent mode", async () => {
+  it("starts a Smith as an orchestrator lead from Orchestrator mode", async () => {
     const user = userEvent.setup();
-    useUi.setState({ newTaskSmith: "sm_ada" });
+    useUi.setState({ newTaskSmith: "sm_ada", newTaskWorktree: true });
     renderDialog();
 
     await user.click(screen.getByRole("radio", { name: "Orchestrator" }));
+    expect(screen.getByRole("button", { name: "Harness" })).toHaveTextContent("Ada");
+    expect(screen.getByRole("button", { name: "Model" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("Ada leads")).toBeTruthy();
+    await user.type(
+      screen.getByPlaceholderText("What should Ada coordinate?"),
+      "Split the migration",
+    );
+    await user.click(screen.getByRole("button", { name: "Start Ada as orchestrator" }));
+
+    await waitFor(() => expect(calls("smiths.startWork")).toHaveLength(1));
+    expect(calls("smiths.startWork")[0]).toEqual({
+      backlog_item_id: null,
+      brief: "Split the migration",
+      id: "sm_ada",
+      orchestrator: true,
+      project: "warpforge",
+      worktree: false,
+    });
+    expect(calls("task.create")).toHaveLength(0);
+    expect(useUi.getState().openTaskId).toBe("t_new");
+  });
+
+  it("offers no Smith in Factory mode", async () => {
+    const user = userEvent.setup();
+    useUi.setState({ newTaskSmith: "sm_ada" });
+    vi.mocked(daemon.workflowList).mockResolvedValue([
+      {
+        id: "review-loop",
+        maxRounds: 3,
+        name: "Review loop",
+        source: "builtin",
+        stages: ["implement", "review", "fix"],
+        valid: true,
+      },
+    ]);
+    renderDialog();
+
+    const factory = screen.getByRole("radio", { name: "Factory" });
+    await waitFor(() => expect(factory).not.toBeDisabled());
+    await user.click(factory);
     expect(screen.getByRole("button", { name: "Harness" })).toHaveTextContent("Claude");
     await user.click(screen.getByRole("button", { name: "Harness" }));
     expect(screen.queryByRole("menuitem", { name: /^Ada/ })).toBeNull();

@@ -76,6 +76,8 @@ export function SmithMethods<TBase extends Constructor<CoreClient>>(Base: TBase)
         backlogItemId?: string | null;
         /** In an isolated worktree; the daemon's default (yes) when absent. */
         worktree?: boolean;
+        /** As an orchestrator lead that spawns plain workers. */
+        orchestrator?: boolean;
       },
     ): Promise<string> {
       const result = await this.request("smiths.startWork", {
@@ -84,6 +86,7 @@ export function SmithMethods<TBase extends Constructor<CoreClient>>(Base: TBase)
         id,
         project: work.project,
         ...(work.worktree === undefined ? {} : { worktree: work.worktree }),
+        ...(work.orchestrator ? { orchestrator: true } : {}),
       });
       return (result as { taskId: string }).taskId;
     }
