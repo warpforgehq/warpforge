@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ProjectMultiSelect } from "@/components/ProjectMultiSelect";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { daemon } from "@/daemon";
 import { useSmiths } from "@/hooks/useSmiths";
+import { type ProjectSelection } from "@/lib/projectSelection";
 import { defaultSmithColor } from "@/lib/smithColors";
 import { smithNameError } from "@/lib/smiths";
 import { applyName, applyVoice } from "@/lib/soulText";
@@ -70,7 +72,12 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
   const [name, setName] = useState("");
   const [color, setColor] = useState(() => defaultSmithColor(String(Date.now())));
   const [presetId, setPresetId] = useState<string | null>(null);
-  const [home, setHome] = useState(project ?? projects[0] ?? "");
+  const [where, setWhere] = useState<ProjectSelection>(() => {
+    const start = project ?? projects[0];
+    return start ? { home: start, projects: [start] } : { home: null, projects: [] };
+  });
+  const [whereError, setWhereError] = useState<string | null>(null);
+  const home = where.home;
   const [agent, setAgent] = useState(agents[0]?.id ?? "claude");
   const [model, setModel] = useState<string | null>(null);
   const [customizing, setCustomizing] = useState(false);
@@ -97,13 +104,15 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
   const create = async () => {
     const error = smithNameError(name.trim(), smiths);
     setNameError(error);
-    if (error || !home || !defaults.data) return;
+    const noProject = home ? null : "Pick at least one project.";
+    setWhereError(noProject);
+    if (error || noProject || !home || !defaults.data) return;
     setBusy(true);
     try {
       const detail = await daemon.createSmith({
         accountId: null,
         agent,
-        allowedProjects: [home],
+        allowedProjects: where.projects,
         budget: {},
         charter,
         color,
@@ -199,22 +208,29 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <span className="text-[13px] font-medium">Works in</span>
-              <Select value={home} onValueChange={setHome}>
-                <SelectTrigger aria-label="Works in" className="h-8">
-                  <SelectValue placeholder="Pick a project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((candidate) => (
-                    <SelectItem key={candidate} value={candidate}>
-                      {candidate}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-1.5">
+            <span className="text-[13px] font-medium">Works in</span>
+            <ProjectMultiSelect
+              label="Works in"
+              projects={projects}
+              value={where}
+              onChange={(next) => {
+                setWhere(next);
+                setWhereError(null);
+              }}
+            />
+            {whereError ? (
+              <p role="alert" className="text-xs text-destructive">
+                {whereError}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                It reads the home project's #general; the others it works in when asked.
+              </p>
+            )}
+          </div>
+
+          <div>
             <div className="space-y-1.5">
               <span className="text-[13px] font-medium">Runs on</span>
               <div className="flex items-center gap-2 text-[13px]">
@@ -287,7 +303,7 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={busy || !defaults.data || !home}>
+            <Button type="submit" size="sm" disabled={busy || !defaults.data}>
               Create {name.trim() || "smith"}
             </Button>
           </DialogFooter>
