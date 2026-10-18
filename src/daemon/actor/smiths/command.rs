@@ -50,6 +50,8 @@ pub enum SmithCommand {
         brief: String,
         backlog_item_id: Option<String>,
         worktree: bool,
+        /// Run it as an orchestrator lead.
+        orchestrator: bool,
         reply: Reply<String>,
     },
     /// The minute timer: look for identity edits made outside the daemon.

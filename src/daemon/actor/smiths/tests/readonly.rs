@@ -94,6 +94,7 @@ async fn a_work_session_writes_only_under_its_smiths_write_paths() {
             brief: "write it".into(),
             backlog_item_id: None,
             worktree: false,
+            orchestrator: false,
             reply,
         })
         .await

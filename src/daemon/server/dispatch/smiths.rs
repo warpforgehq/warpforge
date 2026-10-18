@@ -76,6 +76,7 @@ pub(super) async fn smiths(
             brief,
             backlog_item_id,
             worktree,
+            orchestrator,
         } => {
             let task_id = ask(handle, |reply| SmithCommand::StartWork {
                 id,
@@ -83,6 +84,7 @@ pub(super) async fn smiths(
                 brief,
                 backlog_item_id,
                 worktree,
+                orchestrator,
                 reply,
             })
             .await?;

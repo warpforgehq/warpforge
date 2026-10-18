@@ -106,7 +106,7 @@ fn session_tools(session: &Session) -> Value {
             list.retain(|tool| tool["name"].as_str().is_some_and(thread_may_call));
             return tools;
         }
-        BridgeMode::Work => list.extend(smith_tool_defs()),
+        BridgeMode::Work | BridgeMode::SmithOrchestrator => list.extend(smith_tool_defs()),
         BridgeMode::Advised => list.extend(advisor_tool_defs()),
         BridgeMode::Single | BridgeMode::Orchestrator => {}
     }
@@ -133,7 +133,7 @@ async fn session_call(
     if session.mode == BridgeMode::Thread && !thread_may_call(name) {
         anyhow::bail!("a Smith's thread does not change code: '{name}' is for a work session");
     }
-    if name == "start_work" && !matches!(session.mode, BridgeMode::Thread | BridgeMode::Work) {
+    if name == "start_work" && !session.mode.may_start_work() {
         anyhow::bail!("start_work is for a Smith's own sessions");
     }
     if name == "ask_advisor" {
@@ -290,7 +290,7 @@ mod tests {
         let session = Session {
             parent_task: "t_1".into(),
             project: "demo".into(),
-            is_orchestrator: mode == BridgeMode::Orchestrator,
+            is_orchestrator: mode.is_orchestrator(),
             mode,
         };
         session_tools(&session)
@@ -360,6 +360,21 @@ mod tests {
         assert!(thread.iter().all(|name| thread_may_call(name)));
         assert!(tool_names(BridgeMode::Work).contains(&"start_work".to_string()));
         assert!(!tool_names(BridgeMode::Single).contains(&"start_work".to_string()));
+    }
+
+    #[test]
+    fn an_orchestrator_run_as_a_smith_keeps_both_tool_sets() {
+        let lead = tool_names(BridgeMode::SmithOrchestrator);
+        let plain = tool_names(BridgeMode::Orchestrator);
+        for tool in &plain {
+            assert!(lead.contains(tool), "{tool} from the orchestrator set");
+        }
+        for tool in ["spawn_agent", "read_inbox", "spawn_workflow", "start_work"] {
+            assert!(lead.contains(&tool.to_string()), "{tool}");
+        }
+        assert!(!plain.contains(&"start_work".to_string()));
+        assert!(BridgeMode::SmithOrchestrator.may_start_work());
+        assert!(!BridgeMode::Orchestrator.may_start_work());
     }
 
     #[tokio::test]

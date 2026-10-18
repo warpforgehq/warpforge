@@ -110,6 +110,7 @@ async fn start_work(
         brief: brief.into(),
         backlog_item_id: None,
         worktree: false,
+        orchestrator: false,
         reply,
     })
     .await

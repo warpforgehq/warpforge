@@ -264,7 +264,7 @@ impl Daemon {
         // the orchestrator system preamble and, via WF_MODE=orchestrator, the
         // spawn_agent / read_inbox tools. A plain task gets the core tools only.
         let mode = self.session_bridge_mode(task_id);
-        let is_orchestrator = mode == BridgeMode::Orchestrator;
+        let is_orchestrator = mode.is_orchestrator();
         let mcp_servers = mcp_servers(task_id, project, mode);
         bridge_env(&mut env, task_id, project, mode);
         self.smith_thread_env(task_id, agent, &mut env);

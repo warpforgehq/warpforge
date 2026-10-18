@@ -1665,6 +1665,9 @@ pub enum Method {
         backlog_item_id: Option<String>,
         #[serde(default = "default_true")]
         worktree: bool,
+        /// An orchestrator lead run as the Smith: it spawns plain workers.
+        #[serde(default)]
+        orchestrator: bool,
     },
     /// `start_work` from a Smith's own session (`from_task_id`): a work
     /// session as `smith` — "self", a name or an id — within the daemon's

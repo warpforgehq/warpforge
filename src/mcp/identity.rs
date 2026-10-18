@@ -38,6 +38,9 @@ pub(crate) enum BridgeMode {
     Thread,
     /// A Smith's work session: a single session that may also `start_work`.
     Work,
+    /// An orchestrator lead run as a Smith: every orchestrator tool and
+    /// `start_work` (ADR 0027 invariant 16).
+    SmithOrchestrator,
 }
 
 impl BridgeMode {
@@ -51,7 +54,24 @@ impl BridgeMode {
             BridgeMode::Advisor => "advisor",
             BridgeMode::Thread => "thread",
             BridgeMode::Work => "work",
+            BridgeMode::SmithOrchestrator => "smith-orchestrator",
         }
+    }
+
+    /// @returns whether the session gets the orchestrator tools
+    pub(crate) fn is_orchestrator(self) -> bool {
+        matches!(
+            self,
+            BridgeMode::Orchestrator | BridgeMode::SmithOrchestrator
+        )
+    }
+
+    /// @returns whether the session may call `start_work`
+    pub(crate) fn may_start_work(self) -> bool {
+        matches!(
+            self,
+            BridgeMode::Thread | BridgeMode::Work | BridgeMode::SmithOrchestrator
+        )
     }
 
     fn parse(value: Option<&str>) -> Self {
@@ -61,6 +81,7 @@ impl BridgeMode {
             Some("advisor") => BridgeMode::Advisor,
             Some("thread") => BridgeMode::Thread,
             Some("work") => BridgeMode::Work,
+            Some("smith-orchestrator") => BridgeMode::SmithOrchestrator,
             _ => BridgeMode::Single,
         }
     }
@@ -88,7 +109,7 @@ pub(crate) fn resolve(var: impl Fn(&str) -> Option<String>) -> Result<Identity> 
         return Ok(Identity {
             parent_task: task,
             project: non_empty(SESSION_PROJECT),
-            is_orchestrator: mode == BridgeMode::Orchestrator,
+            is_orchestrator: mode.is_orchestrator(),
             mode,
             from_session: true,
         });
@@ -96,7 +117,7 @@ pub(crate) fn resolve(var: impl Fn(&str) -> Option<String>) -> Result<Identity> 
     // A legacy daemon sets `WF_ORCH_TASK` but not `WF_MODE`; treat that as an
     // orchestrator session so the old env still yields the orchestrator tools.
     let mode = var("WF_MODE");
-    let is_orchestrator = mode.as_deref() == Some("orchestrator")
+    let is_orchestrator = BridgeMode::parse(mode.as_deref()).is_orchestrator()
         || (mode.is_none() && var("WF_ORCH_TASK").is_some());
     let parent_task = var("WF_TASK").or_else(|| var("WF_ORCH_TASK"));
     if is_orchestrator && parent_task.is_none() {
@@ -110,10 +131,10 @@ pub(crate) fn resolve(var: impl Fn(&str) -> Option<String>) -> Result<Identity> 
             .or_else(|| var("WF_ORCH_PROJECT"))
             .filter(|project| !project.trim().is_empty()),
         is_orchestrator,
-        mode: if is_orchestrator {
-            BridgeMode::Orchestrator
-        } else {
-            BridgeMode::parse(mode.as_deref())
+        mode: match BridgeMode::parse(mode.as_deref()) {
+            parsed if parsed.is_orchestrator() => parsed,
+            _ if is_orchestrator => BridgeMode::Orchestrator,
+            parsed => parsed,
         },
         from_session: false,
     })
@@ -129,6 +150,21 @@ mod tests {
                 .find(|(key, _)| *key == name)
                 .map(|(_, value)| value.to_string())
         })
+    }
+
+    #[test]
+    fn a_smith_orchestrator_is_an_orchestrator_on_either_path() {
+        let session = resolve_from(&[
+            (SESSION_TASK, "t_lead"),
+            (SESSION_MODE, "smith-orchestrator"),
+        ])
+        .unwrap();
+        assert_eq!(session.mode, BridgeMode::SmithOrchestrator);
+        assert!(session.is_orchestrator);
+        let legacy =
+            resolve_from(&[("WF_TASK", "t_lead"), ("WF_MODE", "smith-orchestrator")]).unwrap();
+        assert_eq!(legacy.mode, BridgeMode::SmithOrchestrator);
+        assert!(legacy.is_orchestrator);
     }
 
     #[test]

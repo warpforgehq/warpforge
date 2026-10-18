@@ -13,6 +13,18 @@ use crate::daemon::task::TaskStatus;
 pub(crate) const MAX_START_DEPTH: u8 = 2;
 /// Open work sessions per Smith that `start_work` allows.
 pub(crate) const MAX_OPEN_WORK: usize = 3;
+/// The tag that makes a task an orchestrator lead.
+const ORCHESTRATOR_TAG: &str = "orchestrator-chat";
+
+/// How a work session starts, beyond its Smith, project and brief.
+pub(crate) struct WorkStart {
+    /// The board item it works on, if any.
+    pub(crate) backlog_item_id: Option<String>,
+    /// Whether it gets its own worktree.
+    pub(crate) worktree: bool,
+    /// Whether it leads as an orchestrator: the Smith's persona, plain workers.
+    pub(crate) orchestrator: bool,
+}
 
 impl Daemon {
     /// Start a work session as `id`, from the user's New Task or an assigned
@@ -20,16 +32,14 @@ impl Daemon {
     /// @param id the Smith
     /// @param project where the work happens
     /// @param brief the assignment, the session's opening prompt
-    /// @param backlog_item_id the board item it works on, if any
-    /// @param worktree whether it gets its own worktree
+    /// @param start its board item, worktree and whether it leads
     /// @returns the new task's id
     pub(super) async fn smith_start_work(
         &mut self,
         id: &str,
         project: &str,
         brief: String,
-        backlog_item_id: Option<String>,
-        worktree: bool,
+        start: WorkStart,
     ) -> Result<String, String> {
         let smith = self
             .smiths_get(id)
@@ -52,15 +62,19 @@ impl Daemon {
             project: project.to_string(),
             prompt: brief,
             agent: smith.agent.clone(),
-            tags: Vec::new(),
+            tags: if start.orchestrator {
+                vec![ORCHESTRATOR_TAG.to_string()]
+            } else {
+                Vec::new()
+            },
             include_runtime_context: false,
-            worktree,
+            worktree: start.worktree,
             worktree_base: Default::default(),
             parent_task_id: None,
             attachments: Vec::new(),
             default_model: smith.model.clone(),
             config_overrides: Default::default(),
-            backlog_item_id,
+            backlog_item_id: start.backlog_item_id,
             origin: None,
             start: true,
             advisor: None,
@@ -129,8 +143,13 @@ impl Daemon {
         if let Some(refusal) = self.dispatch_refusal(&smith.agent, account) {
             return Err(refusal);
         }
+        let start = WorkStart {
+            backlog_item_id,
+            worktree,
+            orchestrator: false,
+        };
         let task_id = self
-            .smith_start_work(&smith.id, project, brief, backlog_item_id, worktree)
+            .smith_start_work(&smith.id, project, brief, start)
             .await?;
         if let Some(record) = self
             .tasks
