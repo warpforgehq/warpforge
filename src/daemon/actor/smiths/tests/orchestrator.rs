@@ -145,3 +145,115 @@ async fn a_worker_the_smith_led_orchestrator_spawns_carries_no_persona() {
         "a worker's bridge has neither orchestrator nor Smith tools: {env:?}"
     );
 }
+
+const WRITER: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/mock-acp-writer.mjs"
+);
+
+/// The writer mock's answer to its `fs/write_text_file`.
+async fn write_answer(log: &Path) -> serde_json::Value {
+    let answer = || {
+        std::fs::read_to_string(log)
+            .unwrap_or_default()
+            .lines()
+            .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+            .find(|a| a["id"] == 900)
+    };
+    wait("the write's answer", || answer().is_some()).await;
+    answer().unwrap()
+}
+
+/// A plain task under `parent` whose agent writes `target` outside any
+/// write path, as spawn_agent would create it.
+async fn writer_under(
+    daemon: &DaemonHandle,
+    dir: &Path,
+    parent: &str,
+) -> (String, PathBuf, PathBuf) {
+    let log = dir.join(format!("{parent}.log"));
+    let target = dir.join(format!("{parent}.txt"));
+    let command = format!("node {WRITER} {} {}", log.display(), target.display());
+    let id = daemon
+        .create_task(
+            "demo",
+            "write it",
+            &command,
+            vec!["orchestrator".into(), "subagent".into()],
+            false,
+            false,
+            Some(parent.to_string()),
+            vec![],
+            None,
+            Default::default(),
+            None,
+        )
+        .await;
+    (id, log, target)
+}
+
+#[tokio::test]
+async fn workers_under_a_smith_led_orchestrator_inherit_its_write_limit_not_its_persona() {
+    let home = home();
+    let lead_agent = agent(home._dir.path(), false);
+    let daemon = spawn(&home, &[]);
+    let mut spec = ada_on(&lead_agent);
+    spec.permissions = Some(wire::SmithPermissions {
+        write_paths: vec!["src/".into()],
+        push: false,
+        create_pr: false,
+    });
+    let ada = create(&daemon, spec).await.unwrap().smith;
+    let lead = lead(&daemon, &ada.id).await;
+
+    let (worker, log, target) = writer_under(&daemon, home._dir.path(), &lead).await;
+    let answer = write_answer(&log).await;
+    assert!(answer["error"].is_object(), "{answer}");
+    assert!(!target.exists());
+    let task = daemon
+        .tasks()
+        .await
+        .into_iter()
+        .find(|t| t.id == worker)
+        .unwrap();
+    assert!(task.smith.is_none(), "the limit, never the persona");
+    let limit = task.write_limit.expect("the lead's limit");
+    assert_eq!(
+        (limit.smith_id.as_str(), limit.paths),
+        (ada.id.as_str(), vec!["src/".to_string()])
+    );
+
+    let (nested, log, target) = writer_under(&daemon, home._dir.path(), &worker).await;
+    assert!(
+        write_answer(&log).await["error"].is_object(),
+        "a nested spawn too"
+    );
+    assert!(!target.exists());
+    let task = daemon
+        .tasks()
+        .await
+        .into_iter()
+        .find(|t| t.id == nested)
+        .unwrap();
+    assert!(task.smith.is_none() && task.write_limit.is_some());
+}
+
+#[tokio::test]
+async fn a_smith_without_write_paths_leaves_its_workers_unlimited() {
+    let home = home();
+    let lead_agent = agent(home._dir.path(), false);
+    let daemon = spawn(&home, &[]);
+    let ada = create(&daemon, ada_on(&lead_agent)).await.unwrap().smith;
+    let lead = lead(&daemon, &ada.id).await;
+
+    let (worker, log, target) = writer_under(&daemon, home._dir.path(), &lead).await;
+    assert!(write_answer(&log).await["error"].is_null());
+    assert!(target.exists());
+    let task = daemon
+        .tasks()
+        .await
+        .into_iter()
+        .find(|t| t.id == worker)
+        .unwrap();
+    assert!(task.write_limit.is_none());
+}

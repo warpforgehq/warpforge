@@ -34,6 +34,7 @@ impl Daemon {
                     .find_map(|t| t.strip_prefix("branched-from:"))
                     .map(str::to_string);
                 let mut task = Task::new(&project, &prompt, &agent, tags);
+                task.write_limit = self.inherited_write_limit(parent_task_id.as_deref());
                 task.parent_task_id = parent_task_id;
                 task.backlog_item_id = backlog_item_id;
                 task.origin = origin.clone();

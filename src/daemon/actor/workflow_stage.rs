@@ -298,6 +298,7 @@ impl Daemon {
         config_overrides: HashMap<String, String>,
     ) -> Result<String, String> {
         let mut task = Task::new(project, &prompt, agent, vec!["workflow-stage".to_string()]);
+        task.write_limit = self.inherited_write_limit(Some(parent_id));
         task.parent_task_id = Some(parent_id.to_string());
         task.worktree = worktree;
         task.title = title;

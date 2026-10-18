@@ -246,6 +246,9 @@ impl Daemon {
         });
         task.tags = tags;
         task.agent = agent.clone();
+        if task.write_limit.is_none() {
+            task.write_limit = self.inherited_write_limit(parent_task_id.as_deref());
+        }
         task.parent_task_id = parent_task_id;
         task.backlog_item_id = backlog_item_id;
         // A model the lead agent does not list would be sent to the wrong

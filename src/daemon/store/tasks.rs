@@ -17,14 +17,20 @@ impl Store {
             .map(serde_json::to_string)
             .transpose()?;
         let smith = task.smith.as_ref().map(serde_json::to_string).transpose()?;
+        let write_limit = task
+            .write_limit
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()?;
         self.conn.execute(
             r#"
             INSERT INTO tasks
                 (id, session_id, project, prompt, agent, status, tags, title,
                  created_at, updated_at, files_changed, blocked_reason, config_options, worktree,
                  base_branch, parent_task_id, settled_override, settled_at, snoozed_until,
-                 snoozed_at, account_id, backlog_item_id, blocked_kind, model, origin, advisor, smith)
-            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27)
+                 snoozed_at, account_id, backlog_item_id, blocked_kind, model, origin, advisor, smith,
+                 write_limit)
+            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28)
             ON CONFLICT(id) DO UPDATE SET
                 session_id=excluded.session_id,
                 agent=excluded.agent,
@@ -46,7 +52,8 @@ impl Store {
                 blocked_kind=excluded.blocked_kind,
                 model=excluded.model,
                 advisor=excluded.advisor,
-                smith=excluded.smith
+                smith=excluded.smith,
+                write_limit=excluded.write_limit
             "#,
             rusqlite::params![
                 task.id,
@@ -76,6 +83,7 @@ impl Store {
                 task.origin,
                 advisor,
                 smith,
+                write_limit,
             ],
         )?;
         Ok(())
@@ -91,7 +99,7 @@ impl Store {
              created_at, updated_at, files_changed, blocked_reason, config_options, worktree, \
              parent_task_id, title, settled_override, settled_at, snoozed_until, snoozed_at, \
              account_id, backlog_item_id, blocked_kind, model, origin, base_branch, advisor, \
-             smith FROM tasks",
+             smith, write_limit FROM tasks",
         )?;
         let rows = stmt.query_map([], |row| {
             let tags_json: String = row.get(6)?;
@@ -99,6 +107,7 @@ impl Store {
             let config_options_json: String = row.get(11)?;
             let advisor_json: Option<String> = row.get(25)?;
             let smith_json: Option<String> = row.get(26)?;
+            let write_limit_json: Option<String> = row.get(27)?;
             let mut status = parse_status(&status_str);
             if matches!(status, TaskStatus::Running | TaskStatus::Queued) {
                 status = TaskStatus::Interrupted;
@@ -135,6 +144,7 @@ impl Store {
                 advisor: advisor_json.and_then(|json| serde_json::from_str(&json).ok()),
                 status_note: None,
                 smith: smith_json.and_then(|json| serde_json::from_str(&json).ok()),
+                write_limit: write_limit_json.and_then(|json| serde_json::from_str(&json).ok()),
             })
         })?;
         Ok(rows.filter_map(|r| r.ok()).collect())

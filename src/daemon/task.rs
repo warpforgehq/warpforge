@@ -113,6 +113,18 @@ pub struct Task {
     pub status_note: Option<String>,
     /// Set when the task runs as a Smith: its thread, or a work session.
     pub smith: Option<TaskSmith>,
+    /// The write paths of the Smith session it was spawned under, copied at
+    /// creation (ADR 0027 invariant 16): no persona, only the limit.
+    pub write_limit: Option<TaskWriteLimit>,
+}
+
+/// A Smith's write paths carried by a task that does not run as the Smith.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct TaskWriteLimit {
+    /// The Smith whose limit it is.
+    pub smith_id: String,
+    /// Path prefixes it may write, relative to its worktree; never empty.
+    pub paths: Vec<String>,
 }
 
 /// What a Smith task's sessions were given (ADR 0027), so a resume sends the
@@ -200,6 +212,7 @@ impl Task {
             queued_prompts: Vec::new(),
             advisor: None,
             status_note: None,
+            write_limit: None,
             smith: None,
         }
     }
