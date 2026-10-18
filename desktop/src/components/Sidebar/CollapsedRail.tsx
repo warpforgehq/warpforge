@@ -1,7 +1,7 @@
 import { Bot, PanelLeftOpen, Plus, Settings } from "lucide-react";
 import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useRef, useState } from "react";
 
-import { AgentLogo } from "@/components/AgentLogo";
+import { TaskAgentMark } from "@/components/TaskSmith";
 import UpdateControl from "@/components/UpdateControl";
 import type { ConnectionState } from "@/daemon";
 import { taskLabel } from "@/lib/taskLabel";
@@ -258,7 +258,7 @@ function LiveChip({
         active ? "bg-accent/40" : "hover:bg-accent/40",
       )}
     >
-      <AgentLogo agentId={item.task.agent} displayName={item.task.agent} className="size-4" />
+      <TaskAgentMark task={item.task} className="size-4" />
       <span
         aria-hidden
         className={cn(

@@ -7,6 +7,8 @@ import { daemon } from "@/daemon";
 import { normalizeRunnerStatus } from "@/daemon/runner";
 import { openExternalLink } from "@/lib/externalLinks";
 import type { DaemonEvent, TaskInfo, TaskPullRequest } from "@/protocol";
+import { useSmithsStore } from "@/store/smiths";
+import { smithFixture } from "@/test/smiths";
 
 import { SidebarTaskRow } from "./SidebarTaskRow";
 import { TooltipProvider } from "./ui/tooltip";
@@ -178,5 +180,20 @@ describe("SidebarTaskRow group glyphs", () => {
     expect(screen.getByTitle("Orchestrator lead")).toBeInTheDocument();
     expect(container.querySelector(".lucide-users")).not.toBeNull();
     expect(container.querySelector(".lucide-workflow")).toBeNull();
+  });
+});
+
+describe("SidebarTaskRow for a Smith's task", () => {
+  it("shows the Smith's avatar in the agent slot, the harness in its tooltip", () => {
+    useSmithsStore.getState().upsert(smithFixture({ name: "Ada" }));
+    const { container } = renderRow({ ...base, agent: "claude", smithId: "sm_1" });
+    const meta = container.querySelector('[data-lane="meta"]')!;
+    expect(meta.querySelector('[title="Ada · Claude Code"] [role="img"]')).toBeTruthy();
+    expect(meta.querySelector("img")).toBeNull();
+  });
+
+  it("keeps the agent logo for a task no Smith runs", () => {
+    const { container } = renderRow({ ...base, smithId: null });
+    expect(container.querySelector('[data-lane="meta"] [title^="Ada"]')).toBeNull();
   });
 });

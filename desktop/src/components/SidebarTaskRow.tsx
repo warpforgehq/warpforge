@@ -1,8 +1,8 @@
 import { ChevronRight, Users, Workflow } from "lucide-react";
 import { memo, useEffect, useState } from "react";
 
-import { AgentLogo } from "@/components/AgentLogo";
 import { TaskPullRequestGlyph } from "@/components/pullRequest/TaskPullRequestGlyph";
+import { TaskAgentMark } from "@/components/TaskSmith";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { isFactoryTask } from "@/lib/factory";
 import { elapsed } from "@/lib/status";
@@ -181,9 +181,8 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
                   {childCount}
                 </span>
               )}
-              <AgentLogo
-                agentId={task.agent}
-                displayName={task.agent}
+              <TaskAgentMark
+                task={task}
                 className={cn("size-3.5 shrink-0", receded && "opacity-40 grayscale")}
               />
               {state === "snoozed" ? (

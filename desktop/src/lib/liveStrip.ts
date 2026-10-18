@@ -15,6 +15,8 @@ export interface LiveStripItem {
   toolCount: number;
   project: string;
   agent: string;
+  /** The Smith the task runs as. */
+  smithId?: string | null;
 }
 
 export function buildLiveStripItems(
@@ -48,6 +50,7 @@ export function buildLiveStripItems(
       toolCount,
       project: task.project,
       agent: task.agent,
+      smithId: task.smithId,
     });
   }
   items.sort((a, b) => {
