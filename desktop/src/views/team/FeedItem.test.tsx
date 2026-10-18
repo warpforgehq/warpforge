@@ -99,6 +99,13 @@ describe("FeedItem", () => {
     expect(document.querySelectorAll("[data-mention]")).toHaveLength(2);
   });
 
+  it("sets the author apart from the muted time", () => {
+    show(record({ status: "posted", toTask: undefined }));
+    const author = screen.getByRole("button", { name: "Fix login" });
+    expect(author.className).toContain("font-semibold");
+    expect(author.className).toContain("text-sm");
+  });
+
   it("explains a held message", () => {
     show(record({ status: "held" }));
     expect(screen.getByText(/not running/)).toBeTruthy();
