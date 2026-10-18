@@ -12,6 +12,10 @@ const daemonMock = vi.hoisted(() => ({
   updateSmith: vi.fn<(id: string, patch: unknown) => Promise<SmithDetail>>(),
 }));
 vi.mock("@/daemon", () => ({ daemon: daemonMock }));
+const { openExternalLink } = vi.hoisted(() => ({
+  openExternalLink: vi.fn<(url: string) => Promise<void>>(async () => {}),
+}));
+vi.mock("@/lib/externalLinks", () => ({ openExternalLink }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn<() => void>(), success: vi.fn<() => void>() } }));
 vi.mock("./IdentityEditor", () => ({
   IdentityEditor: ({
@@ -96,5 +100,30 @@ describe("SmithSettings", () => {
     expect(screen.getByRole("region", { name: "Model & account" }).textContent).toContain(
       "opening message",
     );
+  });
+
+  it("shows habits as coming soon with an example, and no charter editor", async () => {
+    show();
+    const habits = await screen.findByRole("region", { name: "Habits — coming soon" });
+    expect(habits.textContent).toContain("check CI every morning");
+    expect(habits.querySelector("textarea")).toBeNull();
+    expect(screen.queryByRole("textbox", { name: "Charter" })).toBeNull();
+  });
+
+  it("explains the soul's sections above the editor", async () => {
+    show();
+    const soul = await screen.findByRole("region", { name: "Soul" });
+    for (const section of ["Voice", "Decision rules", "Refusals"]) {
+      expect(soul.textContent).toContain(section);
+    }
+  });
+
+  it("links every card to its section of the Smiths guide", async () => {
+    show();
+    await screen.findByRole("region", { name: "Identity" });
+    const links = screen.getAllByRole("button", { name: "Learn more" });
+    expect(links).toHaveLength(7);
+    await userEvent.click(links[0]!);
+    expect(openExternalLink).toHaveBeenCalledWith("https://warpforge.app/guides/smiths/#identity");
   });
 });

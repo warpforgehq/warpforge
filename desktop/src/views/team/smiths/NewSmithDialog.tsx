@@ -59,7 +59,7 @@ interface Props {
 
 /**
  * New smith in one short step: name, colour, personality, project and agent.
- * The soul and charter are the daemon's real defaults, shown and editable
+ * The soul is the daemon's real default, shown and editable
  * under Customize; everything else starts at its default.
  */
 export function NewSmithDialog({ snapshot, project, onClose }: Props) {
@@ -82,7 +82,6 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
   const [model, setModel] = useState<string | null>(null);
   const [customizing, setCustomizing] = useState(false);
   const [editedSoul, setEditedSoul] = useState<string | null>(null);
-  const [editedCharter, setEditedCharter] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -91,7 +90,6 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
   const soul =
     editedSoul ??
     (defaults.data ? applyVoice(applyName(defaults.data.soul, name), preset?.voice ?? "") : "");
-  const charter = editedCharter ?? defaults.data?.charter ?? "";
   const models = modelOption(agents.find((a) => a.id === agent)?.models ?? [])?.options ?? [];
 
   const pickPreset = (id: string) => {
@@ -114,7 +112,6 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
         agent,
         allowedProjects: where.projects,
         budget: {},
-        charter,
         color,
         homeProject: home,
         model,
@@ -275,7 +272,7 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
                 aria-hidden
                 className={cn("size-3.5 transition-transform", customizing && "rotate-90")}
               />
-              Customize soul and charter
+              Customize soul
             </button>
             {customizing && (
               <div className="space-y-3">
@@ -288,12 +285,6 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
                   language="markdown"
                   value={soul}
                   onChange={setEditedSoul}
-                />
-                <IdentityEditor
-                  label="Charter"
-                  language="yaml"
-                  value={charter}
-                  onChange={setEditedCharter}
                 />
               </div>
             )}

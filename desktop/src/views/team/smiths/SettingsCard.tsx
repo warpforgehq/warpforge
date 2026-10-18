@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { daemon } from "@/daemon";
 import { useSmiths } from "@/hooks/useSmiths";
+import { smithsGuideUrl } from "@/lib/docsLinks";
+import { openExternalLink } from "@/lib/externalLinks";
 import type { SmithDetail } from "@/protocol";
 import { useSmithsStore } from "@/store/smiths";
 
@@ -75,24 +77,43 @@ export function useCardForm(detail: SmithDetail, fields: (keyof SmithFormValues)
   };
 }
 
-/** A titled Settings card with Save and Revert while it has changes. */
+/**
+ * A titled Settings card: what it changes in plain words, a link to the
+ * guide's section, and Save and Revert while it has changes.
+ */
 export function SettingsCard({
   title,
   description,
+  guide,
   form,
   children,
 }: {
   title: string;
   description?: string;
+  /** The Smiths guide's heading anchor for this setting. */
+  guide?: string;
   form?: Pick<ReturnType<typeof useCardForm>, "dirty" | "save" | "saving" | "reset">;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <section aria-label={title} className="space-y-3 rounded-lg border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-0.5">
           <h3 className="text-sm font-semibold">{title}</h3>
-          {description && <p className="text-xs text-muted-foreground">{description}</p>}
+          {(description || guide) && (
+            <p className="text-xs text-muted-foreground">
+              {description}{" "}
+              {guide && (
+                <button
+                  type="button"
+                  onClick={() => void openExternalLink(smithsGuideUrl(guide))}
+                  className="whitespace-nowrap text-primary underline-offset-2 hover:underline"
+                >
+                  Learn more
+                </button>
+              )}
+            </p>
+          )}
         </div>
         {form?.dirty && (
           <div className="flex shrink-0 gap-1">

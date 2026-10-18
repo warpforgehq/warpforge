@@ -13,26 +13,42 @@ impl Daemon {
                 created_by,
                 reply,
             } => {
-                let journal = scope
-                    .as_deref()
-                    .and_then(|s| s.strip_prefix(crate::daemon::memory::SMITH_SCOPE_PREFIX))
-                    .map(str::to_string);
+                let journal = if scope.as_deref() == Some("journal") {
+                    created_by
+                        .as_deref()
+                        .and_then(|task| self.tasks.get(task))
+                        .and_then(|task| task.smith.as_ref().map(|s| s.smith_id.clone()))
+                        .ok_or_else(|| {
+                            crate::daemon::memory::MemoryError::Scope(
+                                "only a Smith's own sessions have a journal".into(),
+                            )
+                        })
+                        .map(Some)
+                } else {
+                    Ok(scope
+                        .as_deref()
+                        .and_then(|s| s.strip_prefix(crate::daemon::memory::SMITH_SCOPE_PREFIX))
+                        .map(str::to_string))
+                };
                 let result = match journal {
-                    Some(smith_id) => self.memory_journal_write(
-                        &smith_id,
-                        &content,
-                        kind.as_deref(),
-                        tags.as_deref(),
-                        created_by.as_deref(),
-                    ),
-                    None => self.memory.store(
-                        &content,
-                        scope.as_deref(),
-                        kind.as_deref(),
-                        tags.as_deref(),
-                        project_id.as_deref(),
-                        created_by.as_deref(),
-                    ),
+                    Err(e) => Err(e),
+                    Ok(journal) => match journal {
+                        Some(smith_id) => self.memory_journal_write(
+                            &smith_id,
+                            &content,
+                            kind.as_deref(),
+                            tags.as_deref(),
+                            created_by.as_deref(),
+                        ),
+                        None => self.memory.store(
+                            &content,
+                            scope.as_deref(),
+                            kind.as_deref(),
+                            tags.as_deref(),
+                            project_id.as_deref(),
+                            created_by.as_deref(),
+                        ),
+                    },
                 };
                 let result = result.and_then(|m| {
                     serde_json::to_value(m).map_err(crate::daemon::memory::MemoryError::from)

@@ -108,7 +108,6 @@ describe("NewSmithDialog", () => {
         agent: "claude",
         allowedProjects: ["api"],
         budget: {},
-        charter: DEFAULTS.charter,
         color: 2,
         homeProject: "api",
         name: "Grace",
@@ -116,6 +115,7 @@ describe("NewSmithDialog", () => {
       }),
     );
     expect(daemonMock.createSmith.mock.calls[0]![0].soul).toContain("Careful and thorough.");
+    expect(daemonMock.createSmith.mock.calls[0]![0].charter).toBeUndefined();
     expect(useUi.getState().teamSelection).toStrictEqual({ id: "sm_9", kind: "teammate" });
     expect(onClose).toHaveBeenCalled();
   });
@@ -149,5 +149,13 @@ describe("NewSmithDialog", () => {
     expect(daemonMock.createSmith).toHaveBeenCalledWith(
       expect.objectContaining({ allowedProjects: ["warpforge", "api"], homeProject: "warpforge" }),
     );
+  });
+
+  it("offers the soul to customize, and no charter editor", async () => {
+    show();
+    await screen.findByRole("radio", { name: /Careful/ });
+    await userEvent.click(screen.getByRole("button", { name: "Customize soul" }));
+    expect(screen.getByRole("textbox", { name: "Soul" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Charter" })).toBeNull();
   });
 });

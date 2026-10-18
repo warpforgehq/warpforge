@@ -16,8 +16,8 @@ import { cn } from "@/lib/utils";
 import type { SmithDetail, Snapshot } from "@/protocol";
 
 import { HarnessChip } from "../../NewTaskDialog/chips";
-import { Toggle as SettingsToggle } from "../../settings/primitives";
 import { modelOption } from "../../NewTaskDialog/useTaskCreation";
+import { Toggle as SettingsToggle } from "../../settings/primitives";
 import { ColorPicker } from "./ColorPicker";
 import { IdentityEditor } from "./IdentityEditor";
 import { useSmithDefaults } from "./NewSmithDialog";
@@ -29,7 +29,12 @@ const DEFAULT = "__default__";
 function IdentityCard({ detail }: { detail: SmithDetail }) {
   const form = useCardForm(detail, ["name", "color"]);
   return (
-    <SettingsCard title="Identity" description="How you see and @mention it." form={form}>
+    <SettingsCard
+      title="Identity"
+      description="Its name is how you @mention it and how its posts are signed; its colour marks it across the app."
+      guide="identity"
+      form={form}
+    >
       <div className="flex flex-wrap items-start gap-6">
         <label className="space-y-1.5">
           <span className="text-xs text-muted-foreground">Name</span>
@@ -61,9 +66,20 @@ function SoulCard({ detail }: { detail: SmithDetail }) {
   return (
     <SettingsCard
       title="Soul"
-      description="Its voice, the rules it decides by and what it refuses. Warpforge's own ground rules always come first."
+      description="How it talks and decides. It's given to every session the smith runs, so a change shows from its next session on. Warpforge's own ground rules always come first."
+      guide="soul"
       form={form}
     >
+      <dl className="grid gap-x-3 gap-y-0.5 text-xs sm:grid-cols-[auto_1fr]">
+        <dt className="font-medium">Voice</dt>
+        <dd className="text-muted-foreground">how it writes — tone, length, what it leads with</dd>
+        <dt className="font-medium">Decision rules</dt>
+        <dd className="text-muted-foreground">
+          when it acts on its own, when it asks you, when it waits
+        </dd>
+        <dt className="font-medium">Refusals</dt>
+        <dd className="text-muted-foreground">what it won't do, whoever asks</dd>
+      </dl>
       {defaults.data && (
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <span className="text-muted-foreground">Voice:</span>
@@ -105,34 +121,13 @@ function SoulCard({ detail }: { detail: SmithDetail }) {
   );
 }
 
-function CharterCard({ detail }: { detail: SmithDetail }) {
-  const form = useCardForm(detail, ["charter"]);
-  const defaults = useSmithDefaults();
+function HabitsCard() {
   return (
     <SettingsCard
-      title="Charter"
-      description="Its standing duties, in YAML. Warpforge does not run them on a schedule yet."
-      form={form}
-    >
-      {defaults.data && (
-        <div className="flex justify-end text-xs">
-          <button
-            type="button"
-            className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-            onClick={() => form.set("charter", defaults.data.charter)}
-          >
-            Restore default
-          </button>
-        </div>
-      )}
-      <IdentityEditor
-        label="Charter"
-        language="yaml"
-        value={form.values.charter}
-        onChange={(next) => form.set("charter", next)}
-      />
-      <FieldError error={form.errors.charter} />
-    </SettingsCard>
+      title="Habits — coming soon"
+      description="Soon a smith will do things on its own, on a schedule or when something happens: for example, check CI every morning and report failures, or review new pull requests when they're opened."
+      guide="habits"
+    />
   );
 }
 
@@ -142,7 +137,8 @@ function ProjectsCard({ detail, snapshot }: { detail: SmithDetail; snapshot: Sna
   return (
     <SettingsCard
       title="Projects"
-      description="Where it may work. It reads its home project's #general; the home project is set when the smith is created."
+      description="Where it may read, take board items and start work. It follows its home project's #general; in the others it acts only when asked. The home project is set when the smith is created."
+      guide="projects"
       form={form}
     >
       <ProjectMultiSelect
@@ -164,7 +160,12 @@ function ModelCard({ detail, snapshot }: { detail: SmithDetail; snapshot: Snapsh
   const accounts = (snapshot.accounts ?? []).filter((a) => a.agentId === form.values.agent);
   const note = injectionNote(detail.smith);
   return (
-    <SettingsCard title="Model & account" form={form}>
+    <SettingsCard
+      title="Model & account"
+      description="Which agent and model its sessions run on, and the account they use. Takes effect from its next session."
+      guide="model-and-account"
+      form={form}
+    >
       <div className="flex flex-wrap items-center gap-3 text-[13px]">
         <HarnessChip
           agent={form.values.agent}
@@ -220,7 +221,8 @@ function LimitsCard({ detail }: { detail: SmithDetail }) {
   return (
     <SettingsCard
       title="Limits"
-      description="Past either, it starts no new work on its own that day. Empty means no limit."
+      description="Caps on what it does on its own each day. Past either, it starts no new work until the next day; work you start for it still runs. Empty means no limit."
+      guide="limits"
       form={form}
     >
       <div className="flex flex-wrap gap-6 text-[13px]">
@@ -284,7 +286,8 @@ function PermissionsCard({ detail }: { detail: SmithDetail }) {
   return (
     <SettingsCard
       title="Permissions"
-      description="What its work may change beyond reading."
+      description="What its work sessions may change: which paths, and whether they may push or open pull requests. Reading is always allowed."
+      guide="permissions"
       form={form}
     >
       <div className="space-y-2">
@@ -356,7 +359,7 @@ export function SmithSettings({ smithId, snapshot }: { smithId: string; snapshot
       <ProjectsCard detail={detail.data} snapshot={snapshot} />
       <LimitsCard detail={detail.data} />
       <PermissionsCard detail={detail.data} />
-      <CharterCard detail={detail.data} />
+      <HabitsCard />
     </div>
   );
 }
