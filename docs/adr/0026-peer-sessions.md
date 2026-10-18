@@ -514,3 +514,80 @@ Channels section: `#general` and the caller's member channels.
 21. **Channel membership is the user's.** No agent-callable path creates a
     channel or changes its members; a post to a channel the caller is not in
     is refused.
+
+## Addendum (2026-10-18): channel conversations
+
+The owner's goal: Smiths in a named channel are teammates in one chat — they
+hear the user and each other, help, and discuss with the user. Until now a
+user's @mention reached a Smith as a `User` prompt in its thread and the Smith
+answered in its thread, so the channel never saw the answer; two Smiths
+mentioned together never saw each other's replies; and a post without a mention
+reached members only through their next digest.
+
+**A named channel's posts wake its Smith members.** This reverses invariants 3
+and 17 for named channels only. A user post wakes every Smith member as a
+`User` turn; its mentions only make that explicit. A Smith's post — its reply
+(below) or a `message_agent("#name")` — wakes every *other* member as a `Peer`
+turn. A post never wakes its author. A member is not woken while its Smith is
+held (paused, over budget, identity changed); an agent's post also skips a
+muted thread and a paused project, as a direct message would. `#general` is
+unchanged: only mentions start turns there, and plain sessions get the digest.
+A wake for a thread with no live session starts one, as a user's message does;
+a direct message to such a thread is still held.
+
+**A mention inside a named channel is part of the conversation.** A member it
+names is woken by the post anyway, so it is sent no separate direct message or
+user prompt (invariant 16 still holds for non-members and for `#general`).
+
+**One channel turn per thread, coalesced.** The daemon keeps, per thread, the
+channels with posts waiting for it. When the thread is idle — not running, its
+queue empty, no channel turn of its own still pending — it submits one turn for
+the oldest waiting channel, built at submit time, so every post that arrived
+while the thread was busy is in it. Further posts for that channel wait for the
+next idle moment and become one more turn, never one turn per post. A thread's
+own queue is untouched: a channel turn lines up behind what the user typed.
+
+**The prompt says where the conversation is.** A channel turn carries the
+channel, its project and members, who posted, and the channel's last 15 posts
+with the new ones marked, framed as peer text (the user's posts as
+`user-post`). It states the rules: the final message of this turn is posted to
+the channel as the Smith's reply; answer exactly `NOTHING_TO_ADD` when there
+is nothing to add; do not repeat another member; when several members were
+addressed, agree in the channel who takes the work before starting it; do not
+also post the reply with `message_agent`. The constitution carries the same
+rules, so they hold in a session built before this prompt shape. That
+channel's posts are left out of the turn's digest; the cursor moves past them
+when the turn starts (invariant 6).
+
+**The reply is the turn's final message.** When a channel turn ends, not
+interrupted, its closing text (after the last tool call) is posted to the
+channel as a post from the thread, through the sender rules (length clipped to
+the cap, mute and pause refuse it). Empty text or exactly `NOTHING_TO_ADD`
+posts nothing. That post wakes the other members like any Smith post.
+
+**A cap per channel conversation.** Each agent-originated wake counts, per
+woken member, against the channel: 20 in 10 minutes. Over the cap a wake is
+skipped — the post stays in the feed and in the members' next context — and
+the first skip in the window marks that post as the channel's one alert. Any
+user post to the channel resets the window and ends the alert; the window
+also lapses on time (invariant 10). The pair guard still applies to every
+agent-originated wake (cooldown, pair window and its alert); a skipped wake is
+not an error to anyone, since nobody called a tool.
+
+*Rejected:* letting the Smith post its own reply with `message_agent` — the
+reply would depend on the model remembering to, and a forgotten call is a
+silent conversation. *Rejected:* one queued turn per post — N posts become N
+turns per member, which is what invariant 3 guarded against.
+
+### Invariants (addendum)
+
+22. **Only Smith members of a named channel are woken by its posts.**
+    (`actor/peers/conversation.rs`) `#general` and plain sessions keep
+    invariants 3 and 17; the author is never woken.
+23. **One pending channel turn per thread; posts coalesce.** A path that
+    submits a turn per post, or a second channel turn before the first ends,
+    multiplies cost by the post count.
+24. **The reply is posted by the daemon, from the thread, on a clean turn end
+    only.** An interrupted turn, empty text or `NOTHING_TO_ADD` posts nothing.
+25. **Every agent-originated wake passes the pair guard and the channel cap; a
+    user post is never capped and resets the cap.**
