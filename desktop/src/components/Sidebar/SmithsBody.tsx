@@ -30,6 +30,8 @@ import { type TeamSelection, useUi } from "@/store/ui";
 import { ChannelNameDialog } from "@/views/team/channels/ChannelNameDialog";
 import { labeller } from "@/views/team/labels";
 
+import { ProjectBadge } from "./ProjectBadge";
+
 interface Props {
   projects: string[];
   tasks: TaskInfo[];
@@ -182,13 +184,19 @@ export function SmithsBody({ projects, tasks }: Props) {
   return (
     <nav aria-label="Smiths" className="flex flex-col gap-4 px-2 py-3">
       <Select value={project} onValueChange={setSmithsProject}>
-        <SelectTrigger aria-label="Project" className="h-8 w-full text-[13px]">
+        <SelectTrigger
+          aria-label="Project"
+          className="h-9 w-full bg-card px-2 font-medium transition-colors hover:bg-accent/60"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {projects.map((name) => (
             <SelectItem key={name} value={name}>
-              {name}
+              <span className="flex min-w-0 items-center gap-2">
+                <ProjectBadge name={name} />
+                <span className="truncate">{name}</span>
+              </span>
             </SelectItem>
           ))}
         </SelectContent>

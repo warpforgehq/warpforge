@@ -2,13 +2,8 @@ import { ArrowUpRight, CheckCheck, ChevronRight, Inbox, Trash2 } from "lucide-re
 
 import { cn } from "@/lib/utils";
 
-import {
-  LANE_GLYPH_PX,
-  LANE_TWISTY_PX,
-  sidebarContentLeft,
-  sidebarTwistyLeft,
-  type SidebarRow,
-} from "./logic";
+import { LANE_TWISTY_PX, sidebarContentLeft, sidebarTwistyLeft, type SidebarRow } from "./logic";
+import { ProjectBadge } from "./ProjectBadge";
 
 /**
  * Closes a project group with the history it hides: "12 done". Settled work is
@@ -137,13 +132,7 @@ export function ProjectRow({
         style={{ paddingLeft: sidebarContentLeft(0) }}
         className="flex h-8 w-full min-w-0 items-center gap-2 rounded-md pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >
-        <span
-          aria-hidden
-          style={{ height: LANE_GLYPH_PX, width: LANE_GLYPH_PX }}
-          className="grid shrink-0 place-items-center rounded-[5px] bg-secondary text-[11px] font-bold uppercase leading-none text-muted-foreground"
-        >
-          {row.name.slice(0, 1)}
-        </span>
+        <ProjectBadge name={row.name} />
         <strong
           className={cn(
             "min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight",
