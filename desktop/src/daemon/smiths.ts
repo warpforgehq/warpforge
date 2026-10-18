@@ -70,13 +70,20 @@ export function SmithMethods<TBase extends Constructor<CoreClient>>(Base: TBase)
     /** Start a work session as the Smith. @returns the new task's id */
     async startSmithWork(
       id: string,
-      work: { project: string; brief: string; backlogItemId?: string | null },
+      work: {
+        project: string;
+        brief: string;
+        backlogItemId?: string | null;
+        /** In an isolated worktree; the daemon's default (yes) when absent. */
+        worktree?: boolean;
+      },
     ): Promise<string> {
       const result = await this.request("smiths.startWork", {
         backlog_item_id: work.backlogItemId ?? null,
         brief: work.brief,
         id,
         project: work.project,
+        ...(work.worktree === undefined ? {} : { worktree: work.worktree }),
       });
       return (result as { taskId: string }).taskId;
     }

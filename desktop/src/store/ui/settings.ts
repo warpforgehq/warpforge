@@ -81,6 +81,12 @@ export interface SettingsState {
   newTaskWorktree: boolean;
   setNewTaskWorktree: (v: boolean) => void;
   /**
+   * The Smith New Task last started as, by id; `null` once a plain agent was
+   * picked. Ignored when that Smith is gone or not allowed in the project.
+   */
+  newTaskSmith: string | null;
+  setNewTaskSmith: (id: string | null) => void;
+  /**
    * Whether continuing a conversation in a new task puts it in an isolated git
    * worktree. On by default — a fork usually explores an alternative — but
    * persisted so continuing in the current checkout stays a one-time choice.
@@ -108,6 +114,7 @@ export const createSettingsSlice: UiSlice<SettingsState> = (set) => ({
   textGenModel: null,
   autoNameTasks: true,
   newTaskWorktree: false,
+  newTaskSmith: null,
   branchWorktree: true,
   newWorkItemExpanded: false,
   theoMod: false,
@@ -139,6 +146,7 @@ export const createSettingsSlice: UiSlice<SettingsState> = (set) => ({
   setTextGenModel: (textGenModel) => set({ textGenModel }),
   setAutoNameTasks: (autoNameTasks) => set({ autoNameTasks }),
   setNewTaskWorktree: (newTaskWorktree) => set({ newTaskWorktree }),
+  setNewTaskSmith: (newTaskSmith) => set({ newTaskSmith }),
   setBranchWorktree: (branchWorktree) => set({ branchWorktree }),
   setNewWorkItemExpanded: (newWorkItemExpanded) => set({ newWorkItemExpanded }),
   setTheoMod: (theoMod) => set({ theoMod }),
