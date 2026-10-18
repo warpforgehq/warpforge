@@ -2,7 +2,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { yaml } from "@codemirror/lang-yaml";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { basicSetup } from "codemirror";
+import { minimalSetup } from "codemirror";
 import { useEffect, useRef } from "react";
 
 import { useThemeMode } from "@/hooks/useTheme";
@@ -34,7 +34,11 @@ export function IdentityEditor({ value, onChange, language, label, placeholder }
       state: EditorState.create({
         doc: viewRef.current?.state.doc.toString() ?? value,
         extensions: [
-          basicSetup,
+          minimalSetup,
+          EditorView.theme({
+            ".cm-content": { lineHeight: "1.75", padding: "14px 4px" },
+            ".cm-line": { padding: "0 12px" },
+          }),
           language === "markdown" ? markdown() : yaml(),
           ...cmChromeForMode(themeMode),
           EditorView.lineWrapping,
@@ -65,7 +69,7 @@ export function IdentityEditor({ value, onChange, language, label, placeholder }
     <div className="relative">
       <div
         ref={host}
-        className="max-h-80 min-h-32 overflow-auto rounded-md border border-border text-[13px]"
+        className="max-h-[28rem] min-h-32 overflow-auto rounded-lg border border-input text-[13px]"
       />
       {!value && placeholder && (
         <p className="pointer-events-none absolute left-10 top-1.5 text-[13px] text-muted-foreground">

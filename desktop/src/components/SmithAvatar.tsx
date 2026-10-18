@@ -48,7 +48,7 @@ export function SmithAvatar({
           "grid place-items-center rounded-full text-[11px] font-semibold uppercase",
           size,
         )}
-        style={{ backgroundColor: smithColor(index, 0.18), color: smithColor(index) }}
+        style={{ backgroundColor: smithColor(index), color: "hsl(var(--background))" }}
       >
         {Array.from(smith.name)[0] ?? "?"}
       </span>

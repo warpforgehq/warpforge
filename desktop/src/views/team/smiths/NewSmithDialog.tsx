@@ -171,7 +171,7 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
             </label>
             <div className="space-y-1.5">
               <span className="text-[13px] font-medium">Colour</span>
-              <ColorPicker value={color} onChange={setColor} name={name || "S"} />
+              <ColorPicker value={color} onChange={setColor} />
             </div>
           </div>
 

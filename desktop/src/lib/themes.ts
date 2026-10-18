@@ -131,7 +131,7 @@ export const THEMES: Theme[] = [
       "syntax-punctuation": "36 10% 60%",
       "syntax-tag": "20 65% 72%",
       "syntax-attribute": "150 45% 72%",
-      ...chart(60, 68),
+      ...chart(70, 64),
     },
   },
   {
@@ -173,7 +173,7 @@ export const THEMES: Theme[] = [
       "syntax-punctuation": "30 15% 45%",
       "syntax-tag": "20 55% 40%",
       "syntax-attribute": "150 40% 34%",
-      ...chart(55, 42),
+      ...chart(65, 46),
     },
   },
   {
@@ -215,7 +215,7 @@ export const THEMES: Theme[] = [
       "syntax-punctuation": "40 15% 62%",
       "syntax-tag": "35 50% 68%",
       "syntax-attribute": "130 40% 60%",
-      ...chart(42, 66),
+      ...chart(62, 64),
     },
   },
   {
@@ -257,7 +257,7 @@ export const THEMES: Theme[] = [
       "syntax-punctuation": "40 20% 42%",
       "syntax-tag": "35 45% 40%",
       "syntax-attribute": "130 38% 32%",
-      ...chart(40, 40),
+      ...chart(55, 44),
     },
   },
   {
@@ -299,7 +299,7 @@ export const THEMES: Theme[] = [
       "syntax-punctuation": "60 12% 58%",
       "syntax-tag": "120 45% 66%",
       "syntax-attribute": "130 45% 62%",
-      ...chart(50, 66),
+      ...chart(66, 64),
     },
   },
   {
@@ -341,7 +341,7 @@ export const THEMES: Theme[] = [
       "syntax-punctuation": "150 18% 42%",
       "syntax-tag": "120 40% 34%",
       "syntax-attribute": "130 40% 32%",
-      ...chart(45, 38),
+      ...chart(60, 44),
     },
   },
   {
@@ -383,7 +383,7 @@ export const THEMES: Theme[] = [
       "syntax-punctuation": "210 15% 58%",
       "syntax-tag": "200 55% 70%",
       "syntax-attribute": "190 45% 64%",
-      ...chart(62, 70),
+      ...chart(72, 66),
     },
   },
   {
@@ -425,7 +425,7 @@ export const THEMES: Theme[] = [
       "syntax-punctuation": "220 20% 44%",
       "syntax-tag": "200 55% 40%",
       "syntax-attribute": "190 45% 36%",
-      ...chart(58, 44),
+      ...chart(66, 46),
     },
   },
 ];

@@ -66,44 +66,33 @@ export function SmithPage({ smith, snapshot, tab = "chat", onOpenTask, onDeleted
     queryClient.setQueryData(smithDetailKey(smith.id), detail);
 
   return (
-    <section aria-label={smith.name} className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-      <header className="flex flex-wrap items-center gap-3">
-        <SmithAvatar smith={smith} size="size-9" className="[&>span]:text-sm" />
+    <section
+      aria-label={smith.name}
+      className="mx-auto flex min-h-0 w-full min-w-0 max-w-[920px] flex-1 flex-col px-8 pt-6"
+    >
+      <header className="flex items-center gap-3.5">
+        <SmithAvatar smith={smith} size="size-10" className="[&>span]:text-base" />
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h2 className="truncate text-lg font-semibold leading-tight">{smith.name}</h2>
             <SmithStatusBadge status={status} />
           </div>
-          <p className="truncate text-xs text-muted-foreground">
+          <p className="mt-0.5 truncate text-[12.5px] text-muted-foreground">
             {smith.homeProject}
             {smith.allowedProjects.length > 1 && ` +${smith.allowedProjects.length - 1}`} ·{" "}
             {smith.agent}
             {smith.model ? ` · ${smith.model}` : ""}
           </p>
         </div>
-        <Tabs
-          value={tab}
-          onValueChange={(next) => openTeam({ id: smith.id, kind: "teammate", tab: next as Tab })}
-          className="ml-auto"
-        >
-          <TabsList>
-            <TabsTrigger variant="pill" value="chat">
-              Chat
-            </TabsTrigger>
-            <TabsTrigger variant="pill" value="work">
-              Work
-              {openWork > 0 && (
-                <span className="tnum text-[11px] text-muted-foreground">{openWork}</span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger variant="pill" value="settings">
-              Settings
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" aria-label="More" className="size-8">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="More"
+              className="ml-auto size-8"
+            >
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -130,9 +119,30 @@ export function SmithPage({ smith, snapshot, tab = "chat", onOpenTask, onDeleted
         </DropdownMenu>
       </header>
 
+      <Tabs
+        value={tab}
+        onValueChange={(next) => openTeam({ id: smith.id, kind: "teammate", tab: next as Tab })}
+        className="mt-5 border-b border-border"
+      >
+        <TabsList className="gap-6">
+          <TabsTrigger value="chat" className="-mb-px px-0">
+            Chat
+          </TabsTrigger>
+          <TabsTrigger value="work" className="-mb-px px-0">
+            Work
+            {openWork > 0 && (
+              <span className="tnum text-[11px] text-muted-foreground">{openWork}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="-mb-px px-0">
+            Settings
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <HeldBanner smith={smith} onResolved={resolved} />
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-6">
         {tab === "chat" && <SmithChat smith={smith} snapshot={snapshot} onOpenTask={onOpenTask} />}
         {tab === "work" && <SmithWork smith={smith} snapshot={snapshot} onOpenTask={onOpenTask} />}
         {tab === "settings" && <SmithSettings smithId={smith.id} snapshot={snapshot} />}

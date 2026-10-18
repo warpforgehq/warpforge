@@ -6,16 +6,12 @@ import { cn } from "@/lib/utils";
 export function ColorPicker({
   value,
   onChange,
-  name,
 }: {
   value: number;
   onChange: (index: number) => void;
-  /** Shown as the initial inside each swatch. */
-  name: string;
 }) {
-  const initial = Array.from(name)[0]?.toUpperCase() ?? "S";
   return (
-    <div role="radiogroup" aria-label="Colour" className="flex gap-1.5">
+    <div role="radiogroup" aria-label="Colour" className="flex gap-2.5">
       {Array.from({ length: CHART_COLORS }, (_, index) => (
         <button
           key={index}
@@ -25,13 +21,11 @@ export function ColorPicker({
           aria-label={`Colour ${index + 1}`}
           onClick={() => onChange(index)}
           className={cn(
-            "grid size-7 place-items-center rounded-full text-[11px] font-semibold ring-offset-2 ring-offset-background transition-shadow focus-visible:outline-none",
-            index === value ? "ring-2 ring-ring" : "hover:ring-1 hover:ring-border",
+            "size-6 rounded-full ring-offset-2 ring-offset-background transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            index === value ? "ring-2 ring-foreground" : "hover:ring-1 hover:ring-border",
           )}
-          style={{ backgroundColor: smithColor(index, 0.18), color: smithColor(index) }}
-        >
-          {initial}
-        </button>
+          style={{ backgroundColor: smithColor(index) }}
+        />
       ))}
     </div>
   );
