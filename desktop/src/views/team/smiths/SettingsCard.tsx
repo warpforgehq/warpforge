@@ -78,14 +78,15 @@ export function useCardForm(detail: SmithDetail, fields: (keyof SmithFormValues)
 }
 
 /**
- * A titled Settings card: what it changes in plain words, a link to the
- * guide's section, and Save and Revert while it has changes.
+ * One Settings section: a heading with what it changes in plain words, its
+ * fields, and a footer with Discard and Save that light up once it changes.
  */
 export function SettingsCard({
   title,
   description,
   guide,
   form,
+  footer,
   children,
 }: {
   title: string;
@@ -93,40 +94,56 @@ export function SettingsCard({
   /** The Smiths guide's heading anchor for this setting. */
   guide?: string;
   form?: Pick<ReturnType<typeof useCardForm>, "dirty" | "save" | "saving" | "reset">;
+  /** Extra actions at the footer's left, e.g. Reset to default. */
+  footer?: ReactNode;
   children?: ReactNode;
 }) {
   return (
-    <section aria-label={title} className="space-y-3 rounded-lg border border-border bg-card p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-0.5">
-          <h3 className="text-sm font-semibold">{title}</h3>
-          {(description || guide) && (
-            <p className="text-xs text-muted-foreground">
-              {description}{" "}
-              {guide && (
-                <button
-                  type="button"
-                  onClick={() => void openExternalLink(smithsGuideUrl(guide))}
-                  className="whitespace-nowrap text-primary underline-offset-2 hover:underline"
-                >
-                  Learn more
-                </button>
-              )}
-            </p>
-          )}
-        </div>
-        {form?.dirty && (
-          <div className="flex shrink-0 gap-1">
-            <Button type="button" variant="ghost" size="sm" onClick={form.reset}>
-              Revert
-            </Button>
-            <Button type="button" size="sm" disabled={form.saving} onClick={() => void form.save()}>
-              Save
-            </Button>
-          </div>
+    <section aria-label={title} className="space-y-5">
+      <header className="space-y-1">
+        <h3 className="text-[15px] font-semibold">{title}</h3>
+        {(description || guide) && (
+          <p className="text-[12.5px] text-muted-foreground">
+            {description}{" "}
+            {guide && (
+              <button
+                type="button"
+                onClick={() => void openExternalLink(smithsGuideUrl(guide))}
+                className="whitespace-nowrap underline-offset-2 hover:text-foreground hover:underline"
+              >
+                Learn more
+              </button>
+            )}
+          </p>
         )}
-      </div>
+      </header>
       {children}
+      {(form || footer) && (
+        <footer className="flex items-center justify-between gap-3 border-t border-border pt-3">
+          <div className="text-[12.5px] text-muted-foreground">{footer}</div>
+          {form && (
+            <div className="flex shrink-0 gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!form.dirty}
+                onClick={form.reset}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={!form.dirty || form.saving}
+                onClick={() => void form.save()}
+              >
+                Save
+              </Button>
+            </div>
+          )}
+        </footer>
+      )}
     </section>
   );
 }

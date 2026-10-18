@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -70,6 +70,7 @@ describe("SmithSettings", () => {
   it("applies a voice preset to the soul and saves only the soul", async () => {
     daemonMock.updateSmith.mockResolvedValue(detail);
     show();
+    await userEvent.click(await screen.findByRole("button", { name: "Personality" }));
     await userEvent.click(await screen.findByRole("button", { name: "Careful" }));
     const soul = screen.getByRole("textbox", { name: "Soul" }) as HTMLTextAreaElement;
     expect(soul.value).toContain("Careful and thorough.");
@@ -83,6 +84,7 @@ describe("SmithSettings", () => {
   it("adds a write path as a chip and saves the permissions alone", async () => {
     daemonMock.updateSmith.mockResolvedValue(detail);
     show();
+    await userEvent.click(await screen.findByRole("button", { name: "Permissions" }));
     await userEvent.type(await screen.findByRole("textbox", { name: "Add a path" }), "src/{Enter}");
     await userEvent.click(screen.getByRole("switch", { name: "May push" }));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -93,8 +95,10 @@ describe("SmithSettings", () => {
 
   it("refuses a bad limit and moves the delivery note into Model & account", async () => {
     show();
+    await userEvent.click(await screen.findByRole("button", { name: "Model & limits" }));
     await userEvent.type(await screen.findByRole("textbox", { name: "Turns per day" }), "1.5");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    const limits = screen.getByRole("region", { name: "Limits" });
+    await userEvent.click(within(limits).getByRole("button", { name: "Save" }));
     expect(screen.getByRole("alert").textContent).toContain("whole number");
     expect(daemonMock.updateSmith).not.toHaveBeenCalled();
     expect(screen.getByRole("region", { name: "Model & account" }).textContent).toContain(
@@ -104,6 +108,7 @@ describe("SmithSettings", () => {
 
   it("shows habits as coming soon with an example, and no charter editor", async () => {
     show();
+    await userEvent.click(await screen.findByRole("button", { name: /^Habits/ }));
     const habits = await screen.findByRole("region", { name: "Habits — coming soon" });
     expect(habits.textContent).toContain("check CI every morning");
     expect(habits.querySelector("textarea")).toBeNull();
@@ -112,18 +117,19 @@ describe("SmithSettings", () => {
 
   it("explains the soul's sections above the editor", async () => {
     show();
-    const soul = await screen.findByRole("region", { name: "Soul" });
+    await userEvent.click(await screen.findByRole("button", { name: "Personality" }));
+    const soul = await screen.findByRole("region", { name: "Personality" });
     for (const section of ["Voice", "Decision rules", "Refusals"]) {
       expect(soul.textContent).toContain(section);
     }
   });
 
-  it("links every card to its section of the Smiths guide", async () => {
+  it("links each section to its part of the Smiths guide", async () => {
     show();
     await screen.findByRole("region", { name: "Identity" });
-    const links = screen.getAllByRole("button", { name: "Learn more" });
-    expect(links).toHaveLength(7);
-    await userEvent.click(links[0]!);
+    await userEvent.click(screen.getByRole("button", { name: "Learn more" }));
     expect(openExternalLink).toHaveBeenCalledWith("https://warpforge.app/guides/smiths/#identity");
+    await userEvent.click(screen.getByRole("button", { name: "Model & limits" }));
+    expect(screen.getAllByRole("button", { name: "Learn more" })).toHaveLength(2);
   });
 });
