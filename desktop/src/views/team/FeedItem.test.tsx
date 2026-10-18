@@ -22,7 +22,11 @@ function record(overrides: Partial<PeerMessage>): PeerMessage {
   };
 }
 
-function show(item: PeerMessage, onStartSession = vi.fn<(record: PeerMessage) => void>()) {
+function show(
+  item: PeerMessage,
+  onStartSession = vi.fn<(record: PeerMessage) => void>(),
+  smith?: { id: string; name: string },
+) {
   const onOpenTask = vi.fn<(id: string) => void>();
   render(
     <ul>
@@ -31,6 +35,7 @@ function show(item: PeerMessage, onStartSession = vi.fn<(record: PeerMessage) =>
         label={label}
         onOpenTask={onOpenTask}
         onStartSession={onStartSession}
+        smith={smith}
       />
     </ul>,
   );
@@ -56,6 +61,11 @@ describe("FeedItem", () => {
     const { onStartSession } = show(post);
     await userEvent.click(screen.getByRole("button", { name: "Start a session" }));
     expect(onStartSession).toHaveBeenCalledWith(post);
+  });
+
+  it("shows the Smith's avatar on its thread's post", () => {
+    show(record({ status: "posted", toTask: undefined }), undefined, { id: "sm_1", name: "Ada" });
+    expect(screen.getByRole("img", { name: "Ada" })).toBeTruthy();
   });
 
   it("has no start action on an agent's post", () => {

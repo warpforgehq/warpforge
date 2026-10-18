@@ -9,6 +9,7 @@ vi.mock("sonner", () => ({
 
 import type { Conversation } from "@/lib/peerFeed";
 import type { PeerMessage } from "@/protocol";
+import { usePeersStore } from "@/store/peers";
 
 import { Thread } from "./Thread";
 
@@ -72,6 +73,30 @@ describe("Thread", () => {
   it("has a composer in the user's own thread", () => {
     show(pair([], [null, "t_b"]));
     expect(screen.getByRole("textbox", { name: "Message" })).toBeTruthy();
+  });
+
+  it("says which members are replying in a named channel", () => {
+    usePeersStore.getState().upsertChannel({
+      createdAt: 0,
+      id: "ch_1",
+      members: [
+        { name: "Ada", smithId: "sm_1" },
+        { name: "Bo", smithId: "sm_2" },
+      ],
+      name: "design",
+      project: "demo",
+      working: ["sm_2"],
+    });
+    show({
+      channelId: "ch_1",
+      key: "demo::team::ch_1",
+      kind: "team",
+      lastAt: 0,
+      parties: null,
+      project: "demo",
+      records: [],
+    });
+    expect(screen.getByRole("status").textContent).toBe("Bo is replying…");
   });
 
   it("follows new messages only while the reader is at the end", () => {

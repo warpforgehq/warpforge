@@ -1,6 +1,7 @@
 import { AlertTriangle, ArrowRight, Play } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { SmithAvatar } from "@/components/SmithAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { PeerMessage } from "@/protocol";
@@ -13,6 +14,8 @@ interface Props {
   onOpenTask: (id: string) => void;
   /** Offered on the user's own channel posts. */
   onStartSession?: (record: PeerMessage) => void;
+  /** The Smith whose thread sent the record. */
+  smith?: { id: string; name: string };
 }
 
 function TaskLink({
@@ -37,7 +40,7 @@ function TaskLink({
 }
 
 /** One feed record: who sent it to whom, its text, and where it stands. */
-export function FeedItem({ record, label, onOpenTask, onStartSession }: Props) {
+export function FeedItem({ record, label, onOpenTask, onStartSession, smith }: Props) {
   const meta = STATUS_META[record.status] ?? STATUS_META.refused;
   if (record.startedTask) {
     return (
@@ -54,6 +57,7 @@ export function FeedItem({ record, label, onOpenTask, onStartSession }: Props) {
   return (
     <li className="group space-y-1 rounded-md px-1 py-1.5">
       <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
+        {smith && <SmithAvatar smith={smith} size="size-5" />}
         <TaskLink id={record.fromTask} label={label} onOpenTask={onOpenTask} />
         {record.toTask && (
           <>
