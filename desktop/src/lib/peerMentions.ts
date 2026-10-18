@@ -53,16 +53,20 @@ export interface MentionResolution {
   unmatched: string[];
 }
 
-/**
- * @param text the post
- * @param candidates the sessions a mention may name
- * @returns the sessions it mentions, the first ambiguous mention, and the
- *   `@words` that name nobody
- */
-export function resolveMentions(text: string, candidates: MentionCandidate[]): MentionResolution {
+/** One `@` that starts a mention, and what it matched. */
+interface Scanned {
+  /** Index of the `@`, in characters. */
+  at: number;
+  /** Characters after the `@` that the match covers. */
+  length: number;
+  matched: MentionCandidate[];
+  /** The `@word` when nothing matched. */
+  word: string;
+}
+
+function scan(text: string, candidates: MentionCandidate[]): Scanned[] {
   const chars = Array.from(text);
-  const found: string[] = [];
-  const unmatched: string[] = [];
+  const scanned: Scanned[] = [];
   for (let at = 0; at < chars.length; at++) {
     if (chars[at] !== "@" || !startsMention(chars[at - 1])) continue;
     const rest = chars.slice(at + 1);
@@ -81,9 +85,33 @@ export function resolveMentions(text: string, candidates: MentionCandidate[]): M
         matched.push(candidate);
       }
     }
+    const word: string[] = [];
+    for (const char of rest) {
+      if (!isWordChar(char)) break;
+      word.push(char);
+    }
+    scanned.push({ at, length: best, matched, word: word.join("") });
+  }
+  return scanned;
+}
+
+/**
+ * @param text the post
+ * @param candidates the sessions a mention may name
+ * @returns the sessions it mentions, the first ambiguous mention, and the
+ *   `@words` that name nobody
+ */
+export function resolveMentions(text: string, candidates: MentionCandidate[]): MentionResolution {
+  const chars = Array.from(text);
+  const found: string[] = [];
+  const unmatched: string[] = [];
+  for (const { at, length, matched, word } of scan(text, candidates)) {
     if (matched.length > 1) {
       return {
-        ambiguous: { ids: matched.map((m) => m.id), mention: rest.slice(0, best).join("") },
+        ambiguous: {
+          ids: matched.map((m) => m.id),
+          mention: chars.slice(at + 1, at + 1 + length).join(""),
+        },
         found,
         unmatched,
       };
@@ -92,12 +120,29 @@ export function resolveMentions(text: string, candidates: MentionCandidate[]): M
       if (!found.includes(matched[0]!.id)) found.push(matched[0]!.id);
       continue;
     }
-    const word: string[] = [];
-    for (const char of rest) {
-      if (!isWordChar(char)) break;
-      word.push(char);
-    }
-    if (word.length > 0) unmatched.push(`@${word.join("")}`);
+    if (word.length > 0) unmatched.push(`@${word}`);
   }
   return { ambiguous: null, found, unmatched };
+}
+
+/** A resolved mention inside a text. */
+export interface MentionSpan {
+  /** Where the `@` is, in characters. */
+  start: number;
+  /** Just past the mention, in characters. */
+  end: number;
+  candidate: MentionCandidate;
+}
+
+/**
+ * The mentions in `text` that name exactly one candidate, for highlighting;
+ * ambiguous and unmatched `@words` are left out.
+ * @param text the text
+ * @param candidates the sessions a mention may name
+ * @returns the spans, in order
+ */
+export function mentionSpans(text: string, candidates: MentionCandidate[]): MentionSpan[] {
+  return scan(text, candidates)
+    .filter((s) => s.matched.length === 1)
+    .map((s) => ({ candidate: s.matched[0]!, end: s.at + 1 + s.length, start: s.at }));
 }
