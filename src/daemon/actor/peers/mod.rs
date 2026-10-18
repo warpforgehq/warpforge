@@ -29,7 +29,7 @@ use crate::daemon::task::now_secs;
 
 pub use command::PeerCommand;
 #[cfg(test)]
-pub(crate) use conversation::CHANNEL_WAKES;
+pub(crate) use conversation::{CHANNEL_WAKES, NOTHING_TO_ADD};
 pub(crate) use directory::{is_peer_visible, peer_info};
 
 pub(crate) const MUTED_SELF: &str = "the user muted this session's peer messages";
