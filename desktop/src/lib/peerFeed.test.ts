@@ -6,6 +6,7 @@ import { smithFixture } from "@/test/smiths";
 import {
   applyMention,
   buildConversations,
+  continuesGroup,
   isPeerVisible,
   mentionAtCaret,
   mentionCandidates,
@@ -193,5 +194,30 @@ describe("named channels", () => {
       ["demo::team", undefined],
       ["demo::ch::c1", "c1"],
     ]);
+  });
+});
+
+describe("continuesGroup", () => {
+  const post = (overrides: Partial<PeerMessage>): PeerMessage => ({
+    createdAt: 1000,
+    fromTask: "t_a",
+    id: 1,
+    project: "demo",
+    status: "posted",
+    text: "x",
+    ...overrides,
+  });
+
+  it("groups the same sender's posts a few minutes apart", () => {
+    expect(continuesGroup(post({}), post({ createdAt: 1200, id: 2 }))).toBe(true);
+  });
+
+  it("starts a new group for another sender, a long gap, a new status or a live alert", () => {
+    const first = post({});
+    expect(continuesGroup(undefined, first)).toBe(false);
+    expect(continuesGroup(first, post({ fromTask: "t_b", id: 2 }))).toBe(false);
+    expect(continuesGroup(first, post({ createdAt: 1000 + 301, id: 2 }))).toBe(false);
+    expect(continuesGroup(first, post({ id: 2, status: "refused" }))).toBe(false);
+    expect(continuesGroup(first, post({ alert: true, id: 2 }))).toBe(false);
   });
 });

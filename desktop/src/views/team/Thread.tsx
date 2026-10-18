@@ -5,7 +5,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { daemon } from "@/daemon";
 import { useSmiths } from "@/hooks/useSmiths";
-import { type Conversation, type MentionCandidate, userWritesIn } from "@/lib/peerFeed";
+import {
+  type Conversation,
+  type MentionCandidate,
+  continuesGroup,
+  userWritesIn,
+} from "@/lib/peerFeed";
 import { smithColorIndex } from "@/lib/smithColors";
 import type { Channel, PeerControls, PeerMessage } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
@@ -168,7 +173,7 @@ export function Thread({
               Nothing said here yet.
             </li>
           ))}
-        {records.map((record) => (
+        {records.map((record, index) => (
           <FeedItem
             key={record.id}
             record={record}
@@ -178,6 +183,7 @@ export function Thread({
             smith={smithOfThread(record.fromTask)}
             mentions={candidates}
             smithColorOf={smithColorOf}
+            continued={continuesGroup(records[index - 1], record)}
           />
         ))}
       </ol>

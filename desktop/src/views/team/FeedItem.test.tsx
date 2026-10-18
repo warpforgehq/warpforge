@@ -106,6 +106,21 @@ describe("FeedItem", () => {
     expect(author.className).toContain("text-sm");
   });
 
+  it("drops the header of a post that continues a group, keeping its text", () => {
+    render(
+      <ul>
+        <FeedItem
+          record={record({ status: "posted", text: "and one more", toTask: undefined })}
+          label={label}
+          onOpenTask={vi.fn<(id: string) => void>()}
+          continued
+        />
+      </ul>,
+    );
+    expect(screen.queryByRole("button", { name: "Fix login" })).toBeNull();
+    expect(screen.getByText("and one more")).toBeTruthy();
+  });
+
   it("explains a held message", () => {
     show(record({ status: "held" }));
     expect(screen.getByText(/not running/)).toBeTruthy();

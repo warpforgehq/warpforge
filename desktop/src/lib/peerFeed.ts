@@ -274,3 +274,25 @@ export function applyMention(
   const next = `${text.slice(0, mention.start)}${insert} ${text.slice(caret)}`;
   return { caret: mention.start + insert.length + 1, text: next };
 }
+
+/** Posts from one sender this close together read as one group. */
+export const GROUP_GAP_SECS = 5 * 60;
+
+/**
+ * @param previous the record shown above, if any
+ * @param record the next record of the same thread
+ * @returns whether `record` continues `previous`'s group and needs no header:
+ *   same sender and receiver, soon after, and nothing of its own to flag
+ */
+export function continuesGroup(previous: PeerMessage | undefined, record: PeerMessage): boolean {
+  return (
+    previous !== undefined &&
+    !previous.startedTask &&
+    !record.startedTask &&
+    previous.fromTask === record.fromTask &&
+    previous.toTask === record.toTask &&
+    previous.status === record.status &&
+    !(record.alert && record.alertClearedAt == null) &&
+    record.createdAt - previous.createdAt <= GROUP_GAP_SECS
+  );
+}
