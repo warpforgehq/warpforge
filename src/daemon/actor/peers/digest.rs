@@ -103,6 +103,7 @@ impl Daemon {
                     .map(|task| (from.as_str(), task)),
                 channel: false,
                 room: None,
+                fresh: false,
                 text: &record.text,
             };
             prompt.content = vec![PromptContent::Context(peer_messages(&[item], 0))];
@@ -210,6 +211,7 @@ impl Daemon {
                 from: i.task.as_deref().map(|task| (i.from.as_str(), task)),
                 channel: i.channel,
                 room: i.room.as_deref(),
+                fresh: false,
                 text: &i.text,
             })
             .collect();
