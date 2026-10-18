@@ -221,6 +221,7 @@ export function Toggle({
       <input
         id={id}
         type="checkbox"
+        role="switch"
         className="peer sr-only"
         checked={checked}
         disabled={disabled}

@@ -1,5 +1,5 @@
 import { Loader2, X } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { ProjectMultiSelect } from "@/components/ProjectMultiSelect";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import type { SmithDetail, Snapshot } from "@/protocol";
 
 import { HarnessChip } from "../../NewTaskDialog/chips";
+import { Toggle as SettingsToggle } from "../../settings/primitives";
 import { modelOption } from "../../NewTaskDialog/useTaskCreation";
 import { ColorPicker } from "./ColorPicker";
 import { IdentityEditor } from "./IdentityEditor";
@@ -259,29 +260,14 @@ function Toggle({
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  const id = useId();
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className="flex items-center gap-2 text-[13px]"
-    >
-      <span
-        className={cn(
-          "relative h-4 w-7 rounded-full transition-colors",
-          checked ? "bg-primary" : "bg-muted-foreground/30",
-        )}
-      >
-        <span
-          className={cn(
-            "absolute top-0.5 size-3 rounded-full bg-background transition-transform",
-            checked ? "translate-x-3.5" : "translate-x-0.5",
-          )}
-        />
-      </span>
-      {label}
-    </button>
+    <span className="flex items-center gap-2 text-[13px]">
+      <SettingsToggle id={id} checked={checked} onChange={onChange} />
+      <label htmlFor={id} className="cursor-pointer">
+        {label}
+      </label>
+    </span>
   );
 }
 
