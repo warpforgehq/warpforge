@@ -209,12 +209,15 @@ impl Daemon {
         }
     }
 
-    /// Answer an advisor's permission request with a denial on the spot.
-    /// @returns whether the request was the advisor's and has been answered
-    pub(crate) fn advisor_denies_permission(
+    /// Answer a read-only session's permission request on the spot: denied,
+    /// except a Smith thread's call to a warpforge tool its bridge serves.
+    /// @param warpforge_tool the warpforge tool the request gates, if any
+    /// @returns whether the request was a read-only session's and is answered
+    pub(crate) fn advisor_answers_permission(
         &mut self,
         task_id: &str,
         request: wire::SessionUpdate,
+        warpforge_tool: Option<String>,
     ) -> bool {
         if !self.is_read_only_session(task_id) {
             return false;
@@ -223,15 +226,20 @@ impl Daemon {
             return false;
         };
         let request_id = request_id.clone();
+        let allowed = self.is_thread_task(task_id)
+            && warpforge_tool
+                .as_deref()
+                .is_some_and(crate::mcp::thread_may_call);
+        let outcome = if allowed { "allow" } else { "deny" };
         if let Some(handle) = self.sessions.get(task_id) {
-            handle.answer(request_id.clone(), "deny".into());
+            handle.answer(request_id.clone(), outcome.into());
         }
         self.emit_session(task_id, request);
         self.emit_session(
             task_id,
             wire::SessionUpdate::PermissionResolved {
                 request_id,
-                outcome: "deny".into(),
+                outcome: outcome.into(),
             },
         );
         true

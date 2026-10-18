@@ -110,6 +110,8 @@ pub enum AcpUpdate {
         title: String,
         options: Vec<String>,
         tool_call_id: Option<String>,
+        /// The warpforge MCP tool the request gates, when it is one.
+        warpforge_tool: Option<String>,
     },
     Plan {
         entries: Vec<wire::PlanEntry>,

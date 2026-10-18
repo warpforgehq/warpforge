@@ -146,6 +146,7 @@ impl Daemon {
                 title,
                 options,
                 tool_call_id,
+                warpforge_tool,
             } => {
                 let request = wire::SessionUpdate::PermissionRequest {
                     request_id: request_id.clone(),
@@ -154,7 +155,7 @@ impl Daemon {
                     tool_call_id,
                     browser_origin: None,
                 };
-                if self.advisor_denies_permission(&task_id, request.clone()) {
+                if self.advisor_answers_permission(&task_id, request.clone(), warpforge_tool) {
                     return;
                 }
                 self.pending_permissions

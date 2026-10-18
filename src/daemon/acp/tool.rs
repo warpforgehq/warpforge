@@ -125,6 +125,18 @@ fn render_mcp_tool(server: &str, tool: &str, update: &Value) -> String {
 
 /// Render an MCP tool label from a bare title string (no rawInput). Handles
 /// `mcp__<server>__<tool>` and `<server>_<tool>`. Falls back to the original.
+/// The warpforge tool a raw MCP tool title names: `mcp__warpforge__<tool>`
+/// (Claude) or `warpforge_<tool>` (opencode).
+/// @param title the tool call's raw title
+/// @returns the tool name, for a warpforge tool
+pub fn warpforge_tool_name(title: &str) -> Option<String> {
+    let tool = title
+        .strip_prefix("mcp__warpforge__")
+        .or_else(|| title.strip_prefix("warpforge_"))?;
+    (!tool.is_empty() && tool.chars().all(|c| c.is_ascii_lowercase() || c == '_'))
+        .then(|| tool.to_string())
+}
+
 pub fn pretty_mcp_tool_label(title: &str) -> String {
     let tool = if let Some(rest) = title.strip_prefix("mcp__") {
         let mut parts = rest.splitn(2, "__");
@@ -247,6 +259,22 @@ pub(super) fn content_text(content: &Value) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_warpforge_tool_is_named_from_either_harness_title() {
+        let named = |title: &str| warpforge_tool_name(title);
+        assert_eq!(
+            named("mcp__warpforge__start_work").as_deref(),
+            Some("start_work")
+        );
+        assert_eq!(
+            named("warpforge_create_backlog_task").as_deref(),
+            Some("create_backlog_task")
+        );
+        assert_eq!(named("mcp__other__start_work"), None);
+        assert_eq!(named("Run `rm -rf build`"), None);
+        assert_eq!(named("warpforge_"), None);
+    }
     use serde_json::json;
 
     #[test]

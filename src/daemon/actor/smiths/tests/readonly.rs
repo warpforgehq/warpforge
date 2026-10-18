@@ -9,9 +9,10 @@ const WRITER: &str = concat!(
 );
 
 /// ADR 0027 invariant 6 through ADR 0022's enforcement: the thread's file
-/// writes and permission prompts are refused by the daemon.
+/// writes and shell prompts are refused by the daemon, while the warpforge
+/// tools its bridge serves — `start_work` among them — are allowed.
 #[tokio::test]
-async fn the_thread_cannot_write_files_or_be_granted_permissions() {
+async fn the_thread_cannot_write_files_but_may_call_its_warpforge_tools() {
     let home = home();
     let log = home._dir.path().join("writer.log");
     let target = home._dir.path().join("written.txt");
@@ -30,7 +31,7 @@ async fn the_thread_cannot_write_files_or_be_granted_permissions() {
             .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
             .collect::<Vec<_>>()
     };
-    wait("both answers", || answers().len() == 2).await;
+    wait("every answer", || answers().len() == 5).await;
     let answers = answers();
     let write = answers.iter().find(|a| a["id"] == 900).unwrap();
     assert!(
@@ -41,10 +42,20 @@ async fn the_thread_cannot_write_files_or_be_granted_permissions() {
         "{write}"
     );
     assert!(!target.exists(), "nothing was written");
-    let permission = answers.iter().find(|a| a["id"] == 901).unwrap();
-    assert_ne!(
-        permission["result"]["outcome"]["optionId"], "allow",
-        "{permission}"
+    let option = |id: u64| {
+        answers.iter().find(|a| a["id"] == id).unwrap()["result"]["outcome"]["optionId"].clone()
+    };
+    assert_eq!(option(901), "deny", "a shell command");
+    assert_eq!(option(902), "allow", "start_work, as Claude names it");
+    assert_eq!(
+        option(903),
+        "allow",
+        "create_backlog_task, as opencode names it"
+    );
+    assert_eq!(
+        option(904),
+        "deny",
+        "a tool the thread's bridge does not serve"
     );
 }
 
