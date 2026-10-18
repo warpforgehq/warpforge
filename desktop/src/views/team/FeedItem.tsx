@@ -25,6 +25,8 @@ interface Props {
   mentions?: MentionCandidate[];
   /** The palette index of the Smith a thread task belongs to. */
   smithColorOf?: (taskId: string) => number | undefined;
+  /** It continues the post above from the same sender: no header. */
+  continued?: boolean;
 }
 
 const SESSION_MENTION = "rounded bg-secondary px-1 font-medium text-foreground";
@@ -66,6 +68,7 @@ export function FeedItem({
   smith,
   mentions,
   smithColorOf,
+  continued = false,
 }: Props) {
   const plugins = useMemo(() => {
     if (!mentions?.length) return undefined;
@@ -93,40 +96,52 @@ export function FeedItem({
   const reason =
     record.status === "refused" ? record.reason : record.status === "held" ? HELD_HINT : undefined;
   return (
-    <li className="group space-y-1 rounded-md px-1 py-1.5">
-      <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
-        {smith && <SmithAvatar smith={smith} size="size-5" />}
-        <TaskLink id={record.fromTask} label={label} onOpenTask={onOpenTask} className={AUTHOR} />
-        {record.toTask && (
-          <>
-            <ArrowRight aria-hidden className="size-3 shrink-0" />
-            <TaskLink id={record.toTask} label={label} onOpenTask={onOpenTask} className={AUTHOR} />
-          </>
-        )}
-        <span className="shrink-0 text-xs">{feedTime(record.createdAt)}</span>
-        {record.status !== "posted" && (
-          <Badge variant={meta.badge} className="shrink-0">
-            {meta.label}
-          </Badge>
-        )}
-        {record.alert && record.alertClearedAt == null && (
-          <AlertTriangle
-            aria-label="Message limit reached"
-            className="size-3.5 shrink-0 text-warn"
-          />
-        )}
-        {onStartSession && isUserPost(record) && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="ml-auto h-6 shrink-0 px-2 text-xs opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
-            onClick={() => onStartSession(record)}
-          >
-            Start a session
-          </Button>
-        )}
-      </div>
+    <li
+      className={cn(
+        "group relative space-y-1 rounded-md px-2 py-1 transition-colors hover:bg-secondary/40",
+        continued ? "mt-0" : "mt-3 first:mt-0",
+      )}
+    >
+      {!continued && (
+        <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
+          {smith && <SmithAvatar smith={smith} size="size-5" />}
+          <TaskLink id={record.fromTask} label={label} onOpenTask={onOpenTask} className={AUTHOR} />
+          {record.toTask && (
+            <>
+              <ArrowRight aria-hidden className="size-3 shrink-0" />
+              <TaskLink
+                id={record.toTask}
+                label={label}
+                onOpenTask={onOpenTask}
+                className={AUTHOR}
+              />
+            </>
+          )}
+          <span className="shrink-0 text-xs">{feedTime(record.createdAt)}</span>
+          {record.status !== "posted" && (
+            <Badge variant={meta.badge} className="shrink-0">
+              {meta.label}
+            </Badge>
+          )}
+          {record.alert && record.alertClearedAt == null && (
+            <AlertTriangle
+              aria-label="Message limit reached"
+              className="size-3.5 shrink-0 text-warn"
+            />
+          )}
+        </div>
+      )}
+      {onStartSession && isUserPost(record) && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="absolute right-1 top-1 h-6 px-2 text-xs opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+          onClick={() => onStartSession(record)}
+        >
+          Start a session
+        </Button>
+      )}
       <CollapsibleMarkdown className="text-sm text-foreground" remarkPlugins={plugins}>
         {record.text}
       </CollapsibleMarkdown>
