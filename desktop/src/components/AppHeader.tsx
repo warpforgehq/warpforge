@@ -3,6 +3,7 @@ import { useMemo, useSyncExternalStore } from "react";
 
 import { TaskPullRequestChip } from "@/components/pullRequest/TaskPullRequestChip";
 import { TaskMenu } from "@/components/TaskMenu";
+import { TaskSmithByline } from "@/components/TaskSmith";
 import { TaskTitleEditor } from "@/components/TaskTitleEditor";
 import {
   DropdownMenu,
@@ -80,6 +81,7 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
         </span>
         {openTask ? (
           <>
+            <TaskSmithByline task={openTask} interactive />
             <TaskTitleEditor task={openTask} />
             {/* Only worth saying when it is the unusual case. A task in the
                 project's own checkout is the default, and a chip announcing

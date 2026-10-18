@@ -1,5 +1,6 @@
 import { TriangleAlert } from "lucide-react";
 
+import { TaskSmithByline } from "@/components/TaskSmith";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { attentionAction, attentionStatus } from "@/lib/attentionLabels";
@@ -53,6 +54,7 @@ export function DecisionQueue({
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <StatusBadge status={attentionStatus(item)} size="xs" />
+                  <TaskSmithByline task={item.task} />
                   <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-foreground">
                     {taskLabel(item.task)}
                   </span>

@@ -1,8 +1,12 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { daemon, type DaemonState } from "@/daemon";
 import type { AccountInfo, TaskInfo } from "@/protocol";
+import { useSmithsStore } from "@/store/smiths";
+import { useUi } from "@/store/ui";
+import { smithFixture } from "@/test/smiths";
 
 import AppHeader from "./AppHeader";
 
@@ -84,5 +88,24 @@ describe("AppHeader with an open task", () => {
     renderHeader(task({ worktree: "/tmp/wt/fix-header" }));
 
     expect(screen.getByTitle("/tmp/wt/fix-header")).toHaveTextContent("Git Worktree");
+  });
+
+  it("names the Smith a task runs as before its title and opens its page", async () => {
+    mockDaemon();
+    useSmithsStore.getState().upsert(smithFixture());
+    renderHeader(task({ smithId: "sm_1" }));
+
+    const byline = screen.getByRole("button", { name: /Ada/ });
+    expect(byline).toHaveTextContent("Ada·");
+    await userEvent.click(byline);
+    expect(useUi.getState().teamSelection).toEqual({ id: "sm_1", kind: "teammate" });
+    expect(useUi.getState().view).toBe("team");
+  });
+
+  it("shows no byline for a task no Smith runs", () => {
+    mockDaemon();
+    renderHeader(task());
+
+    expect(screen.queryByTitle(/^Open /)).toBeNull();
   });
 });
