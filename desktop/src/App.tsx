@@ -70,9 +70,16 @@ export default function App() {
   useDaemonEvents();
   useRunnerEvents(queryClient);
 
+  const revealTask = useUi((s) => s.revealTask);
   const handleOpenTask = (id: string) => {
     setNewTaskOpen(false);
     setOpenTaskId(id);
+  };
+  // The main area is outside the sidebar body: a task opened from it switches
+  // the sidebar to the mode that shows it.
+  const handleRevealTask = (id: string) => {
+    setNewTaskOpen(false);
+    revealTask(id);
   };
 
   const handleSelectView = (nextView: GlobalView) => {
@@ -228,7 +235,7 @@ export default function App() {
                   newTaskBacklogItemId={dialogs.newTaskBacklogItemId}
                   newTaskOptions={dialogs.newTaskOptions}
                   onNewTaskOpenChange={setNewTaskOpen}
-                  onOpenTask={setOpenTaskId}
+                  onOpenTask={handleRevealTask}
                   onCloseTask={() => setOpenTaskId(null)}
                   onAddProject={() => setAddProjectOpen(true)}
                   onNewTask={startNewTask}

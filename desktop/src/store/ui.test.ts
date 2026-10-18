@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { DEFAULT_BACKLOG_PARAMS } from "@/components/backlog/types";
 import { DEFAULT_INBOX_FILTERS } from "@/lib/inboxFilters";
+import { useSmithsStore } from "@/store/smiths";
 
 import {
   clampSidebarWidth,
@@ -529,5 +530,72 @@ describe("Smiths sidebar project", () => {
     );
     await useUi.persist.rehydrate();
     expect(useUi.getState()).not.toHaveProperty("smithColors");
+  });
+});
+
+describe("revealTask", () => {
+  beforeEach(() => {
+    useSmithsStore.setState({
+      loaded: true,
+      smiths: {
+        sm_1: {
+          agent: "claude",
+          allowedProjects: ["warpforge"],
+          budget: {},
+          charterRev: "c",
+          createdAt: 1,
+          homeProject: "warpforge",
+          id: "sm_1",
+          name: "Ada",
+          permissions: { createPr: false, push: false, writePaths: [] },
+          soulRev: "s",
+          threadTaskId: "t_thread",
+        },
+      },
+    });
+    useUi.setState({
+      attentionTargetId: null,
+      openTaskId: null,
+      sidebarMode: "team",
+      teamSelection: null,
+      view: "team",
+    });
+  });
+
+  it("opens an ordinary task in Tasks mode and points the tree at it", () => {
+    const nonce = useUi.getState().attentionTargetNonce;
+    useUi.getState().revealTask("t_work");
+    expect(useUi.getState()).toMatchObject({
+      attentionTargetId: "t_work",
+      attentionTargetNonce: nonce + 1,
+      lastTaskId: "t_work",
+      openTaskId: "t_work",
+      sidebarMode: "tasks",
+    });
+  });
+
+  it("opens a Smith's thread as that Smith's page in Smiths mode", () => {
+    useUi.setState({ openTaskId: "t_other", sidebarMode: "tasks", view: "control" });
+    useUi.getState().revealTask("t_thread");
+    expect(useUi.getState()).toMatchObject({
+      openTaskId: null,
+      sidebarMode: "team",
+      teamSelection: { id: "sm_1", kind: "teammate" },
+      view: "team",
+    });
+  });
+
+  it("carries a file or diff to open in the revealed task", () => {
+    useUi.getState().revealTask("t_work", { path: "src/a.ts", surface: "files" });
+    expect(useUi.getState()).toMatchObject({
+      activeSurface: "files",
+      openTaskNav: { path: "src/a.ts", surface: "files" },
+      sidebarMode: "tasks",
+    });
+  });
+
+  it("leaves the mode alone for a click inside the sidebar body", () => {
+    useUi.getState().openTask("t_work");
+    expect(useUi.getState().sidebarMode).toBe("team");
   });
 });

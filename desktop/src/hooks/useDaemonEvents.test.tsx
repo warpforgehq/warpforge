@@ -110,15 +110,15 @@ describe("useDaemonEvents native notification lifecycle", () => {
         },
       ],
     };
-    const openTask = vi.spyOn(useUi.getState(), "openTask").mockImplementation(() => {});
+    const revealTask = vi.spyOn(useUi.getState(), "revealTask").mockImplementation(() => {});
 
     await vi.waitFor(() => expect(notifyAction).not.toBeNull());
     notifyAction?.({
       payload: { action: "approve", kind: "permission", request_id: "req-9", task_id: "t_1" },
     });
 
-    expect(openTask).toHaveBeenCalledWith("t_1");
+    expect(revealTask).toHaveBeenCalledWith("t_1");
     expect(request).not.toHaveBeenCalled();
-    openTask.mockRestore();
+    revealTask.mockRestore();
   });
 });

@@ -147,7 +147,7 @@ export function useDaemonEvents() {
     }
 
     const openInChat = (taskId: string) => {
-      useUi.getState().openTask(taskId);
+      useUi.getState().revealTask(taskId);
     };
     const notifyWorkflowWaiting = (task: TaskInfo, kind: "question" | "limit") => {
       const toastId = `attention:workflow:${task.id}:${kind}`;
@@ -383,7 +383,7 @@ export function useDaemonEvents() {
             const requestId = payload.request_id;
             const outcome = bannerOutcome(taskId, requestId, payload.action);
             if (!outcome) {
-              useUi.getState().openTask(taskId);
+              useUi.getState().revealTask(taskId);
               void focusWindow();
               return;
             }
@@ -427,7 +427,7 @@ export function useDaemonEvents() {
             return;
           }
           if (payload.action === "review") {
-            useUi.getState().openTask(taskId);
+            useUi.getState().revealTask(taskId);
             void focusWindow();
           }
         });

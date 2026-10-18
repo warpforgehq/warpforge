@@ -121,7 +121,7 @@ export async function runAgain(task: Pick<TaskInfo, "id" | "project">) {
     const result = await daemon.runnerRetry(task.project, task.id);
     toastEnqueueResult(result);
     const created = result.created[0];
-    if (created) useUi.getState().openTask(created.taskId);
+    if (created) useUi.getState().revealTask(created.taskId);
   } catch (error) {
     toast.error("Could not run it again", {
       description: error instanceof Error ? error.message : String(error),
