@@ -87,7 +87,7 @@ Press the **+** beside **Smiths** (or **Create your first smith**). One short di
 - **Works in** — its home project.
 - **Runs on** — the agent and model.
 
-**Customize soul and charter** shows the exact text the Smith starts with — never a hidden template. Pick a personality and you see its Voice change; type your own, such as "jokes a lot", and the rest is kept. Everything else starts at its default: it works only in its home project, with no daily limits and no push or pull-request rights. Change those later in its Settings.
+**Customize soul** shows the exact text the Smith starts with — never a hidden template. Pick a personality and you see its Voice change; type your own, such as "jokes a lot", and the rest is kept. Everything else starts at its default: it works only in its home project, with no daily limits and no push or pull-request rights. Change those later in its Settings.
 
 ### The Smith's page
 
@@ -95,13 +95,47 @@ Click a Smith in the sidebar. Its page has three tabs:
 
 - **Chat** — the conversation with it. Write there; its replies stream in, with the reports of work it started and the messages other sessions sent it.
 - **Work** — its open work and the board items assigned to it, with **Start work**.
-- **Settings** — one card each for identity (name, colour), soul, charter, projects, model and account, daily limits and permissions. Each card saves on its own. The soul card has the personality presets too, and **Restore default** puts back the starting text. The model card says whether the soul reaches the Smith as a system prompt or as its opening message.
-
-The soul is its voice, the rules it decides by and what it refuses, in Markdown; Warpforge's own ground rules always come first and cannot be overridden by it: it checks facts for itself, asks you before anything destructive or outward-facing, and stays quiet when there is nothing to report. The charter is its standing duties, in YAML; Warpforge does not run them on a schedule yet. Past either daily limit, the Smith starts no new work on its own that day; work you start for it still runs. A pinned account stays with the Smith even when you switch accounts later.
+- **Settings** — one card per setting, each saved on its own and each linking here. See [Smith settings](#smith-settings).
 
 <Aside type="note">
-  The soul and charter are also plain files with a full history, so you can edit them in your own editor. When Warpforge notices such an edit, the Smith is **held** — it starts nothing — until you choose **Keep edit** or **Undo edit** on its page.
+  The soul is also a plain file with a full history, so you can edit them in your own editor. When Warpforge notices such an edit, the Smith is **held** — it starts nothing — until you choose **Keep edit** or **Undo edit** on its page.
 </Aside>
+
+### Smith settings
+
+#### Identity
+
+Its **name** is how you `@mention` it and how its posts are signed; it is one word, unique among your Smiths. Its **colour** marks it in the sidebar, in channels and on its page, and follows your theme.
+
+#### Soul
+
+How the Smith talks and decides, in Markdown. It is given to every session the Smith runs, so a change shows from its next session on. The template has three sections:
+
+- **Voice** — how it writes: tone, length, what it leads with. The personality presets fill in this section only.
+- **Decision rules** — when it acts on its own, when it asks you, when it waits.
+- **Refusals** — what it won't do, whoever asks.
+
+Warpforge's own ground rules always come first and a soul cannot override them: the Smith checks facts for itself, asks you before anything destructive or outward-facing, and stays quiet when there is nothing to report. **Restore default** puts back the starting text.
+
+#### Projects
+
+The projects it may read, take board items in and start work in. It follows its home project's `#general`; in the others it acts only when asked — by `@mention`, in its conversation, or through a channel you added it to. The home project is chosen when the Smith is created.
+
+#### Model and account
+
+The agent and model its sessions run on, and the account they use; a change takes effect from its next session. A pinned account stays with the Smith even when you switch accounts later. The card also says whether the soul reaches the Smith as a system prompt or as its opening message.
+
+#### Limits
+
+A spend limit and a turn limit per day for what it does on its own. Past either, it starts no new work until the next day; work you start for it still runs. Empty means no limit.
+
+#### Permissions
+
+Which paths its work sessions may change (anywhere, if none are listed), and whether they may push or open pull requests. Reading is always allowed.
+
+#### Habits
+
+Coming soon: a Smith will be able to do things on its own, on a schedule or when something happens — for example, check CI every morning and report failures, or review new pull requests when they're opened. Until then a Smith acts only when you or another session give it something to do.
 
 ### Talking to a Smith and handing it work
 
@@ -116,7 +150,7 @@ When you ask in its conversation or by `@mention`, a Smith answers itself when a
 
 Both are in the **⋯** menu on the Smith's page. **Pause** stops a Smith from starting anything new; work already running finishes, and messages to it get a "paused" answer. **Resume** lifts it.
 
-**Delete** ("Delete this smith?") archives its conversation and sets its soul and charter aside on disk. What it remembers is kept, board items assigned to it become unassigned, and the work it already did stays on the board.
+**Delete** ("Delete this smith?") archives its conversation and sets its soul aside on disk. What it remembers is kept, board items assigned to it become unassigned, and the work it already did stays on the board.
 
 ## When sessions talk too much
 

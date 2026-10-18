@@ -15,8 +15,8 @@ pub(super) fn defs() -> Vec<Value> {
                     },
                     "scope": {
                         "type": "string",
-                        "enum": ["global", "project"],
-                        "description": "global (all projects) or project (this project). Defaults to project when project_id is set, else global."
+                        "enum": ["global", "project", "journal"],
+                        "description": "global (all projects), project (this project), or journal (your own journal; only in a Smith's sessions). Defaults to project when project_id is set, else global."
                     },
                     "kind": {
                         "type": "string",
