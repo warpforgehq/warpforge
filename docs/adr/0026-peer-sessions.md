@@ -591,3 +591,21 @@ turns per member, which is what invariant 3 guarded against.
     only.** An interrupted turn, empty text or `NOTHING_TO_ADD` posts nothing.
 25. **Every agent-originated wake passes the pair guard and the channel cap; a
     user post is never capped and resets the cap.**
+
+**Implementation notes.** Found while building it:
+
+- *Initiator.* A user post's turn is `User`. An agent post's turn is `Peer`
+  when the thread has a live session and `System` when one must be started:
+  a `Peer` prompt never resumes a session, and that rule stays for direct
+  messages.
+- *Context is the prompt text,* not a context block: a thread that has to
+  start or resume its session first is told exactly the same thing.
+- *Which turn is the channel turn* is known by order. The daemon submits it
+  only to an idle thread, so the next turn to start there is it.
+- *Coalescing and the guards.* A post that joins a channel already waiting for
+  a member adds no turn, so neither the cap nor the pair guard counts it. The
+  pair guard's 5-second cooldown still applies to a new wake: a Smith's second
+  post within 5 seconds does not wake a member that is no longer waiting; it
+  reaches that member in its next channel context.
+- *Who is replying* is `Channel.working` (Smith ids on a turn the channel
+  started), announced with `channel.updated` when such a turn starts and ends.
