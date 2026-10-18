@@ -823,10 +823,10 @@ describe("Sidebar workspace tree", () => {
     renderSidebar(state);
     fireEvent.click(screen.getByRole("button", { name: /^Expand 1 subtask of Lead/ }));
 
-    // padding-left = base inset 12 + depth × 12 + twisty 16 + gap 6: a root task
+    // padding-left = base inset 4 + depth × 12 + twisty 16 + gap 6: a root task
     // aligns with its project and each subtask level steps in by one indent.
-    expect(taskRows("lead")[0]).toHaveStyle({ paddingLeft: "34px" });
-    expect(taskRows("child")[0]).toHaveStyle({ paddingLeft: "46px" });
+    expect(taskRows("lead")[0]).toHaveStyle({ paddingLeft: "26px" });
+    expect(taskRows("child")[0]).toHaveStyle({ paddingLeft: "38px" });
 
     // The meta lane fits count + logo + elapsed at 68px (was 72px).
     const meta = taskRows("child")[0].querySelector<HTMLElement>('[data-lane="meta"]')!;
@@ -874,14 +874,14 @@ describe("Sidebar workspace tree", () => {
       taskRows(id)[0]
         .closest("[data-rail-depth]")!
         .querySelector<HTMLElement>(`[data-rail-level="${level}"]`);
-    // Lead's chevron centre = 12 + 0 × 12 + 8 = 20; Mid's = 12 + 12 + 8 = 32.
-    // So Mid's connector (level 0) at 20 sits under Lead's chevron, and Leaf's
-    // connector (level 1) at 32 sits under Mid's. Lead has no following sibling,
+    // Lead's chevron centre = 4 + 0 × 12 + 8 = 12; Mid's = 4 + 12 + 8 = 24.
+    // So Mid's connector (level 0) at 12 sits under Lead's chevron, and Leaf's
+    // connector (level 1) at 24 sits under Mid's. Lead has no following sibling,
     // so Leaf draws no pass-through on level 0.
-    expect(rail("mid", 0)).toHaveStyle({ left: "20px" });
-    expect(document.querySelector('[data-expand="mid"]')).toHaveStyle({ left: "24px" });
+    expect(rail("mid", 0)).toHaveStyle({ left: "12px" });
+    expect(document.querySelector('[data-expand="mid"]')).toHaveStyle({ left: "16px" });
     expect(rail("leaf", 0)).toBeNull();
-    expect(rail("leaf", 1)).toHaveStyle({ left: "32px" });
+    expect(rail("leaf", 1)).toHaveStyle({ left: "24px" });
   });
 
   it("draws a pass-through lane only beside a continuing subtree", () => {

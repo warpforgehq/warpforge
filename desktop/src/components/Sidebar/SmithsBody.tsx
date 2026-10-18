@@ -186,7 +186,7 @@ export function SmithsBody({ projects, tasks }: Props) {
       <Select value={project} onValueChange={setSmithsProject}>
         <SelectTrigger
           aria-label="Project"
-          className="h-9 w-full bg-card px-2 font-medium transition-colors hover:bg-accent/60"
+          className="h-9 w-full bg-card px-2 font-medium transition-colors hover:bg-accent/60 [&>span]:line-clamp-none [&>span]:min-w-0 [&>span]:flex-1"
         >
           <SelectValue>
             <span className="flex min-w-0 items-center gap-2">

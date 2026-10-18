@@ -583,28 +583,28 @@ describe("nested rail data", () => {
     const rows = taskRows(build(kids, { expandedTaskIds: new Set(["lead"]) }));
     const one = rows.find((row) => row.task.id === "one")!;
     const two = rows.find((row) => row.task.id === "two")!;
-    // x = base inset (12) + level × INDENT + half the twisty lane (8), so a
-    // depth-1 connector at x=20 lands under the depth-0 chevron centre; the
-    // run ends at the child's content start (12 + 12 + 16 + 6 = 46).
+    // x = base inset (4) + level × INDENT + half the twisty lane (8), so a
+    // depth-1 connector at x=12 lands under the depth-0 chevron centre; the
+    // run ends at the child's content start (4 + 12 + 16 + 6 = 38).
     expect(railLanes(one.depth, one.ancestorLines, one.isLast, null)).toEqual([
-      { active: false, level: 0, run: 26, shape: "tee", x: 20 },
+      { active: false, level: 0, run: 26, shape: "tee", x: 12 },
     ]);
     expect(railLanes(two.depth, two.ancestorLines, two.isLast, 0)).toEqual([
-      { active: true, level: 0, run: 26, shape: "elbow", x: 20 },
+      { active: true, level: 0, run: 26, shape: "elbow", x: 12 },
     ]);
   });
 
   it("draws pass-through lanes only where the ancestor continues", () => {
     expect(railLanes(3, [true, true, false], true, 2)).toEqual([
-      { active: false, level: 0, run: 1, shape: "pass", x: 20 },
-      { active: true, level: 2, run: 26, shape: "elbow", x: 44 },
+      { active: false, level: 0, run: 1, shape: "pass", x: 12 },
+      { active: true, level: 2, run: 26, shape: "elbow", x: 36 },
     ]);
   });
 
   it("keeps deeper rails on one evenly spaced grid and clamps at five levels", () => {
-    // Level 1 at x=32 (base 12 + 12 + 8) sits under a depth-1 chevron centre.
+    // Level 1 at x=24 (base 4 + 12 + 8) sits under a depth-1 chevron centre.
     const lanes = railLanes(7, [true, true, true, true, true, true, true], true, null);
-    expect(lanes.map((lane) => lane.x)).toEqual([20, 32, 44, 56, 68]);
+    expect(lanes.map((lane) => lane.x)).toEqual([12, 24, 36, 48, 60]);
   });
 
   it("ends a connector where the child's own content starts", () => {

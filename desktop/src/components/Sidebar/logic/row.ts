@@ -7,7 +7,7 @@ export const SIDEBAR_INDENT_PX = 12;
 
 /** Base left inset before the twisty lane, uniform at every depth: keeps the
  *  chevron and glyph off the sidebar edge. */
-export const SIDEBAR_ROW_INSET_PX = 12;
+export const SIDEBAR_ROW_INSET_PX = 4;
 
 /** Deeper nesting stops indenting here so the title lane keeps its minimum. */
 export const SIDEBAR_MAX_INDENT_LEVELS = 5;
