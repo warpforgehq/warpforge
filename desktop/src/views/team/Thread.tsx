@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { daemon } from "@/daemon";
 import { useSmiths } from "@/hooks/useSmiths";
 import { type Conversation, type MentionCandidate, userWritesIn } from "@/lib/peerFeed";
+import { smithColorIndex } from "@/lib/smithColors";
 import type { Channel, PeerControls, PeerMessage } from "@/protocol";
 import { usePeersStore } from "@/store/peers";
 
@@ -67,6 +68,10 @@ export function Thread({
   const firstSmith = smiths.find((smith) => smith.allowedProjects.includes(conversation.project));
   const smithOfThread = (taskId: string | undefined) =>
     taskId ? smiths.find((smith) => smith.threadTaskId === taskId) : undefined;
+  const smithColorOf = (taskId: string) => {
+    const smith = smithOfThread(taskId);
+    return smith ? smithColorIndex(smith) : undefined;
+  };
   const channel = usePeersStore((state) =>
     conversation.channelId ? state.channels[conversation.channelId] : undefined,
   );
@@ -171,6 +176,8 @@ export function Thread({
             onOpenTask={onOpenTask}
             onStartSession={startFrom}
             smith={smithOfThread(record.fromTask)}
+            mentions={candidates}
+            smithColorOf={smithColorOf}
           />
         ))}
       </ol>

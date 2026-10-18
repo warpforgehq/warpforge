@@ -283,6 +283,7 @@ export function Markdown({
   onOpenFile,
   renderImage,
   allowHtml = false,
+  remarkPlugins,
 }: {
   children: string;
   className?: string;
@@ -302,6 +303,8 @@ export function Markdown({
    * `HTML_SCHEMA`.
    */
   allowHtml?: boolean;
+  /** Run after GFM, such as `remarkMentions`. */
+  remarkPlugins?: PluggableList;
 }) {
   const context = useMemo(
     () => ({ onOpenFile, renderImage, resolveFilePath }),
@@ -318,7 +321,7 @@ export function Markdown({
     >
       <MarkdownContext.Provider value={context}>
         <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
+          remarkPlugins={remarkPlugins ? [remarkGfm, ...remarkPlugins] : [remarkGfm]}
           rehypePlugins={allowHtml ? HTML_PLUGINS : undefined}
           components={MARKDOWN_COMPONENTS}
         >
@@ -371,11 +374,13 @@ export function CollapsibleMarkdown({
   className,
   resolveFilePath,
   onOpenFile,
+  remarkPlugins,
 }: {
   children: string;
   className?: string;
   resolveFilePath?: FileLinkResolver;
   onOpenFile?: (path: string) => void;
+  remarkPlugins?: PluggableList;
 }) {
   const [expanded, setExpanded] = useState(false);
   const collapsible =
@@ -396,7 +401,12 @@ export function CollapsibleMarkdown({
             : undefined
         }
       >
-        <Markdown className={className} resolveFilePath={resolveFilePath} onOpenFile={onOpenFile}>
+        <Markdown
+          className={className}
+          resolveFilePath={resolveFilePath}
+          onOpenFile={onOpenFile}
+          remarkPlugins={remarkPlugins}
+        >
           {collapsed ? collapsedPrefix(children) : children}
         </Markdown>
       </div>

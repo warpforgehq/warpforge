@@ -67,6 +67,38 @@ describe("FeedItem", () => {
     ]);
   });
 
+  it("highlights mentions in the Smith's colour, sessions neutrally, never in code", () => {
+    render(
+      <ul>
+        <FeedItem
+          record={record({
+            status: "posted",
+            text: "@Ada look at `@Ada` with @Docs, not @Nobody",
+            toTask: undefined,
+          })}
+          label={label}
+          onOpenTask={vi.fn<(id: string) => void>()}
+          mentions={[
+            { id: "t_ada", label: "Ada", smith: true },
+            { id: "t_b", label: "Docs" },
+          ]}
+          smithColorOf={(id) => (id === "t_ada" ? 2 : undefined)}
+        />
+      </ul>,
+    );
+    const ada = document.querySelectorAll('[data-mention="t_ada"]');
+    expect(ada).toHaveLength(1);
+    expect(ada[0]!.textContent).toBe("@Ada");
+    expect(ada[0]!.getAttribute("style")).toContain("hsl(var(--chart-3))");
+    expect(ada[0]!.getAttribute("style")).toContain("hsl(var(--chart-3) / 0.15)");
+    expect(document.querySelector("code")?.textContent).toBe("@Ada");
+    expect(document.querySelector("code [data-mention]")).toBeNull();
+    const docs = document.querySelector('[data-mention="t_b"]');
+    expect(docs?.textContent).toBe("@Docs");
+    expect(docs?.className).toContain("bg-secondary");
+    expect(document.querySelectorAll("[data-mention]")).toHaveLength(2);
+  });
+
   it("explains a held message", () => {
     show(record({ status: "held" }));
     expect(screen.getByText(/not running/)).toBeTruthy();

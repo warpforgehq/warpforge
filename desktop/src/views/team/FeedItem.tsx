@@ -1,10 +1,13 @@
 import { AlertTriangle, ArrowRight, Play } from "lucide-react";
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { CollapsibleMarkdown } from "@/components/Markdown";
 import { SmithAvatar } from "@/components/SmithAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { type MentionLook, remarkMentions } from "@/lib/markdownMentions";
+import type { MentionCandidate } from "@/lib/peerFeed";
+import { smithColor } from "@/lib/smithColors";
 import type { PeerMessage } from "@/protocol";
 
 import { HELD_HINT, STATUS_META, feedTime, isUserPost } from "./labels";
@@ -17,7 +20,14 @@ interface Props {
   onStartSession?: (record: PeerMessage) => void;
   /** The Smith whose thread sent the record. */
   smith?: { id: string; name: string };
+  /** Who an `@mention` in the text can name, highlighted when it does. */
+  mentions?: MentionCandidate[];
+  /** The palette index of the Smith a thread task belongs to. */
+  smithColorOf?: (taskId: string) => number | undefined;
 }
+
+const SESSION_MENTION = "rounded bg-secondary px-1 font-medium text-foreground";
+const SMITH_MENTION = "rounded px-1 font-medium";
 
 function TaskLink({
   id,
@@ -41,7 +51,27 @@ function TaskLink({
 }
 
 /** One feed record: who sent it to whom, its text, and where it stands. */
-export function FeedItem({ record, label, onOpenTask, onStartSession, smith }: Props) {
+export function FeedItem({
+  record,
+  label,
+  onOpenTask,
+  onStartSession,
+  smith,
+  mentions,
+  smithColorOf,
+}: Props) {
+  const plugins = useMemo(() => {
+    if (!mentions?.length) return undefined;
+    const look = (candidate: MentionCandidate): MentionLook => {
+      const index = candidate.smith ? smithColorOf?.(candidate.id) : undefined;
+      if (index === undefined) return { className: SESSION_MENTION };
+      return {
+        className: SMITH_MENTION,
+        style: `color: ${smithColor(index)}; background-color: ${smithColor(index, 0.15)}`,
+      };
+    };
+    return [remarkMentions(mentions, look)];
+  }, [mentions, smithColorOf]);
   const meta = STATUS_META[record.status] ?? STATUS_META.refused;
   if (record.startedTask) {
     return (
@@ -90,7 +120,9 @@ export function FeedItem({ record, label, onOpenTask, onStartSession, smith }: P
           </Button>
         )}
       </div>
-      <CollapsibleMarkdown className="text-sm text-foreground">{record.text}</CollapsibleMarkdown>
+      <CollapsibleMarkdown className="text-sm text-foreground" remarkPlugins={plugins}>
+        {record.text}
+      </CollapsibleMarkdown>
       {reason && <p className="text-xs text-muted-foreground">{reason}</p>}
       {record.mentions && record.mentions.length > 0 && (
         <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
