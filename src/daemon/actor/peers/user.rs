@@ -42,10 +42,19 @@ impl Daemon {
         record.channel_id = channel;
         self.peers_record(&record);
         self.peers.remember_post(record.clone());
+        let woken = match record.channel_id.as_deref() {
+            Some(id) => self.conversation_members(id, None),
+            None => Vec::new(),
+        };
+        self.conversation_wake(&mut record).await;
 
         let mut reached = Vec::new();
         let mut notices = Vec::new();
         for to in mentions {
+            if woken.contains(&to) {
+                reached.push(to);
+                continue;
+            }
             match self.peers_user_prompt(&to, &text).await {
                 Ok(()) => reached.push(to),
                 Err(error) => notices.push(format!("@{}: {error}", self.peers_label(Some(&to)))),

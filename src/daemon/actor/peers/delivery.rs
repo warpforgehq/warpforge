@@ -205,6 +205,7 @@ impl Daemon {
     /// @param task_id the task whose session went away
     pub(crate) fn peers_session_gone(&mut self, task_id: &str) {
         self.peers.reserved.remove(task_id);
+        self.conversation_session_gone(task_id);
         let lost: Vec<u64> = self
             .peers
             .in_flight
@@ -227,6 +228,7 @@ impl Daemon {
         self.peers.cursors.remove(task_id);
         self.peers.muted.remove(task_id);
         self.peers.reserved.remove(task_id);
+        self.conversation_task_deleted(task_id);
         self.peers.guard.forget(task_id);
         self.peers_end_alerts();
         let (orphans, held): (Vec<_>, Vec<_>) = std::mem::take(&mut self.peers.held)

@@ -183,6 +183,7 @@ impl Daemon {
                 self.mark_task_running(&task_id);
                 self.advisor_turn_started(&task_id);
                 self.peers_turn_started(&task_id, initiator, peer);
+                self.conversation_turn_started(&task_id);
                 self.smith_turn_started(&task_id, smith);
                 self.smith_note_turn(&task_id);
                 if let Some(echo) = echo {
@@ -290,6 +291,9 @@ impl Daemon {
                 if !interrupted && self.turn_output_has_consumer(&task_id, workflow_child) {
                     self.request_task_output(&task_id, success, workflow_child, initiator);
                 }
+                // Last: the reply reads this turn's buffer, and the next
+                // channel turn needs the status already back to Waiting.
+                self.conversation_turn_ended(&task_id, interrupted).await;
             }
             AcpUpdate::ModelMismatch { message } => {
                 // Non-fatal: the session keeps running, so no handle removal
