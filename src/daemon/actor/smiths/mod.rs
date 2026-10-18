@@ -145,11 +145,15 @@ impl Daemon {
                 brief,
                 backlog_item_id,
                 worktree,
+                orchestrator,
                 reply,
             } => {
-                let result = self
-                    .smith_start_work(&id, &project, brief, backlog_item_id, worktree)
-                    .await;
+                let start = work::WorkStart {
+                    backlog_item_id,
+                    worktree,
+                    orchestrator,
+                };
+                let result = self.smith_start_work(&id, &project, brief, start).await;
                 let _ = reply.send(result);
             }
             SmithCommand::StartWorkFrom {

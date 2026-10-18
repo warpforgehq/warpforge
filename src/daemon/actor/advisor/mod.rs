@@ -127,7 +127,11 @@ impl Daemon {
             return BridgeMode::Single;
         };
         if task.tags.iter().any(|tag| tag == "orchestrator-chat") {
-            BridgeMode::Orchestrator
+            if task.smith.is_some() {
+                BridgeMode::SmithOrchestrator
+            } else {
+                BridgeMode::Orchestrator
+            }
         } else if task.origin.as_deref() == Some(ADVISOR_ORIGIN) {
             BridgeMode::Advisor
         } else if task.origin.as_deref() == Some(crate::daemon::actor::smiths::SMITH_ORIGIN) {
