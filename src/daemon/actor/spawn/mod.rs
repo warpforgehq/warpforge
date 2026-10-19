@@ -163,7 +163,13 @@ impl Daemon {
         // Open (or disable) the shared-memory store. `load` never fails: an
         // unopenable memory.db yields a disabled store whose tools report
         // "memory disabled" rather than crashing the daemon.
-        let memory = crate::daemon::memory::MemoryStore::load();
+        // A test daemon never opens the user's ~/.warpforge/memory.db; tests
+        // that need memory hand it a temporary store (`SmithCommand::UseMemory`).
+        let memory = if cfg!(test) {
+            crate::daemon::memory::MemoryStore::disabled("memory disabled")
+        } else {
+            crate::daemon::memory::MemoryStore::load()
+        };
 
         // Everything above read from the store directly — it is startup, the
         // actor is not running yet. From here the connection belongs to the

@@ -144,6 +144,19 @@ impl MemoryStore {
         })
     }
 
+    /// A store that is off, for a daemon that must not read the user's.
+    /// @param reason what the memory tools report
+    /// @returns the disabled store
+    pub fn disabled(reason: &str) -> Self {
+        Self {
+            conn: None,
+            config: MemoryConfig::default(),
+            disabled: Some(reason.into()),
+            embed: Mutex::new(EmbedEngine::new(false)),
+            projects_root: None,
+        }
+    }
+
     /// Load config and open the store. Never fails: a disabled or unopenable
     /// store is represented as a `disabled` flag so the daemon stays up and the
     /// memory tools report "memory disabled" instead of crashing.
