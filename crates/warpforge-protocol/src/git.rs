@@ -44,6 +44,29 @@ pub struct GitBranchList {
     /// Remote-tracking refs, e.g. `["origin/main", "origin/feature/x"]`.
     #[serde(default)]
     pub remotes: Vec<String>,
+    /// Local branches checked out in another worktree of this repository; the
+    /// current branch is never listed.
+    #[serde(default)]
+    pub worktrees: Vec<BranchWorktree>,
+}
+
+/// A local branch held by another worktree, one element of
+/// [`GitBranchList::worktrees`].
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BranchWorktree {
+    pub branch: String,
+    /// Absolute path of the worktree that has it checked out.
+    pub path: String,
+    /// The repository's main worktree (the project folder).
+    #[serde(default)]
+    pub primary: bool,
+    /// Lives under `.warpforge/worktrees` or the legacy `.worktrees`.
+    #[serde(default)]
+    pub managed: bool,
+    /// The task that owns the worktree, `None` when no task does.
+    #[serde(default)]
+    pub task_id: Option<String>,
 }
 
 /// One git checkout under a project — the project's own root, or a nested

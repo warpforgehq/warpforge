@@ -1,4 +1,4 @@
-import { Check, ChevronRight, GitBranch } from "lucide-react";
+import { Check, ChevronRight, FolderGit2, GitBranch } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import type { BranchWorktree } from "@/protocol";
 
 import type { BranchRow } from "./branchTree";
 
@@ -23,6 +24,7 @@ export function BranchList({
   searchRows,
   openFolders,
   current,
+  holders,
   onAction,
   onToggleFolder,
 }: {
@@ -32,6 +34,7 @@ export function BranchList({
   searchRows: BranchRow[];
   openFolders: Set<string>;
   current: string | null;
+  holders: Map<string, BranchWorktree>;
   onAction: (action: string, branch: string, remote: boolean) => void;
   onToggleFolder: (key: string) => void;
 }) {
@@ -49,6 +52,7 @@ export function BranchList({
             row={row}
             remote={row.remote}
             current={current}
+            holder={row.remote ? undefined : holders.get(row.branch ?? "")}
             menuOpen={row.branch === openBranch}
             onAction={onAction}
             onToggleMenu={toggleBranch}
@@ -66,6 +70,7 @@ export function BranchList({
         openFolders={openFolders}
         onToggleFolder={onToggleFolder}
         current={current}
+        holders={holders}
         openBranch={openBranch}
         onAction={onAction}
         onToggleMenu={toggleBranch}
@@ -78,6 +83,7 @@ export function BranchList({
           onToggleFolder={onToggleFolder}
           remote
           current={current}
+          holders={holders}
           openBranch={openBranch}
           onAction={onAction}
           onToggleMenu={toggleBranch}
@@ -94,6 +100,7 @@ function BranchSection({
   onToggleFolder,
   remote = false,
   current,
+  holders,
   openBranch,
   onAction,
   onToggleMenu,
@@ -104,6 +111,7 @@ function BranchSection({
   onToggleFolder: (key: string) => void;
   remote?: boolean;
   current: string | null;
+  holders: Map<string, BranchWorktree>;
   openBranch: string | null;
   onAction: (action: string, branch: string, remote: boolean) => void;
   onToggleMenu: (branch: string | null) => void;
@@ -141,6 +149,7 @@ function BranchSection({
                 row={row}
                 remote={remote}
                 current={current}
+                holder={remote ? undefined : holders.get(row.branch)}
                 menuOpen={row.branch === openBranch}
                 onAction={onAction}
                 onToggleMenu={onToggleMenu}
@@ -157,6 +166,7 @@ function BranchRowLine({
   row,
   remote = false,
   current,
+  holder,
   menuOpen,
   onAction,
   onToggleMenu,
@@ -164,6 +174,7 @@ function BranchRowLine({
   row: BranchRow;
   remote?: boolean;
   current: string | null;
+  holder?: BranchWorktree;
   menuOpen: boolean;
   onAction: (action: string, branch: string, remote: boolean) => void;
   onToggleMenu: (branch: string | null) => void;
@@ -171,6 +182,8 @@ function BranchRowLine({
   const isCurrent = !remote && row.branch === current;
   const branch = row.branch ?? "";
   const openMenu = () => onToggleMenu(menuOpen ? null : branch);
+  const holderLabel =
+    holder && (holder.taskId ? "Open in a task's worktree" : `Checked out at ${holder.path}`);
   return (
     <div className="relative">
       <div
@@ -198,6 +211,15 @@ function BranchRowLine({
         >
           {row.label}
         </button>
+        {holderLabel && (
+          <FolderGit2
+            role="img"
+            aria-label={holderLabel}
+            className="size-3 shrink-0 text-muted-foreground/70"
+          >
+            <title>{holderLabel}</title>
+          </FolderGit2>
+        )}
         {/* The current branch is marked at the end of the row, where it reads
             as "this one" rather than as a prefix that indents it away from
             every other branch. */}
@@ -220,6 +242,8 @@ function BranchRowLine({
           branch={branch}
           remote={remote}
           current={isCurrent}
+          held={Boolean(holder)}
+          openTask={Boolean(holder?.taskId)}
           currentBranch={current}
           onAction={(action) => {
             onToggleMenu(null);
@@ -235,12 +259,16 @@ function BranchActionSubmenu({
   branch,
   remote,
   current,
+  held,
+  openTask,
   currentBranch,
   onAction,
 }: {
   branch: string;
   remote: boolean;
   current: boolean;
+  held: boolean;
+  openTask: boolean;
   currentBranch: string | null;
   onAction: (action: string) => void;
 }) {
@@ -264,11 +292,11 @@ function BranchActionSubmenu({
           ["rename", "Rename…"],
         ]
       : [
-          ["checkout", "Checkout"],
+          ["checkout", openTask ? "Open task" : "Checkout"],
           ["create", `New Branch from '${branch}'…`],
           ["rebase-main", `Rebase '${branch}' onto 'main'`],
           ["rebase", `Rebase '${branch}' onto…`],
-          ["checkout-update", "Checkout and Update"],
+          ...(held ? [] : [["checkout-update", "Checkout and Update"]]),
           ["push", "Push…"],
           ["rename", "Rename…"],
           ["delete", "Delete…"],
