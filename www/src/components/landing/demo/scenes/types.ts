@@ -1,4 +1,13 @@
-import type { DaemonEvent, FileDoc, SessionUpdate, Snapshot, TaskDiff } from "@app/protocol";
+import type {
+  Channel,
+  DaemonEvent,
+  FileDoc,
+  PeerMessage,
+  SessionUpdate,
+  Smith,
+  Snapshot,
+  TaskDiff,
+} from "@app/protocol";
 import type { TaskSurface, UiState } from "@app/store/ui";
 
 import type { SceneId } from "./meta";
@@ -15,6 +24,10 @@ export interface Seed {
   fileDocFor: (path: string) => FileDoc;
   sessionUpdates: Record<string, SessionUpdate[]>;
   snapshot: Snapshot;
+  /** What the Smiths and peer-feed stores start with. */
+  smiths?: Smith[];
+  channels?: Channel[];
+  peerMessages?: PeerMessage[];
 }
 
 
@@ -32,7 +45,9 @@ export interface Scene {
   hold?: number;
   /** The task open in the detail pane when the scene starts. */
   openTaskId: string | null;
-  /** UI state applied on every (re)start, over the demo's defaults. */
+  /** Where the scene starts in the shell; reapplied on every replay. */
+  nav?: Partial<UiState>;
+  /** UI state applied when the scene is picked, over the demo's defaults. */
   ui?: Partial<UiState>;
   /** The task surface shown once the start-up navigation has settled. */
   surface?: TaskSurface;

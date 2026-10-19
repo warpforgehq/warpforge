@@ -5,12 +5,17 @@ import AppHeader from "@app/components/AppHeader";
 import Sidebar from "@app/components/Sidebar";
 import { TooltipProvider } from "@app/components/ui/tooltip";
 import { daemon } from "@app/daemon";
+import { useChannelsSync, usePeerFeedSync } from "@app/hooks/usePeerFeed";
 import { runnerStatusKey } from "@app/hooks/useRunner";
+import { useSmithsSync } from "@app/hooks/useSmiths";
 import { DEFAULT_INBOX_FILTERS } from "@app/lib/inboxFilters";
+import { usePeersStore } from "@app/store/peers";
 import { usePrFeedbackStore } from "@app/store/prFeedback";
+import { useSmithsStore } from "@app/store/smiths";
 import { DEFAULT_TASK_SURFACE, SIDEBAR_WIDTH_MIN, useUi } from "@app/store/ui";
 import InboxView from "@app/views/InboxView";
 import TaskDetail from "@app/views/TaskDetail";
+import Team from "@app/views/Team";
 
 import { sceneById, type Scene } from "./scenes";
 
@@ -34,22 +39,29 @@ const queryClient = new QueryClient({
  * Put the world back to where `scene` starts.
  *
  * Demo mode's reseed covers the snapshot and the transcripts. Pull requests,
- * cached queries and the PR-feedback marks live outside it, so they are reset
- * here — through the reducer for the pull requests, as a daemon would. A
- * replay resets navigation only, so the tab a visitor picked survives it.
+ * cached queries, the PR-feedback marks, the Smiths and the peer feed live
+ * outside it, so they are reset here. A replay resets navigation only, so
+ * the tab a visitor picked survives it.
  */
 function startScene(scene: Scene, replay = false) {
   for (const taskId of Object.keys(daemon.getState().taskPullRequests ?? {})) {
     daemon.demoEvent({ data: { pull_request: null, task_id: taskId }, event: "task.pullRequest" });
   }
   usePrFeedbackStore.setState({ handledByTask: {} });
-  daemon.enableDemoMode(scene.seed());
+  const seed = scene.seed();
+  daemon.enableDemoMode(seed);
+  // The sync hooks load these once per connect, which a reseed is not.
+  useSmithsStore.getState().load(seed.smiths ?? []);
+  usePeersStore.getState().load(seed.peerMessages ?? [], { mutedTasks: [], pausedProjects: [] });
+  usePeersStore.getState().setChannels(seed.channels ?? []);
   void queryClient.resetQueries(replay ? { queryKey: ["runner"] } : undefined);
   const nav = {
     inboxSelectedKey: null,
     openTaskId: scene.openTaskId,
     sidebarMode: "tasks",
+    teamSelection: null,
     view: "control",
+    ...scene.nav,
   } as const;
   if (replay) {
     useUi.setState(nav);
@@ -76,17 +88,31 @@ function startScene(scene: Scene, replay = false) {
  *
  * `task.pullRequests` replaces the client's whole pull-request map with its
  * reply, and demo mode answers `{}`, so it echoes the map the scene's events
- * built — otherwise opening a task would wipe its PR chip.
+ * built — otherwise opening a task would wipe its PR chip. The Smiths and
+ * peer-feed loads echo their stores for the same reason.
  */
 function serveScene(scene: () => Scene) {
   const inner = daemon.request.bind(daemon);
   daemon.request = (method: string, params?: unknown) => {
     const answered = scene().request?.(method, params);
     if (answered) return answered;
-    if (method === "task.pullRequests") {
-      return Promise.resolve({ pullRequests: daemon.getState().taskPullRequests ?? {} });
+    const peers = usePeersStore.getState();
+    switch (method) {
+      case "task.pullRequests":
+        return Promise.resolve({ pullRequests: daemon.getState().taskPullRequests ?? {} });
+      case "smiths.list":
+        return Promise.resolve({ smiths: Object.values(useSmithsStore.getState().smiths) });
+      case "peers.feed":
+        return Promise.resolve({ messages: Object.values(peers.records) });
+      case "peers.alerts":
+        return Promise.resolve({ messages: [] });
+      case "peers.controls":
+        return Promise.resolve(peers.controls);
+      case "channels.list":
+        return Promise.resolve({ channels: Object.values(peers.channels) });
+      default:
+        return inner(method, params);
     }
-    return inner(method, params);
   };
 }
 
@@ -124,6 +150,11 @@ export default function AppDemo() {
     serveScene(() => current.current);
     startScene(scene);
   }
+
+  // `SmithsHost` and `PeerFeedHost`, as the app mounts them.
+  useSmithsSync();
+  usePeerFeedSync();
+  useChannelsSync();
 
   // `useRunnerEvents`, against the demo's own client: the hook's parameter is
   // typed with the app's copy of React Query, which this client is not.
@@ -260,6 +291,12 @@ export default function AppDemo() {
                   onOpenTask={openTaskInDemo}
                   snapshot={live}
                   task={openTask}
+                />
+              ) : view === "team" ? (
+                <Team
+                  onNewTask={noop}
+                  onOpenTask={(id) => useUi.getState().revealTask(id)}
+                  snapshot={live}
                 />
               ) : view === "inbox" ? (
                 <InboxView
