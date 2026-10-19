@@ -102,7 +102,7 @@ describe("SmithsBody", () => {
     ]);
     usePeersStore.setState({ records: { 1: dm("warpforge", 1), 2: dm("api", 2) } });
     useUi.setState({ selectedProjectId: "api" });
-    show();
+    show([task("t_a"), task("t_b")]);
     expect(screen.getByRole("combobox", { name: "Project" })).toHaveValue("api");
     expect(within(section("Smiths")).getByText("Grace")).toBeInTheDocument();
     expect(within(section("Smiths")).queryByText("Ada")).toBeNull();

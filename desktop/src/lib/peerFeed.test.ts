@@ -285,3 +285,43 @@ describe("records that outlive their sessions", () => {
     expect(isSmithInternal({ ...old, text: "hello" }, none)).toBe(false);
   });
 });
+
+describe("the Direct list", () => {
+  const tasks = new Map(
+    [
+      task("t_oly", "thread", { origin: "smith", smithId: "sm_oly" }),
+      task("t_ada", "thread", { origin: "smith", smithId: "sm_ada" }),
+      task("t_done", "Settled work", { status: "done" }),
+    ].map((t) => [t.id, t]),
+  );
+  const parties = (list: ReturnType<typeof buildConversations>) =>
+    list.map((c) => c.parties?.join("|"));
+
+  it("drops a conversation once either side is deleted, whatever it stored", () => {
+    const records = [
+      record(1, { fromLabel: "Bo · x", fromTask: "t_gone", text: "hi", toTask: "t_oly" }),
+      record(2, { fromTask: "t_oly", toLabel: "Bo · y", toTask: "t_gone2" }),
+      record(3, { fromTask: undefined, toTask: "t_gone3" }),
+      record(4, { fromTask: "t_done", toTask: "t_ada" }),
+      record(5, { fromTask: undefined, toTask: "t_ada" }),
+    ];
+    expect(parties(buildConversations(records, "demo", tasks))).toEqual(["|t_ada", "t_done|t_ada"]);
+  });
+
+  it("keeps one conversation for a pair, whoever wrote first", () => {
+    const records = [
+      record(1, { fromTask: "t_oly", toTask: "t_ada" }),
+      record(2, { fromTask: "t_ada", toTask: "t_oly" }),
+    ];
+    const list = buildConversations(records, "demo", tasks);
+    expect(list).toHaveLength(1);
+    expect(list[0]!.records.map((r) => r.id)).toEqual([1, 2]);
+  });
+
+  it("still leaves out a Smith's talk with its own session", () => {
+    const work = task("t_work", "Test task", { smithId: "sm_oly" });
+    const all = new Map([...tasks, [work.id, work]]);
+    const records = [record(1, { fromTask: "t_work", toTask: "t_oly" })];
+    expect(buildConversations(records, "demo", all)).toEqual([]);
+  });
+});
