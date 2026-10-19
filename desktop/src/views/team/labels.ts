@@ -16,20 +16,37 @@ export const STATUS_META: Record<
 /** Why a held message has not arrived yet. */
 export const HELD_HINT = "The session is not running; it reads this when it is next resumed.";
 
+/** How the feed names a session that is gone and left no label. */
+export const DELETED_LABEL = "deleted session";
+
 /**
  * @param tasks the snapshot's tasks by id
  * @param smiths the Smiths by id
- * @returns names a task id as every surface does, falling back to the id once
- *   the task is gone
+ * @param records feed records, whose stored labels name sessions that are gone
+ * @returns names a task id: the label a record stored for it, else the live
+ *   task's, else "deleted session"
  */
 export function labeller(
   tasks: ReadonlyMap<string, TaskInfo>,
   smiths: Readonly<Record<string, Smith>> = {},
+  records: Iterable<PeerMessage> = [],
 ) {
+  const stored = new Map<string, { id: number; label: string }>();
+  const keep = (task: string | undefined, label: string | undefined, id: number) => {
+    if (!task || !label) return;
+    const known = stored.get(task);
+    if (!known || known.id < id) stored.set(task, { id, label });
+  };
+  for (const record of records) {
+    keep(record.fromTask, record.fromLabel, record.id);
+    keep(record.toTask, record.toLabel, record.id);
+  }
   return (id: string | null | undefined): string => {
     if (!id) return USER_LABEL;
+    const label = stored.get(id)?.label;
+    if (label) return label;
     const task = tasks.get(id);
-    return task ? peerLabel(task, smiths) : id;
+    return task ? peerLabel(task, smiths) : DELETED_LABEL;
   };
 }
 

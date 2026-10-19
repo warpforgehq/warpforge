@@ -84,7 +84,10 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   );
   const smithsById = useSmithsStore((state) => state.smiths);
   const smiths = useSmiths();
-  const label = useMemo(() => labeller(taskById, smithsById), [smithsById, taskById]);
+  const label = useMemo(
+    () => labeller(taskById, smithsById, Object.values(records)),
+    [records, smithsById, taskById],
+  );
   const projects = useMemo(() => snapshot.projects.map((p) => p.name), [snapshot.projects]);
 
   const firstChannel = projects[0] ? projectChannels(projects[0])[0]!.key : null;

@@ -165,7 +165,10 @@ export function SmithsBody({ projects, tasks }: Props) {
 
   const smiths = allSmiths.filter((smith) => project && smith.allowedProjects.includes(project));
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
-  const label = useMemo(() => labeller(taskById, smithsById), [smithsById, taskById]);
+  const label = useMemo(
+    () => labeller(taskById, smithsById, Object.values(records)),
+    [records, smithsById, taskById],
+  );
   const dms = useMemo(
     () =>
       buildConversations(Object.values(records), project, taskById).filter((c) => c.kind === "dm"),
