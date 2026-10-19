@@ -31,6 +31,7 @@ pub use command::PeerCommand;
 #[cfg(test)]
 pub(crate) use conversation::{CHANNEL_WAKES, NOTHING_TO_ADD};
 pub(crate) use directory::{is_peer_visible, peer_info};
+pub(crate) use guard::MAX_TEXT_CHARS;
 
 pub(crate) const MUTED_SELF: &str = "the user muted this session's peer messages";
 pub(crate) const PAUSED: &str = "the user paused peer messages in this project";

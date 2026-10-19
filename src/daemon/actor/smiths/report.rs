@@ -1,59 +1,78 @@
-//! A work session that `start_work` started reports back once, when it
-//! settles, to the task that asked (ADR 0027 invariant 14).
+//! A work session that `start_work` started reports every finished turn to
+//! the task that asked (ADR 0027 invariant 14), the way a spawned child
+//! reports to its orchestrator: an idle asker is woken, a busy one hears it
+//! once its turn ends.
 
-use crate::daemon::actor::Daemon;
-use crate::daemon::task::TaskStatus;
-
-/// The most of the session's closing message a report carries.
-const CLOSING_CHARS: usize = 600;
+use crate::daemon::acp::TurnInitiator;
+use crate::daemon::actor::peers::MAX_TEXT_CHARS;
+use crate::daemon::actor::{Command, Daemon};
 
 impl Daemon {
-    /// Send the settled session's report to the asking task, once: a
-    /// message from the session, held for the asker's next prompt.
-    /// @param task_id the work session that settled
-    pub(crate) fn smith_report_back(&mut self, task_id: &str) {
+    /// @param task_id a task
+    /// @returns whether its finished turns are reported to an asker
+    pub(crate) fn smith_reports_turns(&self, task_id: &str) -> bool {
+        self.tasks
+            .get(task_id)
+            .and_then(|task| task.smith.as_ref())
+            .is_some_and(|record| record.report_to.is_some())
+    }
+
+    /// Report a finished turn to the asker: a message from the session, held
+    /// for the asker's next prompt, and a prompt that is that next one — so
+    /// the report arrives through the digest on every harness and asker kind.
+    /// @param task_id the work session whose turn ended
+    /// @param success whether the turn ended cleanly
+    /// @param output the turn's whole text, when it left no closing message
+    pub(crate) async fn smith_report_turn(&mut self, task_id: &str, success: bool, output: String) {
         let Some(task) = self.tasks.get(task_id) else {
             return;
         };
-        let Some(record) = task.smith.as_ref().filter(|r| !r.reported) else {
+        let Some(asker) = task.smith.as_ref().and_then(|r| r.report_to.clone()) else {
             return;
         };
-        let Some(asker) = record.report_to.clone() else {
-            return;
-        };
-        let settled = task.status == TaskStatus::Done || task.settled_override == Some(true);
-        if !settled {
+        if !self.tasks.contains_key(&asker) {
             return;
         }
-        let outcome = match task.status {
-            TaskStatus::Blocked => "blocked",
-            TaskStatus::Interrupted => "interrupted",
-            _ => "finished",
+        let (title, files) = (task.title.clone(), task.files_changed);
+        let outcome = if success {
+            "finished a turn"
+        } else {
+            "stopped: its agent disconnected"
         };
-        let mut report = format!(
-            "Work session \"{}\" ({}) {outcome}: {} files changed.",
-            task.title, task.id, task.files_changed
-        );
+        let mut report =
+            format!("Work session \"{title}\" ({task_id}) {outcome}; {files} files changed.");
         let closing = self.collect_stage_text(task_id).closing;
-        let closing = closing.trim();
-        if !closing.is_empty() {
-            let clipped: String = closing.chars().take(CLOSING_CHARS).collect();
-            let more = if clipped.len() < closing.len() {
+        let message = match closing.trim() {
+            "" => output.trim().to_string(),
+            closing => closing.to_string(),
+        };
+        if !message.is_empty() {
+            report.push_str("\nIts final message:\n");
+            let room = MAX_TEXT_CHARS.saturating_sub(report.chars().count() + 1);
+            let clipped: String = message.chars().take(room).collect();
+            let more = if clipped.len() < message.len() {
                 "…"
             } else {
                 ""
             };
-            report.push_str(&format!("\nClosing message: {clipped}{more}"));
+            report.push_str(&format!("{clipped}{more}"));
         }
         if self.peers_daemon_message(task_id, &asker, report).is_none() {
             return;
         }
-        if let Some(task) = self.tasks.get_mut(task_id) {
-            if let Some(record) = task.smith.as_mut() {
-                record.reported = true;
-            }
-            let updated = task.clone();
-            self.persist(&updated);
-        }
+        let nudge = format!(
+            "[System] Work session \"{title}\" ({task_id}) reported back; its report is in \
+             the peer messages above. Decide what to do next."
+        );
+        let (tx, _rx) = tokio::sync::oneshot::channel();
+        self.handle_session_command(Command::SessionPrompt {
+            task_id: asker,
+            text: nudge,
+            attachments: Vec::new(),
+            initiator: TurnInitiator::System,
+            peer_message: None,
+            reply: tx,
+        })
+        .await;
     }
 }

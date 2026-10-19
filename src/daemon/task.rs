@@ -152,12 +152,10 @@ pub struct TaskSmith {
     /// the user started.
     #[serde(default)]
     pub depth: u8,
-    /// The task whose `start_work` asked for this one; it gets the report.
+    /// The task whose `start_work` asked for this one; every finished turn
+    /// is reported to it.
     #[serde(default)]
     pub report_to: Option<String>,
-    /// The settle report was sent to `report_to`.
-    #[serde(default)]
-    pub reported: bool,
 }
 
 impl TaskSmith {
