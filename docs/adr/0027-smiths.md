@@ -252,7 +252,9 @@ from the session, and then submits a `System` prompt to the asker. That prompt
 is the asker's next one, so the digest carries the report: an idle asker is
 woken at once, a busy one hears it after its current turn, one without a
 session is resumed — the read-only thread and a Smith-led lead alike, with no
-inbox tool needed. A reply to a ping is a turn, so it is reported too. The
+inbox tool needed. A reply to a ping is a turn, so it is reported too —
+unless the session already sent its asker a direct message during that turn,
+which said it once; then the turn-close report is skipped. The
 settle report is gone; settling still writes the journal entry.
 `peers.list` marks the sessions a caller started (`PeerInfo.started`), across
 projects and after they settle, and `list_agents` shows them as

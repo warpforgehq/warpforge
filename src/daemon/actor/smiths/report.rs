@@ -17,6 +17,27 @@ impl Daemon {
             .is_some_and(|record| record.report_to.is_some())
     }
 
+    /// A peer message was accepted from `from` to `to`: when `to` is the
+    /// asker of `from`'s `start_work`, this turn has already reported.
+    /// @param from the sending task
+    /// @param to the receiving task
+    pub(crate) fn smith_note_message(&mut self, from: &str, to: &str) {
+        let asks = self
+            .tasks
+            .get(from)
+            .and_then(|task| task.smith.as_ref())
+            .is_some_and(|record| record.report_to.as_deref() == Some(to));
+        if asks {
+            self.smiths.messaged_asker.insert(from.to_string());
+        }
+    }
+
+    /// A turn started: what the last one sent its asker no longer counts.
+    /// @param task_id the task whose turn started
+    pub(crate) fn smith_report_turn_started(&mut self, task_id: &str) {
+        self.smiths.messaged_asker.remove(task_id);
+    }
+
     /// Report a finished turn to the asker: a message from the session, held
     /// for the asker's next prompt, and a prompt that is that next one — so
     /// the report arrives through the digest on every harness and asker kind.
@@ -31,6 +52,10 @@ impl Daemon {
             return;
         };
         if !self.tasks.contains_key(&asker) {
+            return;
+        }
+        // It already told the asker itself this turn; a report would say it twice.
+        if self.smiths.messaged_asker.remove(task_id) {
             return;
         }
         let (title, files) = (task.title.clone(), task.files_changed);

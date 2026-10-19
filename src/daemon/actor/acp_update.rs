@@ -186,6 +186,7 @@ impl Daemon {
                 self.peers_turn_started(&task_id, initiator, peer);
                 self.conversation_turn_started(&task_id);
                 self.smith_turn_started(&task_id, smith);
+                self.smith_report_turn_started(&task_id);
                 self.smith_note_turn(&task_id);
                 if let Some(echo) = echo {
                     // A reconnect retry can submit the same text again after
