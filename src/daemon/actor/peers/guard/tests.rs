@@ -191,3 +191,16 @@ fn queued_turns_hold_a_share_of_the_hourly_cap_and_held_messages_none() {
     guard.release("s0", "r");
     assert!(guard.admit("next", "r", "hi", true, start + SEC).is_ok());
 }
+
+#[test]
+fn a_receiver_is_full_once_its_hour_is_spent() {
+    let mut guard = PeerGuard::default();
+    let now = Instant::now();
+    for _ in 0..RECEIVER_TURNS_PER_HOUR {
+        assert!(!guard.receiver_full("t_b", now));
+        guard.note_delivered("t_b", now);
+    }
+    assert!(guard.receiver_full("t_b", now));
+    assert!(!guard.receiver_full("t_c", now));
+    assert!(!guard.receiver_full("t_b", now + Duration::from_secs(60 * 60)));
+}

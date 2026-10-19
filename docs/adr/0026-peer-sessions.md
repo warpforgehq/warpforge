@@ -571,8 +571,13 @@ skipped — the post stays in the feed and in the members' next context — and
 the first skip in the window marks that post as the channel's one alert. Any
 user post to the channel resets the window and ends the alert; the window
 also lapses on time (invariant 10). The pair guard still applies to every
-agent-originated wake (cooldown, pair window and its alert); a skipped wake is
-not an error to anyone, since nobody called a tool.
+agent-originated wake (cooldown, pair window and its alert), and so does the
+receiver's hourly cap: a channel turn an agent's post started counts toward it
+when it starts, exactly as a direct message's turn does, and a member whose
+hour is full is not woken. A skipped wake is not an error to anyone, since
+nobody called a tool. A pair-window alert is a refused record of its own for
+that pair (citing the post in `source_id`), so the end of one pair's window
+clears only that pair's alert; the channel cap's alert stays on the post.
 
 *Rejected:* letting the Smith post its own reply with `message_agent` — the
 reply would depend on the model remembering to, and a forgotten call is a
@@ -589,8 +594,8 @@ turns per member, which is what invariant 3 guarded against.
     multiplies cost by the post count.
 24. **The reply is posted by the daemon, from the thread, on a clean turn end
     only.** An interrupted turn, empty text or `NOTHING_TO_ADD` posts nothing.
-25. **Every agent-originated wake passes the pair guard and the channel cap; a
-    user post is never capped and resets the cap.**
+25. **Every agent-originated wake passes the pair guard, the receiver's hourly
+    cap and the channel cap; a user post is never capped and resets the cap.**
 
 **Implementation notes.** Found while building it:
 
