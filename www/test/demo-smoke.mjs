@@ -107,6 +107,17 @@ await must("the PR review shows the failing check", () =>
   page.getByText("ci / test").first().waitFor({ timeout: RUN_MS }),
 );
 
+await page.evaluate(() => (window.location.hash = "smiths"));
+await must("the channel shows the request", () =>
+  page.getByText("invoices need a CSV export").first().waitFor({ timeout: RUN_MS }),
+);
+await must("a Smith takes the work", () =>
+  page.getByText(/Taking it/).first().waitFor({ timeout: RUN_MS }),
+);
+await must("the work session runs as that Smith", () =>
+  page.getByText(/CSV export is in/).first().waitFor({ timeout: RUN_MS }),
+);
+
 await browser.close();
 server.close();
 
