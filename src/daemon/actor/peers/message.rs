@@ -32,6 +32,17 @@ pub(super) struct Refused {
     alert: bool,
 }
 
+impl Refused {
+    /// @param reason the rule's text
+    /// @returns a refusal that raises the user's alert
+    pub(super) fn alerting(reason: String) -> Self {
+        Self {
+            reason,
+            alert: true,
+        }
+    }
+}
+
 impl From<String> for Refused {
     fn from(reason: String) -> Self {
         Self {
