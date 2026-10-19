@@ -38,7 +38,11 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
             mentions     TEXT,
             source_id    INTEGER,
             started_task TEXT,
-            channel_id   TEXT
+            channel_id   TEXT,
+            from_label   TEXT,
+            to_label     TEXT,
+            from_smith_id TEXT,
+            to_smith_id  TEXT
         );
         CREATE INDEX IF NOT EXISTS peer_messages_project_idx ON peer_messages(project, id);
         CREATE TABLE IF NOT EXISTS peer_cursors (
@@ -58,6 +62,10 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
         "source_id INTEGER",
         "started_task TEXT",
         "channel_id TEXT",
+        "from_label TEXT",
+        "to_label TEXT",
+        "from_smith_id TEXT",
+        "to_smith_id TEXT",
     ] {
         let _ = conn.execute(
             &format!("ALTER TABLE peer_messages ADD COLUMN {column}"),
@@ -86,7 +94,8 @@ impl PeerControl {
 }
 
 const MESSAGE_COLUMNS: &str = "id, project, from_task, to_task, text, created_at, delivered_at, \
-     status, reason, alert, alert_cleared_at, mentions, source_id, started_task, channel_id";
+     status, reason, alert, alert_cleared_at, mentions, source_id, started_task, channel_id, \
+     from_label, to_label, from_smith_id, to_smith_id";
 
 fn message_from_row(row: &Row<'_>) -> rusqlite::Result<wire::PeerMessage> {
     Ok(wire::PeerMessage {
@@ -108,6 +117,10 @@ fn message_from_row(row: &Row<'_>) -> rusqlite::Result<wire::PeerMessage> {
         source_id: row.get::<_, Option<i64>>(12)?.map(|id| id as u64),
         started_task: row.get(13)?,
         channel_id: row.get(14)?,
+        from_label: row.get(15)?,
+        to_label: row.get(16)?,
+        from_smith_id: row.get(17)?,
+        to_smith_id: row.get(18)?,
     })
 }
 
@@ -116,7 +129,8 @@ impl Store {
         self.conn.execute(
             &format!(
                 "INSERT OR REPLACE INTO peer_messages ({MESSAGE_COLUMNS}) \
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)"
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, \
+                 ?16, ?17, ?18, ?19)"
             ),
             params![
                 message.id as i64,
@@ -135,6 +149,10 @@ impl Store {
                 message.source_id.map(|id| id as i64),
                 message.started_task,
                 message.channel_id,
+                message.from_label,
+                message.to_label,
+                message.from_smith_id,
+                message.to_smith_id,
             ],
         )?;
         Ok(())

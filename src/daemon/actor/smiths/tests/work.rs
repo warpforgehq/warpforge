@@ -335,3 +335,33 @@ async fn a_turn_that_already_messaged_its_asker_sends_no_report() {
         "{records:?}"
     );
 }
+
+#[tokio::test]
+async fn a_report_keeps_who_sent_it_after_the_session_is_deleted() {
+    let home = home();
+    let daemon = spawn(&home, &[]);
+    let (ada, _) = smith_on_mock(&daemon, &home, "Ada", None).await;
+    let (bo, _) = smith_on_mock(&daemon, &home, "Bo", None).await;
+    let thread = ada.thread_task_id.clone();
+    let work = start_from(&daemon, &thread, "Bo", "demo").await.unwrap();
+    wait_idle(&daemon, &work).await;
+    wait_idle(&daemon, &thread).await;
+
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    daemon
+        .send(Command::DeleteTask {
+            id: work.clone(),
+            reply: tx,
+        })
+        .await;
+    rx.await.unwrap().unwrap();
+    let reports = records_from(&daemon, &work).await;
+    let report = reports.first().expect("the report");
+    assert_eq!(
+        report.from_label.as_deref(),
+        Some("Bo · fix the login flake")
+    );
+    assert_eq!(report.to_label.as_deref(), Some("Ada"));
+    assert_eq!(report.from_smith_id.as_deref(), Some(bo.id.as_str()));
+    assert_eq!(report.to_smith_id.as_deref(), Some(ada.id.as_str()));
+}

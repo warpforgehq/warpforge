@@ -272,6 +272,10 @@ async fn records_still_queued_at_startup_are_refused() {
             source_id: None,
             started_task: None,
             channel_id: None,
+            from_label: None,
+            to_label: None,
+            from_smith_id: None,
+            to_smith_id: None,
         })
         .unwrap();
     let daemon = seeded(store);
