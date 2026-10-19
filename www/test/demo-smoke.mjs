@@ -86,6 +86,27 @@ await must("the changes rail counts them", () =>
   page.getByText(/\/4 files/).first().waitFor({ timeout: RUN_MS }),
 );
 
+// The other scenes, picked the way the landing page picks them: the frame's
+// fragment. Each has to reach the state only its events and RPCs produce.
+await page.evaluate(() => (window.location.hash = "factory"));
+await must("factory reaches review round 1", () =>
+  page.getByText("Reviewing · round 1/3").first().waitFor({ timeout: RUN_MS }),
+);
+await must("factory opens the draft PR", () =>
+  page.getByText("PR #41").first().waitFor({ timeout: RUN_MS }),
+);
+
+await page.evaluate(() => (window.location.hash = "pulls"));
+await must("the PR feedback reaches the task", () =>
+  page.getByText("PR #12: 1 check failed · 1 new comment").first().waitFor({ timeout: RUN_MS }),
+);
+await must("the PR review groups its files", () =>
+  page.getByText("Migrations").first().waitFor({ timeout: RUN_MS }),
+);
+await must("the PR review shows the failing check", () =>
+  page.getByText("ci / test").first().waitFor({ timeout: RUN_MS }),
+);
+
 await browser.close();
 server.close();
 
@@ -95,4 +116,4 @@ if (failures.length > 0) {
   console.error("Landing demo is broken:\n  - " + failures.join("\n  - "));
   process.exit(1);
 }
-console.log("Landing demo smoke: the run plays through, console clean.");
+console.log("Landing demo smoke: every scene plays through, console clean.");
