@@ -95,10 +95,11 @@ export default function Team({ snapshot, onOpenTask, onNewTask }: Props) {
   const conversation = useMemo(() => {
     if (selection?.kind !== "conversation") return null;
     return (
-      buildConversations(Object.values(records)).find((c) => c.key === selection.key) ??
-      emptyConversation(selection.key, projects, Object.values(channels))
+      buildConversations(Object.values(records), null, taskById).find(
+        (c) => c.key === selection.key,
+      ) ?? emptyConversation(selection.key, projects, Object.values(channels))
     );
-  }, [channels, projects, records, selection]);
+  }, [channels, projects, records, selection, taskById]);
   const candidates = useMemo(
     () => (conversation ? mentionCandidates(snapshot.tasks, conversation.project, smiths) : []),
     [conversation, smiths, snapshot.tasks],

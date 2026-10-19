@@ -75,18 +75,39 @@ export function userThread(project: string, taskId: string): Conversation {
 }
 
 /**
+ * A message between a Smith's thread and its own work sessions — `start_work`
+ * reports among them. It is the Smith talking to itself: its chat shows it,
+ * and it is no direct conversation of its own.
+ * @param record a feed record
+ * @param tasks the snapshot's tasks by id
+ * @returns whether both ends run as the same Smith
+ */
+export function isSmithInternal(
+  record: PeerMessage,
+  tasks: ReadonlyMap<string, TaskInfo>,
+): boolean {
+  if (!record.fromTask || !record.toTask) return false;
+  const from = tasks.get(record.fromTask)?.smithId;
+  return !!from && from === tasks.get(record.toTask)?.smithId;
+}
+
+/**
  * Group the feed into threads, each oldest first, threads newest first.
  * @param records feed records in any order
  * @param project only this project's threads, when given
+ * @param tasks the snapshot's tasks by id; given, a Smith's messages to its
+ *   own sessions are left out
  * @returns the threads
  */
 export function buildConversations(
   records: Iterable<PeerMessage>,
   project?: string | null,
+  tasks?: ReadonlyMap<string, TaskInfo>,
 ): Conversation[] {
   const byKey = new Map<string, Conversation>();
   for (const record of records) {
     if (project && record.project !== project) continue;
+    if (tasks && isSmithInternal(record, tasks)) continue;
     const key = conversationKey(record);
     let conversation = byKey.get(key);
     if (!conversation) {
