@@ -98,7 +98,7 @@ Dreaming is off until you enable it, runs on the harness and model you choose, a
 
 ## How agents use it
 
-Every session is told, in its own system prompt, to use shared memory instead of writing to per-harness files — and the [`memory_*` tools](/reference/mcp-tools/#memory--knowledge-that-outlives-the-session) are always visible, so the habit doesn't depend on you asking.
+Every session is told, in its opening prompt, to search memory before it settles on an approach and to store decisions, gotchas, preferences and non-obvious facts as it learns them — next to your repo's `CLAUDE.md` / `AGENTS.md`, not instead of them. Smiths also check their journal first. The [`memory_*` tools](/reference/mcp-tools/#memory--knowledge-that-outlives-the-session) are always visible, so the habit doesn't depend on you asking.
 
 A well-behaved agent:
 
