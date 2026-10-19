@@ -266,6 +266,18 @@ impl Daemon {
             self.peers.conversations.turns.remove(thread);
             return;
         }
+        // A start that failed or was refused on the way leaves no session and
+        // no resume behind: that turn will never start, so it must not wait.
+        let started =
+            self.sessions.contains_key(thread) || self.pending_resume.contains_key(thread);
+        let blocked = self
+            .tasks
+            .get(thread)
+            .is_none_or(|task| task.status == TaskStatus::Blocked);
+        if blocked || !started {
+            self.peers.conversations.turns.remove(thread);
+            return;
+        }
         if let Some(turn) = self.peers.conversations.turns.get_mut(thread) {
             turn.submitting = false;
         }
@@ -307,6 +319,10 @@ impl Daemon {
             .get(task_id)
             .map(|turn| turn.started);
         if started == Some(false) {
+            // A channel turn that ended without starting never will; holding
+            // its entry would keep the thread from every later channel turn.
+            self.peers.conversations.turns.remove(task_id);
+            self.conversation_dispatch(task_id).await;
             return;
         }
         if let Some(turn) = self.peers.conversations.turns.remove(task_id) {
