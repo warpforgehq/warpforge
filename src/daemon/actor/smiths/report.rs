@@ -85,6 +85,11 @@ impl Daemon {
         if self.peers_daemon_message(task_id, &asker, report).is_none() {
             return;
         }
+        // A muted or hidden asker gets no digest: the report waits, held, and
+        // a nudge saying it is "above" would be a turn about nothing.
+        if !self.peers_digest_reaches(&asker) {
+            return;
+        }
         let nudge = format!(
             "[System] Work session \"{title}\" ({task_id}) reported back; its report is in \
              the peer messages above. Decide what to do next."
