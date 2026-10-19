@@ -48,6 +48,7 @@ const FINDING =
   "1. [medium] `api/src/routes/invoices.ts:7` — the CSV branch ignores `range(req)` validation, so an inverted range returns every invoice (reviewer (codex))";
 
 export const script: Beat[] = [
+  // A replay starts queued, with no Pipeline tab to stay on.
   { after: 0, ui: { activeSurface: "diff" } },
 
   // Picked up from the queue: the parent gets its worktree and the run starts.
@@ -67,7 +68,6 @@ export const script: Beat[] = [
       stage: "implement",
     }),
   },
-  { after: 400, ui: { activeSurface: "pipeline" } },
   {
     after: 300,
     event: say(IMPLEMENT_ID, {
