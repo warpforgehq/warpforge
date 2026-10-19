@@ -23,8 +23,8 @@ export const DELETED_LABEL = "deleted session";
  * @param tasks the snapshot's tasks by id
  * @param smiths the Smiths by id
  * @param records feed records, whose stored labels name sessions that are gone
- * @returns names a task id: the label a record stored for it, else the live
- *   task's, else "deleted session"
+ * @returns names a task id: the live task's label, so a rename shows, else the
+ *   one a record stored for it, else "deleted session"
  */
 export function labeller(
   tasks: ReadonlyMap<string, TaskInfo>,
@@ -43,10 +43,9 @@ export function labeller(
   }
   return (id: string | null | undefined): string => {
     if (!id) return USER_LABEL;
-    const label = stored.get(id)?.label;
-    if (label) return label;
     const task = tasks.get(id);
-    return task ? peerLabel(task, smiths) : DELETED_LABEL;
+    if (task) return peerLabel(task, smiths);
+    return stored.get(id)?.label ?? DELETED_LABEL;
   };
 }
 
