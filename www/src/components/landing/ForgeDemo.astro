@@ -12,10 +12,28 @@
  * has: a desk layout squeezed into a phone-width column stops being a picture
  * of the product.
  */
+import { SCENE_META } from "./demo/scenes/meta";
+
 const APP_WIDTH = 1440;
 const APP_HEIGHT = 860;
+const [first] = SCENE_META;
 ---
 
+<div class="wf-demo-scenes" role="group" aria-label="Demo scene">
+  {
+    SCENE_META.map((scene) => (
+      <button
+        type="button"
+        class="wf-demo-scene"
+        aria-pressed={scene.id === first.id ? "true" : "false"}
+        data-scene={scene.id}
+        data-caption={scene.caption}
+      >
+        {scene.label}
+      </button>
+    ))
+  }
+</div>
 <div class="wf-demo-frame" data-forge-demo>
   <iframe
     src="/embed/app-demo/"
@@ -24,8 +42,50 @@ const APP_HEIGHT = 860;
     width={APP_WIDTH}
     height={APP_HEIGHT}></iframe>
 </div>
+<p class="wf-demo-cap">Live demo — interactive. <span data-demo-caption>{first.caption}</span></p>
 
 <style define:vars={{ appW: `${APP_WIDTH}`, appH: `${APP_HEIGHT}` }}>
+  .wf-demo-scenes {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-bottom: 0.9rem;
+  }
+  .wf-demo-scene {
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--mut);
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+  }
+  .wf-demo-scene:hover {
+    color: var(--fg);
+  }
+  .wf-demo-scene[aria-pressed="true"] {
+    border-color: hsl(var(--foreground) / 0.3);
+    background: hsl(var(--foreground) / 0.08);
+    color: var(--fg);
+  }
+  .wf-demo-scene:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 1px var(--bg),
+      0 0 0 3px hsl(var(--ring));
+  }
+  .wf-demo-cap {
+    margin: 1rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--faint);
+    text-align: center;
+  }
+
   .wf-demo-frame {
     container-type: inline-size;
     position: relative;
@@ -78,4 +138,18 @@ const APP_HEIGHT = 860;
       observer.observe(frame);
     });
   }
+
+  // A scene is picked through the frame's fragment: changing only the hash
+  // does not reload the frame, and `replace` keeps it out of the page's history.
+  const buttons = document.querySelectorAll<HTMLButtonElement>(".wf-demo-scene");
+  const frame = document.querySelector<HTMLIFrameElement>("[data-forge-demo] iframe");
+  const caption = document.querySelector<HTMLElement>("[data-demo-caption]");
+  buttons.forEach((button) =>
+    button.addEventListener("click", () => {
+      if (!frame || button.getAttribute("aria-pressed") === "true") return;
+      buttons.forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
+      if (caption) caption.textContent = button.dataset.caption ?? "";
+      frame.contentWindow?.location.replace(`/embed/app-demo/#${button.dataset.scene}`);
+    }),
+  );
 </script>

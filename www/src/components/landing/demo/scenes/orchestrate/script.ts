@@ -7,29 +7,9 @@
  * does against a live daemon — the animation is the app updating, not a
  * timeline of CSS classes.
  */
-import type { DaemonEvent, SessionUpdate } from "@app/protocol";
-
+import { say, tool } from "../beats";
+import type { Beat } from "../types";
 import { apiTask, diff, LEAD_TASK_ID, leadTask, testTask } from "./fixtures";
-
-interface Beat {
-  /** Milliseconds to wait before dispatching this event. */
-  after: number;
-  event: DaemonEvent;
-}
-
-const say = (taskId: string, update: SessionUpdate): DaemonEvent => ({
-  data: { task_id: taskId, update },
-  event: "session.update",
-});
-
-const tool = (
-  taskId: string,
-  id: string,
-  title: string,
-  kind: string,
-  status: "pending" | "in_progress" | "completed",
-): DaemonEvent =>
-  say(taskId, { kind: "tool_call", status, title, tool_call_id: id, tool_kind: kind });
 
 export const script: Beat[] = [
   {
