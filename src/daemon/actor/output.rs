@@ -100,7 +100,10 @@ impl Daemon {
         let feeds_parent = !workflow_child
             && task.parent_task_id.is_some()
             && task.origin.as_deref() != Some(crate::daemon::actor::advisor::ADVISOR_ORIGIN);
-        orchestrator_node || feeds_parent || self.automation_run_tasks.contains_key(task_id)
+        orchestrator_node
+            || feeds_parent
+            || self.automation_run_tasks.contains_key(task_id)
+            || self.smith_reports_turns(task_id)
     }
 
     /// Hand a finished turn's text to the orchestrator / parent inbox as

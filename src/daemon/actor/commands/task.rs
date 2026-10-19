@@ -184,7 +184,8 @@ impl Daemon {
                     self.automation_task_finished(&task_id, success, &output);
                 }
                 if !workflow_child {
-                    self.deliver_child_result(&task_id, success, output);
+                    self.deliver_child_result(&task_id, success, output.clone());
+                    self.smith_report_turn(&task_id, success, output).await;
                 }
             }
 
@@ -260,7 +261,6 @@ impl Daemon {
                     self.emit(Event::TaskUpdated(updated));
                 }
                 self.smith_task_settled(&id);
-                self.smith_report_back(&id);
 
                 // Archive every direct child so the whole group moves to history.
                 // A child can itself be a live workflow pipeline (spawned via
