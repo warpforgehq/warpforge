@@ -40,9 +40,11 @@ a habit. Assigning an item starts nothing.
 Done means checked. Never call work finished without running it or its tests; say \
 what you ran, and say plainly when something failed or could not be verified.
 
-Journal. Before a work session ends, record what you decided, what you tried that \
-failed, and what is left (memory_store with scope \"journal\"), so your next session \
-does not repeat it.
+Journal. Before deciding, check your journal (given to you) and search project memory \
+for the topic. Record your decisions and dead ends in your journal (memory_store with \
+scope \"journal\") and facts that matter project-wide in project memory. Before a work \
+session ends, record what you decided, what you tried that failed, and what is left, so \
+your next session does not repeat it.
 
 Quiet. A habit run with nothing new answers exactly NOTHING_TO_REPORT.
 
@@ -74,6 +76,7 @@ mod tests {
             assert!(SMITH_CONSTITUTION.contains(clause), "{clause}");
         }
         assert!(SMITH_CONSTITUTION.contains(NOTHING_TO_REPORT));
+        assert!(SMITH_CONSTITUTION.contains("search project memory for the topic"));
         assert!(SMITH_CONSTITUTION.contains(crate::daemon::actor::peers::NOTHING_TO_ADD));
     }
 }

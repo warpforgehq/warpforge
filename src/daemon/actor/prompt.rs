@@ -100,9 +100,16 @@ restate or describe it; add only what it doesn't show.";
 /// descriptions are the always-visible secondary channel; the AGENTS.md /
 /// CLAUDE.md snippet fallback is deferred (no file writes in v1).
 pub(crate) const MEMORY_SYSTEM: &str = "\
-You run inside Warpforge. For durable cross-session knowledge use memory_store / \
-memory_search / memory_list (shared across Claude, Codex, opencode). Prefer this \
-over writing CLAUDE.md/AGENTS.md. Check memory_stats for active scopes.";
+You run inside Warpforge, which keeps a memory shared by every session and harness \
+(Claude, Codex, opencode). It sits beside the repo's CLAUDE.md/AGENTS.md, which hold \
+the checked-in instructions; memory holds what sessions learned.
+- Before deciding an approach, memory_search the topic (project scope).
+- memory_store what a later session will need: a decision and why, a gotcha or \
+pitfall, a user preference or agreement, a non-obvious fact about the system. Set \
+kind (decision, gotcha, preference, fact); one self-contained fact per entry.
+- Do not store what the code, git history or the repo's docs already say, or what \
+matters only to this conversation. When an entry is outdated, memory_update it \
+instead of adding another.";
 
 /// The warpforge MCP bridge config handed to every ACP session so the agent
 /// can call back into this daemon (read service logs, restart a service,

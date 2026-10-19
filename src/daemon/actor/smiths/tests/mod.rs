@@ -6,6 +6,7 @@ mod assign;
 mod channels;
 mod conversation;
 mod journal;
+mod memory;
 mod orchestrator;
 mod readonly;
 mod sessions;
