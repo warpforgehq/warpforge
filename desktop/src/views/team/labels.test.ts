@@ -37,4 +37,12 @@ describe("labeller", () => {
     expect(label("t_unknown")).toBe(DELETED_LABEL);
     expect(label(null)).toBe("You");
   });
+
+  it("prefers the live task, so a rename shows", () => {
+    const live = { id: "t_w", prompt: "x", tags: [], title: "Renamed task" } as unknown as TaskInfo;
+    const label = labeller(new Map([["t_w", live]]), {}, [
+      post({ fromLabel: "Old title", fromTask: "t_w" }),
+    ]);
+    expect(label("t_w")).toBe("Renamed task");
+  });
 });
