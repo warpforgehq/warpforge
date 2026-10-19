@@ -422,6 +422,10 @@ async fn a_turn_start_from_a_replaced_session_delivers_nothing() {
         source_id: None,
         started_task: None,
         channel_id: None,
+        from_label: None,
+        to_label: None,
+        from_smith_id: None,
+        to_smith_id: None,
     };
     store.upsert_peer_message(&held).unwrap();
     let daemon = seeded(store);

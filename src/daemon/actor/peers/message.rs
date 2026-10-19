@@ -287,6 +287,10 @@ impl Daemon {
             source_id: None,
             started_task: None,
             channel_id: None,
+            from_label: from.map(|id| self.peers_label(Some(id))),
+            to_label: to.map(|id| self.peers_label(Some(id))),
+            from_smith_id: from.and_then(|id| self.task_smith_id(id)),
+            to_smith_id: to.and_then(|id| self.task_smith_id(id)),
         }
     }
 }

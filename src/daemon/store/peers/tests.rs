@@ -21,6 +21,10 @@ fn record(id: u64, project: &str, status: wire::PeerMessageStatus) -> wire::Peer
         source_id: None,
         started_task: None,
         channel_id: None,
+        from_label: None,
+        to_label: None,
+        from_smith_id: None,
+        to_smith_id: None,
     }
 }
 

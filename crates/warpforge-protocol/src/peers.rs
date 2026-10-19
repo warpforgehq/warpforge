@@ -160,6 +160,19 @@ pub struct PeerMessage {
     /// The named channel a post went to; `None` is `#general`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub channel_id: Option<String>,
+    /// The sender's label when the record was written, so the feed can name a
+    /// session that is gone; `None` for the user and older records.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from_label: Option<String>,
+    /// The receiver's label when the record was written.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to_label: Option<String>,
+    /// The Smith the sending task ran as, when it did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from_smith_id: Option<String>,
+    /// The Smith the receiving task ran as, when it did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to_smith_id: Option<String>,
 }
 
 /// How the daemon resolved a `session.message` target.
