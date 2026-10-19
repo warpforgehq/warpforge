@@ -109,6 +109,28 @@ async fn list_agents_names_general_and_the_callers_channels() {
 }
 
 #[tokio::test]
+async fn sessions_it_started_are_listed_apart_from_its_peers() {
+    let daemon = FakeDaemon::at("ws://a");
+    let mut started = peer("t_work", "Fix the flake", None);
+    started["started"] = json!(true);
+    script(
+        &daemon,
+        "peers.list",
+        json!({ "peers": [started, peer("t_b", "Docs", None)] }),
+    );
+    script(&daemon, "channels.list", json!({ "channels": [] }));
+    let text = call(&daemon, false, "list_agents", json!({})).await;
+
+    let mine = text
+        .find("relation: started")
+        .expect("its started sessions");
+    let peers = text.find("## Peers (relation: peer)").unwrap();
+    assert!(mine < peers, "{text}");
+    assert!(text[mine..peers].contains("t_work"), "{text}");
+    assert!(!text[peers..].contains("t_work"), "{text}");
+}
+
+#[tokio::test]
 async fn a_hidden_caller_gets_no_channels_section() {
     let daemon = FakeDaemon::at("ws://a");
     script(
