@@ -242,6 +242,22 @@ once and wakes nobody. A `reported` flag keeps it to one. Questions in between g
 through ordinary peer messaging: the work session messages its thread or the
 user, under ADR 0026's guard.
 
+*Amended (2026-10-19):* reporting once on settle left a lead waiting on a
+session that had long finished its turn, and a reply to a `message_agent`
+ping landed only in the session's own transcript — seen live, the lead
+concluded the report channel was broken. Now a `start_work` session reports
+like a spawned child: every turn that ends without interruption sends the
+asker its outcome and final message (up to the message cap) as a held message
+from the session, and then submits a `System` prompt to the asker. That prompt
+is the asker's next one, so the digest carries the report: an idle asker is
+woken at once, a busy one hears it after its current turn, one without a
+session is resumed — the read-only thread and a Smith-led lead alike, with no
+inbox tool needed. A reply to a ping is a turn, so it is reported too. The
+settle report is gone; settling still writes the journal entry.
+`peers.list` marks the sessions a caller started (`PeerInfo.started`), across
+projects and after they settle, and `list_agents` shows them as
+`relation: started`.
+
 **`kind: smith` in the directory.** `PeerKind` gains `Smith`. The thread is
 listed as `kind: smith`, `name` = the Smith's name, in the directory of every
 project in `allowed_projects` (a projection: the task still has one project).
@@ -448,9 +464,10 @@ rewrite a soul is the case #120 exists for.
 13. **A Smith assignee is `smith:<id>`, on local items only.** (backlog
     update path) A name would break on rename and collide with logins; a
     tracker item's assignee is overwritten by the next sync.
-14. **Every work session the thread started reports back to it once, on
-    settle.** (`actor/smiths/`) The user asked there; a result that lands only
-    on the board is a result they have to go looking for.
+14. **Every finished turn of a `start_work` session reports back to its
+    asker, and wakes it.** (`actor/smiths/report.rs`) A report that waits for
+    settle, or for the asker's own next prompt, is a result nobody hears; a
+    result that lands only on the board is one they have to go looking for.
 15. **A thread never runs in a harness plan mode.** (`advisor/prompt.rs`
     `thread_mode`) Read-only comes from the harness asking and the daemon
     denying; a plan mode turns the thread's own tools into refusals.
@@ -498,7 +515,7 @@ rewrite a soul is the case #120 exists for.
    session, read-only) answering in DM and channel; board items created and
    assigned by the thread (`assignee` = `smith:<id>`, local items only);
    `start_work` with its limits, `Task.smith_id` work sessions linked through
-   `backlog_item_id`, and the settle report back to the asking thread;
+   `backlog_item_id`, and the per-turn report back to the asker;
    injection (`_meta.systemPrompt` append for Claude, prefix otherwise) with
    delta re-send; `smith:<id>` journal scope and the daemon's settle entry;
    account copy and quota gate on `start_work`; Team view management — create,
