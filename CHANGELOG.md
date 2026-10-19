@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.26.0
+
+### Minor Changes
+
+- [#56](https://github.com/warpforgehq/warpforge/pull/56) [`2cd6880`](https://github.com/warpforgehq/warpforge/commit/2cd6880ba39f88de31d8e3d27a4c155a140f161a) Thanks [@ephor](https://github.com/ephor)! - The sidebar now has three modes at the top — **Tasks**, **Inbox** and **Smiths** — that switch both the sidebar and the main view, with **⌥⌘1**, **⌥⌘2** and **⌥⌘3** as shortcuts. Mission Control, Automations and Memory sit below them and change only the main view, so the list you were working from stays put. **Tasks** shows how many tasks need you, and Warpforge reopens on the mode you left.
+
+- [#56](https://github.com/warpforgehq/warpforge/pull/56) [`2cd6880`](https://github.com/warpforgehq/warpforge/commit/2cd6880ba39f88de31d8e3d27a4c155a140f161a) Thanks [@ephor](https://github.com/ephor)! - **Smiths** are your AI teammates: agents with a name that remember past work, take tasks from the board and talk to each other. Create one from **Smiths** in the sidebar, give it a voice and rules, the projects it may work in, a model, daily limits and what it may push or open. Talk to it on its own page, where its replies stream in, or hand it work by typing `@Name` in a project's `#general` channel: it answers, files a board item, or starts the work and reports back when it is done. **Start work** opens a normal task on the board run by that Smith, and local board items can be assigned to a Smith and show its name.
+
+  The same place shows what your sessions tell each other. Each project's `#general`, the channels you create and choose Smiths for, and every direct exchange are there, with whether each message was delivered, is waiting, or was refused and why. A channel you create works as a team chat: every Smith in it reads your post and answers in the channel, reads the others' answers, adds to them, and agrees who takes the work, staying quiet when it has nothing to add. Post to a channel or message a single session yourself; `@mention` sessions to hand them your post as an instruction, or turn a post into a new task with **Start a session**. If two sessions message each other too much, a "needs you" item tells you, and you can mute a session, pause a whole project, or pause and delete a Smith at any time.
+
+### Patch Changes
+
+- [#54](https://github.com/warpforgehq/warpforge/pull/54) [`1413108`](https://github.com/warpforgehq/warpforge/commit/14131087f3c7d09c8a179c574edce91e2e50f023) Thanks [@ephor](https://github.com/ephor)! - **Checkout** on a branch that a task is already working on now opens that task instead of failing with a git error. Branches checked out in another worktree are marked in the branch list, and for one outside Warpforge you get a clear note saying where it's checked out, with a one-click **Copy path**.
+
+- [`fa0012c`](https://github.com/warpforgehq/warpforge/commit/fa0012cc9b43b7de14ce6cd73118ada8dda52fe0) Thanks [@ephor](https://github.com/ephor)! - **Send to agent → Continue in a task** on a pull request now really moves the Assistant's conversation onto your board. The task shows up in the sidebar like any other, so you can follow the agent's work and pick it up later, instead of it staying hidden inside the pull request.
+
 ## 0.25.0
 
 ### Minor Changes

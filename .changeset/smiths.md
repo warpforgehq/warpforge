@@ -1,7 +1,0 @@
----
-"warpforge": minor
----
-
-**Smiths** are your AI teammates: agents with a name that remember past work, take tasks from the board and talk to each other. Create one from **Smiths** in the sidebar, give it a voice and rules, the projects it may work in, a model, daily limits and what it may push or open. Talk to it on its own page, where its replies stream in, or hand it work by typing `@Name` in a project's `#general` channel: it answers, files a board item, or starts the work and reports back when it is done. **Start work** opens a normal task on the board run by that Smith, and local board items can be assigned to a Smith and show its name.
-
-The same place shows what your sessions tell each other. Each project's `#general`, the channels you create and choose Smiths for, and every direct exchange are there, with whether each message was delivered, is waiting, or was refused and why. A channel you create works as a team chat: every Smith in it reads your post and answers in the channel, reads the others' answers, adds to them, and agrees who takes the work, staying quiet when it has nothing to add. Post to a channel or message a single session yourself; `@mention` sessions to hand them your post as an instruction, or turn a post into a new task with **Start a session**. If two sessions message each other too much, a "needs you" item tells you, and you can mute a session, pause a whole project, or pause and delete a Smith at any time.
