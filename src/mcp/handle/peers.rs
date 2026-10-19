@@ -37,6 +37,14 @@ pub(super) async fn dispatch(
                 .await?;
             let peers: Vec<wire::PeerInfo> =
                 serde_json::from_value(result.get("peers").cloned().unwrap_or_default())?;
+            let (started, peers): (Vec<_>, Vec<_>) = peers.into_iter().partition(|p| p.started);
+            if !started.is_empty() {
+                out.push_str("## Started by you with start_work (relation: started)\n\n");
+                out.push_str(&render_peers(&started));
+                out.push_str(
+                    "\n\nEach reports back to you when it finishes a turn; message_agent reaches it.\n\n",
+                );
+            }
             out.push_str("## Peers (relation: peer)\n\n");
             out.push_str(&render_peers(&peers));
             if result.get("hidden").and_then(Value::as_bool) == Some(true) {

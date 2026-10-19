@@ -47,6 +47,7 @@ pub(crate) fn peer_info(task: &Task, now: u64) -> wire::PeerInfo {
         blocked_kind: task.blocked_kind,
         snoozed: task.snoozed_until.is_some_and(|until| until > now),
         orchestrator: task.tags.iter().any(|tag| tag == ORCHESTRATOR_TAG),
+        started: false,
         project: task.project.clone(),
         worktree: task.worktree.clone(),
         base_branch: task.base_branch.clone(),
@@ -93,13 +94,20 @@ impl Daemon {
             return Ok(None);
         }
         let now = now_secs();
+        let started = |task: &Task| {
+            task.smith
+                .as_ref()
+                .is_some_and(|record| record.report_to.as_deref() == Some(task_id))
+        };
+        // The sessions it started are listed wherever they work, settled ones too.
         let mut peers: Vec<wire::PeerInfo> = self
             .tasks
             .values()
             .filter(|task| task.id != caller.id)
-            .filter(|task| self.peer_visible(task, &caller.project))
+            .filter(|task| started(task) || self.peer_visible(task, &caller.project))
             .map(|task| {
                 let mut info = self.peer_entry(task, now);
+                info.started = started(task);
                 if self.peers.muted.contains(&task.id) {
                     info.note = None;
                 }

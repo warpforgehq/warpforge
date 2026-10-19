@@ -39,6 +39,9 @@ pub struct PeerInfo {
     /// The session orchestrates children of its own.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub orchestrator: bool,
+    /// A session the caller started with `start_work`; it reports back to it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub started: bool,
     pub project: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub worktree: Option<String>,
