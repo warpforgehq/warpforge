@@ -8,6 +8,11 @@ export const SCENE_META = [
     id: "orchestrate",
     label: "Orchestrate",
   },
+  {
+    caption: "A backlog item through Factory: implement, review, fix, then a draft PR.",
+    id: "factory",
+    label: "Factory",
+  },
 ] as const;
 
 export type SceneId = (typeof SCENE_META)[number]["id"];
