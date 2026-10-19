@@ -13,6 +13,11 @@ export const SCENE_META = [
     id: "factory",
     label: "Factory",
   },
+  {
+    caption: "A PR comes back with a failing check and a review comment. The task asks for you.",
+    id: "pulls",
+    label: "Pull requests",
+  },
 ] as const;
 
 export type SceneId = (typeof SCENE_META)[number]["id"];
