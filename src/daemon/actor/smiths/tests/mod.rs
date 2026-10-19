@@ -528,3 +528,25 @@ async fn an_outside_edit_while_running_holds_the_smith_on_the_next_tick() {
     }
     assert_eq!(held, vec![wire::SmithHold::IdentityChanged]);
 }
+
+#[tokio::test]
+async fn startup_moves_aside_an_identity_repo_whose_smith_is_gone() {
+    let home = home();
+    let daemon = spawn(&home, &[]);
+    let ada = create(&daemon, ada()).await.unwrap().smith;
+    flush(&daemon).await;
+    let orphan = home.root.join("sm_orphan");
+    std::fs::create_dir_all(&orphan).unwrap();
+    std::fs::write(orphan.join("soul.md"), "left behind").unwrap();
+
+    let restarted = spawn(&home, &[]);
+    let _ = list(&restarted).await;
+    assert!(repo(&home, &ada.id).exists(), "a live Smith's repo stays");
+    assert!(!orphan.exists());
+    assert!(home
+        .root
+        .join(crate::daemon::smiths::DELETED_DIR)
+        .join("sm_orphan")
+        .join("soul.md")
+        .exists());
+}

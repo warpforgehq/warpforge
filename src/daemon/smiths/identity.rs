@@ -233,9 +233,50 @@ pub fn retire(root: &Path, id: &str, now: u64) -> Result<()> {
     std::fs::rename(&from, &to).with_context(|| format!("moving {}", from.display()))
 }
 
+/// Retire every identity repo under `root` whose Smith is gone — a delete
+/// the daemon did not finish, say. Moved to `.deleted/`, never removed.
+/// @param root the smiths root
+/// @param known the ids of the Smiths that exist
+/// @param now unix seconds, for a name already taken in `.deleted/`
+/// @returns the ids retired
+pub fn retire_orphans(root: &Path, known: &[String], now: u64) -> Result<Vec<String>> {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return Ok(Vec::new());
+    };
+    let mut retired = Vec::new();
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        let orphan = entry.path().is_dir() && !name.starts_with('.') && !known.contains(&name);
+        if orphan {
+            retire(root, &name, now)?;
+            retired.push(name);
+        }
+    }
+    Ok(retired)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_identity_repo_without_a_smith_is_moved_aside() {
+        let root = tempfile::tempdir().unwrap();
+        for id in ["sm_kept", "sm_orphan"] {
+            std::fs::create_dir_all(root.path().join(id)).unwrap();
+            std::fs::write(root.path().join(id).join("soul.md"), "soul").unwrap();
+        }
+        std::fs::create_dir_all(root.path().join(crate::daemon::smiths::DELETED_DIR)).unwrap();
+        let retired = retire_orphans(root.path(), &["sm_kept".to_string()], 7).unwrap();
+        assert_eq!(retired, vec!["sm_orphan".to_string()]);
+        assert!(root.path().join("sm_kept").exists());
+        let moved = root
+            .path()
+            .join(crate::daemon::smiths::DELETED_DIR)
+            .join("sm_orphan")
+            .join("soul.md");
+        assert!(moved.exists(), "moved, not removed");
+    }
 
     fn identity(soul: &str) -> Identity {
         Identity {

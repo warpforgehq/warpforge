@@ -26,6 +26,7 @@ use crate::daemon::actor::{Daemon, Event};
 use crate::daemon::runtime::Write as PersistWrite;
 use crate::daemon::smiths::identity::{self, Revs};
 use crate::daemon::store::Store;
+use crate::daemon::task::now_secs;
 
 pub use command::SmithCommand;
 
@@ -67,9 +68,22 @@ fn recorded(smith: &wire::Smith) -> Revs {
 /// @returns the mirror the actor starts with
 pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>, root: PathBuf) -> SmithsState {
     let rows = match store.map(|s| s.lock()) {
-        Some(Ok(store)) => store.load_smiths().unwrap_or_default(),
-        _ => Vec::new(),
+        Some(Ok(store)) => store.load_smiths().ok(),
+        _ => None,
     };
+    // Before any command can create a Smith, and only when the rows were read:
+    // with no store every repo would look orphaned.
+    if let Some(rows) = &rows {
+        let known: Vec<String> = rows.iter().map(|smith| smith.id.clone()).collect();
+        match identity::retire_orphans(&root, &known, now_secs()) {
+            Ok(retired) if !retired.is_empty() => {
+                eprintln!("[daemon] retired orphaned Smith repos: {retired:?}")
+            }
+            Ok(_) => {}
+            Err(error) => eprintln!("[daemon] sweeping Smith repos: {error:#}"),
+        }
+    }
+    let rows = rows.unwrap_or_default();
     let mut souls = HashMap::new();
     let smiths = rows
         .into_iter()
@@ -235,6 +249,7 @@ impl Daemon {
     /// loop. Smiths with a write in flight are skipped: their revs are moving.
     fn smith_check_identities(&self) {
         let root = self.smiths.root.clone();
+
         let expected: Vec<(String, Revs)> = self
             .smiths
             .smiths
