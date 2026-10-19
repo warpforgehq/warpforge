@@ -18,6 +18,11 @@ export const SCENE_META = [
     id: "pulls",
     label: "Pull requests",
   },
+  {
+    caption: "Ask your Smiths in a channel. They agree who takes it, and the work starts as that Smith.",
+    id: "smiths",
+    label: "Smiths",
+  },
 ] as const;
 
 export type SceneId = (typeof SCENE_META)[number]["id"];

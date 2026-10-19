@@ -214,7 +214,7 @@ const TEST_TS = `test("quotes a customer name with a comma", () => {
 });
 `;
 
-const diff: TaskDiff = {
+export const diff: TaskDiff = {
   branch: "factory/128-export-invoices-csv",
   files: [
     added("api/src/export/csv.ts", CSV_TS),
