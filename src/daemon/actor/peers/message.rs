@@ -149,6 +149,7 @@ impl Daemon {
         if let Err(refused) = verdict {
             return Err(refused.reason);
         }
+        self.smith_note_message(from, to);
         if !held {
             self.peers_submit(&mut record).await;
         }

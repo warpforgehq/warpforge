@@ -282,3 +282,56 @@ async fn a_smith_led_orchestrator_hears_its_started_session_report() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn a_turn_that_already_messaged_its_asker_sends_no_report() {
+    let home = home();
+    let gate = home._dir.path().join("gate");
+    std::fs::write(&gate, "").unwrap();
+    let daemon = spawn(&home, &[]);
+    let (ada, _) = smith_on_mock(&daemon, &home, "Ada", None).await;
+    let (_bo, bo_log) = smith_on_mock(&daemon, &home, "Bo", Some(&gate)).await;
+    let thread = ada.thread_task_id.clone();
+    let work = start_from(&daemon, &thread, "Bo", "demo").await.unwrap();
+    let bo = bo_log.clone();
+    wait("the work session's turn", || !prompt_texts(&bo).is_empty()).await;
+
+    // What message_agent from inside the running turn sends.
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    daemon
+        .send(Command::Peers(PeerCommand::Message {
+            from_task_id: work.clone(),
+            to: thread.clone(),
+            message: "PING-REPLY-OK".into(),
+            reply: tx,
+        }))
+        .await;
+    rx.await.unwrap().unwrap();
+    std::fs::remove_file(&gate).unwrap();
+    wait_idle(&daemon, &work).await;
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    let records = records_from(&daemon, &work).await;
+    assert_eq!(records.len(), 1, "the message, no report: {records:?}");
+    assert_eq!(records[0].text, "PING-REPLY-OK");
+
+    wait_idle(&daemon, &thread).await;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    daemon
+        .send(Command::Peers(PeerCommand::Message {
+            from_task_id: thread.clone(),
+            to: work.clone(),
+            message: "anything else?".into(),
+            reply: tx,
+        }))
+        .await;
+    rx.await.unwrap().unwrap();
+    wait("the next turn, reported", || prompt_texts(&bo).len() == 2).await;
+    wait_idle(&daemon, &work).await;
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    let records = records_from(&daemon, &work).await;
+    assert_eq!(records.len(), 2, "{records:?}");
+    assert!(
+        records.iter().any(|r| r.text.contains("finished a turn")),
+        "{records:?}"
+    );
+}

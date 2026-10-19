@@ -47,6 +47,9 @@ pub(crate) struct SmithsState {
     claude_meta: bool,
     /// Turns and spend per Smith over the last day, for the daily budget.
     spend: budget::Spend,
+    /// `start_work` sessions that messaged their asker in the running turn,
+    /// whose turn-close report would repeat it.
+    messaged_asker: HashSet<String>,
 }
 
 /// The identity revs a Smith row records.
@@ -86,6 +89,7 @@ pub(crate) fn load_state(store: Option<&Arc<Mutex<Store>>>, root: PathBuf) -> Sm
         souls,
         claude_meta: !cfg!(test) && crate::daemon::smiths::claude_adapter_reads_meta(),
         spend: Default::default(),
+        messaged_asker: HashSet::new(),
     }
 }
 
