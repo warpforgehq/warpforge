@@ -12,6 +12,7 @@ use tokio::sync::oneshot;
 use warpforge_protocol as wire;
 
 use super::guard::{pair, MAX_TEXT_CHARS};
+use super::message::Refused;
 use crate::daemon::acp::TurnInitiator;
 use crate::daemon::actor::{Command, Daemon, Event};
 use crate::daemon::task::{now_secs, TaskStatus};
@@ -177,7 +178,11 @@ impl Daemon {
                         .admit(from, &thread, &post.text, false, now)
                     {
                         if refusal.alert() {
-                            pair_alerts.push((pair(from, &thread), refusal.to_string()));
+                            pair_alerts.push((
+                                from.to_string(),
+                                thread.clone(),
+                                refusal.to_string(),
+                            ));
                         }
                         continue;
                     }
@@ -189,21 +194,29 @@ impl Daemon {
                 .enqueue(&thread, &channel_id, post.id, user);
             woken.push(thread);
         }
-        if cap_alert.is_some() || !pair_alerts.is_empty() {
+        if let Some(reason) = cap_alert {
             post.alert = true;
-            post.reason = cap_alert
-                .clone()
-                .or_else(|| pair_alerts.first().map(|(_, reason)| reason.clone()));
+            post.reason = Some(reason);
             self.peers_record(post);
-            if cap_alert.is_some() {
-                self.peers
-                    .conversations
-                    .alerts
-                    .insert(channel_id.clone(), post.clone());
-            }
-            for (key, _) in pair_alerts {
-                self.peers.alerts.insert(key, post.clone());
-            }
+            self.peers
+                .conversations
+                .alerts
+                .insert(channel_id.clone(), post.clone());
+        }
+        // Each pair's alert is a record of its own, so one pair's window
+        // ending does not clear another's.
+        for (from, to, reason) in pair_alerts {
+            let refused = Refused::alerting(reason);
+            let mut record = self.peers_new_record(
+                &post.project,
+                Some(&from),
+                Some(&to),
+                post.text.clone(),
+                Some(&refused),
+            );
+            record.source_id = Some(post.id);
+            self.peers_record(&record);
+            self.peers.alerts.insert(pair(&from, &to), record);
         }
         for thread in woken {
             self.conversation_dispatch(&thread).await;
