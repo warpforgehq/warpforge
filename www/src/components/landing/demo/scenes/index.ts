@@ -1,7 +1,8 @@
+import { factory } from "./factory";
 import { orchestrate } from "./orchestrate";
 import type { Scene } from "./types";
 
-export const SCENES: Scene[] = [orchestrate];
+export const SCENES: Scene[] = [orchestrate, factory];
 
 /**
  * @param id A scene id, possibly from a URL or a message.
