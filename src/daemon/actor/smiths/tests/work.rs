@@ -117,6 +117,28 @@ async fn a_held_or_spent_smith_starts_no_work() {
         .await
         .unwrap_err();
     assert!(paused.contains("held"), "{paused}");
+
+    // Spent and paused at once: the hold is the reason, not the budget.
+    ask(&daemon, |reply| SmithCommand::Update {
+        id: ada.id.clone(),
+        patch: Box::new(wire::SmithPatch {
+            budget: Some(wire::SmithBudget {
+                usd_per_day: None,
+                turns_per_day: Some(1),
+            }),
+            ..Default::default()
+        }),
+        reply,
+    })
+    .await
+    .unwrap();
+    let both = start_from(&daemon, &thread, "self", "demo")
+        .await
+        .unwrap_err();
+    assert!(
+        both.contains("held") && !both.contains("daily limit"),
+        "{both}"
+    );
 }
 
 const CHANNEL_AGENT: &str = concat!(

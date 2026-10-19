@@ -117,6 +117,13 @@ impl Daemon {
             ));
         }
         let smith = self.smith_resolve(target, &caller.smith_id)?;
+        if smith
+            .held
+            .iter()
+            .any(|hold| *hold != wire::SmithHold::Budget)
+        {
+            return Err(format!("{} is held and starts no sessions", smith.name));
+        }
         if smith.held.contains(&wire::SmithHold::Budget) {
             return Err(format!("{} is over its budget", smith.name));
         }
