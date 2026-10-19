@@ -103,8 +103,9 @@ const START_WORK_REPORT =
  * Group the feed into threads, each oldest first, threads newest first.
  * @param records feed records in any order
  * @param project only this project's threads, when given
- * @param tasks the snapshot's tasks by id; given, a Smith's messages to its
- *   own sessions are left out
+ * @param tasks the snapshot's tasks by id; given, a direct thread is kept only
+ *   while both sides exist, and a Smith's messages to its own sessions are
+ *   left out
  * @returns the threads
  */
 export function buildConversations(
@@ -115,7 +116,10 @@ export function buildConversations(
   const byKey = new Map<string, Conversation>();
   for (const record of records) {
     if (project && record.project !== project) continue;
-    if (tasks && isSmithInternal(record, tasks)) continue;
+    if (tasks && record.toTask) {
+      const gone = (id: string | undefined) => !!id && !tasks.has(id);
+      if (gone(record.fromTask) || gone(record.toTask) || isSmithInternal(record, tasks)) continue;
+    }
     const key = conversationKey(record);
     let conversation = byKey.get(key);
     if (!conversation) {
