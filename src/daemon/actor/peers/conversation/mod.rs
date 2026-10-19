@@ -38,6 +38,8 @@ pub(crate) struct ChannelTurn {
     project: String,
     /// The newest post its prompt showed.
     pub(crate) newest: u64,
+    /// Agent posts woke it, so starting spends the receiver's hourly cap.
+    charged: bool,
     started: bool,
     /// Set while the prompt is being handed to the session: a stale handle
     /// dropped on the way is not this turn's end.
@@ -158,6 +160,11 @@ impl Daemon {
                     continue;
                 }
                 if !self.peers.conversations.is_waiting(&thread, &channel_id) {
+                    // The receiver's hourly cap counts channel turns as it
+                    // counts direct messages (ADR 0026); its ceiling raises no alert.
+                    if self.peers.guard.receiver_full(&thread, now) {
+                        continue;
+                    }
                     if let Err(reached) = self.peers.conversations.caps.check(&channel_id, now) {
                         if reached.alert {
                             cap_alert = Some(reached.to_string());
@@ -246,6 +253,7 @@ impl Daemon {
                 channel_id: channel.id.clone(),
                 project: channel.project.clone(),
                 newest,
+                charged: !waiting.user,
                 started: false,
                 submitting: true,
                 submitted_at: Instant::now(),
@@ -303,7 +311,10 @@ impl Daemon {
             return;
         }
         turn.started = true;
-        let channel_id = turn.channel_id.clone();
+        let (channel_id, charged) = (turn.channel_id.clone(), turn.charged);
+        if charged {
+            self.peers.guard.note_delivered(task_id, Instant::now());
+        }
         self.channel_announce(&channel_id);
     }
 

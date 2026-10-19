@@ -170,6 +170,22 @@ impl PeerGuard {
         Ok(())
     }
 
+    /// Whether `to` has no room left in its hourly cap for another agent-started
+    /// turn: the turns it took this hour plus the ones still waiting for it.
+    /// @param to the receiving task
+    /// @param now the current instant
+    /// @returns whether one more would be over the cap
+    pub(crate) fn receiver_full(&mut self, to: &str, now: Instant) -> bool {
+        self.expire(now);
+        let waiting = self
+            .queued
+            .keys()
+            .filter(|(_, receiver)| receiver == to)
+            .count();
+        let delivered = self.received.get(to).map_or(0, VecDeque::len);
+        delivered + waiting >= RECEIVER_TURNS_PER_HOUR
+    }
+
     /// A `Peer` turn started: its share of the receiver's hourly cap is spent.
     /// @param to the receiving task
     /// @param now the current instant
