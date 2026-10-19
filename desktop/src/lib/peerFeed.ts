@@ -87,9 +87,17 @@ export function isSmithInternal(
   tasks: ReadonlyMap<string, TaskInfo>,
 ): boolean {
   if (!record.fromTask || !record.toTask) return false;
-  const from = tasks.get(record.fromTask)?.smithId;
-  return !!from && from === tasks.get(record.toTask)?.smithId;
+  const from = record.fromSmithId ?? tasks.get(record.fromTask)?.smithId;
+  const to = record.toSmithId ?? tasks.get(record.toTask)?.smithId;
+  if (from) return from === to;
+  // A record from before both sides were stored: a start_work report whose
+  // tasks are gone can only have been a Smith's own session reporting.
+  const unknown = !tasks.has(record.fromTask) && !tasks.has(record.toTask);
+  return unknown && START_WORK_REPORT.test(record.text);
 }
+
+const START_WORK_REPORT =
+  /^Work session ".*" \(t_[0-9a-f]+\) (finished a turn|stopped|finished|blocked|interrupted)/;
 
 /**
  * Group the feed into threads, each oldest first, threads newest first.

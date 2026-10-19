@@ -258,3 +258,30 @@ describe("a Smith's messages to its own sessions", () => {
     expect(buildConversations(records, "demo")).toHaveLength(3);
   });
 });
+
+describe("records that outlive their sessions", () => {
+  const none = new Map<string, TaskInfo>();
+
+  it("stay internal by the Smiths they stored, with both tasks gone", () => {
+    const report = record(1, {
+      fromSmithId: "sm_oly",
+      fromTask: "t_bf9db30d",
+      toSmithId: "sm_oly",
+      toTask: "t_oly",
+    });
+    expect(isSmithInternal(report, none)).toBe(true);
+    expect(buildConversations([report], "demo", none)).toEqual([]);
+    const other = record(2, { fromSmithId: "sm_oly", fromTask: "t_x", toSmithId: "sm_ada" });
+    expect(isSmithInternal(other, none)).toBe(false);
+  });
+
+  it("guess an older start_work report as internal only when nothing is known", () => {
+    const old = record(3, {
+      fromTask: "t_06cf5c75",
+      text: 'Work session "Test task" (t_06cf5c75) finished a turn; 0 files changed.',
+      toTask: "t_oly",
+    });
+    expect(isSmithInternal(old, none)).toBe(true);
+    expect(isSmithInternal({ ...old, text: "hello" }, none)).toBe(false);
+  });
+});

@@ -28,6 +28,13 @@ export interface PeerMessage {
   startedTask?: string;
   /** The named channel a post went to; absent is `#general`. */
   channelId?: string;
+  /** Each side's label when the record was written; absent for the user and
+   *  older records. */
+  fromLabel?: string;
+  toLabel?: string;
+  /** The Smith each side ran as, when it did. */
+  fromSmithId?: string;
+  toSmithId?: string;
 }
 
 export interface PeerControls {
