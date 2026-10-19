@@ -28,7 +28,7 @@ import { usePeersStore } from "@/store/peers";
 import { useSmithsStore } from "@/store/smiths";
 import { type TeamSelection, useUi } from "@/store/ui";
 import { ChannelNameDialog } from "@/views/team/channels/ChannelNameDialog";
-import { labeller } from "@/views/team/labels";
+import { labeller, shortLabel } from "@/views/team/labels";
 
 import { ProjectBadge } from "./ProjectBadge";
 
@@ -164,13 +164,12 @@ export function SmithsBody({ projects, tasks }: Props) {
     selection?.kind === "conversation" && selection.key === key;
 
   const smiths = allSmiths.filter((smith) => project && smith.allowedProjects.includes(project));
-  const label = useMemo(
-    () => labeller(new Map(tasks.map((task) => [task.id, task])), smithsById),
-    [smithsById, tasks],
-  );
+  const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
+  const label = useMemo(() => labeller(taskById, smithsById), [smithsById, taskById]);
   const dms = useMemo(
-    () => buildConversations(Object.values(records), project).filter((c) => c.kind === "dm"),
-    [project, records],
+    () =>
+      buildConversations(Object.values(records), project, taskById).filter((c) => c.kind === "dm"),
+    [project, records, taskById],
   );
   const dmTargets = useMemo(
     () => (project ? mentionCandidates(tasks, project, allSmiths) : []),
@@ -312,9 +311,10 @@ export function SmithsBody({ projects, tasks }: Props) {
             aria-current={isConversation(dm.key) ? "true" : undefined}
             onClick={() => openTeam({ key: dm.key, kind: "conversation" })}
             className={cn(ROW, isConversation(dm.key) && "bg-accent")}
+            title={`${label(dm.parties?.[0])} ↔ ${label(dm.parties?.[1])}`}
           >
             <span className="truncate">
-              {label(dm.parties?.[0])} ↔ {label(dm.parties?.[1])}
+              {shortLabel(label(dm.parties?.[0]))} ↔ {shortLabel(label(dm.parties?.[1]))}
             </span>
           </button>
         ))}

@@ -18,6 +18,7 @@ import { usePeersStore } from "@/store/peers";
 import { ChannelEmpty } from "./channels/ChannelEmpty";
 import { ChannelHeaderActions } from "./channels/ChannelHeaderActions";
 import { FeedItem } from "./FeedItem";
+import { shortLabel } from "./labels";
 import { TeamComposer } from "./TeamComposer";
 
 /** How close to the end, in pixels, still counts as reading the newest. */
@@ -121,8 +122,14 @@ export function Thread({
             <span className="text-xs text-muted-foreground">{project}</span>
           </>
         ) : (
-          <h2 className="min-w-0 truncate text-sm font-medium">
-            {label(conversation.parties?.[0])} ↔ {label(conversation.parties?.[1])}
+          <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+            <span className="truncate" title={label(conversation.parties?.[0])}>
+              {shortLabel(label(conversation.parties?.[0]))}
+            </span>
+            <span aria-hidden>↔</span>
+            <span className="truncate" title={label(conversation.parties?.[1])}>
+              {shortLabel(label(conversation.parties?.[1]))}
+            </span>
           </h2>
         )}
         {conversation.kind === "team" ? (
@@ -137,16 +144,19 @@ export function Thread({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-xs"
+                  className="h-7 max-w-48 px-2 text-xs"
+                  aria-label={`${muted ? "Unmute" : "Mute"} ${label(id)}`}
                   title={
                     muted
-                      ? "Let this session message peers again"
-                      : "Refuse this session's peer messages, posts and note"
+                      ? `Let ${label(id)} message peers again`
+                      : `Refuse ${label(id)}'s peer messages, posts and note`
                   }
                   onClick={() => void changeControls(() => daemon.setPeerMuted(id, !muted))}
                 >
                   {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
-                  {muted ? "Unmute" : "Mute"} {label(id)}
+                  <span className="truncate">
+                    {muted ? "Unmute" : "Mute"} {shortLabel(label(id))}
+                  </span>
                 </Button>
               );
             })}

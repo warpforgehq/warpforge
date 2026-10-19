@@ -33,6 +33,19 @@ export function labeller(
   };
 }
 
+const SHORT_LABEL = 28;
+
+/**
+ * A label short enough for a list row or a button; the full one goes in its
+ * tooltip.
+ * @param label a session's label
+ * @returns it, cut to a few words
+ */
+export function shortLabel(label: string): string {
+  const chars = Array.from(label);
+  return chars.length > SHORT_LABEL ? `${chars.slice(0, SHORT_LABEL - 1).join("")}…` : label;
+}
+
 /** A user's channel post, the only kind a session can be started from. */
 export function isUserPost(record: PeerMessage): boolean {
   return !record.fromTask && !record.toTask && !record.startedTask && record.status === "posted";

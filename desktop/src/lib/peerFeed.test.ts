@@ -8,6 +8,7 @@ import {
   buildConversations,
   continuesGroup,
   isPeerVisible,
+  isSmithInternal,
   mentionAtCaret,
   mentionCandidates,
   mentionText,
@@ -219,5 +220,41 @@ describe("continuesGroup", () => {
     expect(continuesGroup(first, post({ createdAt: 1000 + 301, id: 2 }))).toBe(false);
     expect(continuesGroup(first, post({ id: 2, status: "refused" }))).toBe(false);
     expect(continuesGroup(first, post({ alert: true, id: 2 }))).toBe(false);
+  });
+});
+
+describe("a Smith's messages to its own sessions", () => {
+  const tasks = new Map(
+    [
+      task("t_oly", "thread", { origin: "smith", smithId: "sm_oly" }),
+      task("t_work", "Test task: git pull and report", { smithId: "sm_oly" }),
+      task("t_ada", "thread", { origin: "smith", smithId: "sm_ada" }),
+      task("t_plain", "Docs"),
+    ].map((t) => [t.id, t]),
+  );
+
+  it("are internal only between one Smith's thread and its work", () => {
+    expect(isSmithInternal(record(1, { fromTask: "t_work", toTask: "t_oly" }), tasks)).toBe(true);
+    expect(isSmithInternal(record(2, { fromTask: "t_oly", toTask: "t_work" }), tasks)).toBe(true);
+    expect(isSmithInternal(record(3, { fromTask: "t_oly", toTask: "t_ada" }), tasks)).toBe(false);
+    expect(isSmithInternal(record(4, { fromTask: "t_work", toTask: "t_plain" }), tasks)).toBe(
+      false,
+    );
+    expect(isSmithInternal(record(5, { fromTask: undefined, toTask: "t_work" }), tasks)).toBe(
+      false,
+    );
+  });
+
+  it("make no direct conversation when the tasks are known", () => {
+    const records = [
+      record(1, { fromTask: "t_work", toTask: "t_oly" }),
+      record(2, { fromTask: "t_oly", toTask: "t_work" }),
+      record(3, { fromTask: "t_oly", toTask: "t_ada" }),
+      record(4, { fromTask: undefined, toTask: "t_work" }),
+    ];
+    const keys = (list: ReturnType<typeof buildConversations>) =>
+      list.map((c) => c.parties?.join("|"));
+    expect(keys(buildConversations(records, "demo", tasks))).toEqual(["|t_work", "t_oly|t_ada"]);
+    expect(buildConversations(records, "demo")).toHaveLength(3);
   });
 });

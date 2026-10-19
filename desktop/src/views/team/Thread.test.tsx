@@ -70,6 +70,17 @@ describe("Thread", () => {
     expect(onMessageSession).toHaveBeenCalledWith("demo", "t_b");
   });
 
+  it("names each side shortly, one mute per side with the full name in reach", () => {
+    const long = "t_a_session_with_a_title_far_too_long_for_a_row";
+    show(pair([record(1)], [long, "t_b"]));
+    const mute = screen.getByRole("button", { name: `Mute ${long}` });
+    const short = `${long.slice(0, 27)}…`;
+    expect(mute.textContent).toBe(`Mute ${short}`);
+    expect(screen.getByRole("button", { name: "Mute t_b" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /^Mute / })).toHaveLength(2);
+    expect(screen.getByTitle(long).textContent).toBe(short);
+  });
+
   it("has a composer in the user's own thread", () => {
     show(pair([], [null, "t_b"]));
     expect(screen.getByRole("textbox", { name: "Message" })).toBeTruthy();
