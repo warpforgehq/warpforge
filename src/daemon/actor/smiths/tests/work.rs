@@ -365,3 +365,34 @@ async fn a_report_keeps_who_sent_it_after_the_session_is_deleted() {
     assert_eq!(report.from_smith_id.as_deref(), Some(bo.id.as_str()));
     assert_eq!(report.to_smith_id.as_deref(), Some(ada.id.as_str()));
 }
+
+#[tokio::test]
+async fn a_muted_asker_is_not_woken_and_the_report_stays_held() {
+    let home = home();
+    let daemon = spawn(&home, &[]);
+    let (ada, ada_log) = smith_on_mock(&daemon, &home, "Ada", None).await;
+    let (_bo, bo_log) = smith_on_mock(&daemon, &home, "Bo", None).await;
+    let thread = ada.thread_task_id.clone();
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    daemon
+        .send(Command::Peers(PeerCommand::SetMuted {
+            task_id: thread.clone(),
+            muted: true,
+            reply: tx,
+        }))
+        .await;
+    rx.await.unwrap().unwrap();
+    let work = start_from(&daemon, &thread, "Bo", "demo").await.unwrap();
+    let bo = bo_log.clone();
+    wait("the work session's turn", || !prompt_texts(&bo).is_empty()).await;
+    wait_idle(&daemon, &work).await;
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+
+    assert!(
+        prompt_texts(&ada_log).is_empty(),
+        "no nudge to a muted asker"
+    );
+    let reports = records_from(&daemon, &work).await;
+    assert_eq!(reports.len(), 1);
+    assert_eq!(reports[0].status, wire::PeerMessageStatus::Held);
+}

@@ -134,6 +134,17 @@ impl Daemon {
         prompt
     }
 
+    /// Whether `task_id`'s next prompt carries a digest at all: not while it
+    /// is hidden or muted.
+    /// @param task_id a task
+    /// @returns whether held messages reach it with its next prompt
+    pub(crate) fn peers_digest_reaches(&self, task_id: &str) -> bool {
+        self.tasks
+            .get(task_id)
+            .is_some_and(|task| self.peer_visible(task, &task.project))
+            && !self.peers.muted.contains(task_id)
+    }
+
     /// The unseen posts and held messages for `task_id`, framed, and what
     /// delivering them changes; reserves them for this prompt.
     fn peers_digest(&mut self, task_id: &str) -> Option<(String, PeerDelivery)> {
