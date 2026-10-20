@@ -1,4 +1,5 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { BranchList } from "./BranchList";
@@ -37,6 +38,32 @@ describe("BranchList", () => {
     expect(main.lastElementChild).toBe(check);
     expect(main.firstElementChild?.classList.contains("lucide-chevron-right")).toBe(true);
     expect(container.querySelector('[data-branch="release"] svg.lucide-check')).toBeNull();
+  });
+
+  it("opens the branch actions at the cursor on right-click", async () => {
+    const onAction = vi.fn<(action: string, branch: string, remote: boolean) => void>();
+    const { container } = render(
+      <BranchList
+        localRows={rows(["main"])}
+        remoteRows={[]}
+        searching={false}
+        searchRows={[]}
+        openFolders={new Set()}
+        current="main"
+        holders={new Map()}
+        onAction={onAction}
+        onToggleFolder={noop}
+      />,
+    );
+
+    fireEvent.contextMenu(container.querySelector('[data-branch="main"]')!, {
+      clientX: 40,
+      clientY: 60,
+    });
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Update" }));
+
+    expect(onAction).toHaveBeenCalledWith("update", "main", false);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
   it("lists main first, and a remote row carries no check", () => {

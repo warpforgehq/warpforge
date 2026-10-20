@@ -1,8 +1,8 @@
-import { createContext, memo, useMemo, useRef, type MouseEvent } from "react";
+import { createContext, memo, type MouseEvent } from "react";
 
 import type { FileLinkResolver } from "@/components/Markdown";
 
-import { showContextMenu, useNativeContextMenu } from "../../hooks/useNativeContextMenu";
+import { useContextMenu } from "../../hooks/useContextMenu";
 import type { AgentConfig, EditHunk, SessionUpdate } from "../../protocol";
 import { StreamLine } from "../../views/mission-control/StreamLine";
 import { MessageActions } from "../MessageActions";
@@ -57,23 +57,16 @@ export const TranscriptRow = memo(function TranscriptRow({
   const messageText =
     update.kind === "user_message" || update.kind === "agent_text" ? update.text : null;
 
-  const requestId = useRef(`message-${crypto.randomUUID()}`).current;
-  const copyHandler = useMemo(
-    () =>
-      messageText
-        ? new Map([["copy", () => void navigator.clipboard.writeText(messageText)]])
-        : new Map<string, () => void>(),
-    [messageText],
-  );
-  useNativeContextMenu(requestId, copyHandler);
+  const openContextMenu = useContextMenu();
 
   const onRowContextMenu = (e: MouseEvent) => {
     if (!messageText) return;
     e.preventDefault();
     e.stopPropagation();
-    void showContextMenu({
-      requestId,
+    openContextMenu({
+      at: { x: e.clientX, y: e.clientY },
       items: [{ type: "item", id: "copy", label: "Copy Message" }],
+      handlers: new Map([["copy", () => void navigator.clipboard.writeText(messageText)]]),
     });
   };
 

@@ -3,19 +3,20 @@ import type { MouseEvent } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { daemon } from "../../daemon";
-import { showContextMenu, useNativeContextMenu } from "../../hooks/useNativeContextMenu";
-import type { ShowContextMenuRequest } from "../../hooks/useNativeContextMenu";
+import type { ShowContextMenuRequest } from "../../hooks/useContextMenu";
 import type { FileDiff } from "../../protocol";
 import type { FlatRow } from "./treeUtils";
 import { useChangesContextMenu } from "./useChangesContextMenu";
 
-vi.mock("../../hooks/useNativeContextMenu", () => ({
-  showContextMenu: vi.fn<(request: ShowContextMenuRequest) => Promise<void>>(),
-  useNativeContextMenu: vi.fn<(requestId: string, handlers: Map<string, () => void>) => void>(),
+const mocks = vi.hoisted(() => ({
+  openMenu: vi.fn<(request: ShowContextMenuRequest) => void>(),
 }));
 
-const showMenu = showContextMenu as Mock;
-const wireMenu = useNativeContextMenu as Mock;
+vi.mock("../../hooks/useContextMenu", () => ({
+  useContextMenu: () => mocks.openMenu,
+}));
+
+const showMenu = mocks.openMenu as Mock;
 
 const changedFile: FileDiff = {
   hunks: [
@@ -49,7 +50,7 @@ type Handler = (e: MouseEvent, row: FlatRow) => void;
 
 function renderHook(props: Partial<typeof baseProps> = {}): {
   handler: Handler;
-  handlers: Map<string, () => void>;
+  handlers: () => Map<string, () => void>;
 } {
   let handler!: Handler;
   render(
@@ -60,10 +61,10 @@ function renderHook(props: Partial<typeof baseProps> = {}): {
       }}
     />,
   );
-  const handlers = wireMenu.mock.calls[wireMenu.mock.calls.length - 1][1] as Map<
-    string,
-    () => void
-  >;
+  const handlers = () => {
+    const calls = showMenu.mock.calls;
+    return calls[calls.length - 1][0].handlers;
+  };
   return { handler, handlers };
 }
 
@@ -80,7 +81,12 @@ function Harness({
 }
 
 const fakeEvent = () =>
-  ({ preventDefault: () => {}, stopPropagation: () => {} }) as unknown as MouseEvent;
+  ({
+    clientX: 120,
+    clientY: 80,
+    preventDefault: () => {},
+    stopPropagation: () => {},
+  }) as unknown as MouseEvent;
 
 const fileRow = (path: string): FlatRow => ({
   depth: 0,
@@ -160,11 +166,11 @@ describe("useChangesContextMenu", () => {
 
     handler(fakeEvent(), fileRow("new.txt"));
     expect(labels()).toContain("Shelve…");
-    handlers.get("shelve")!();
+    handlers().get("shelve")!();
     expect(onShelve).toHaveBeenCalledWith(["new.txt"]);
 
     handler(fakeEvent(), fileRow("src/a.ts"));
-    handlers.get("shelve")!();
+    handlers().get("shelve")!();
     expect(onShelve).toHaveBeenCalledWith(["src/a.ts"]);
   });
 
@@ -173,7 +179,7 @@ describe("useChangesContextMenu", () => {
     const { handler, handlers } = renderHook({ onRefresh });
 
     handler(fakeEvent(), fileRow("new.txt"));
-    handlers.get("addVcs")!();
+    handlers().get("addVcs")!();
 
     await waitFor(() =>
       expect(daemon.request).toHaveBeenCalledWith("git.add", {
@@ -189,7 +195,7 @@ describe("useChangesContextMenu", () => {
     const { handler, handlers } = renderHook({ onRefresh });
 
     handler(fakeEvent(), fileRow("new.txt"));
-    handlers.get("ignore")!();
+    handlers().get("ignore")!();
 
     await waitFor(() =>
       expect(daemon.request).toHaveBeenCalledWith("git.ignore", {
@@ -205,7 +211,7 @@ describe("useChangesContextMenu", () => {
     const { handler, handlers } = renderHook({ onRefresh });
 
     handler(fakeEvent(), fileRow("new.txt"));
-    handlers.get("del")!();
+    handlers().get("del")!();
 
     await waitFor(() =>
       expect(daemon.request).toHaveBeenCalledWith("file.delete", {
@@ -220,7 +226,7 @@ describe("useChangesContextMenu", () => {
     const { handler, handlers } = renderHook();
 
     handler(fakeEvent(), fileRow("src/a.ts"));
-    handlers.get("copyPatch")!();
+    handlers().get("copyPatch")!();
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       expect.stringContaining("--- a/src/a.ts\n+++ b/src/a.ts\n@@ -2,1 +2,1 @@\n-two\n+TWO\n"),
@@ -250,7 +256,7 @@ describe("useChangesContextMenu", () => {
 
     handler(fakeEvent(), fileRow("src/a.ts"));
     expect(labels()).toContain("Stash…");
-    handlers.get("stash")!();
+    handlers().get("stash")!();
     expect(onStash).toHaveBeenCalledWith(["src/a.ts"]);
   });
 });

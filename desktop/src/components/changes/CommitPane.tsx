@@ -11,7 +11,7 @@ import {
   Undo2,
   UnfoldVertical,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { PaneHeader } from "@/components/workspace";
@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { useUi } from "@/store/ui";
 
 import { daemon } from "../../daemon";
-import { showContextMenu, useNativeContextMenu } from "../../hooks/useNativeContextMenu";
+import { useContextMenu } from "../../hooks/useContextMenu";
 import type { FileDiff, GitIgnoredFiles, GitRoots } from "../../protocol";
 import { daemonQuery } from "../../query";
 import { buildChangesRoot, ignoredSectionState } from "./changesTree";
@@ -102,7 +102,7 @@ export function CommitPane({
   const [showIgnored, setShowIgnored] = useState(false);
   const [groupBy, setGroupBy] = useState<"directory" | "flat">("directory");
   const [shelveBusy, setShelveBusy] = useState(false);
-  const groupMenuId = useRef(`changes-groupby-${taskId}`).current;
+  const openContextMenu = useContextMenu();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // A project can hold more than one checkout (nested repos). One root keeps
@@ -230,30 +230,25 @@ export function CommitPane({
     setOpenFolders(new Set());
   }, []);
 
-  const openGroupMenu = useCallback(() => {
-    void showContextMenu({
-      requestId: groupMenuId,
-      items: [
-        {
-          type: "item",
-          id: "by-directory",
-          label: `${groupBy === "directory" ? "✓ " : ""}Directory`,
-        },
-        { type: "item", id: "by-flat", label: `${groupBy === "flat" ? "✓ " : ""}Flat` },
-      ],
-    });
-  }, [groupBy, groupMenuId]);
-
-  useNativeContextMenu(
-    groupMenuId,
-    useMemo(
-      () =>
-        new Map<string, () => void>([
+  const openGroupMenu = useCallback(
+    (e: MouseEvent) => {
+      openContextMenu({
+        at: { x: e.clientX, y: e.clientY },
+        items: [
+          {
+            type: "item",
+            id: "by-directory",
+            label: `${groupBy === "directory" ? "✓ " : ""}Directory`,
+          },
+          { type: "item", id: "by-flat", label: `${groupBy === "flat" ? "✓ " : ""}Flat` },
+        ],
+        handlers: new Map<string, () => void>([
           ["by-directory", () => setGroupBy("directory")],
           ["by-flat", () => setGroupBy("flat")],
         ]),
-      [],
-    ),
+      });
+    },
+    [groupBy, openContextMenu],
   );
 
   // NOTE: no ⌘+/⌘- shortcuts here on purpose — those are taken globally

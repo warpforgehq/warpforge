@@ -1,11 +1,7 @@
 import { useCallback, useMemo, useRef, type MouseEvent } from "react";
 
 import { daemon } from "../../daemon";
-import {
-  showContextMenu,
-  useNativeContextMenu,
-  type ContextMenuItemOrSeparator,
-} from "../../hooks/useNativeContextMenu";
+import { useContextMenu, type ContextMenuEntry } from "../../hooks/useContextMenu";
 import type { FileDiff } from "../../protocol";
 import { toUnifiedPatch } from "./filePatch";
 import { reportGitFailure } from "./reportGitFailure";
@@ -49,18 +45,18 @@ export function useChangesContextMenu({
   untrackedPaths: string[];
 }) {
   const untracked = useMemo(() => new Set(untrackedPaths), [untrackedPaths]);
-  const requestId = useRef(`changes-${taskId}`).current;
+  const openContextMenu = useContextMenu();
   const targetRef = useRef<{ kind: "file" | "folder"; path?: string; paths: string[] } | null>(
     null,
   );
 
   const fileItems = useCallback(
-    (path: string): ContextMenuItemOrSeparator[] => {
-      const shared: ContextMenuItemOrSeparator[] = [
+    (path: string): ContextMenuEntry[] => {
+      const shared: ContextMenuEntry[] = [
         { type: "item", id: "open", label: "Show Diff" },
         { type: "item", id: "jump", label: "Jump to Source" },
       ];
-      const tail: ContextMenuItemOrSeparator[] = [
+      const tail: ContextMenuEntry[] = [
         { type: "item", id: "copyPatch", label: "Copy as Patch to Clipboard" },
         { type: "item", id: "copy", label: "Copy Path" },
       ];
@@ -96,46 +92,6 @@ export function useChangesContextMenu({
       ];
     },
     [staged, untracked],
-  );
-
-  const handleContextMenu = useCallback(
-    (e: MouseEvent, row: FlatRow) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const path = row.node.path;
-      if (path) {
-        targetRef.current = { kind: "file", path, paths: [path] };
-        void showContextMenu({ requestId, items: fileItems(path) });
-        return;
-      }
-      const paths = leaves(row.node);
-      targetRef.current = { kind: "folder", paths };
-      const folderUntracked = paths.length > 0 && paths.every((p) => untracked.has(p));
-      const items: ContextMenuItemOrSeparator[] = folderUntracked
-        ? [
-            { type: "item", id: "addVcs", label: "Add to VCS" },
-            { type: "item", id: "ignore", label: "Add to .gitignore" },
-            { type: "separator" },
-            { type: "item", id: "shelve", label: "Shelve…" },
-            { type: "item", id: "stash", label: "Stash…" },
-            { type: "item", id: "copy", label: "Copy Path" },
-            { type: "item", id: "refresh", label: "Refresh" },
-          ]
-        : [
-            {
-              type: "item",
-              id: "toggle",
-              label: paths.every((p) => staged.has(p)) ? "Unstage folder" : "Stage folder",
-            },
-            { type: "separator" },
-            { type: "item", id: "shelve", label: "Shelve…" },
-            { type: "item", id: "stash", label: "Stash…" },
-            { type: "item", id: "copy", label: "Copy Path" },
-            { type: "item", id: "refresh", label: "Refresh" },
-          ];
-      void showContextMenu({ requestId, items });
-    },
-    [fileItems, requestId, staged, untracked],
   );
 
   const mutate = useCallback(
@@ -255,7 +211,46 @@ export function useChangesContextMenu({
       ]),
     [filesByPath, mutate, onRefresh, onSelect, onShelve, onStash, staged, taskId, toggle],
   );
-  useNativeContextMenu(requestId, menuHandlers);
+  const handleContextMenu = useCallback(
+    (e: MouseEvent, row: FlatRow) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const path = row.node.path;
+      const at = { x: e.clientX, y: e.clientY };
+      if (path) {
+        targetRef.current = { kind: "file", path, paths: [path] };
+        openContextMenu({ at, items: fileItems(path), handlers: menuHandlers });
+        return;
+      }
+      const paths = leaves(row.node);
+      targetRef.current = { kind: "folder", paths };
+      const folderUntracked = paths.length > 0 && paths.every((p) => untracked.has(p));
+      const items: ContextMenuEntry[] = folderUntracked
+        ? [
+            { type: "item", id: "addVcs", label: "Add to VCS" },
+            { type: "item", id: "ignore", label: "Add to .gitignore" },
+            { type: "separator" },
+            { type: "item", id: "shelve", label: "Shelve…" },
+            { type: "item", id: "stash", label: "Stash…" },
+            { type: "item", id: "copy", label: "Copy Path" },
+            { type: "item", id: "refresh", label: "Refresh" },
+          ]
+        : [
+            {
+              type: "item",
+              id: "toggle",
+              label: paths.every((p) => staged.has(p)) ? "Unstage folder" : "Stage folder",
+            },
+            { type: "separator" },
+            { type: "item", id: "shelve", label: "Shelve…" },
+            { type: "item", id: "stash", label: "Stash…" },
+            { type: "item", id: "copy", label: "Copy Path" },
+            { type: "item", id: "refresh", label: "Refresh" },
+          ];
+      openContextMenu({ at, items, handlers: menuHandlers });
+    },
+    [fileItems, menuHandlers, openContextMenu, staged, untracked],
+  );
 
   return handleContextMenu;
 }
