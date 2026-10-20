@@ -106,17 +106,8 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     ? { kind: "file", path: activeFilePath }
     : { kind: "changes" };
 
-  const {
-    diff,
-    diffQuery,
-    projectFiles,
-    fileListError,
-    fileListLoading,
-    mentionFiles,
-    mentionFilesQuery,
-    fileDoc,
-    queryClient,
-  } = useTaskQueries(task.id, activeFilePath, activeTabForQuery, task.updatedAt);
+  const { diff, diffQuery, projectFiles, mentionFiles, mentionFilesQuery, fileDoc, queryClient } =
+    useTaskQueries(task.id, activeFilePath, activeTabForQuery, task.updatedAt);
 
   const openFileTab = useCallback(
     (path: string, location?: { line: number; column: number }) => {
@@ -461,8 +452,6 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     editable,
     enabledAgents,
     fileDoc,
-    fileListError,
-    fileListLoading,
     foldTarget,
     gotoLocation,
     handleWorkspaceResize,
@@ -477,7 +466,6 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     openSymbol,
     openTabs,
     portforwards,
-    projectFiles,
     projectRoot,
     queryClient,
     repositoryOperation,

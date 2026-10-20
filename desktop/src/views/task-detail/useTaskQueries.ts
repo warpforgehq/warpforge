@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 
 import type { FileDiff, FileDoc, ProjectFile, SessionUpdate, TaskDiff } from "../../protocol";
 import { daemonQuery } from "../../query";
+import { invalidateExplorer } from "./explorer/useExplorerData";
 
 const EMPTY_PROJECT_FILES: ProjectFile[] = [];
 /** Diffs and file docs are the heaviest reads; drop them sooner than the
@@ -28,6 +29,7 @@ export function useTaskFileEditCacheSync(taskId: string, updates: SessionUpdate[
     }
     void queryClient.invalidateQueries({ queryKey: ["diff", taskId] });
     void queryClient.invalidateQueries({ queryKey: ["fileList", taskId] });
+    invalidateExplorer(queryClient, { taskId });
     void queryClient.invalidateQueries({ queryKey: ["fileContents", taskId] });
   }, [latestFileEdit, queryClient, taskId]);
 }
@@ -58,8 +60,6 @@ export function useTaskQueries(
     queryKey: ["fileList", taskId, "all"],
   });
   const projectFiles = Array.isArray(fileListQuery.data) ? fileListQuery.data : EMPTY_PROJECT_FILES;
-  const fileListError = fileListQuery.error?.message ?? null;
-  const fileListLoading = fileListQuery.isLoading;
 
   const mentionFilesQuery = useQuery({
     placeholderData: keepPreviousData,
@@ -87,6 +87,7 @@ export function useTaskQueries(
   useEffect(() => {
     void queryClient.invalidateQueries({ queryKey: ["diff", taskId] });
     void queryClient.invalidateQueries({ queryKey: ["fileList", taskId] });
+    invalidateExplorer(queryClient, { taskId });
     void queryClient.invalidateQueries({ queryKey: ["fileContents", taskId] });
   }, [queryClient, taskId, updatedAt]);
 
@@ -94,8 +95,6 @@ export function useTaskQueries(
     diff,
     diffQuery,
     projectFiles,
-    fileListError,
-    fileListLoading,
     mentionFiles,
     mentionFilesQuery,
     fileDoc,

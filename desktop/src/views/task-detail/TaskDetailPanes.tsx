@@ -18,6 +18,7 @@ import { TaskAgentSwitcher } from "../../components/TaskAgentSwitcher";
 import type { TaskInfo } from "../../protocol";
 import { BrowserSurface } from "./browser/BrowserSurface";
 import { DiffSurface } from "./DiffSurface";
+import { invalidateExplorer } from "./explorer/useExplorerData";
 import { FilesSurface } from "./FilesSurface";
 import { PipelineSurface } from "./PipelineSurface";
 import { TaskConversation } from "./TaskConversation";
@@ -65,9 +66,6 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
     composerRef,
     diffWorkspaceRef,
     editable,
-    projectFiles,
-    fileListError,
-    fileListLoading,
     mentionFiles,
     mentionFilesQuery,
     fileDoc,
@@ -219,9 +217,6 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
         <div className="min-h-0 min-w-0 flex-1">
           {activeSurface === "files" && (
             <FilesSurface
-              projectFiles={projectFiles}
-              fileListError={fileListError}
-              fileListLoading={fileListLoading}
               activeFilePath={activeFilePath}
               onSelectTreeFile={openFileTab}
               openTabs={openTabs}
@@ -289,10 +284,12 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
                 onCommitted={() => {
                   void queryClient.invalidateQueries({ queryKey: ["diff", task.id] });
                   void queryClient.invalidateQueries({ queryKey: ["fileList", task.id] });
+                  invalidateExplorer(queryClient, { taskId: task.id });
                 }}
                 onRefresh={() => {
                   void queryClient.invalidateQueries({ queryKey: ["diff", task.id] });
                   void queryClient.invalidateQueries({ queryKey: ["fileList", task.id] });
+                  invalidateExplorer(queryClient, { taskId: task.id });
                 }}
                 diffWorkspaceRef={diffWorkspaceRef}
                 initialScrollTop={taskSession.diff.scrollTop}

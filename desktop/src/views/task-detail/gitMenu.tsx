@@ -2,6 +2,7 @@ import type { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import type { GitOpResult } from "../../protocol";
+import { invalidateExplorer } from "./explorer/useExplorerData";
 
 /** Surface a git operation's outcome, including any conflicts it listed. */
 export function handleGitOpResult(r: GitOpResult) {
@@ -29,6 +30,7 @@ export const handleGitOpError = (e: Error) => toast.error(e.message);
 export function invalidateAll(queryClient: ReturnType<typeof useQueryClient>, taskId: string) {
   void queryClient.invalidateQueries({ queryKey: ["diff", taskId] });
   void queryClient.invalidateQueries({ queryKey: ["fileList", taskId] });
+  invalidateExplorer(queryClient, { taskId });
   void queryClient.invalidateQueries({ queryKey: ["branches", taskId] });
 }
 

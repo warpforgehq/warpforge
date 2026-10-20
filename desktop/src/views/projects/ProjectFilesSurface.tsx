@@ -161,8 +161,6 @@ export function ProjectFilesSurface({ project, rootPath }: ProjectFilesSurfacePr
 
   return (
     <FilesSurface
-      projectFiles={files}
-      fileListError={filesQuery.error?.message ?? null}
       activeFilePath={open.activePath}
       onSelectTreeFile={openFile}
       openTabs={openTabs}

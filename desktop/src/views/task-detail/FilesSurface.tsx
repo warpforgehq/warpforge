@@ -10,7 +10,7 @@ import { PANEL_BOUNDS, useAutoHiddenRail, usePanelSize } from "@/store/panelLayo
 import { useUi } from "@/store/ui";
 
 import type { EditorPosition } from "../../components/CodeEditor/session";
-import type { FileDoc, FileRange, ProjectFile, SymbolMatch } from "../../protocol";
+import type { FileDoc, FileRange, SymbolMatch } from "../../protocol";
 import { EditorSkeleton } from "./EditorSkeleton";
 import { ProjectFilesPanel, type ProjectTreeState } from "./ProjectFilesPanel";
 
@@ -28,9 +28,6 @@ export interface OpenFileTab {
  * tab strip for files opened from the tree, diff, or chat mentions.
  */
 export function FilesSurface({
-  projectFiles,
-  fileListError,
-  fileListLoading,
   activeFilePath,
   onSelectTreeFile,
   openTabs,
@@ -54,9 +51,6 @@ export function FilesSurface({
   treeState,
   treeResetKey,
 }: {
-  projectFiles: ProjectFile[];
-  fileListError: string | null;
-  fileListLoading?: boolean;
   activeFilePath: string | null;
   onSelectTreeFile: (path: string) => void;
   openTabs: OpenFileTab[];
@@ -208,9 +202,6 @@ export function FilesSurface({
           className="min-w-0"
         >
           <ProjectFilesPanel
-            files={projectFiles}
-            error={fileListError}
-            loading={fileListLoading}
             selected={activeFilePath}
             onSelect={onSelectTreeFile}
             rootPath={rootPath}

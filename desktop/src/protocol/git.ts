@@ -55,6 +55,32 @@ export interface ProjectFile {
   changed: boolean;
 }
 
+/** One child from `dir.list`. A symlink carries its target's kind. */
+export interface DirEntry {
+  name: string;
+  kind: "file" | "dir";
+  symlink: boolean;
+  /** Matched by a gitignore rule; tracked files never are. */
+  ignored: boolean;
+}
+
+/** Result of `dir.list`: one directory's children, sorted by name. */
+export interface DirListing {
+  entries: DirEntry[];
+  truncated: boolean;
+}
+
+/** One changed path from `git.status`; `code` is porcelain v1's `XY`. */
+export interface StatusEntry {
+  path: string;
+  code: string;
+}
+
+export interface GitStatus {
+  entries: StatusEntry[];
+  truncated: boolean;
+}
+
 /** One line-level match from `file.search` — path plus 1-based line/column. */
 export interface SymbolMatch {
   path: string;

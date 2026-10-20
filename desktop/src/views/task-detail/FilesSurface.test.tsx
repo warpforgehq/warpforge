@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -5,6 +6,10 @@ import { useUi } from "@/store/ui";
 
 import type { FileDoc } from "../../protocol";
 import { FilesSurface } from "./FilesSurface";
+
+vi.mock("@/daemon", () => ({
+  daemon: { request: () => Promise.resolve({ entries: [], truncated: false }) },
+}));
 
 vi.mock("@/components/CodeEditor", () => ({
   CodeEditor: () => <div data-testid="editor" />,
@@ -31,21 +36,22 @@ const doc: FileDoc = {
 };
 
 function renderSurface(overrides: { fileDoc?: FileDoc | null } = {}) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <FilesSurface
-      activeFilePath="README.md"
-      editable
-      fileDoc={overrides.fileDoc ?? null}
-      fileListError={null}
-      onCloseTab={() => {}}
-      onRefresh={() => {}}
-      onSave={() => {}}
-      onSelectTab={() => {}}
-      onSelectTreeFile={() => {}}
-      openTabs={[]}
-      projectFiles={[{ changed: false, path: "README.md" }]}
-      taskId="task-1"
-    />,
+    <QueryClientProvider client={client}>
+      <FilesSurface
+        activeFilePath="README.md"
+        editable
+        fileDoc={overrides.fileDoc ?? null}
+        onCloseTab={() => {}}
+        onRefresh={() => {}}
+        onSave={() => {}}
+        onSelectTab={() => {}}
+        onSelectTreeFile={() => {}}
+        openTabs={[]}
+        taskId="task-1"
+      />
+    </QueryClientProvider>,
   );
 }
 

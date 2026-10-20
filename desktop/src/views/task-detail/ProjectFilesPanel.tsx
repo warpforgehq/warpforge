@@ -1,37 +1,19 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ChevronDown, FileText } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type DragEvent,
-  type MouseEvent,
-} from "react";
+import { FileText } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonBar, SkeletonBlock, skeletonWidth } from "@/components/ui/skeleton";
 import { PaneHeader } from "@/components/workspace";
-import { getFileIconUrl } from "@/lib/fileIcon";
-import { cn } from "@/lib/utils";
 
-import {
-  type ContextMenuItemOrSeparator,
-  showContextMenu,
-  useNativeContextMenu,
-} from "../../hooks/useNativeContextMenu";
-import { FILE_REF_MIME } from "../../lib/composerMentions";
-import type { ProjectFile } from "../../protocol";
+import { ExplorerRow, type ExplorerRowHandlers } from "./explorer/ExplorerRow";
+import { buildVisibleRows, parentFolders, staleExpanded } from "./explorer/explorerRows";
+import { startFileDrag } from "./explorer/fileDrag";
+import { invalidateExplorer, useExplorerData } from "./explorer/useExplorerData";
+import { useExplorerMenu } from "./explorer/useExplorerMenu";
 import { FileSystemActionDialog, type FileSystemAction } from "./FileSystemActionDialog";
-import {
-  buildProjectTree,
-  collectFolderKeys,
-  flattenProjectTree,
-  projectFileParentFolders,
-  PROJECT_ROW_HEIGHT,
-  type ProjectFlatRow,
-} from "./projectFileTree";
+import { PROJECT_ROW_HEIGHT } from "./projectFileTree";
 
 export interface ProjectTreeState {
   expandedDirs: string[];
@@ -40,10 +22,11 @@ export interface ProjectTreeState {
   onChange: (next: { expandedDirs: string[]; scrollTop: number; scrollLeft: number }) => void;
 }
 
+/**
+ * The Explorer: the checkout's tree, read one directory at a time as folders
+ * open (ADR 0028), with git status markers joined by path.
+ */
 export function ProjectFilesPanel({
-  files,
-  error,
-  loading = false,
   selected,
   onSelect,
   taskId,
@@ -53,9 +36,6 @@ export function ProjectFilesPanel({
   treeState,
   resetKey,
 }: {
-  files: ProjectFile[];
-  error: string | null;
-  loading?: boolean;
   selected: string | null;
   onSelect: (path: string) => void;
   taskId?: string;
@@ -68,7 +48,8 @@ export function ProjectFilesPanel({
   /** Identity of the subject owning the tree; a change re-arms scroll restore. */
   resetKey?: string;
 }) {
-  const root = useMemo(() => buildProjectTree(files), [files]);
+  const queryClient = useQueryClient();
+  const subject = useMemo(() => ({ project, taskId: taskId || undefined }), [project, taskId]);
   const [localOpenFolders, setLocalOpenFolders] = useState<Set<string>>(() => new Set());
   const openFolders = useMemo(
     () => (treeState ? new Set(treeState.expandedDirs) : localOpenFolders),
@@ -82,6 +63,10 @@ export function ProjectFilesPanel({
   // re-ran the effect every render and wrote the tree back on a loop.
   const treeStateRef = useRef(treeState);
   treeStateRef.current = treeState;
+  const openFoldersRef = useRef(openFolders);
+  openFoldersRef.current = openFolders;
+
+  const { listing, status, rootError, rootLoading } = useExplorerData(subject, openFolders);
 
   const setOpenFolders = useCallback((updater: (previous: Set<string>) => Set<string>) => {
     const state = treeStateRef.current;
@@ -104,11 +89,10 @@ export function ProjectFilesPanel({
     });
   }, []);
 
-  const rows = useMemo(() => {
-    const out: ProjectFlatRow[] = [];
-    flattenProjectTree(root, 0, "", openFolders, out);
-    return out;
-  }, [root, openFolders]);
+  const rows = useMemo(
+    () => buildVisibleRows(listing, openFolders, status, true),
+    [listing, openFolders, status],
+  );
 
   // Deeply nested trees push file names off the panel's fixed width. Give the
   // scroll content a width derived from the deepest visible row's indent so the
@@ -127,7 +111,7 @@ export function ProjectFilesPanel({
 
   useEffect(() => {
     if (!selected) return;
-    const parents = projectFileParentFolders(selected);
+    const parents = parentFolders(selected);
     if (parents.length === 0) return;
     setOpenFolders((previous) => {
       const next = new Set(previous);
@@ -146,7 +130,7 @@ export function ProjectFilesPanel({
     if (!selected || lastRevealedFileRef.current === selected) {
       return;
     }
-    const index = rows.findIndex((row) => row.node.path === selected);
+    const index = rows.findIndex((row) => row.path === selected);
     if (index < 0) {
       return;
     }
@@ -164,21 +148,17 @@ export function ProjectFilesPanel({
     restoredScrollRef.current = false;
   }, [resetKey]);
 
-  // Expanded folders the current tree no longer has are dropped, so a renamed
+  // Expanded folders a loaded listing no longer has are dropped, so a renamed
   // or deleted directory cannot keep its entry in the session.
   useEffect(() => {
-    const state = treeStateRef.current;
-    if (!state || state.expandedDirs.length === 0) return;
-    const keys = new Set<string>();
-    collectFolderKeys(root, "", keys);
-    const valid = state.expandedDirs.filter((dir) => keys.has(dir));
-    if (valid.length === state.expandedDirs.length) return;
-    state.onChange({
-      expandedDirs: valid,
-      scrollLeft: state.scrollLeft,
-      scrollTop: state.scrollTop,
+    const stale = staleExpanded(openFoldersRef.current, listing);
+    if (stale.length === 0) return;
+    setOpenFolders((previous) => {
+      const next = new Set(previous);
+      for (const dir of stale) next.delete(dir);
+      return next;
     });
-  }, [root]);
+  }, [listing, setOpenFolders]);
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -200,207 +180,60 @@ export function ProjectFilesPanel({
   }, []);
 
   const toggleFolder = useCallback(
-    (fk: string) => {
+    (dir: string) => {
       setOpenFolders((prev) => {
         const next = new Set(prev);
-        if (next.has(fk)) {
-          next.delete(fk);
+        if (next.has(dir)) {
+          next.delete(dir);
         } else {
-          next.add(fk);
+          next.add(dir);
         }
         return next;
       });
     },
     [setOpenFolders],
   );
+  const isExpanded = useCallback((dir: string) => openFoldersRef.current.has(dir), []);
 
-  const requestId = useRef(`project-files`).current;
-  const targetRef = useRef<{ path?: string; fKey?: string }>({});
+  const refresh = useCallback(() => {
+    invalidateExplorer(queryClient, subject);
+    onRefresh?.();
+  }, [onRefresh, queryClient, subject]);
+
   const [fileAction, setFileAction] = useState<FileSystemAction | null>(null);
+  const onRowContextMenu = useExplorerMenu({
+    canEdit: Boolean(taskId || project),
+    isExpanded,
+    onFileAction: setFileAction,
+    onOpen: onSelect,
+    onRefresh: refresh,
+    onToggle: toggleFolder,
+    rootPath,
+  });
 
-  const openExternalPath = useCallback(
-    async (path: string, reveal: boolean) => {
-      if (!("__TAURI_INTERNALS__" in window) || !rootPath) return;
-      const absolute = `${rootPath.replace(/\/+$/, "")}/${path}`;
-      const { openPath, revealItemInDir } = await import("@tauri-apps/plugin-opener");
-      if (reveal) await revealItemInDir(absolute);
-      else await openPath(absolute);
-    },
-    [rootPath],
+  const handlers = useMemo<ExplorerRowHandlers>(
+    () => ({
+      onActivate: (_event, row) => {
+        if (row.kind === "dir") toggleFolder(row.path);
+        else onSelect(row.path);
+      },
+      onContextMenu: onRowContextMenu,
+      onDragStart: (event, row) => startFileDrag(event, row.path),
+    }),
+    [onRowContextMenu, onSelect, toggleFolder],
   );
-
-  const menuHandlers = useMemo(
-    () =>
-      new Map<string, () => void>([
-        [
-          "open",
-          () => {
-            const t = targetRef.current;
-            if (t.path) onSelect(t.path);
-          },
-        ],
-        [
-          "copy",
-          () => {
-            const t = targetRef.current;
-            if (t.path) void navigator.clipboard.writeText(t.path);
-          },
-        ],
-        [
-          "reveal",
-          () => {
-            const t = targetRef.current;
-            if (t.path) void openExternalPath(t.path, true);
-          },
-        ],
-        [
-          "terminal",
-          () => {
-            const t = targetRef.current;
-            if (t.path) void openExternalPath(t.path, false);
-          },
-        ],
-        ["refresh", () => onRefresh?.()],
-        [
-          "new-file",
-          () => {
-            const t = targetRef.current;
-            setFileAction({
-              kind: "create-file",
-              parent: t.fKey ?? t.path?.split("/").slice(0, -1).join("/") ?? "",
-            });
-          },
-        ],
-        [
-          "new-folder",
-          () => {
-            const t = targetRef.current;
-            setFileAction({
-              kind: "create-folder",
-              parent: t.fKey ?? t.path?.split("/").slice(0, -1).join("/") ?? "",
-            });
-          },
-        ],
-        [
-          "rename",
-          () => {
-            const t = targetRef.current;
-            if (t.path) setFileAction({ kind: "rename", path: t.path });
-          },
-        ],
-        [
-          "delete",
-          () => {
-            const t = targetRef.current;
-            if (t.path || t.fKey) setFileAction({ kind: "delete", path: t.path ?? t.fKey! });
-          },
-        ],
-        [
-          "expand",
-          () => {
-            const t = targetRef.current;
-            if (t.fKey && !openFolders.has(t.fKey)) toggleFolder(t.fKey);
-          },
-        ],
-        [
-          "collapse",
-          () => {
-            const t = targetRef.current;
-            if (t.fKey && openFolders.has(t.fKey)) toggleFolder(t.fKey);
-          },
-        ],
-      ]),
-    [onRefresh, onSelect, openExternalPath, openFolders, toggleFolder],
-  );
-  useNativeContextMenu(requestId, menuHandlers);
-
-  const onRowContextMenu = (e: MouseEvent, path?: string, fKey?: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    targetRef.current = { path, fKey };
-    // `file.create/rename/delete` need a subject to address; a tree opened
-    // with neither a task nor a project cannot offer them.
-    const edits: ContextMenuItemOrSeparator[] =
-      taskId || project
-        ? [
-            { type: "separator" },
-            { type: "item", id: "new-file", label: "New File…" },
-            { type: "item", id: "new-folder", label: "New Folder…" },
-            { type: "item", id: "rename", label: "Rename…" },
-            { type: "item", id: "delete", label: "Delete…" },
-          ]
-        : [];
-    const items: ContextMenuItemOrSeparator[] = path
-      ? [
-          { type: "item", id: "open", label: "Open" },
-          { type: "item", id: "copy", label: "Copy Path" },
-          { type: "item", id: "reveal", label: "Reveal in Finder" },
-          { type: "item", id: "terminal", label: "Open in Default App" },
-          ...edits,
-          { type: "separator" },
-          { type: "item", id: "refresh", label: "Refresh" },
-        ]
-      : fKey
-        ? [
-            {
-              type: "item",
-              id: openFolders.has(fKey) ? "collapse" : "expand",
-              label: openFolders.has(fKey) ? "Collapse" : "Expand",
-            },
-            { type: "item", id: "copy", label: "Copy Path" },
-            { type: "item", id: "reveal", label: "Reveal in Finder" },
-            { type: "item", id: "terminal", label: "Open in Default App" },
-            ...edits,
-            { type: "separator" },
-            { type: "item", id: "refresh", label: "Refresh" },
-          ]
-        : [];
-    void showContextMenu({ requestId, items });
-  };
-
-  const onRowDragStart = (e: DragEvent, path: string) => {
-    e.dataTransfer.setData(FILE_REF_MIME, path);
-    e.dataTransfer.setData("text/plain", path);
-    e.dataTransfer.effectAllowed = "copy";
-    const tile = document.createElement("div");
-    tile.textContent = path.split("/").pop() ?? path;
-    Object.assign(tile.style, {
-      position: "fixed",
-      left: "0",
-      top: "0",
-      zIndex: "9999",
-      display: "flex",
-      alignItems: "center",
-      gap: "6px",
-      padding: "4px 10px",
-      borderRadius: "6px",
-      background: "var(--accent)",
-      color: "var(--accent-foreground)",
-      border: "1px solid var(--border)",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-      fontSize: "12px",
-      fontWeight: "500",
-      fontFamily: "var(--font-mono, monospace)",
-      whiteSpace: "nowrap",
-      pointerEvents: "none",
-      userSelect: "none",
-    });
-    document.body.appendChild(tile);
-    e.dataTransfer.setDragImage(tile, 12, 12);
-    e.currentTarget.addEventListener("dragend", () => tile.remove(), { once: true });
-  };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <PaneHeader title="Project Files" />
-      {error && <p className="border-b px-3 py-2 text-xs text-destructive">{error}</p>}
+      {rootError && <p className="border-b px-3 py-2 text-xs text-destructive">{rootError}</p>}
       <div
         ref={scrollRef}
         onScroll={onTreeScroll}
         className="min-h-0 flex-1 overflow-auto overflow-x-auto py-1.5"
       >
-        {rows.length === 0 && !error ? (
-          loading ? (
+        {rows.length === 0 && !rootError ? (
+          rootLoading ? (
             <SkeletonBlock
               aria-label="Loading project files"
               data-testid="project-files-skeleton"
@@ -423,60 +256,14 @@ export function ProjectFilesPanel({
           >
             {virtualizer.getVirtualItems().map((vi) => {
               const row = rows[vi.index];
-              const pad = { paddingLeft: `${row.depth * 12 + 10}px` };
-
-              if (row.node.path) {
-                const iconUrl = getFileIconUrl(row.node.name);
-                return (
-                  <button
-                    key={vi.key}
-                    type="button"
-                    style={{ ...pad, transform: `translateY(${vi.start}px)` }}
-                    onClick={() => onSelect(row.node.path!)}
-                    onContextMenu={(e) => onRowContextMenu(e, row.node.path)}
-                    draggable
-                    onDragStart={(e) => onRowDragStart(e, row.node.path!)}
-                    title={row.node.path}
-                    className={cn(
-                      "absolute left-0 top-0 flex h-7 w-full min-w-0 items-center gap-1.5 pr-2 text-left text-xs",
-                      selected === row.node.path
-                        ? "bg-secondary text-foreground"
-                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
-                    )}
-                  >
-                    {iconUrl ? (
-                      <img src={iconUrl} alt="" aria-hidden className="size-3.5 shrink-0" />
-                    ) : (
-                      <FileText
-                        className={cn(
-                          "size-3.5 shrink-0",
-                          row.node.changed ? "text-info" : "text-muted-foreground",
-                        )}
-                      />
-                    )}
-                    <span className="truncate">{row.node.name}</span>
-                  </button>
-                );
-              }
-
-              const isOpen = openFolders.has(row.fKey!);
               return (
-                <button
-                  key={vi.key}
-                  type="button"
-                  style={{ ...pad, transform: `translateY(${vi.start}px)` }}
-                  onClick={() => toggleFolder(row.fKey!)}
-                  onContextMenu={(e) => onRowContextMenu(e, undefined, row.fKey)}
-                  className="absolute left-0 top-0 flex h-7 w-full min-w-0 items-center gap-1.5 pr-2 text-left text-xs text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                >
-                  <ChevronDown
-                    className={cn(
-                      "size-3.5 shrink-0 transition-transform",
-                      !isOpen && "-rotate-90",
-                    )}
-                  />
-                  <span className="truncate">{row.node.name}</span>
-                </button>
+                <ExplorerRow
+                  key={row.path}
+                  row={row}
+                  selected={row.kind === "file" && selected === row.path}
+                  top={vi.start}
+                  handlers={handlers}
+                />
               );
             })}
           </div>
@@ -486,7 +273,7 @@ export function ProjectFilesPanel({
         action={fileAction}
         taskId={taskId ?? ""}
         project={project}
-        onComplete={() => onRefresh?.()}
+        onComplete={refresh}
         onClose={() => setFileAction(null)}
       />
     </div>

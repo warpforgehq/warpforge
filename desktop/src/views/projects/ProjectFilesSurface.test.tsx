@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { daemon } from "@/daemon";
+import { explorerFromPaths } from "@/lib/explorerFromPaths";
 import {
   getProjectFileRequest,
   requestProjectFile,
@@ -56,6 +57,9 @@ beforeEach(() => {
   resetRegistryForTests();
   useUi.setState({ filesPanelCollapsed: false });
   vi.spyOn(daemon, "request").mockImplementation(async (method: string, params?: unknown) => {
+    if (method === "dir.list" || method === "git.status") {
+      return explorerFromPaths(["README.md", "Cargo.toml"])(method, params);
+    }
     if (method === "file.list") {
       return [
         { path: "README.md", changed: false },
@@ -76,8 +80,8 @@ describe("ProjectFilesSurface", () => {
 
     expect(await screen.findByTitle("README.md")).toBeInTheDocument();
     expect(daemon.request).toHaveBeenCalledWith(
-      "file.list",
-      expect.objectContaining({ project: "warpforge" }),
+      "dir.list",
+      expect.objectContaining({ path: "", project: "warpforge" }),
     );
     expect(screen.getByText("No file open")).toBeInTheDocument();
   });

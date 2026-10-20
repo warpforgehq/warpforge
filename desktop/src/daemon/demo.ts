@@ -1,3 +1,4 @@
+import { explorerFromPaths } from "../lib/explorerFromPaths";
 import type {
   AdvisorPick,
   DaemonEvent,
@@ -63,6 +64,14 @@ export class DaemonDemo extends DaemonEvents {
         const diff = this.demoDiff!(String(p.task_id));
         const files = diff.files.map((f) => ({ changed: true, path: f.path }));
         return Promise.resolve(files);
+      }
+      case "dir.list":
+      case "git.status": {
+        const files = this.demoDiff!(String(p.task_id)).files;
+        return explorerFromPaths(
+          files.map((f) => f.path),
+          { status: files.map((f) => ({ code: " M", path: f.path })) },
+        )(method, params);
       }
       case "file.search":
         return Promise.resolve([]);
