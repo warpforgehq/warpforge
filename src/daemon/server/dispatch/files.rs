@@ -77,7 +77,13 @@ pub(super) async fn dir_list(
             message: "no checkout for this task or project".into(),
         });
     };
-    let listing = crate::daemon::explorer::dir_list(&root, &path)
+    let tracked = handle
+        .explorer
+        .status
+        .tracked_ignored(&root)
+        .await
+        .unwrap_or_default();
+    let listing = crate::daemon::explorer::dir_list(&root, &path, tracked)
         .await
         .map_err(|e| wire::RpcError {
             code: wire::ErrorCode::NotFound,

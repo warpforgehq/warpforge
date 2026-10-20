@@ -1,12 +1,13 @@
 //! `dir.list`: one directory's children, classified, never descended into.
 
 use std::path::Path;
+use std::sync::Arc;
 
 use anyhow::{bail, Result};
 use tokio::sync::Semaphore;
 use warpforge_protocol as wire;
 
-use super::{Class, IgnoreStack};
+use super::{Class, IgnoreStack, TrackedIgnored};
 use crate::daemon::diff::resolve_target_in_root;
 
 pub(crate) const DIR_LIST_CAP: usize = 5000;
@@ -14,15 +15,22 @@ pub(crate) const DIR_LIST_CAP: usize = 5000;
 /// Bounds the blocking pool threads a burst of expands can take (ADR 0028).
 static PERMITS: Semaphore = Semaphore::const_new(8);
 
-/// Lists the directory at `path` (relative, empty for the root) under `root`.
-pub(crate) async fn dir_list(root: &str, path: &str) -> Result<wire::DirListing> {
+/// Lists the directory at `path` (relative, empty for the root) under `root`;
+/// `tracked` comes from [`super::status::StatusRuns::tracked_ignored`].
+pub(crate) async fn dir_list(
+    root: &str,
+    path: &str,
+    tracked: Arc<TrackedIgnored>,
+) -> Result<wire::DirListing> {
     let rel = path.trim_matches('/').to_string();
     let dir = if rel.is_empty() {
         std::fs::canonicalize(root)?
     } else {
         resolve_target_in_root(root, &rel)?
     };
-    let mut stack = IgnoreStack::open(Path::new(root)).await;
+    let mut stack = IgnoreStack::open(Path::new(root))
+        .await
+        .with_tracked(tracked);
     let _permit = PERMITS.acquire().await?;
     tokio::task::spawn_blocking(move || list_blocking(&mut stack, &dir, &rel, DIR_LIST_CAP)).await?
 }
@@ -117,7 +125,9 @@ mod tests {
     #[tokio::test]
     async fn the_root_marks_ignored_and_drops_hidden() {
         let dir = repo().await;
-        let listing = dir_list(dir.path().to_str().unwrap(), "").await.unwrap();
+        let listing = dir_list(dir.path().to_str().unwrap(), "", Arc::default())
+            .await
+            .unwrap();
         assert_eq!(
             names(&listing),
             [
@@ -136,9 +146,9 @@ mod tests {
     async fn an_ignored_dir_lists_with_every_child_ignored() {
         let dir = repo().await;
         let root = dir.path().to_str().unwrap();
-        let listing = dir_list(root, "coverage/").await.unwrap();
+        let listing = dir_list(root, "coverage/", Arc::default()).await.unwrap();
         assert_eq!(names(&listing), [("lcov.info", true)]);
-        let listing = dir_list(root, ".warpforge").await.unwrap();
+        let listing = dir_list(root, ".warpforge", Arc::default()).await.unwrap();
         assert_eq!(names(&listing), [("workspace.yaml", false)]);
     }
 
@@ -154,7 +164,10 @@ mod tests {
             "/etc",
             "src/../..",
         ] {
-            assert!(dir_list(root, path).await.is_err(), "{path}");
+            assert!(
+                dir_list(root, path, Arc::default()).await.is_err(),
+                "{path}"
+            );
         }
     }
 
@@ -166,7 +179,9 @@ mod tests {
         let root = dir.path();
         std::os::unix::fs::symlink(root.join("src"), root.join("src-link")).unwrap();
         std::os::unix::fs::symlink(outside.path(), root.join("out")).unwrap();
-        let listing = dir_list(root.to_str().unwrap(), "").await.unwrap();
+        let listing = dir_list(root.to_str().unwrap(), "", Arc::default())
+            .await
+            .unwrap();
         let link = listing
             .entries
             .iter()
@@ -174,9 +189,35 @@ mod tests {
             .unwrap();
         assert!(link.symlink);
         assert_eq!(link.kind, wire::EntryKind::Dir);
-        let listing = dir_list(root.to_str().unwrap(), "src-link").await.unwrap();
+        let listing = dir_list(root.to_str().unwrap(), "src-link", Arc::default())
+            .await
+            .unwrap();
         assert_eq!(names(&listing), [("main.rs", false)]);
-        assert!(dir_list(root.to_str().unwrap(), "out").await.is_err());
+        assert!(dir_list(root.to_str().unwrap(), "out", Arc::default())
+            .await
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn tracked_files_under_an_ignore_pattern_are_not_ignored() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        init_repo(root).await;
+        write(root, "build/keep.txt");
+        crate::daemon::diff::testsupport::git(root, &["add", "."]).await;
+        crate::daemon::diff::testsupport::git(root, &["commit", "-qm", "init"]).await;
+        std::fs::write(root.join(".gitignore"), "build/\n").unwrap();
+        write(root, "build/out.bin");
+        let root = root.to_str().unwrap();
+        let tracked = super::super::status::StatusRuns::default()
+            .tracked_ignored(root)
+            .await
+            .unwrap();
+
+        let listing = dir_list(root, "", tracked.clone()).await.unwrap();
+        assert_eq!(names(&listing), [(".gitignore", false), ("build", false)]);
+        let listing = dir_list(root, "build", tracked).await.unwrap();
+        assert_eq!(names(&listing), [("keep.txt", false), ("out.bin", true)]);
     }
 
     #[tokio::test]

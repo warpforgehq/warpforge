@@ -1,7 +1,8 @@
-//! `git.status` for the Explorer's change markers, coalesced per root: at most
-//! one run in flight, and every request made during a run gets a later one.
+//! Git's view of a checkout for the Explorer — change markers and the tracked
+//! files an ignore pattern matches — coalesced per root: at most one run in
+//! flight, and every request made during a run gets a later one.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -12,6 +13,17 @@ use warpforge_protocol as wire;
 use crate::daemon::diff::is_ignored_path;
 
 pub(crate) const STATUS_CAP: usize = 10_000;
+pub(crate) const TRACKED_IGNORED_CAP: usize = 10_000;
+
+/// Tracked files matched by an ignore pattern, plus their ancestor
+/// directories. Git does not treat these as ignored, so neither does the tree.
+pub(crate) type TrackedIgnored = HashSet<String>;
+
+#[derive(Default)]
+struct Snapshot {
+    status: Arc<wire::GitStatus>,
+    tracked_ignored: Arc<TrackedIgnored>,
+}
 
 #[derive(Default)]
 pub(crate) struct StatusRuns {
@@ -23,7 +35,7 @@ struct RootRuns {
     requested: AtomicU64,
     /// The latest result and the request number it covers. Held across a run,
     /// so it is also what keeps runs for one root serial.
-    last: tokio::sync::Mutex<Option<(u64, Arc<wire::GitStatus>)>>,
+    last: tokio::sync::Mutex<Option<(u64, Arc<Snapshot>)>>,
 }
 
 impl StatusRuns {
@@ -32,38 +44,91 @@ impl StatusRuns {
     pub(crate) async fn status(&self, root: &str) -> Result<Arc<wire::GitStatus>> {
         let root = std::fs::canonicalize(root)?.to_string_lossy().into_owned();
         let run_root = root.clone();
-        self.coalesced(&root, move || git_status(run_root)).await
+        let snapshot = self.coalesced(&root, move || snapshot(run_root)).await?;
+        Ok(snapshot.status.clone())
     }
 
-    async fn coalesced<F, Fut>(&self, root: &str, run: F) -> Result<Arc<wire::GitStatus>>
-    where
-        F: FnOnce() -> Fut,
-        Fut: Future<Output = Result<wire::GitStatus>>,
-    {
-        let runs = self
-            .roots
+    /// The tracked-but-ignored set from the latest run, running one only when
+    /// this root has none yet. It refreshes whenever `status` runs.
+    pub(crate) async fn tracked_ignored(&self, root: &str) -> Result<Arc<TrackedIgnored>> {
+        let root = std::fs::canonicalize(root)?.to_string_lossy().into_owned();
+        if let Some((_, snapshot)) = self.runs(&root).last.lock().await.as_ref() {
+            return Ok(snapshot.tracked_ignored.clone());
+        }
+        let run_root = root.clone();
+        let snapshot = self.coalesced(&root, move || snapshot(run_root)).await?;
+        Ok(snapshot.tracked_ignored.clone())
+    }
+
+    fn runs(&self, root: &str) -> Arc<RootRuns> {
+        self.roots
             .lock()
             .unwrap()
             .entry(root.to_string())
             .or_default()
-            .clone();
+            .clone()
+    }
+
+    async fn coalesced<F, Fut>(&self, root: &str, run: F) -> Result<Arc<Snapshot>>
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<Snapshot>>,
+    {
+        let runs = self.runs(root);
         let wanted = runs.requested.fetch_add(1, Ordering::SeqCst) + 1;
         let mut last = runs.last.lock().await;
-        if let Some((covered, status)) = last.as_ref() {
+        if let Some((covered, snapshot)) = last.as_ref() {
             if *covered >= wanted {
-                return Ok(status.clone());
+                return Ok(snapshot.clone());
             }
         }
         let covers = runs.requested.load(Ordering::SeqCst);
-        let status = Arc::new(run().await?);
-        *last = Some((covers, status.clone()));
-        Ok(status)
+        let snapshot = Arc::new(run().await?);
+        *last = Some((covers, snapshot.clone()));
+        Ok(snapshot)
     }
 }
 
-async fn git_status(root: String) -> Result<wire::GitStatus> {
+async fn snapshot(root: String) -> Result<Snapshot> {
+    let (status, tracked_ignored) = tokio::join!(git_status(&root), tracked_ignored(&root));
+    Ok(Snapshot {
+        status: Arc::new(status?),
+        tracked_ignored: Arc::new(tracked_ignored.unwrap_or_default()),
+    })
+}
+
+async fn tracked_ignored(root: &str) -> Result<TrackedIgnored> {
     let out = tokio::process::Command::new("git")
-        .args(["--no-optional-locks", "-C", &root, "status"])
+        .args(["-C", root, "ls-files", "-z", "--cached", "--ignored"])
+        .arg("--exclude-standard")
+        .output()
+        .await?;
+    if !out.status.success() {
+        bail!("{}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+    let mut set = TrackedIgnored::new();
+    for path in out
+        .stdout
+        .split(|b| *b == 0)
+        .filter(|p| !p.is_empty())
+        .take(TRACKED_IGNORED_CAP)
+    {
+        let path = String::from_utf8_lossy(path);
+        let mut at = path.as_ref();
+        set.insert(at.to_string());
+        while let Some((parent, _)) = at.rsplit_once('/') {
+            if !set.insert(parent.to_string()) {
+                break;
+            }
+            at = parent;
+        }
+    }
+    Ok(set)
+}
+
+async fn git_status(root: &str) -> Result<wire::GitStatus> {
+    let out = tokio::process::Command::new("git")
+        .args(["--no-optional-locks", "-C", root, "status"])
         .args([
             "--porcelain=v1",
             "--untracked-files=all",
@@ -73,7 +138,7 @@ async fn git_status(root: String) -> Result<wire::GitStatus> {
         .output()
         .await?;
     if !out.status.success() {
-        if !is_git_checkout(&root).await {
+        if !is_git_checkout(root).await {
             return Ok(wire::GitStatus::default());
         }
         bail!("{}", String::from_utf8_lossy(&out.stderr).trim());
@@ -175,6 +240,30 @@ mod tests {
         assert_eq!(*status, wire::GitStatus::default());
     }
 
+    #[tokio::test]
+    async fn tracked_ignored_lists_files_and_their_ancestors() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        init_repo(root).await;
+        std::fs::create_dir_all(root.join("public/js")).unwrap();
+        std::fs::write(root.join("public/js/sw.js"), "a").unwrap();
+        git(root, &["add", "."]).await;
+        git(root, &["commit", "-qm", "init"]).await;
+        std::fs::write(root.join(".gitignore"), "sw.js\n").unwrap();
+
+        let runs = StatusRuns::default();
+        let root = root.to_str().unwrap();
+        let mut found: Vec<_> = runs
+            .tracked_ignored(root)
+            .await
+            .unwrap()
+            .iter()
+            .cloned()
+            .collect();
+        found.sort();
+        assert_eq!(found, ["public", "public/js", "public/js/sw.js"]);
+    }
+
     #[test]
     fn parse_caps_and_flags_truncation() {
         let status = parse(b"?? a\0?? b\0?? c\0", 2);
@@ -194,12 +283,15 @@ mod tests {
                 runs.coalesced("/r", move || async move {
                     let n = count.fetch_add(1, Ordering::SeqCst) + 1;
                     tokio::time::sleep(Duration::from_millis(50)).await;
-                    Ok(wire::GitStatus {
-                        entries: vec![wire::StatusEntry {
-                            path: n.to_string(),
-                            code: "??".into(),
-                        }],
-                        truncated: false,
+                    Ok(Snapshot {
+                        status: Arc::new(wire::GitStatus {
+                            entries: vec![wire::StatusEntry {
+                                path: n.to_string(),
+                                code: "??".into(),
+                            }],
+                            truncated: false,
+                        }),
+                        ..Default::default()
                     })
                 })
                 .await
@@ -210,16 +302,11 @@ mod tests {
         assert!(count.load(Ordering::SeqCst) <= 2, "{count:?}");
 
         let later = runs
-            .coalesced("/r", || async {
-                Ok(wire::GitStatus {
-                    entries: vec![],
-                    truncated: false,
-                })
-            })
+            .coalesced("/r", || async { Ok(Snapshot::default()) })
             .await
             .unwrap();
         assert!(
-            later.entries.is_empty(),
+            later.status.entries.is_empty(),
             "a request after the burst runs again"
         );
     }

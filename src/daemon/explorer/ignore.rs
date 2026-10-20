@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use ::ignore::gitignore::{Gitignore, GitignoreBuilder};
 use ::ignore::Match;
@@ -26,6 +27,7 @@ pub(crate) struct IgnoreStack {
     global: Option<Gitignore>,
     per_dir: HashMap<PathBuf, Option<Gitignore>>,
     dir_ignored: HashMap<PathBuf, bool>,
+    tracked: Arc<super::TrackedIgnored>,
 }
 
 impl IgnoreStack {
@@ -47,6 +49,7 @@ impl IgnoreStack {
             global,
             per_dir: HashMap::new(),
             dir_ignored: HashMap::new(),
+            tracked: Arc::default(),
         }
     }
 
@@ -65,12 +68,19 @@ impl IgnoreStack {
         Self::new(root, common.as_deref())
     }
 
+    /// Treats `tracked` (tracked files under an ignore pattern, and their
+    /// directories) as not ignored, as git does.
+    pub(crate) fn with_tracked(mut self, tracked: Arc<super::TrackedIgnored>) -> Self {
+        self.tracked = tracked;
+        self
+    }
+
     /// Classifies `rel`, a non-empty `/`-separated path under the root.
     pub(crate) fn classify(&mut self, rel: &str, is_dir: bool) -> Class {
         if is_ignored_path(rel) {
             return Class::Hidden;
         }
-        if self.is_ignored(Path::new(rel), is_dir) {
+        if self.is_ignored(Path::new(rel), is_dir) && !self.tracked.contains(rel) {
             Class::Ignored
         } else {
             Class::Visible
