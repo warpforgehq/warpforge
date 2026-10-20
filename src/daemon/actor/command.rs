@@ -420,6 +420,13 @@ pub enum Command {
         project: Option<String>,
         reply: oneshot::Sender<Option<wire::FileDoc>>,
     },
+    /// The checkout a task or project reads from: the task's worktree, else
+    /// its project, else the named project.
+    ResolveRoot {
+        task_id: String,
+        project: Option<String>,
+        reply: oneshot::Sender<Option<String>>,
+    },
     /// List files in a task's project working tree.
     ListFiles {
         task_id: String,

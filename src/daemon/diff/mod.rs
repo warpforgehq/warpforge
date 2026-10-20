@@ -32,6 +32,7 @@ mod working;
 
 pub use branch::{branch_create, delete_branch, list_branches, rename_branch, switch_branch};
 pub use commit::{commit, last_commit_message, reject_hunk, stage_paths};
+pub(crate) use files::resolve_target_in_root;
 pub use files::{create_file, delete_file, file_doc, rename_file, save_file};
 pub use listing::{is_ignored_path, list_files};
 pub use remote::{create_draft_pr, create_pr, push, push_info};

@@ -33,6 +33,7 @@ pub(super) fn method_runs_concurrently(method: &wire::Method) -> bool {
             | DiffGet { .. }
             | FileContents { .. }
             | FileList { .. }
+            | DirList { .. }
             | FileSearch { .. }
             | GitBranches { .. }
             | GitRoots { .. }
@@ -107,6 +108,7 @@ pub(super) fn method_is_mutation(method: &wire::Method) -> bool {
             | DiffGet { .. }
             | FileContents { .. }
             | FileList { .. }
+            | DirList { .. }
             | FileSearch { .. }
             | GitBranches { .. }
             | GitRoots { .. }

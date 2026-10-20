@@ -78,6 +78,7 @@ impl IgnoreStack {
     }
 
     /// Drops cached matchers and verdicts, after a `.gitignore` changed.
+    #[allow(dead_code)]
     pub(crate) fn forget(&mut self) {
         self.per_dir.clear();
         self.dir_ignored.clear();

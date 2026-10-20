@@ -65,6 +65,30 @@ pub(super) async fn file_list(
     })
 }
 
+pub(super) async fn dir_list(
+    handle: &DaemonHandle,
+    task_id: String,
+    project: Option<String>,
+    path: String,
+) -> Result<serde_json::Value, wire::RpcError> {
+    let Some(root) = handle.resolve_root(&task_id, project).await else {
+        return Err(wire::RpcError {
+            code: wire::ErrorCode::NotFound,
+            message: "no checkout for this task or project".into(),
+        });
+    };
+    let listing = crate::daemon::explorer::dir_list(&root, &path)
+        .await
+        .map_err(|e| wire::RpcError {
+            code: wire::ErrorCode::NotFound,
+            message: format!("cannot list {path}: {e}"),
+        })?;
+    serde_json::to_value(listing).map_err(|e| wire::RpcError {
+        code: wire::ErrorCode::Internal,
+        message: e.to_string(),
+    })
+}
+
 pub(super) async fn file_save(
     handle: &DaemonHandle,
     task_id: String,

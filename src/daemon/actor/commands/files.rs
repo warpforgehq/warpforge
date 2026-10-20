@@ -114,6 +114,18 @@ impl Daemon {
                     let _ = reply.send(doc);
                 });
             }
+            Command::ResolveRoot {
+                task_id,
+                project,
+                reply,
+            } => {
+                let repo = self
+                    .tasks
+                    .get(&task_id)
+                    .and_then(|_| self.task_repo_path(&task_id))
+                    .or_else(|| project.as_deref().and_then(|name| self.project_path(name)));
+                let _ = reply.send(repo);
+            }
             Command::ListFiles {
                 task_id,
                 project,

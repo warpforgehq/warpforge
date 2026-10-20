@@ -225,6 +225,17 @@ impl DaemonHandle {
         rx.await.unwrap_or_default()
     }
 
+    pub async fn resolve_root(&self, task_id: &str, project: Option<String>) -> Option<String> {
+        let (tx, rx) = oneshot::channel();
+        self.send(Command::ResolveRoot {
+            task_id: task_id.to_string(),
+            project,
+            reply: tx,
+        })
+        .await;
+        rx.await.ok().flatten()
+    }
+
     pub async fn search_files(
         &self,
         task_id: &str,

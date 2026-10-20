@@ -85,6 +85,7 @@ pub(super) async fn dispatch(
         DiffResolveHunk { task_id, file, hunk_index, resolution, } => files::diff_resolve_hunk(handle, task_id, file, hunk_index, resolution).await,
         FileContents { task_id, path, project, } => files::file_contents(handle, task_id, path, project).await,
         FileList { task_id, project, include_ignored, } => files::file_list(handle, task_id, project, include_ignored).await,
+        DirList { task_id, project, path } => files::dir_list(handle, task_id, project, path).await,
         FileSave { task_id, path, content, project, } => files::file_save(handle, task_id, path, content, project).await,
         FileCreate { task_id, path, directory, project, } => files::file_create(handle, task_id, path, directory, project).await,
         FileRename { task_id, path, new_path, project, } => files::file_rename(handle, task_id, path, new_path, project).await,

@@ -39,6 +39,9 @@ pub use channels::*;
 pub mod event;
 pub use event::*;
 
+pub mod explorer;
+pub use explorer::*;
+
 pub mod git;
 pub use git::*;
 

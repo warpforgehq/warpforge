@@ -18,7 +18,6 @@ pub mod browser;
 pub mod claude_auth;
 pub mod credential_capture;
 pub mod diff;
-#[allow(dead_code, unused_imports)]
 pub(crate) mod explorer;
 pub mod handoff;
 pub mod history_config;

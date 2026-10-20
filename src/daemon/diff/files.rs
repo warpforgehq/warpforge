@@ -148,7 +148,7 @@ fn resolve_in_root(repo: &str, path: &str) -> Result<std::path::PathBuf> {
 
 /// [`resolve_in_root`] for ops that read or write through the last component:
 /// an existing leaf is followed too, so a link to a file outside is refused.
-fn resolve_target_in_root(repo: &str, path: &str) -> Result<std::path::PathBuf> {
+pub(crate) fn resolve_target_in_root(repo: &str, path: &str) -> Result<std::path::PathBuf> {
     let full = resolve_in_root(repo, path)?;
     if std::fs::symlink_metadata(&full).is_err() {
         return Ok(full);

@@ -662,6 +662,17 @@ pub enum Method {
         #[serde(default)]
         include_ignored: bool,
     },
+    /// Children of one directory in the task's or project's checkout, for the
+    /// Explorer. `path` is relative to the root; empty lists the root.
+    #[serde(rename = "dir.list")]
+    DirList {
+        #[serde(default)]
+        task_id: String,
+        #[serde(default)]
+        project: Option<String>,
+        #[serde(default)]
+        path: String,
+    },
     /// Write new contents to a file in the task's working tree (in-review edit).
     #[serde(rename = "file.save")]
     FileSave {
