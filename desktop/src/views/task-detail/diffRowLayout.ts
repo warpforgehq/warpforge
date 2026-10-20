@@ -30,6 +30,17 @@ export function estimateFileHeight(file: FileDiff | undefined): number {
 }
 
 /**
+ * Identity of one virtualized diff row. The virtualizer maps its measurement
+ * cache by this key, so it must follow the file, not the slot: when the diff
+ * arrives with a new file inserted, index-keyed sizes are handed to whichever
+ * file now sits at that index, and the list spaces rows for a height they no
+ * longer have.
+ */
+export function fileRowKey(files: readonly FileDiff[], index: number): string {
+  return files[index]?.path ?? `#${index}`;
+}
+
+/**
  * Height for one virtualized diff row. The row is a header plus a diff body,
  * and the body's CodeMirror editor is created asynchronously (its language
  * module loads first), so for a frame or more the row's real height is just

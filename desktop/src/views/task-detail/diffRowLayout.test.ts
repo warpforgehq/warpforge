@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { FileDiff } from "../../protocol";
-import { estimateFileHeight, measureDiffRow } from "./diffRowLayout";
+import { estimateFileHeight, fileRowKey, measureDiffRow } from "./diffRowLayout";
 
 const HEADER_PX = 36;
 const LINE_PX = 20;
@@ -71,6 +71,19 @@ function fakeRow({
     querySelector: (selector: string) => (bodyEl && selector.includes("warpforge") ? bodyEl : null),
   };
 }
+
+describe("fileRowKey", () => {
+  const files = [file([], "src/a.ts"), file([], "src/b.ts")];
+
+  it("follows the file across an insertion above it", () => {
+    expect(fileRowKey(files, 1)).toBe("src/b.ts");
+    expect(fileRowKey([file([], "src/0.ts"), ...files], 2)).toBe("src/b.ts");
+  });
+
+  it("falls back to the slot when the file is unknown", () => {
+    expect(fileRowKey(files, 9)).toBe("#9");
+  });
+});
 
 describe("measureDiffRow", () => {
   const files = [file([hunk(1, 4, 1, 4)]), file([hunk(1, 4, 1, 4)])];

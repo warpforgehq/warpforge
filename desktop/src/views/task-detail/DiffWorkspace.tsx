@@ -16,7 +16,7 @@ import { saveFile } from "@/lib/saveFile";
 
 import type { EditHunk, FileDiff, HunkResolution, TaskDiff } from "../../protocol";
 import { fileAnchor, hunkKey } from "./diffAnchors";
-import { estimateFileHeight, measureDiffRow } from "./diffRowLayout";
+import { estimateFileHeight, fileRowKey, measureDiffRow } from "./diffRowLayout";
 import { DiffSkeleton } from "./DiffSurface";
 import { matchingHunkIndexes } from "./editHunkMatch";
 import { EditorSkeleton } from "./EditorSkeleton";
@@ -137,6 +137,7 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
   const unifiedVirtualizer = useVirtualizer({
     count: files.length,
     estimateSize: (index) => estimateFileHeight(files[index]),
+    getItemKey: (index) => fileRowKey(files, index),
     getScrollElement: () => unifiedScrollParent.current,
     measureElement: measureRow,
     overscan: 2,
@@ -144,6 +145,7 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
   const splitVirtualizer = useVirtualizer({
     count: files.length,
     estimateSize: (index) => estimateFileHeight(files[index]),
+    getItemKey: (index) => fileRowKey(files, index),
     getScrollElement: () => splitScrollParent.current,
     measureElement: measureRow,
     overscan: 1,
@@ -181,13 +183,6 @@ export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function Dif
       diffView === "unified" ? unifiedScrollParent.current : splitScrollParent.current;
     if (container) container.scrollTop = initialScrollTop;
   }, [diffView, initialScrollTop]);
-
-  // Folding a file changes its row height; the cached measurement would leave
-  // the rows below it spaced for the expanded body.
-  useEffect(() => {
-    unifiedVirtualizer.measure();
-    splitVirtualizer.measure();
-  }, [collapsedFiles, splitVirtualizer, unifiedVirtualizer]);
 
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
