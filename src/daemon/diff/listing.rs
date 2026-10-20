@@ -37,6 +37,10 @@ pub async fn list_files(repo: &str, include_ignored: bool) -> Result<Vec<wire::P
                 if path.is_empty() {
                     continue;
                 }
+                // Pure string check, so ignored trees never pay a stat or a walk.
+                if is_ignored_path(path) {
+                    continue;
+                }
                 let full = std::path::Path::new(&repo).join(path);
                 if path.ends_with('/') || full.is_dir() {
                     // `git ls-files` collapses untracked directories to a
@@ -46,7 +50,7 @@ pub async fn list_files(repo: &str, include_ignored: bool) -> Result<Vec<wire::P
                     let _ = walk_files(std::path::Path::new(&repo), &full, &mut files);
                     continue;
                 }
-                if full.exists() && !is_ignored_path(path) {
+                if full.exists() {
                     files.push(wire::ProjectFile {
                         path: path.to_string(),
                         changed: changed.contains(path),
@@ -145,6 +149,32 @@ mod tests {
         assert!(is_ignored_path(".warpforge/worktrees/t_a/"));
         // A bare `worktrees` folder elsewhere is not Warpforge's, and must stay.
         assert!(!is_ignored_path("src/worktrees/mod.rs"));
+    }
+
+    #[tokio::test]
+    async fn list_files_skips_ignored_dirs_before_walking() {
+        let dir = std::env::temp_dir().join(format!("wf-listing-ignored-{}", uuid::Uuid::new_v4()));
+        init_repo(&dir).await;
+        let repo = dir.to_str().unwrap();
+        std::fs::write(dir.join("a.txt"), "one\n").unwrap();
+        git(&dir, &["add", "."]).await;
+        git(&dir, &["commit", "-q", "-m", "init"]).await;
+
+        // git collapses the nested repo to a "node_modules/pkg/" directory
+        // entry, the shape that would otherwise be walked.
+        let pkg = dir.join("node_modules").join("pkg");
+        init_repo(&pkg).await;
+        std::fs::write(pkg.join("index.js"), "x\n").unwrap();
+        std::fs::create_dir_all(dir.join("node_modules/loose")).unwrap();
+        std::fs::write(dir.join("node_modules/loose/b.js"), "x\n").unwrap();
+
+        let files = list_files(repo, true).await.unwrap();
+        assert_eq!(
+            files.iter().map(|f| f.path.as_str()).collect::<Vec<_>>(),
+            vec!["a.txt"]
+        );
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[tokio::test]
