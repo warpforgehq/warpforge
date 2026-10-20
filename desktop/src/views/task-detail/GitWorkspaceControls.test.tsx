@@ -8,6 +8,7 @@ const { request } = vi.hoisted(() => ({
 
 vi.mock("../../daemon", () => ({ daemon: { request } }));
 
+import { ContextMenuProvider } from "../../hooks/useContextMenu";
 import { useUi } from "../../store/ui";
 import { GitWorkspaceControls } from "./GitWorkspaceControls";
 
@@ -15,12 +16,14 @@ function renderControls() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <GitWorkspaceControls
-        taskId="task-1"
-        branch="main"
-        onOpenCommit={vi.fn<() => void>()}
-        onOpenPush={vi.fn<() => void>()}
-      />
+      <ContextMenuProvider>
+        <GitWorkspaceControls
+          taskId="task-1"
+          branch="main"
+          onOpenCommit={vi.fn<() => void>()}
+          onOpenPush={vi.fn<() => void>()}
+        />
+      </ContextMenuProvider>
     </QueryClientProvider>,
   );
 }

@@ -1,6 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
+
+import { ContextMenuProvider } from "@/hooks/useContextMenu";
 
 import { BranchList } from "./BranchList";
 import { buildBranchTree, flattenBranchTree, type BranchRow } from "./branchTree";
@@ -14,10 +17,12 @@ function rows(branches: string[]): BranchRow[] {
 
 const noop = vi.fn<() => void>();
 
+const renderList = (ui: ReactElement) => render(<ContextMenuProvider>{ui}</ContextMenuProvider>);
+
 describe("BranchList", () => {
   it("marks the current branch at the end of its row, with nothing prefixed", () => {
     const localRows = rows(["main", "feat/one", "release"]);
-    const { container } = render(
+    const { container } = renderList(
       <BranchList
         localRows={localRows}
         remoteRows={[]}
@@ -42,7 +47,7 @@ describe("BranchList", () => {
 
   it("opens the branch actions at the cursor on right-click", async () => {
     const onAction = vi.fn<(action: string, branch: string, remote: boolean) => void>();
-    const { container } = render(
+    const { container } = renderList(
       <BranchList
         localRows={rows(["main"])}
         remoteRows={[]}
@@ -68,7 +73,7 @@ describe("BranchList", () => {
 
   it("lists main first, and a remote row carries no check", () => {
     const localRows = rows(["main", "feat/one", "release"]);
-    const { container } = render(
+    const { container } = renderList(
       <BranchList
         localRows={localRows}
         remoteRows={[
@@ -97,7 +102,7 @@ describe("BranchList", () => {
         { branch: "warpforge/task/t_9", path: "/repo/.warpforge/worktrees/t_9", taskId: "t_9" },
       ],
     ]);
-    const { container } = render(
+    const { container } = renderList(
       <BranchList
         localRows={[]}
         remoteRows={[]}

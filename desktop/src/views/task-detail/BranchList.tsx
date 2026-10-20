@@ -1,13 +1,6 @@
 import { Check, ChevronRight, FolderGit2, GitBranch } from "lucide-react";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuPortal,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +8,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useContextMenu } from "@/hooks/useContextMenu";
 import { cn } from "@/lib/utils";
 import type { BranchWorktree } from "@/protocol";
 
@@ -203,92 +197,92 @@ function BranchRowLine({
     onToggleMenu(null);
     onAction(action, branch, remote);
   };
+  const openContextMenu = useContextMenu();
+  const onRowContextMenu = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openContextMenu({
+      at: { x: e.clientX, y: e.clientY },
+      items: actions.map(([id, label]) => ({
+        type: "item" as const,
+        id,
+        label,
+        destructive: id === "delete",
+      })),
+      handlers: new Map(actions.map(([id]) => [id, () => rowAction(id)])),
+    });
+  };
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div className="relative">
-          <div
-            data-branch={branch}
-            className={cn(
-              "group/row flex w-full items-center gap-1 rounded px-1 py-1 text-left text-[13px]",
-              isCurrent ? "bg-accent text-foreground" : "hover:bg-accent/50",
-            )}
-            style={{ paddingLeft: `${row.depth * 12 + 6}px` }}
+    <div className="relative" onContextMenu={onRowContextMenu}>
+      <div
+        data-branch={branch}
+        className={cn(
+          "group/row flex w-full items-center gap-1 rounded px-1 py-1 text-left text-[13px]",
+          isCurrent ? "bg-accent text-foreground" : "hover:bg-accent/50",
+        )}
+        style={{ paddingLeft: `${row.depth * 12 + 6}px` }}
+      >
+        {remote && <GitBranch className="size-3.5 shrink-0 text-muted-foreground/60" />}
+        <ChevronRight
+          aria-hidden="true"
+          className={cn("size-3.5 shrink-0 transition-transform", menuOpen && "rotate-90")}
+        />
+        <button
+          type="button"
+          onClick={openMenu}
+          title={row.branch}
+          className="min-w-0 flex-1 truncate text-left"
+        >
+          {row.label}
+        </button>
+        {holderLabel && (
+          <FolderGit2
+            role="img"
+            aria-label={holderLabel}
+            className="size-3 shrink-0 text-muted-foreground/70"
           >
-            {remote && <GitBranch className="size-3.5 shrink-0 text-muted-foreground/60" />}
-            <ChevronRight
-              aria-hidden="true"
-              className={cn("size-3.5 shrink-0 transition-transform", menuOpen && "rotate-90")}
-            />
-            <button
-              type="button"
-              onClick={openMenu}
-              title={row.branch}
-              className="min-w-0 flex-1 truncate text-left"
-            >
-              {row.label}
-            </button>
-            {holderLabel && (
-              <FolderGit2
-                role="img"
-                aria-label={holderLabel}
-                className="size-3 shrink-0 text-muted-foreground/70"
-              >
-                <title>{holderLabel}</title>
-              </FolderGit2>
-            )}
-            {/* The current branch is marked at the end of the row, where it reads
-                as "this one" rather than as a prefix that indents it away from
-                every other branch. */}
-            {isCurrent && <Check className="size-3.5 shrink-0 text-foreground" />}
-          </div>
-          <DropdownMenu
-            open={menuOpen}
-            modal={false}
-            onOpenChange={(open) => onToggleMenu(open ? branch : null)}
+            <title>{holderLabel}</title>
+          </FolderGit2>
+        )}
+        {/* The current branch is marked at the end of the row, where it reads
+            as "this one" rather than as a prefix that indents it away from
+            every other branch. */}
+        {isCurrent && <Check className="size-3.5 shrink-0 text-foreground" />}
+      </div>
+      <DropdownMenu
+        open={menuOpen}
+        modal={false}
+        onOpenChange={(open) => onToggleMenu(open ? branch : null)}
+      >
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            title={row.branch}
+            className="absolute inset-0 z-10 cursor-pointer opacity-0"
+            aria-label={`Actions for ${branch}`}
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuPortal>
+          <DropdownMenuContent
+            side="right"
+            align="start"
+            sideOffset={6}
+            collisionPadding={8}
+            className="w-72"
           >
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                title={row.branch}
-                className="absolute inset-0 z-10 cursor-pointer opacity-0"
-                aria-label={`Actions for ${branch}`}
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuPortal>
-              <DropdownMenuContent
-                side="right"
-                align="start"
-                sideOffset={6}
-                collisionPadding={8}
-                className="w-72"
+            {actions.map(([id, label]) => (
+              <DropdownMenuItem
+                key={id}
+                onSelect={() => rowAction(id)}
+                className={id === "delete" ? "text-destructive focus:text-destructive" : undefined}
               >
-                {actions.map(([id, label]) => (
-                  <DropdownMenuItem
-                    key={id}
-                    onSelect={() => rowAction(id)}
-                    className={
-                      id === "delete" ? "text-destructive focus:text-destructive" : undefined
-                    }
-                  >
-                    {label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenuPortal>
-          </DropdownMenu>
-        </div>
-      </ContextMenuTrigger>
-      <ContextMenuPortal>
-        <ContextMenuContent className="w-72">
-          {actions.map(([id, label]) => (
-            <ContextMenuItem key={id} onSelect={() => rowAction(id)} destructive={id === "delete"}>
-              {label}
-            </ContextMenuItem>
-          ))}
-        </ContextMenuContent>
-      </ContextMenuPortal>
-    </ContextMenu>
+                {label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenuPortal>
+      </DropdownMenu>
+    </div>
   );
 }
 

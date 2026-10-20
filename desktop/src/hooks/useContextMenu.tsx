@@ -2,7 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -67,18 +67,16 @@ const ContextMenuContext = createContext<OpenContextMenu | null>(null);
  */
 export function ContextMenuProvider({ children }: { children: ReactNode }) {
   const [request, setRequest] = useState<ShowContextMenuRequest | null>(null);
-  const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLSpanElement>(null);
 
   const openMenu = useCallback<OpenContextMenu>((next) => {
     setRequest(next);
-    setOpen(true);
   }, []);
 
-  // Radix only opens from a real `contextmenu` event: replay it on a hidden
-  // trigger parked at the requested point so the menu anchors there.
-  useEffect(() => {
-    if (!open || !request) return;
+  // Radix keeps its anchor in trigger state that only a `contextmenu` event
+  // updates, so replay it before paint; setting `open` ourselves paints at (0,0).
+  useLayoutEffect(() => {
+    if (!request) return;
     triggerRef.current?.dispatchEvent(
       new MouseEvent("contextmenu", {
         bubbles: true,
@@ -88,17 +86,17 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
         clientY: request.at.y,
       }),
     );
-  }, [open, request]);
-
-  const handleOpenChange = (next: boolean) => {
-    setOpen(next);
-    if (!next) setRequest(null);
-  };
+  }, [request]);
 
   return (
     <ContextMenuContext.Provider value={openMenu}>
       {children}
-      <ContextMenu open={open} onOpenChange={handleOpenChange}>
+      <ContextMenu
+        modal={false}
+        onOpenChange={(next) => {
+          if (!next) setRequest(null);
+        }}
+      >
         <ContextMenuTrigger asChild>
           <span
             ref={triggerRef}
