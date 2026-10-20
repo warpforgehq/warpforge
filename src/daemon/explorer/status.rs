@@ -73,9 +73,22 @@ async fn git_status(root: String) -> Result<wire::GitStatus> {
         .output()
         .await?;
     if !out.status.success() {
+        if !is_git_checkout(&root).await {
+            return Ok(wire::GitStatus::default());
+        }
         bail!("{}", String::from_utf8_lossy(&out.stderr).trim());
     }
     Ok(parse(&out.stdout, STATUS_CAP))
+}
+
+/// Asked only after a failure, so a non-git project costs one extra spawn
+/// and git's localized error text is never parsed.
+async fn is_git_checkout(root: &str) -> bool {
+    tokio::process::Command::new("git")
+        .args(["-C", root, "rev-parse", "--git-dir"])
+        .output()
+        .await
+        .is_ok_and(|out| out.status.success())
 }
 
 fn parse(stdout: &[u8], cap: usize) -> wire::GitStatus {
@@ -149,6 +162,17 @@ mod tests {
             ]
         );
         assert!(!status.truncated);
+    }
+
+    #[tokio::test]
+    async fn a_non_git_project_has_no_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.rs"), "a").unwrap();
+        let status = StatusRuns::default()
+            .status(dir.path().to_str().unwrap())
+            .await
+            .unwrap();
+        assert_eq!(*status, wire::GitStatus::default());
     }
 
     #[test]
