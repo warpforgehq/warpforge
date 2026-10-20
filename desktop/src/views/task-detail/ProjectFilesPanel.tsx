@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { EmptyState } from "@/components/ui/empty-state";
+import { SkeletonBar, SkeletonBlock, skeletonWidth } from "@/components/ui/skeleton";
 import { PaneHeader } from "@/components/workspace";
 import { getFileIconUrl } from "@/lib/fileIcon";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,7 @@ export interface ProjectTreeState {
 export function ProjectFilesPanel({
   files,
   error,
+  loading = false,
   selected,
   onSelect,
   taskId,
@@ -53,6 +55,7 @@ export function ProjectFilesPanel({
 }: {
   files: ProjectFile[];
   error: string | null;
+  loading?: boolean;
   selected: string | null;
   onSelect: (path: string) => void;
   taskId?: string;
@@ -397,7 +400,22 @@ export function ProjectFilesPanel({
         className="min-h-0 flex-1 overflow-auto overflow-x-auto py-1.5"
       >
         {rows.length === 0 && !error ? (
-          <EmptyState compact icon={FileText} title="No files found" />
+          loading ? (
+            <SkeletonBlock
+              aria-label="Loading project files"
+              data-testid="project-files-skeleton"
+              className="space-y-2.5 px-3 py-2"
+            >
+              {Array.from({ length: 8 }, (_, row) => (
+                <div key={row} className="flex h-4 items-center gap-2">
+                  <SkeletonBar className="size-3.5 shrink-0" />
+                  <SkeletonBar h={10} w={skeletonWidth(row, 0, 30, 70)} />
+                </div>
+              ))}
+            </SkeletonBlock>
+          ) : (
+            <EmptyState compact icon={FileText} title="No files found" />
+          )
         ) : (
           <div
             className="relative"

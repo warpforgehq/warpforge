@@ -59,6 +59,7 @@ export function useTaskQueries(
   });
   const projectFiles = Array.isArray(fileListQuery.data) ? fileListQuery.data : EMPTY_PROJECT_FILES;
   const fileListError = fileListQuery.error?.message ?? null;
+  const fileListLoading = fileListQuery.isLoading;
 
   const mentionFilesQuery = useQuery({
     placeholderData: keepPreviousData,
@@ -94,6 +95,7 @@ export function useTaskQueries(
     diffQuery,
     projectFiles,
     fileListError,
+    fileListLoading,
     mentionFiles,
     mentionFilesQuery,
     fileDoc,

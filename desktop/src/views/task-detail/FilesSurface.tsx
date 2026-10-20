@@ -30,6 +30,7 @@ export interface OpenFileTab {
 export function FilesSurface({
   projectFiles,
   fileListError,
+  fileListLoading,
   activeFilePath,
   onSelectTreeFile,
   openTabs,
@@ -55,6 +56,7 @@ export function FilesSurface({
 }: {
   projectFiles: ProjectFile[];
   fileListError: string | null;
+  fileListLoading?: boolean;
   activeFilePath: string | null;
   onSelectTreeFile: (path: string) => void;
   openTabs: OpenFileTab[];
@@ -208,6 +210,7 @@ export function FilesSurface({
           <ProjectFilesPanel
             files={projectFiles}
             error={fileListError}
+            loading={fileListLoading}
             selected={activeFilePath}
             onSelect={onSelectTreeFile}
             rootPath={rootPath}

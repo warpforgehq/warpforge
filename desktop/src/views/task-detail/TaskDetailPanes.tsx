@@ -67,6 +67,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
     editable,
     projectFiles,
     fileListError,
+    fileListLoading,
     mentionFiles,
     mentionFilesQuery,
     fileDoc,
@@ -220,6 +221,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
             <FilesSurface
               projectFiles={projectFiles}
               fileListError={fileListError}
+              fileListLoading={fileListLoading}
               activeFilePath={activeFilePath}
               onSelectTreeFile={openFileTab}
               openTabs={openTabs}
