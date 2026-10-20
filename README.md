@@ -140,14 +140,10 @@ Prerequisites, running the checks, and building a local bundle: **[Build from so
 
 ## CLI
 
-The Rust binary manages the project registry directly and can run the daemon by hand:
+The Rust binary runs the daemon the desktop app is built on; projects and agents are managed in the desktop app.
 
 ```bash
-warpforge add <path>        # register a project
-warpforge remove <name>     # unregister it
-warpforge list              # list projects and port ranges
-warpforge init [path]       # create workspace config (--add also registers it)
-warpforge bootstrap [path]  # generate a config interactively with an agent
+warpforge daemon   # run the local daemon by hand (development)
 ```
 
 `install.sh` installs this as `wf` from published archives (macOS Apple Silicon only for now); it does not install the desktop app. Full command reference: **[CLI reference](https://warpforge.app/reference/cli/)**.

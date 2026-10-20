@@ -1,7 +1,7 @@
 
 ## Project: Warpforge
 
-Workspace orchestrator with TUI and desktop interfaces. Manages multiple dev projects: isolated services with auto-resolved ports, embedded agent terminals (Codex, Claude), instant context switching.
+Workspace orchestrator with a desktop interface. Manages multiple dev projects: isolated services with auto-resolved ports, embedded agent terminals (Codex, Claude), instant context switching.
 
 ### Architecture
 
@@ -16,10 +16,9 @@ Workspace orchestrator with TUI and desktop interfaces. Manages multiple dev pro
 - **Port isolation:** each project gets 100-port range (4000+), `${svc.port}` interpolation in env vars
 - **Daemon IPC:** WebSocket JSON-RPC (port 61814)
 
-**TUI (Rust):**
-- **Framework:** Ratatui + Crossterm
-- **Binary:** `cargo build --release` → `target/release/warpforge`
-- **Key crates:** ratatui 0.29, crossterm 0.28 (event-stream), vt100 0.15
+**Binary (Rust):** `cargo build --release` → `target/release/warpforge`. Only
+`warpforge daemon` (run by desktop as a sidecar) and the hidden
+`__mcp-orchestrator` (spawned by the daemon for orchestrator agents).
 
 **Desktop (TypeScript + Tauri):**
 - **Framework:** Tauri v2 (Rust shell + WebView)
@@ -31,28 +30,22 @@ Workspace orchestrator with TUI and desktop interfaces. Manages multiple dev pro
 - **Linting:** oxlint + oxfmt
 - **Tests:** Vitest + React Testing Library
 
-**Key crates (Rust):** tokio, clap 4, serde, anyhow, portable-pty 0.8, vt100 0.15, ratatui 0.29, crossterm 0.28
+**Key crates (Rust):** tokio, clap 4, serde, anyhow, portable-pty 0.8, vt100 0.15
 
 ### Source layout (`src/`)
 
 ```
-main.rs          — CLI entry (clap), subcommands: add, remove, list, ui
-app.rs           — TUI event loop (tokio::select), AppState, InputMode (Navigate/Terminal), key handling
+main.rs          — CLI entry (clap), subcommands: daemon, __mcp-orchestrator
 agent.rs         — AgentManager: PTY spawn via portable-pty, vt100 parser, input/output channels
 service.rs       — ServiceManager: sh -c spawn, stdout/stderr log capture, process-group kill, port allocation
 config.rs        — workspace config parsing + auto-detect (package.json scripts, docker-compose)
 workflow_config.rs — .warpforge/workflows/*.yaml templates: schema, validation, prompt rendering
 registry.rs      — ~/.warpforge/projects.json CRUD
 ports.rs         — Port range allocation (4000+), ${svc.port} env interpolation
-tui/
-  mod.rs         — render dispatch (Dashboard vs Project screen)
-  dashboard.rs   — Project list with service/agent status, j/k nav, Enter to open
-  project.rs     — Split layout: sidebar (services + agents) + right pane (terminal or logs)
-  terminal.rs    — TerminalPane widget: vt100 Screen → ratatui Buffer (cell-by-cell, colors, cursor)
 ```
 
 **Daemon (`src/daemon/`):**
-- WebSocket server (port 61814) that desktop/TUI connect to
+- WebSocket server (port 61814) that desktop connects to
 - Manages agents, services, port-forwards, tasks, git operations
 - Key files: server.rs, actor.rs, task.rs, agents.rs, diff.rs
 - **workflow.rs** — deterministic workflow pipeline: run state, stage prompts,
@@ -89,14 +82,9 @@ lib/                  — Utilities (38 files: sessionActivity, sessionTiming, e
 
 ### What Works (Rust)
 
-- **CLI:** `warpforge add/remove/list` — project registry CRUD
-- **TUI dashboard:** project list with service status, agent elapsed time, j/k navigation
-- **TUI project view:** sidebar (services + agents list) + agent terminal or logs pane
-- **Agent terminal:** portable-pty + vt100 renders full-color terminal with cursor, bold, italic, underline, inverse
-- **Agent input mode:** `i` enters terminal mode (all keys forwarded to PTY), `Esc` exits
-- **Multi-agent tabs:** `Tab` cycles, `1-9` direct switch, `n` spawns new claude session, `x` kills
-- **Service management:** auto-start on project open (from .workspace.yaml), `u/d` start/stop individual services
-- **Service logs:** `l` toggles logs pane, scroll with j/k, `[/]` switch between services
+- **Daemon:** `warpforge daemon` — owns all state, serves the WebSocket API desktop connects to
+- **Agent PTYs:** portable-pty + vt100 screen buffer per agent
+- **Service management:** `sh -c` spawn, log capture, readiness, start/stop/restart
 - **Port isolation:** per-project 100-port ranges, env interpolation
 - **Process cleanup:** process-group kill (`kill -9 -<pgid>`) for service subtrees, PTY drop on agent kill
 
@@ -127,21 +115,17 @@ the rejected alternatives and the invariants that are not visible in the code �
 each entry's *Invariants* section lists mistakes already made once. Add a new
 numbered record when you make a decision a future reader could not infer.
 
-- **Ratatui + vt100** for terminal-in-terminal: native cell-by-cell rendering with zero translation layer. Previous TypeScript/OpenTUI attempt couldn't render ANSI properly.
-- **vt100 + TerminalPane:** Agent PTY output → `vt100::Parser::process()` → `Screen` → iterate cells with colors/attributes → write directly to ratatui `Buffer`. Cursor rendered via `Modifier::REVERSED`.
 - **portable-pty:** Cross-platform PTY. Reader/writer in `spawn_blocking` tasks, input via `mpsc::unbounded_channel`.
 - **Process groups:** Services spawn with `process_group(0)` so `kill -9 -<pgid>` kills sh→npm→node tree.
-- **Event-driven rendering:** `tokio::select!` on crossterm events + agent PTY data + service log events. No polling.
 - **`sh -c "<command>"`** for services — commands can contain pipes, `&&`, `cd`, etc.
-- **Navigate/Terminal input modes:** Navigate = TUI keys (j/k/Tab/n/x), Terminal = raw PTY forwarding. `Esc` always exits terminal mode, `Ctrl+C` always quits app.
 
 ### Build & Run
 
 ```bash
-# Rust TUI
+# Rust daemon (desktop dev builds it as the sidecar)
 cargo build --release
-# or during dev:
-cargo run
+# or run it by hand:
+cargo run -- daemon
 
 # Desktop (Tauri + React)
 cd desktop
