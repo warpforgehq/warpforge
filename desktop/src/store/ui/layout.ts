@@ -9,6 +9,8 @@ export interface LayoutState {
   sidebarCollapsed: boolean;
   /** File-tree panel inside the Files surface collapsed to a thin rail. */
   filesPanelCollapsed: boolean;
+  /** The Explorer lists gitignored entries, greyed; one value for every project. */
+  explorerShowIgnored: boolean;
   /** Service/port-forward sidebar inside the Runtime surface collapsed. */
   runtimeSidebarCollapsed: boolean;
   /** Changes rail inside the Diff surface collapsed. */
@@ -25,6 +27,7 @@ export interface LayoutState {
   toggleSidebarCollapsed: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleFilesPanelCollapsed: () => void;
+  toggleExplorerShowIgnored: () => void;
   toggleRuntimeSidebarCollapsed: () => void;
   toggleDiffPanelCollapsed: () => void;
   togglePullFilesPanelCollapsed: () => void;
@@ -41,6 +44,7 @@ export const createLayoutSlice: UiSlice<LayoutState> = (set) => ({
   sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
   sidebarCollapsed: false,
   filesPanelCollapsed: false,
+  explorerShowIgnored: true,
   runtimeSidebarCollapsed: false,
   diffPanelCollapsed: false,
   pullFilesPanelCollapsed: false,
@@ -52,6 +56,7 @@ export const createLayoutSlice: UiSlice<LayoutState> = (set) => ({
   toggleSidebarCollapsed: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
   toggleFilesPanelCollapsed: () => set((s) => ({ filesPanelCollapsed: !s.filesPanelCollapsed })),
+  toggleExplorerShowIgnored: () => set((s) => ({ explorerShowIgnored: !s.explorerShowIgnored })),
   toggleRuntimeSidebarCollapsed: () =>
     set((s) => ({ runtimeSidebarCollapsed: !s.runtimeSidebarCollapsed })),
   toggleDiffPanelCollapsed: () => set((s) => ({ diffPanelCollapsed: !s.diffPanelCollapsed })),

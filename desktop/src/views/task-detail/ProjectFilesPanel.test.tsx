@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { explorerFromPaths } from "@/lib/explorerFromPaths";
+import { useUi } from "@/store/ui";
 
 import { ProjectFilesPanel } from "./ProjectFilesPanel";
 
@@ -37,6 +38,7 @@ function listedPaths() {
 }
 
 beforeEach(() => {
+  useUi.setState({ explorerShowIgnored: true });
   request.mockReset();
   request.mockImplementation(
     explorerFromPaths(["desktop/src/TaskDetail.tsx", "README.md", "coverage/lcov.info"], {
@@ -91,6 +93,23 @@ describe("ProjectFilesPanel", () => {
 
     expect(screen.queryByRole("button", { name: "src" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "TaskDetail.tsx" })).not.toBeInTheDocument();
+  });
+
+  it("hides ignored entries for every project when the toggle is off", async () => {
+    wrap(
+      <ProjectFilesPanel taskId="t1" selected={null} onSelect={vi.fn<(path: string) => void>()} />,
+    );
+
+    expect(await screen.findByRole("button", { name: "coverage" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Hide ignored files" }));
+
+    expect(screen.queryByRole("button", { name: "coverage" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "README.md" })).toBeInTheDocument();
+    expect(useUi.getState().explorerShowIgnored).toBe(false);
+    expect(listedPaths()).toEqual([""]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show ignored files" }));
+    expect(screen.getByRole("button", { name: "coverage" })).toBeInTheDocument();
   });
 
   it("opens a file on click", async () => {

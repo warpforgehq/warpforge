@@ -1,11 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { FileText } from "lucide-react";
+import { Eye, EyeOff, FileText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonBar, SkeletonBlock, skeletonWidth } from "@/components/ui/skeleton";
 import { PaneHeader } from "@/components/workspace";
+import { cn } from "@/lib/utils";
+import { useUi } from "@/store/ui";
 
 import { ExplorerRow, type ExplorerRowHandlers } from "./explorer/ExplorerRow";
 import { buildVisibleRows, parentFolders, staleExpanded } from "./explorer/explorerRows";
@@ -49,6 +51,8 @@ export function ProjectFilesPanel({
   resetKey?: string;
 }) {
   const queryClient = useQueryClient();
+  const showIgnored = useUi((state) => state.explorerShowIgnored);
+  const toggleShowIgnored = useUi((state) => state.toggleExplorerShowIgnored);
   const subject = useMemo(() => ({ project, taskId: taskId || undefined }), [project, taskId]);
   const [localOpenFolders, setLocalOpenFolders] = useState<Set<string>>(() => new Set());
   const openFolders = useMemo(
@@ -90,8 +94,8 @@ export function ProjectFilesPanel({
   }, []);
 
   const rows = useMemo(
-    () => buildVisibleRows(listing, openFolders, status, true),
-    [listing, openFolders, status],
+    () => buildVisibleRows(listing, openFolders, status, showIgnored),
+    [listing, openFolders, showIgnored, status],
   );
 
   // Deeply nested trees push file names off the panel's fixed width. Give the
@@ -225,7 +229,24 @@ export function ProjectFilesPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <PaneHeader title="Project Files" />
+      <PaneHeader
+        title="Project Files"
+        actions={
+          <button
+            type="button"
+            aria-label={showIgnored ? "Hide ignored files" : "Show ignored files"}
+            title={showIgnored ? "Hide ignored files" : "Show ignored files"}
+            aria-pressed={showIgnored}
+            onClick={toggleShowIgnored}
+            className={cn(
+              "rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground",
+              showIgnored && "text-foreground",
+            )}
+          >
+            {showIgnored ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+          </button>
+        }
+      />
       {rootError && <p className="border-b px-3 py-2 text-xs text-destructive">{rootError}</p>}
       <div
         ref={scrollRef}
