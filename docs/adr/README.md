@@ -39,3 +39,4 @@ stale and then misleads.
 | [0025](0025-inline-html-renders.md) | Agents show HTML pages inline, framed and served by the desktop |
 | [0026](0026-peer-sessions.md) | Parallel sessions see each other in a directory and message as peers |
 | [0027](0027-smiths.md) | A Smith is a persistent, named, universal agent that outlives its tasks |
+| [0028](0028-explorer-lazy-tree.md) | The Explorer reads directories on demand, and a watcher says what changed |
