@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import { Toaster } from "sonner";
 
 import App from "./App";
+import { ContextMenuProvider } from "./hooks/useContextMenu";
 import { installControlCharGuard } from "./lib/controlCharInput";
 import { queryClient } from "./query";
 
@@ -57,7 +58,9 @@ requestAnimationFrame(() => {
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <ContextMenuProvider>
+        <App />
+      </ContextMenuProvider>
       <Toaster
         theme="dark"
         position="bottom-right"
