@@ -1,6 +1,6 @@
 # 0028 — The Explorer reads directories on demand, and a watcher says what changed
 
-**Status:** proposed (2026-10-20)
+**Status:** accepted (2026-10-20)
 
 ## Context
 
@@ -18,9 +18,12 @@ on the Explorer's refresh button, and on window focus once the 5 s `staleTime`
 has passed. Five other surfaces (`@` mentions, Quick Open, Focus pane, New Task,
 Smith chat) fetch the same RPC with `include_ignored=false`.
 
-A quick fix (filter before stat, tree on `include_ignored=false`, a loading
-skeleton) removes the 30 s case. It does not change the shape: one whole-repo
-listing per refetch, and "changed" computed by a full `working_diff` each time.
+A quick fix removes the 30 s case and keeps the tree on `include_ignored=true`:
+the name filter runs before the stat, and ignored paths come from a second
+`ls-files --others --ignored --exclude-standard --directory` pass, which
+collapses each ignored directory to one entry. `file.list` on kodjin went from
+~35 s to 0.5 s. It does not change the shape: one whole-repo listing per
+refetch, and "changed" computed by a full `working_diff` each time.
 
 Zed's worktree, read in its source, is the reference design: a filesystem walk
 with `ignore`'s gitignore matcher; ignored directories never read until
@@ -34,14 +37,13 @@ by path; a virtualised list of visible rows.
 directory's children when it is drawn expanded — the root on open, a folder on
 expand. An entry is `{ name, kind: file|dir|symlink, ignored }`. The daemon
 reads the directory with `read_dir`, classifies each child with the ignore
-matcher, and never descends. `node_modules` costs one `read_dir` when someone
-opens it and nothing otherwise. The daemon keeps no copy of a listing:
+matcher, and never descends. An ignored `coverage/` costs one `read_dir` when
+someone opens it and nothing otherwise. The daemon keeps no copy of a listing:
 `read_dir` on a directory of a few hundred entries costs less than keeping
 a cached copy correct.
 *Rejected:* **keep `git ls-files` plus the reorder** — that is the quick fix; it
-still lists and serialises the whole tree per refetch, still needs `working_diff`
-for the change markers, and cannot show an ignored folder's contents without
-returning to the 712k-line listing.
+still lists and serialises the whole tree per refetch (0.5 s on kodjin, two git
+passes and a `working_diff` each time), and every trigger above pays it again.
 *Rejected:* **a streamed snapshot plus deltas** (Zed's `UpdateWorktree`) — it
 needs entry ids, scan ids, chunking and a resync protocol on reconnect, and buys
 little here: our directories are small, the webview never needs entries it is
@@ -50,11 +52,13 @@ worth that machinery when the client must hold the whole tree; ours does not.
 *Rejected:* **pushing the full tree once and patching it** — the same cost as
 today at first paint, and memory in the webview proportional to the repo.
 
-**Ignore classification is the `ignore` crate's matcher, not git.** A matcher
-stack per root: nested `.gitignore`s along the path, `.git/info/exclude`, the
-global `core.excludesFile`, then Warpforge's own rules (`HEAVY_DIRS`,
-`IGNORED_NAMES`, task worktree paths). Matchers are built lazily per loaded
-directory and dropped with it. A non-git project gets only Warpforge's rules.
+**Ignore classification is the `ignore` crate's matcher, not git.** A path is
+*hidden*, *ignored* or neither. Hidden is Warpforge's own rules, checked first:
+`HEAVY_DIRS`, `IGNORED_NAMES` and task worktree paths (`is_ignored_path`).
+Ignored is git's rules: nested `.gitignore`s along the path,
+`.git/info/exclude` and the global `core.excludesFile`. Matchers are built
+lazily per loaded directory and dropped with it. A non-git project has no
+ignored paths, only hidden ones.
 *Rejected:* `git check-ignore` per listing — a subprocess on every expand.
 
 **The watcher reports which directories changed, not what is in them.** One
@@ -114,10 +118,14 @@ For a watched root the daemon caches that list and rebuilds it only after an
 *Rejected:* server-side search per keystroke — a round trip per character for
 a list that fits in memory many times over.
 
-**Show Ignored Files is a client-side filter.** `dir.list` always returns
-ignored children, marked. The toggle hides or shows them, greyed, with no
-extra RPC; expanding an ignored folder is an ordinary `dir.list`. `.git` and
-task worktree directories are never listed, whatever the toggle says.
+**Show Ignored Files is a global client-side filter, on by default.** That
+is the tree users already have: `.env`, `logs/`, `coverage/` visible and
+greyed. `dir.list` always returns ignored children, marked; the toggle hides
+or shows them with no extra RPC, and expanding an ignored folder is an
+ordinary `dir.list`. Hidden paths — `HEAVY_DIRS` (`.git`, `node_modules`,
+`target`, …), task worktrees, `IGNORED_NAMES` — are never listed, whatever the
+toggle says. The setting is one value for every project, persisted in the UI
+store.
 
 **Bounded memory.** Daemon, per watched root: the set of listed directories,
 their matchers, the last status (≤ 10,000 entries) and the mention list
@@ -143,9 +151,10 @@ for the mention list.
    so a dropped daemon ends them.
 2. **`git status` runs with `--no-optional-locks`.** Without it status refreshes
    the index, the watcher sees `index` change, and status runs again — forever.
-3. **The watcher never walks or watches an ignored tree it was not asked to
-   list.** (`explorer/watch.rs`) On Linux an `inotify` watch on `node_modules`
-   is the difference between working and exhausting the user's watch limit.
+3. **Nothing walks or watches a hidden tree, and nothing watches an ignored
+   tree it was not asked to list.** (`explorer/dir_list.rs`, `explorer/watch.rs`)
+   On Linux an `inotify` watch on `node_modules` is the difference between
+   working and exhausting the user's watch limit.
 4. **A project's watcher drops events under task worktree paths**
    (`is_worktree_path`). Worktrees live inside the project root; without the
    filter an agent's edits in its worktree invalidate the project's tree.
