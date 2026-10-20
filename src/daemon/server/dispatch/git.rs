@@ -85,6 +85,32 @@ pub(super) async fn git_ignored(
     })
 }
 
+pub(super) async fn git_status(
+    handle: &DaemonHandle,
+    task_id: String,
+    project: Option<String>,
+) -> Result<serde_json::Value, wire::RpcError> {
+    let Some(root) = handle.resolve_root(&task_id, project).await else {
+        return Err(wire::RpcError {
+            code: wire::ErrorCode::NotFound,
+            message: "no checkout for this task or project".into(),
+        });
+    };
+    let status = handle
+        .explorer
+        .status
+        .status(&root)
+        .await
+        .map_err(|e| wire::RpcError {
+            code: wire::ErrorCode::Internal,
+            message: format!("git status failed: {e}"),
+        })?;
+    serde_json::to_value(&*status).map_err(|e| wire::RpcError {
+        code: wire::ErrorCode::Internal,
+        message: e.to_string(),
+    })
+}
+
 pub(super) async fn git_add(
     handle: &DaemonHandle,
     task_id: String,

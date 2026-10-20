@@ -17,6 +17,7 @@ pub(crate) fn spawn_pull_bridge(handle: &DaemonHandle, mut watch: mpsc::Unbounde
     let cmd_tx = handle.cmd_tx.downgrade();
     let event_tx = handle.event_tx.clone();
     let pulls = handle.pulls.clone();
+    let explorer = handle.explorer.clone();
     let mut events = handle.event_tx.subscribe();
     tokio::spawn(async move {
         loop {
@@ -28,6 +29,7 @@ pub(crate) fn spawn_pull_bridge(handle: &DaemonHandle, mut watch: mpsc::Unbounde
                         cmd_tx,
                         event_tx: event_tx.clone(),
                         pulls: pulls.clone(),
+                        explorer: explorer.clone(),
                     };
                     crate::daemon::pull_status::refresh(&handle, Some(&[task_id]), Some(0)).await;
                 }

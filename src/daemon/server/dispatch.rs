@@ -95,6 +95,7 @@ pub(super) async fn dispatch(
         GitUpdate { task_id } => git::git_update(handle, task_id).await,
         GitBranches { task_id, project } => git::git_branches(handle, task_id, project).await,
         GitRoots { task_id, project } => git::git_roots(handle, task_id, project).await,
+        GitStatus { task_id, project } => git::git_status(handle, task_id, project).await,
         GitIgnored { task_id, project } => git::git_ignored(handle, task_id, project).await,
         GitAdd { task_id, paths } => git::git_add(handle, task_id, paths).await,
         GitIgnore { task_id, paths } => git::git_ignore(handle, task_id, paths).await,

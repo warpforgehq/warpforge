@@ -1,4 +1,4 @@
-//! The Explorer's lazy file tree: one directory per `dir.list` (ADR 0028).
+//! The Explorer's lazy file tree (ADR 0028): `dir.list` and `git.status`.
 
 use serde::{Deserialize, Serialize};
 
@@ -29,6 +29,25 @@ pub struct DirEntry {
 #[serde(rename_all = "camelCase")]
 pub struct DirListing {
     pub entries: Vec<DirEntry>,
+    #[serde(default)]
+    pub truncated: bool,
+}
+
+/// One changed path from `git.status`. `code` is porcelain v1's two-letter
+/// `XY` (index, worktree): `" M"`, `"A "`, `"??"`, `"UU"`, ….
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct StatusEntry {
+    pub path: String,
+    pub code: String,
+}
+
+/// Result of `git.status`. `truncated` means more paths changed than one
+/// reply carries.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GitStatus {
+    pub entries: Vec<StatusEntry>,
     #[serde(default)]
     pub truncated: bool,
 }

@@ -847,6 +847,15 @@ pub enum Method {
         #[serde(default)]
         project: Option<String>,
     },
+    /// Changed paths in the task's or project's checkout, for the Explorer's
+    /// markers. Concurrent calls for one checkout share a run.
+    #[serde(rename = "git.status")]
+    GitStatus {
+        #[serde(default)]
+        task_id: String,
+        #[serde(default)]
+        project: Option<String>,
+    },
     /// Switch the task's project repo to `branch`, carrying uncommitted changes
     /// across (stash → checkout → unstash). A conflict rolls back to the branch
     /// you were on with your changes intact.

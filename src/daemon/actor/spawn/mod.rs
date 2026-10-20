@@ -292,6 +292,7 @@ impl Daemon {
             cmd_tx,
             event_tx,
             pulls: Default::default(),
+            explorer: Default::default(),
         };
         let _ = handle
             .cmd_tx

@@ -14,6 +14,7 @@ pub struct DaemonHandle {
     pub cmd_tx: mpsc::Sender<Command>,
     pub(crate) event_tx: broadcast::Sender<Event>,
     pub(crate) pulls: std::sync::Arc<crate::daemon::pull_status::PullWatch>,
+    pub(crate) explorer: std::sync::Arc<crate::daemon::explorer::Explorer>,
 }
 
 impl DaemonHandle {
