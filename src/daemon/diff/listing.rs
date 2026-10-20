@@ -12,18 +12,48 @@ use super::{is_worktree_path, HEAVY_DIRS, IGNORED_NAMES};
 /// untracked); fall back to a small filesystem walk for non-git projects.
 /// `include_ignored` keeps .gitignore'd paths in the list.
 pub async fn list_files(repo: &str, include_ignored: bool) -> Result<Vec<wire::ProjectFile>> {
-    let mut args = vec!["-C", repo, "ls-files", "--cached", "--others"];
-    if !include_ignored {
-        args.push("--exclude-standard");
-    }
-    let out = Command::new("git").args(&args).output().await?;
+    let out = Command::new("git")
+        .args([
+            "-C",
+            repo,
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+        ])
+        .output()
+        .await?;
+
+    // Ignored paths get their own pass: listing them together enumerates every
+    // file under node_modules and target just to drop it. `--directory` collapses
+    // a whole ignored directory to one "dir/" entry, so only survivors are walked.
+    let ignored = if include_ignored && out.status.success() {
+        let out = Command::new("git")
+            .args([
+                "-C",
+                repo,
+                "ls-files",
+                "--others",
+                "--ignored",
+                "--exclude-standard",
+                "--directory",
+            ])
+            .output()
+            .await?;
+        out.status
+            .success()
+            .then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+    } else {
+        None
+    };
 
     // Both paths below stat every file in the project. That is synchronous
     // work, and left on a runtime worker it stalls whatever shares the thread —
     // it was measurably delaying the next request on the same connection. Hand
     // it to the blocking pool (ADR 0002).
     let repo = repo.to_string();
-    if out.status.success() {
+    if out.status.success() && (!include_ignored || ignored.is_some()) {
+        let ignored = ignored.unwrap_or_default();
         let changed = working_diff(&repo)
             .await
             .unwrap_or_default()
@@ -32,7 +62,10 @@ pub async fn list_files(repo: &str, include_ignored: bool) -> Result<Vec<wire::P
             .collect::<std::collections::HashSet<_>>();
         return tokio::task::spawn_blocking(move || {
             let mut files = Vec::new();
-            for line in String::from_utf8_lossy(&out.stdout).lines() {
+            for line in String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .chain(ignored.lines())
+            {
                 let path = line.trim();
                 if path.is_empty() {
                     continue;
@@ -58,6 +91,9 @@ pub async fn list_files(repo: &str, include_ignored: bool) -> Result<Vec<wire::P
                 }
             }
             files.sort_by(|a, b| a.path.cmp(&b.path));
+            // A tracked file inside an ignored directory comes from both passes:
+            // the cached list and the walked "dir/" entry. Keep the cached one.
+            files.dedup_by(|a, b| a.path == b.path);
             files
         })
         .await
@@ -218,6 +254,32 @@ mod tests {
             !files.iter().any(|f| f.path.contains("worktrees")),
             "task worktrees must not appear in the tree: {:?}",
             files.iter().map(|f| &f.path).collect::<Vec<_>>()
+        );
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn list_files_keeps_ignored_non_heavy_paths() {
+        let dir =
+            std::env::temp_dir().join(format!("wf-listing-ignored-keep-{}", uuid::Uuid::new_v4()));
+        init_repo(&dir).await;
+        let repo = dir.to_str().unwrap();
+        std::fs::write(dir.join(".gitignore"), ".env\nlogs/\nnode_modules/\n").unwrap();
+        std::fs::write(dir.join("a.txt"), "one\n").unwrap();
+        git(&dir, &["add", "."]).await;
+        git(&dir, &["commit", "-q", "-m", "init"]).await;
+
+        std::fs::write(dir.join(".env"), "SECRET=1\n").unwrap();
+        std::fs::create_dir_all(dir.join("logs")).unwrap();
+        std::fs::write(dir.join("logs").join("x.log"), "x\n").unwrap();
+        std::fs::create_dir_all(dir.join("node_modules").join("pkg")).unwrap();
+        std::fs::write(dir.join("node_modules").join("pkg").join("index.js"), "x\n").unwrap();
+
+        let files = list_files(repo, true).await.unwrap();
+        assert_eq!(
+            files.iter().map(|f| f.path.as_str()).collect::<Vec<_>>(),
+            vec![".env", ".gitignore", "a.txt", "logs/x.log"]
         );
 
         std::fs::remove_dir_all(&dir).ok();
