@@ -1,17 +1,15 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { focusManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { explorerFromPaths } from "@/lib/explorerFromPaths";
 import { useUi } from "@/store/ui";
+import { emitDaemonEvent, request, setDaemonConnection } from "@/test/fakeDaemon";
 
 import { ProjectFilesPanel } from "./ProjectFilesPanel";
 
-const { request } = vi.hoisted(() => ({
-  request: vi.fn<(method: string, params: unknown) => Promise<unknown>>(),
-}));
-vi.mock("@/daemon", () => ({ daemon: { request } }));
+vi.mock("@/daemon", () => import("@/test/fakeDaemon"));
 
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: ({ count }: { count: number }) => ({
@@ -145,4 +143,88 @@ describe("ProjectFilesPanel persisted tree state", () => {
       );
     });
   });
+});
+
+describe("ProjectFilesPanel live updates", () => {
+  function serve(files: string[], degraded = false) {
+    const tree = explorerFromPaths(files);
+    request.mockImplementation((method, params) =>
+      method === "fs.watch" ? Promise.resolve({ degraded, root: "/repo" }) : tree(method, params),
+    );
+  }
+  const callsOf = (method: string) => request.mock.calls.filter(([m]) => m === method);
+  const change = (dirs: string[], root = "/repo") =>
+    act(() =>
+      emitDaemonEvent({
+        data: { degraded: false, dirs, index_changed: true, rescan: false, root },
+        event: "fs.changed",
+      }),
+    );
+
+  it("watches its checkout while mounted and stops when it unmounts", async () => {
+    serve(["README.md"]);
+    const view = wrap(
+      <ProjectFilesPanel taskId="t1" selected={null} onSelect={vi.fn<(path: string) => void>()} />,
+    );
+    await waitFor(() => expect(callsOf("fs.watch")).toEqual([["fs.watch", { task_id: "t1" }]]));
+
+    view.unmount();
+    expect(callsOf("fs.unwatch")).toEqual([["fs.unwatch", { task_id: "t1" }]]);
+  });
+
+  it("refetches only the folder a change names, for its own root", async () => {
+    serve(["README.md", "src/a.ts"]);
+    wrap(
+      <ProjectFilesPanel taskId="t1" selected={null} onSelect={vi.fn<(path: string) => void>()} />,
+    );
+    await screen.findByRole("button", { name: "README.md" });
+    await waitFor(() => expect(callsOf("fs.watch")).toHaveLength(1));
+
+    serve(["README.md", "NEW.md", "src/a.ts"]);
+    await change([""], "/elsewhere");
+    expect(screen.queryByRole("button", { name: "NEW.md" })).not.toBeInTheDocument();
+
+    await change([""]);
+    expect(await screen.findByRole("button", { name: "NEW.md" })).toBeInTheDocument();
+    expect(listedPaths()).toEqual(["", ""]);
+  });
+
+  it("watches again after the daemon reconnects", async () => {
+    serve(["README.md"]);
+    wrap(
+      <ProjectFilesPanel taskId="t1" selected={null} onSelect={vi.fn<(path: string) => void>()} />,
+    );
+    await waitFor(() => expect(callsOf("fs.watch")).toHaveLength(1));
+
+    act(() => setDaemonConnection("disconnected"));
+    act(() => setDaemonConnection("connected"));
+    await waitFor(() => expect(callsOf("fs.watch")).toHaveLength(2));
+  });
+
+  it.each([
+    [false, 1],
+    [true, 2],
+  ])(
+    "with degraded=%s, refocusing the window lists the root %i time(s)",
+    async (degraded, times) => {
+      serve(["README.md"], degraded);
+      wrap(
+        <ProjectFilesPanel
+          taskId="t1"
+          selected={null}
+          onSelect={vi.fn<(path: string) => void>()}
+        />,
+      );
+      await screen.findByRole("button", { name: "README.md" });
+      await waitFor(() => expect(callsOf("fs.watch")).toHaveLength(1));
+
+      act(() => {
+        focusManager.setFocused(false);
+        focusManager.setFocused(true);
+      });
+      await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+      expect(listedPaths()).toHaveLength(times);
+      focusManager.setFocused(undefined);
+    },
+  );
 });

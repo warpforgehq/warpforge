@@ -3,7 +3,6 @@ import { useEffect, useMemo } from "react";
 
 import type { FileDiff, FileDoc, ProjectFile, SessionUpdate, TaskDiff } from "../../protocol";
 import { daemonQuery } from "../../query";
-import { invalidateExplorer } from "./explorer/useExplorerData";
 
 const EMPTY_PROJECT_FILES: ProjectFile[] = [];
 /** Diffs and file docs are the heaviest reads; drop them sooner than the
@@ -29,7 +28,6 @@ export function useTaskFileEditCacheSync(taskId: string, updates: SessionUpdate[
     }
     void queryClient.invalidateQueries({ queryKey: ["diff", taskId] });
     void queryClient.invalidateQueries({ queryKey: ["fileList", taskId] });
-    invalidateExplorer(queryClient, { taskId });
     void queryClient.invalidateQueries({ queryKey: ["fileContents", taskId] });
   }, [latestFileEdit, queryClient, taskId]);
 }
@@ -74,9 +72,9 @@ export function useTaskQueries(
   });
   const fileDoc = fileContentsEnabled ? (fileDocQuery.data ?? null) : null;
 
-  // `updatedAt` moves on every streamed chunk. The file list and the Explorer
-  // change only with a file edit or a git operation, and both invalidate them
-  // where they happen.
+  // `updatedAt` moves on every streamed chunk. The file list changes only with
+  // a file edit or a git operation, which invalidate it where they happen; the
+  // Explorer follows its watcher.
   useEffect(() => {
     void queryClient.invalidateQueries({ queryKey: ["diff", taskId] });
     void queryClient.invalidateQueries({ queryKey: ["fileContents", taskId] });

@@ -5,13 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { explorerFromPaths } from "@/lib/explorerFromPaths";
 import { resetPendingForTests, resetRegistryForTests } from "@/lib/sessionStore";
+import { request } from "@/test/fakeDaemon";
 
 import { ProjectFilesPanel } from "./ProjectFilesPanel";
 
-const { request } = vi.hoisted(() => ({
-  request: vi.fn<(method: string, params: unknown) => Promise<unknown>>(),
-}));
-vi.mock("@/daemon", () => ({ daemon: { request } }));
+vi.mock("@/daemon", () => import("@/test/fakeDaemon"));
 
 // The virtualizer only affects rendering, not the reveal-effect contract this
 // test pins; mocking it keeps the test deterministic under jsdom.

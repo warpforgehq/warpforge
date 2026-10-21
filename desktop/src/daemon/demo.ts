@@ -65,6 +65,10 @@ export class DaemonDemo extends DaemonEvents {
         const files = diff.files.map((f) => ({ changed: true, path: f.path }));
         return Promise.resolve(files);
       }
+      case "fs.watch":
+        return Promise.resolve({ degraded: false, root: `demo:${String(p.task_id)}` });
+      case "fs.unwatch":
+        return Promise.resolve({});
       case "dir.list":
       case "git.status": {
         const files = this.demoDiff!(String(p.task_id)).files;

@@ -3,13 +3,12 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useUi } from "@/store/ui";
+import { request } from "@/test/fakeDaemon";
 
 import type { FileDoc } from "../../protocol";
 import { FilesSurface } from "./FilesSurface";
 
-vi.mock("@/daemon", () => ({
-  daemon: { request: () => Promise.resolve({ entries: [], truncated: false }) },
-}));
+vi.mock("@/daemon", () => import("@/test/fakeDaemon"));
 
 vi.mock("@/components/CodeEditor", () => ({
   CodeEditor: () => <div data-testid="editor" />,
@@ -57,6 +56,7 @@ function renderSurface(overrides: { fileDoc?: FileDoc | null } = {}) {
 
 beforeEach(() => {
   useUi.setState({ filesPanelCollapsed: false });
+  request.mockResolvedValue({ entries: [], truncated: false });
 });
 
 describe("FilesSurface loading states", () => {

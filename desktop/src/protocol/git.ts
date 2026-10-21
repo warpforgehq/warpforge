@@ -76,6 +76,13 @@ export interface StatusEntry {
   code: string;
 }
 
+/** Result of `fs.watch`: the name `fs.changed` events carry for this checkout. */
+export interface WatchedRoot {
+  root: string;
+  /** Changes will not all be reported; poll instead. */
+  degraded: boolean;
+}
+
 export interface GitStatus {
   entries: StatusEntry[];
   truncated: boolean;

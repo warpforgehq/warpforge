@@ -32,12 +32,11 @@ describe("useTaskFileEditCacheSync", () => {
 
     rerender({ updates: [fileEdit] });
 
-    await waitFor(() => expect(invalidate).toHaveBeenCalledTimes(5));
+    // The Explorer's listings follow its watcher, not file edits.
+    await waitFor(() => expect(invalidate).toHaveBeenCalledTimes(3));
     expect(invalidate).toHaveBeenNthCalledWith(1, { queryKey: ["diff", "task-1"] });
     expect(invalidate).toHaveBeenNthCalledWith(2, { queryKey: ["fileList", "task-1"] });
-    expect(invalidate).toHaveBeenNthCalledWith(3, { queryKey: ["dirList", "task-1"] });
-    expect(invalidate).toHaveBeenNthCalledWith(4, { queryKey: ["gitStatus", "task-1"] });
-    expect(invalidate).toHaveBeenNthCalledWith(5, {
+    expect(invalidate).toHaveBeenNthCalledWith(3, {
       queryKey: ["fileContents", "task-1"],
     });
 
@@ -45,7 +44,7 @@ describe("useTaskFileEditCacheSync", () => {
       updates: [fileEdit, { kind: "agent_text", text: "Done" }],
     });
 
-    await waitFor(() => expect(invalidate).toHaveBeenCalledTimes(5));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledTimes(3));
   });
 });
 

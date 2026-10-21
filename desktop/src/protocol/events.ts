@@ -61,6 +61,16 @@ export type DaemonEvent =
   | { event: "task.updated"; data: TaskInfo }
   | { event: "task.removed"; data: { id: string } }
   | {
+      event: "fs.changed";
+      data: {
+        root: string;
+        dirs: string[];
+        index_changed: boolean;
+        rescan: boolean;
+        degraded: boolean;
+      };
+    }
+  | {
       event: "task.pullRequest";
       data: { task_id: string; pull_request: TaskPullRequest | null };
     }

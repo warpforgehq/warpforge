@@ -14,6 +14,7 @@ import { buildVisibleRows, parentFolders, staleExpanded } from "./explorer/explo
 import { startFileDrag } from "./explorer/fileDrag";
 import { invalidateExplorer, useExplorerData } from "./explorer/useExplorerData";
 import { useExplorerMenu } from "./explorer/useExplorerMenu";
+import { useFsWatch } from "./explorer/useFsWatch";
 import { FileSystemActionDialog, type FileSystemAction } from "./FileSystemActionDialog";
 import { PROJECT_ROW_HEIGHT } from "./projectFileTree";
 
@@ -70,7 +71,12 @@ export function ProjectFilesPanel({
   const openFoldersRef = useRef(openFolders);
   openFoldersRef.current = openFolders;
 
-  const { listing, status, rootError, rootLoading } = useExplorerData(subject, openFolders);
+  const { degraded } = useFsWatch(subject);
+  const { listing, status, rootError, rootLoading } = useExplorerData(
+    subject,
+    openFolders,
+    degraded,
+  );
 
   const setOpenFolders = useCallback((updater: (previous: Set<string>) => Set<string>) => {
     const state = treeStateRef.current;

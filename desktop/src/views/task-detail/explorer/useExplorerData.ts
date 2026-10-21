@@ -18,10 +18,15 @@ export interface ExplorerSubject {
   project?: string;
 }
 
-function subjectKeys({ taskId, project }: ExplorerSubject) {
+/** Query key prefixes for one subject's listings, status and tracked file list. */
+export function explorerKeys({ taskId, project }: ExplorerSubject) {
   return taskId
-    ? { dirs: ["dirList", taskId], status: ["gitStatus", taskId] }
-    : { dirs: ["projectDirList", project ?? ""], status: ["projectGitStatus", project ?? ""] };
+    ? { dirs: ["dirList", taskId], status: ["gitStatus", taskId], tracked: ["fileList", taskId] }
+    : {
+        dirs: ["projectDirList", project ?? ""],
+        status: ["projectGitStatus", project ?? ""],
+        tracked: ["projectFileList", project ?? ""],
+      };
 }
 
 /** `dir.list` for one folder, under the key the tree and tab checks share. */
@@ -29,13 +34,13 @@ export function dirListQuery(subject: ExplorerSubject, path: string) {
   const params = subject.taskId ? { task_id: subject.taskId } : { project: subject.project };
   return {
     queryFn: daemonQuery<DirListing>("dir.list", { ...params, path }),
-    queryKey: [...subjectKeys(subject).dirs, path],
+    queryKey: [...explorerKeys(subject).dirs, path],
   };
 }
 
 /** Refetch every listing and the status the tree holds for `subject`. */
 export function invalidateExplorer(queryClient: QueryClient, subject: ExplorerSubject) {
-  const keys = subjectKeys(subject);
+  const keys = explorerKeys(subject);
   void queryClient.invalidateQueries({ queryKey: keys.dirs });
   void queryClient.invalidateQueries({ queryKey: keys.status });
 }
@@ -49,16 +54,18 @@ export interface ExplorerData {
 
 /**
  * One `dir.list` query for the root and for each expanded folder whose
- * ancestors are expanded too, plus the checkout's `git.status`.
+ * ancestors are expanded too, plus the checkout's `git.status`. They refetch
+ * on window focus only with `pollOnFocus`, when no watcher reports changes.
  */
 export function useExplorerData(
   subject: ExplorerSubject,
   expanded: ReadonlySet<string>,
+  pollOnFocus: boolean,
 ): ExplorerData {
   const { taskId, project } = subject;
   const enabled = Boolean(taskId || project);
   const params = useMemo(() => (taskId ? { task_id: taskId } : { project }), [project, taskId]);
-  const keys = useMemo(() => subjectKeys({ project, taskId }), [project, taskId]);
+  const keys = useMemo(() => explorerKeys({ project, taskId }), [project, taskId]);
   const paths = useMemo(
     () => [
       "",
@@ -77,7 +84,11 @@ export function useExplorerData(
   );
   const dirs = useQueries({
     combine,
-    queries: paths.map((path) => ({ ...dirListQuery({ project, taskId }, path), enabled })),
+    queries: paths.map((path) => ({
+      ...dirListQuery({ project, taskId }, path),
+      enabled,
+      refetchOnWindowFocus: pollOnFocus,
+    })),
   });
 
   const statusQuery = useQuery({
@@ -85,6 +96,7 @@ export function useExplorerData(
     placeholderData: keepPreviousData,
     queryFn: daemonQuery<GitStatus>("git.status", params),
     queryKey: keys.status,
+    refetchOnWindowFocus: pollOnFocus,
   });
   const status = useMemo(
     () => buildStatusIndex(statusQuery.data?.entries ?? []),
