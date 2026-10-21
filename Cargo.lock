@@ -3867,7 +3867,7 @@ dependencies = [
 
 [[package]]
 name = "warpforge"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3906,7 +3906,7 @@ dependencies = [
 
 [[package]]
 name = "warpforge-protocol"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "serde",
  "serde_json",

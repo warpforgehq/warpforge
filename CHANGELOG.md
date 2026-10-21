@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.27.0
+
+### Minor Changes
+
+- [`b6fb2fc`](https://github.com/warpforgehq/warpforge/commit/b6fb2fcd87c9183d6cde5454243717c5b9a13e04) Thanks [@ephor](https://github.com/ephor)! - The Explorer is rebuilt for large projects. The file tree opens instantly, loads folders as you expand them, and updates live as files change on disk — including files agents create from the terminal — so they're ready to `@`-mention and show up in the Changes rail within a second. Changed files and their folders are coloured by git status; gitignored files such as `.env` stay visible but greyed out, and the eye button in the Explorer header hides them in every project.
+
+- [#58](https://github.com/warpforgehq/warpforge/pull/58) [`5f24705`](https://github.com/warpforgehq/warpforge/commit/5f24705750ca31f94a4b3a18924231701e7e4fb7) Thanks [@ephor](https://github.com/ephor)! - The terminal UI and the `add`, `remove`, `list`, `init` and `bootstrap` commands have been removed. Everything they did lives in the desktop app: add a project in **Projects → Add Project**, and let an agent generate its config in the bootstrap wizard. Running `warpforge` in a terminal now just prints help.
+
+### Patch Changes
+
+- [`b2809f3`](https://github.com/warpforgehq/warpforge/commit/b2809f34564652d601452bd950a20cfeb432df17) Thanks [@ephor](https://github.com/ephor)! - Right-click menus now match the app's look instead of the native macOS menu.
+
+- [`07a26e0`](https://github.com/warpforgehq/warpforge/commit/07a26e0cf769f461e934cd91b53579dbaa3d404f) Thanks [@ephor](https://github.com/ephor)! - Collapsing a file in the diff view no longer leaves a blank gap or overlaps the next file.
+
+- [`b0c4867`](https://github.com/warpforgehq/warpforge/commit/b0c486767758a2aafe09986d990ab4c3b7a459c0) Thanks [@ephor](https://github.com/ephor)! - File links in chat that point at a line or range, such as `src/app.ts:42` or `#L10-L20`, now open the editor right at that spot.
+
+- [`b6fb2fc`](https://github.com/warpforgehq/warpforge/commit/b6fb2fcd87c9183d6cde5454243717c5b9a13e04) Thanks [@ephor](https://github.com/ephor)! - Long chats and streaming agents use far less memory over a working day, so the app stays responsive instead of growing to gigabytes.
+
 ## 0.26.0
 
 ### Minor Changes
