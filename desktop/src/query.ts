@@ -32,30 +32,24 @@ export const daemonQuery =
   () =>
     daemon.request(method, params) as Promise<T>;
 
-/** Project file list for a task, shared with the editor tree's query key so
- *  the quick-open palette and FilesSurface stay in the same cache. */
-export function useProjectFileListQuery(taskId: string | null, includeIgnored = false) {
+/** Tracked and untracked files of a task's checkout, without ignored ones —
+ *  the list `@` mentions, quick open and chat path links share. */
+export function useProjectFileListQuery(taskId: string | null) {
   return useQuery({
     enabled: Boolean(taskId),
     placeholderData: (prev: ProjectFile[] | undefined) => prev,
-    queryFn: daemonQuery<ProjectFile[]>("file.list", {
-      include_ignored: includeIgnored,
-      task_id: taskId,
-    }),
-    queryKey: ["fileList", taskId ?? "", includeIgnored ? "all" : "tracked"],
+    queryFn: daemonQuery<ProjectFile[]>("file.list", { task_id: taskId }),
+    queryKey: ["fileList", taskId ?? "", "tracked"],
   });
 }
 
 /** The same listing for a project with no task attached — the project page's
  *  Files surface reads the registered checkout directly. */
-export function useProjectFilesQuery(project: string | null, includeIgnored = false) {
+export function useProjectFilesQuery(project: string | null) {
   return useQuery({
     enabled: Boolean(project),
     placeholderData: (prev: ProjectFile[] | undefined) => prev,
-    queryFn: daemonQuery<ProjectFile[]>("file.list", {
-      include_ignored: includeIgnored,
-      project,
-    }),
-    queryKey: ["projectFileList", project ?? "", includeIgnored ? "all" : "tracked"],
+    queryFn: daemonQuery<ProjectFile[]>("file.list", { project }),
+    queryKey: ["projectFileList", project ?? "", "tracked"],
   });
 }

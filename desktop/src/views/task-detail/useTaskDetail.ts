@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { DEFAULT_SURFACE_TABS, type SurfaceTab } from "@/components/workspace";
 import { useTaskSession } from "@/hooks/useWorkspaceSession";
-import { parseFileLocation } from "@/lib/fileLocation";
 import {
   pruneTaskDiff,
   setTaskDiff,
@@ -28,7 +27,9 @@ import { usePanelLayout } from "../../store/panelLayout";
 import { useUi } from "../../store/ui";
 import { hunkKey } from "./diffAnchors";
 import { type DiffWorkspaceHandle } from "./DiffWorkspace";
+import { useVanishedPaths } from "./explorer/useVanishedPaths";
 import { formatFileDiffAsMessage } from "./FileDiffView";
+import { useSessionFilePath } from "./useSessionFilePath";
 import { useSplitResize } from "./useSplitResize";
 import { useTaskQueries, type ActiveTab } from "./useTaskQueries";
 
@@ -110,8 +111,12 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     ? { kind: "file", path: activeFilePath }
     : { kind: "changes" };
 
-  const { diff, diffQuery, projectFiles, mentionFiles, mentionFilesQuery, fileDoc, queryClient } =
-    useTaskQueries(task.id, activeFilePath, activeTabForQuery, task.updatedAt);
+  const { diff, diffQuery, mentionFiles, mentionFilesQuery, fileDoc, queryClient } = useTaskQueries(
+    task.id,
+    activeFilePath,
+    activeTabForQuery,
+    task.updatedAt,
+  );
 
   const openFileTab = useCallback(
     (path: string, location?: { line?: number; column?: number; endLine?: number }) => {
@@ -286,38 +291,12 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     () => snapshot.projects.find((p) => p.name === task.project)?.path.replace(/\/+$/, ""),
     [snapshot.projects, task.project],
   );
-  const knownFilePaths = useMemo(() => {
-    const paths = new Set<string>();
-    for (const file of projectFiles) {
-      paths.add(file.path);
-    }
-    for (const file of diff?.files ?? []) {
-      paths.add(file.path);
-    }
-    for (const path of openFileTabs) {
-      paths.add(path);
-    }
-    return paths;
-  }, [diff?.files, openFileTabs, projectFiles]);
-  const resolveSessionFilePath = useCallback(
-    (value: string): string | null => {
-      const stripped = value.trim().replace(/^['"`]+|['"`]+$/g, "");
-      let path = parseFileLocation(stripped).path;
-      path = path.replace(/[),;]+$/, "");
-      path = path.replace(/^\.\/+/, "");
-
-      if (projectRoot && path.startsWith(`${projectRoot}/`)) {
-        return path.slice(projectRoot.length + 1);
-      }
-
-      if (knownFilePaths.has(path)) {
-        return path;
-      }
-
-      return null;
-    },
-    [knownFilePaths, projectRoot],
-  );
+  const resolveSessionFilePath = useSessionFilePath({
+    diffFiles: diff?.files,
+    openTabs: openFileTabs,
+    projectRoot,
+    trackedFiles: mentionFiles,
+  });
 
   // Restore this task's editor workspace once its session has been read. An
   // explicit `openTaskNav` runs after this and wins, because it is applied in
@@ -364,23 +343,21 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     setTaskSurface(task.id, task.project, activeSurface, task.worktree ?? undefined);
   }, [activeSurface, sessionHydrated, task.id, task.project, task.worktree]);
 
-  // A file that no longer appears in the project tree or the diff is dropped
-  // from the strip rather than reopened against a path the daemon rejects.
-  const listedPaths = useMemo(() => {
-    const paths = new Set<string>();
-    for (const file of projectFiles) paths.add(file.path);
-    for (const file of diff?.files ?? []) paths.add(file.path);
-    return paths;
-  }, [diff?.files, projectFiles]);
+  // A tab whose file left the checkout, and is not a deletion in the diff, is
+  // dropped from the strip rather than reopened against a path the daemon rejects.
+  const diffPaths = useMemo(() => new Set((diff?.files ?? []).map((f) => f.path)), [diff?.files]);
+  const explorerSubject = useMemo(() => ({ taskId: task.id }), [task.id]);
+  const vanishedTabs = useVanishedPaths(explorerSubject, openFileTabs, diffPaths);
 
   useEffect(() => {
-    if (!sessionHydrated || listedPaths.size === 0) return;
-    const valid = openFileTabs.filter((path) => listedPaths.has(path));
-    if (valid.length !== openFileTabs.length) setOpenFileTabs(valid);
-    if (activeFilePath && !listedPaths.has(activeFilePath)) {
+    if (!sessionHydrated || vanishedTabs.length === 0) return;
+    const gone = new Set(vanishedTabs);
+    const valid = openFileTabs.filter((path) => !gone.has(path));
+    setOpenFileTabs(valid);
+    if (activeFilePath && gone.has(activeFilePath)) {
       setActiveFilePath(valid[valid.length - 1] ?? null);
     }
-  }, [activeFilePath, listedPaths, openFileTabs, sessionHydrated]);
+  }, [activeFilePath, openFileTabs, sessionHydrated, vanishedTabs]);
 
   // A hunk position is restored only after the diff actually carries the file.
   // The workspace mounts a frame behind the shell, so retry like a diff

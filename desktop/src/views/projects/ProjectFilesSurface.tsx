@@ -36,7 +36,7 @@ export function ProjectFilesSurface({ project, rootPath }: ProjectFilesSurfacePr
   const queryClient = useQueryClient();
   const { session } = useProjectSession(project, rootPath);
   const open = session.files;
-  const filesQuery = useProjectFilesQuery(project, false);
+  const filesQuery = useProjectFilesQuery(project);
   const files = useMemo(
     () => (Array.isArray(filesQuery.data) ? filesQuery.data : []),
     [filesQuery.data],

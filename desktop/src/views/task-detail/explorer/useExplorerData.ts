@@ -24,6 +24,15 @@ function subjectKeys({ taskId, project }: ExplorerSubject) {
     : { dirs: ["projectDirList", project ?? ""], status: ["projectGitStatus", project ?? ""] };
 }
 
+/** `dir.list` for one folder, under the key the tree and tab checks share. */
+export function dirListQuery(subject: ExplorerSubject, path: string) {
+  const params = subject.taskId ? { task_id: subject.taskId } : { project: subject.project };
+  return {
+    queryFn: daemonQuery<DirListing>("dir.list", { ...params, path }),
+    queryKey: [...subjectKeys(subject).dirs, path],
+  };
+}
+
 /** Refetch every listing and the status the tree holds for `subject`. */
 export function invalidateExplorer(queryClient: QueryClient, subject: ExplorerSubject) {
   const keys = subjectKeys(subject);
@@ -68,11 +77,7 @@ export function useExplorerData(
   );
   const dirs = useQueries({
     combine,
-    queries: paths.map((path) => ({
-      enabled,
-      queryFn: daemonQuery<DirListing>("dir.list", { ...params, path }),
-      queryKey: [...keys.dirs, path],
-    })),
+    queries: paths.map((path) => ({ ...dirListQuery({ project, taskId }, path), enabled })),
   });
 
   const statusQuery = useQuery({

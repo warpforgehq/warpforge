@@ -51,16 +51,6 @@ export function useTaskQueries(
   });
   const diff = diffQuery.data ?? null;
 
-  const fileListQuery = useQuery({
-    placeholderData: keepPreviousData,
-    queryFn: daemonQuery<ProjectFile[]>("file.list", {
-      include_ignored: true,
-      task_id: taskId,
-    }),
-    queryKey: ["fileList", taskId, "all"],
-  });
-  const projectFiles = Array.isArray(fileListQuery.data) ? fileListQuery.data : EMPTY_PROJECT_FILES;
-
   const mentionFilesQuery = useQuery({
     placeholderData: keepPreviousData,
     queryFn: daemonQuery<ProjectFile[]>("file.list", { task_id: taskId }),
@@ -94,7 +84,6 @@ export function useTaskQueries(
   return {
     diff,
     diffQuery,
-    projectFiles,
     mentionFiles,
     mentionFilesQuery,
     fileDoc,

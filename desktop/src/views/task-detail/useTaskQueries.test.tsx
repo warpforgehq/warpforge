@@ -4,7 +4,7 @@ import type { PropsWithChildren } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { SessionUpdate } from "../../protocol";
-import { useTaskFileEditCacheSync } from "./useTaskQueries";
+import { useTaskFileEditCacheSync, useTaskQueries } from "./useTaskQueries";
 
 describe("useTaskFileEditCacheSync", () => {
   it("invalidates task file queries when a file edit arrives", async () => {
@@ -46,5 +46,55 @@ describe("useTaskFileEditCacheSync", () => {
     });
 
     await waitFor(() => expect(invalidate).toHaveBeenCalledTimes(5));
+  });
+});
+
+const { request } = vi.hoisted(() => ({
+  request: vi.fn<(method: string, params: unknown) => Promise<unknown>>(),
+}));
+vi.mock("@/daemon", () => ({ daemon: { request } }));
+
+/** Sized like this repository: 75k paths with ignored files, 2.3k without. */
+const ALL_PATHS = Array.from({ length: 75_000 }, (_, i) => `target/debug/deps/lib${i}.rlib`);
+const TRACKED_PATHS = Array.from({ length: 2_300 }, (_, i) => `src/module${i}.rs`);
+
+function fileListCalls() {
+  return request.mock.calls.filter(([method]) => method === "file.list");
+}
+
+describe("useTaskQueries file list", () => {
+  function renderQueries() {
+    request.mockReset();
+    request.mockImplementation((method, params) => {
+      if (method === "file.list") {
+        const all = (params as { include_ignored?: boolean }).include_ignored;
+        return Promise.resolve(
+          (all ? ALL_PATHS : TRACKED_PATHS).map((path) => ({ changed: false, path })),
+        );
+      }
+      return Promise.resolve(null);
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const hook = renderHook(
+      ({ updatedAt }: { updatedAt: number }) =>
+        useTaskQueries("task-1", null, { kind: "changes" }, updatedAt),
+      { initialProps: { updatedAt: 1 }, wrapper },
+    );
+    return { hook, queryClient };
+  }
+
+  it("holds only the tracked list, never the one with ignored files", async () => {
+    const { hook, queryClient } = renderQueries();
+
+    await waitFor(() => expect(hook.result.current.mentionFiles).toHaveLength(2_300));
+    expect(fileListCalls().map(([, params]) => params)).toEqual([{ task_id: "task-1" }]);
+    const cached = queryClient
+      .getQueryCache()
+      .getAll()
+      .reduce((sum, query) => sum + (JSON.stringify(query.state.data)?.length ?? 0), 0);
+    expect(cached).toBeLessThan(200_000);
   });
 });
