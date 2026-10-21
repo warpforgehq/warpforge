@@ -61,7 +61,7 @@ export function ShelfRow({
           aria-label={deleteTitle}
           title={deleteTitle}
           onClick={() => onDelete(row)}
-          className="pointer-events-none absolute right-1 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-muted-foreground/50 opacity-0 transition-opacity hover:bg-accent hover:text-destructive focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring group-hover/shelf:pointer-events-auto group-hover/shelf:opacity-100"
+          className="pointer-events-none absolute right-1 top-1/2 hidden size-5 -translate-y-1/2 place-items-center rounded text-muted-foreground/50 hover:bg-accent hover:text-destructive focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring group-hover/shelf:pointer-events-auto group-hover/shelf:grid group-focus-within/shelf:pointer-events-auto group-focus-within/shelf:grid"
         >
           <Trash2 className="size-3" />
         </button>
@@ -178,7 +178,7 @@ export function ProjectRow({
           onMouseLeave={() => onSettleHover?.(false)}
           onFocus={() => onSettleHover?.(true)}
           onBlur={() => onSettleHover?.(false)}
-          className="pointer-events-none absolute right-7 top-1/2 grid size-[22px] -translate-y-1/2 place-items-center rounded text-muted-foreground/70 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring group-hover/proj:pointer-events-auto group-hover/proj:opacity-100"
+          className="pointer-events-none absolute right-7 top-1/2 hidden size-[22px] -translate-y-1/2 place-items-center rounded text-muted-foreground/70 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring group-hover/proj:pointer-events-auto group-hover/proj:grid group-focus-within/proj:pointer-events-auto group-focus-within/proj:grid"
         >
           <CheckCheck className="size-3.5" />
         </button>
@@ -190,7 +190,7 @@ export function ProjectRow({
           its left rather than owning the lane. */}
       <ArrowUpRight
         aria-hidden
-        className="pointer-events-none absolute right-1.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/70 opacity-0 transition-opacity group-hover/proj:opacity-100 group-focus-within/proj:opacity-100"
+        className="pointer-events-none absolute right-1.5 top-1/2 hidden size-3.5 -translate-y-1/2 text-muted-foreground/70 group-hover/proj:block group-focus-within/proj:block"
       />
     </div>
   );

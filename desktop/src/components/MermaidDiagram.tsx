@@ -69,7 +69,7 @@ export function MermaidDiagram({ code, className }: { code: string; className?: 
             event.stopPropagation();
             setEnlarged(true);
           }}
-          className="absolute right-2 top-2 rounded-md border border-border bg-background/95 p-1 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:bg-secondary hover:text-foreground group-hover/diagram:opacity-100 group-focus-within/diagram:opacity-100"
+          className="absolute right-2 top-2 hidden rounded-md border border-border bg-background/95 p-1 text-muted-foreground shadow-sm hover:bg-secondary hover:text-foreground group-hover/diagram:inline-block group-focus-within/diagram:inline-block"
           aria-label="Enlarge diagram"
           title="Enlarge diagram"
         >

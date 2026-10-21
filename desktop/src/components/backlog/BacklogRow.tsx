@@ -145,57 +145,60 @@ export const BacklogRow = React.memo(function BacklogRow({
 
       {/* Reserved width, not conditional rendering: an action appearing on
           hover must not shift the columns to its left. */}
-      <div className="flex w-[6rem] shrink-0 items-center justify-end gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
-        {actions.onStartInFactory && !inFactory && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-6 text-muted-foreground hover:text-foreground"
-            onClick={() => actions.onStartInFactory?.(item)}
-            title="Start in Factory: a pipeline makes the change and can open a draft PR"
-          >
-            <Factory className="size-3.5" />
-            <span className="sr-only">Start in Factory</span>
-          </Button>
-        )}
-        {item.url && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6 text-muted-foreground hover:text-foreground"
-            title={`Open ${item.number} in ${item.source}`}
-            onClick={() => void openExternalLink(item.url!)}
-          >
-            <ExternalLink className="size-3.5" />
-            <span className="sr-only">Open in tracker</span>
-          </Button>
-        )}
-        {item.taskId && (actions.liveTaskIds === undefined || actions.liveTaskIds.has(item.taskId))
-          ? actions.onOpenTask && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-                onClick={() => actions.onOpenTask?.(item.taskId as string)}
-              >
-                Open task
-              </Button>
-            )
-          : actions.onStartTask && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-6 text-muted-foreground hover:text-foreground"
-                onClick={() => actions.onStartTask?.(item)}
-                title="Start an agent task from this item"
-              >
-                <Play className="size-3.5" />
-                <span className="sr-only">Start task</span>
-              </Button>
-            )}
+      <div className="flex w-[6rem] shrink-0 items-center justify-end">
+        <div className="hidden items-center gap-0.5 group-hover:flex group-focus-within:flex">
+          {actions.onStartInFactory && !inFactory && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-6 text-muted-foreground hover:text-foreground"
+              onClick={() => actions.onStartInFactory?.(item)}
+              title="Start in Factory: a pipeline makes the change and can open a draft PR"
+            >
+              <Factory className="size-3.5" />
+              <span className="sr-only">Start in Factory</span>
+            </Button>
+          )}
+          {item.url && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6 text-muted-foreground hover:text-foreground"
+              title={`Open ${item.number} in ${item.source}`}
+              onClick={() => void openExternalLink(item.url!)}
+            >
+              <ExternalLink className="size-3.5" />
+              <span className="sr-only">Open in tracker</span>
+            </Button>
+          )}
+          {item.taskId &&
+          (actions.liveTaskIds === undefined || actions.liveTaskIds.has(item.taskId))
+            ? actions.onOpenTask && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                  onClick={() => actions.onOpenTask?.(item.taskId as string)}
+                >
+                  Open task
+                </Button>
+              )
+            : actions.onStartTask && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-6 text-muted-foreground hover:text-foreground"
+                  onClick={() => actions.onStartTask?.(item)}
+                  title="Start an agent task from this item"
+                >
+                  <Play className="size-3.5" />
+                  <span className="sr-only">Start task</span>
+                </Button>
+              )}
+        </div>
       </div>
     </div>
   );

@@ -88,7 +88,7 @@ export function ProjectMultiSelect({
                   <button
                     type="button"
                     onClick={() => onChange(makeHome(value, project))}
-                    className="shrink-0 text-xs text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+                    className="hidden shrink-0 text-xs text-muted-foreground hover:text-foreground group-hover:inline-block group-focus-within:inline-block"
                   >
                     Make home
                   </button>

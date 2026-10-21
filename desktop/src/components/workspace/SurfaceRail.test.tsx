@@ -376,9 +376,9 @@ describe("SurfaceRail", () => {
       expect(card).toHaveTextContent("⌘3");
       expect(card).toHaveAttribute("aria-hidden", "true");
       expect(card?.className).toContain("pointer-events-none");
-      expect(card?.className).toContain("opacity-0");
-      expect(card?.className).toContain("group-hover:opacity-100");
-      expect(card?.className).toContain("group-focus-visible:opacity-100");
+      expect(card?.className).toContain("hidden");
+      expect(card?.className).toContain("group-hover:block");
+      expect(card?.className).toContain("group-focus-visible:block");
 
       const explorer = screen.getByRole("button", { name: /^Explorer/ });
       expect(explorer.querySelector("[data-surface-peek]")).toHaveTextContent(
@@ -392,9 +392,8 @@ describe("SurfaceRail", () => {
       expect(cards).toHaveLength(DEFAULT_SURFACE_TABS.length + 1);
       for (const card of cards) {
         const tokens = card.className.split(/\s+/);
-        expect(tokens).toContain("delay-150");
-        expect(tokens).toContain("opacity-0");
-        expect(tokens).not.toContain("opacity-100");
+        expect(tokens).toContain("hidden");
+        expect(tokens).not.toContain("opacity-0");
       }
     });
   });

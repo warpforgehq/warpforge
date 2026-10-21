@@ -564,9 +564,9 @@ describe("Sidebar status encoding", () => {
     renderSidebar(makeState([task("a", { prompt: "Hover me" })]));
 
     const actions = screen.getAllByRole("button", { name: /Mark handled/ })[0].parentElement!;
-    expect(actions.className).toContain("opacity-0");
-    expect(actions.className).toContain("group-hover/row:opacity-100");
-    expect(actions.className).toContain("group-focus-within/row:opacity-100");
+    expect(actions.className).toContain("hidden");
+    expect(actions.className).toContain("group-hover/row:flex");
+    expect(actions.className).toContain("group-focus-within/row:flex");
 
     // …and the resting metadata yields the same lane rather than stacking.
     const meta = within(taskRows("a")[0]).getByText(/^\d+[smhd]$/).parentElement!;

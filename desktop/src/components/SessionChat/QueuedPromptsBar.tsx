@@ -207,7 +207,7 @@ export function QueuedPromptsBar({ taskId, queued }: { taskId: string; queued: Q
                       </div>
                     )}
                   </div>
-                  <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                  <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex focus-within:flex">
                     {open ? (
                       <>
                         <Button

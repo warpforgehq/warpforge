@@ -43,6 +43,22 @@ describe("MessageActions", () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("Copy this exactly"));
   });
 
+  it("keeps the actions out of the box until the message is hovered or focused", () => {
+    render(
+      <MessageActions
+        agents={[]}
+        text="No overlay at rest"
+        onContinue={vi.fn<(agent: string) => Promise<void>>().mockResolvedValue(undefined)}
+      />,
+    );
+
+    const actions = screen.getByRole("button", { name: "Copy message" }).parentElement!;
+    expect(actions.className).toContain("hidden");
+    expect(actions.className).toContain("group-hover/message:flex");
+    expect(actions.className).toContain("group-focus-within/message:flex");
+    expect(actions.className).not.toContain("opacity-0");
+  });
+
   it("lists every enabled harness supplied by the transcript", async () => {
     const user = userEvent.setup();
     const onContinue = vi.fn<(agent: string) => Promise<void>>().mockResolvedValue(undefined);

@@ -261,7 +261,7 @@ export function BrowserSurface({ onAnnotate, onShot, project, services }: Props)
                   e.stopPropagation();
                   closeTab(tab.id);
                 }}
-                className="shrink-0 rounded p-0.5 opacity-0 hover:bg-muted group-hover:opacity-100"
+                className="hidden shrink-0 rounded p-0.5 hover:bg-muted group-hover:inline-flex"
               >
                 <X className="size-3" />
               </span>

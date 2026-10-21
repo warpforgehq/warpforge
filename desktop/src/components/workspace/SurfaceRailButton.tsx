@@ -63,7 +63,7 @@ export const SurfaceRailButton = forwardRef<HTMLButtonElement, SurfaceRailButton
         <span
           aria-hidden
           data-surface-peek=""
-          className="pointer-events-none absolute right-full top-1/2 mr-2 w-56 -translate-y-1/2 rounded-md border border-border bg-popover px-3 py-2 text-left text-popover-foreground opacity-0 shadow-md transition-opacity delay-150 duration-150 ease-[var(--ease-out)] group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
+          className="pointer-events-none absolute right-full top-1/2 mr-2 hidden w-56 -translate-y-1/2 rounded-md border border-border bg-popover px-3 py-2 text-left text-popover-foreground shadow-md group-hover:block group-focus-visible:block"
         >
           <span className="flex items-baseline gap-2">
             <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{label}</span>

@@ -136,7 +136,7 @@ export function FeedItem({
           type="button"
           variant="ghost"
           size="sm"
-          className="absolute right-1 top-1 h-6 px-2 text-xs opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+          className="absolute right-1 top-1 hidden h-6 px-2 text-xs group-hover:inline-flex group-focus-within:inline-flex"
           onClick={() => onStartSession(record)}
         >
           Start a session

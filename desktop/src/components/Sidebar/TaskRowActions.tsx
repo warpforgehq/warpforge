@@ -84,9 +84,9 @@ export function RowActions({
   return (
     <div
       className={cn(
-        "absolute inset-y-0 right-1 flex items-center gap-px opacity-0 transition-opacity",
-        "pointer-events-none group-hover/row:pointer-events-auto group-hover/row:opacity-100",
-        "group-focus-within/row:pointer-events-auto group-focus-within/row:opacity-100",
+        "absolute inset-y-0 right-1 hidden items-center gap-px",
+        "pointer-events-none group-hover/row:pointer-events-auto group-hover/row:flex",
+        "group-focus-within/row:pointer-events-auto group-focus-within/row:flex",
       )}
     >
       {state === "snoozed" ? (
