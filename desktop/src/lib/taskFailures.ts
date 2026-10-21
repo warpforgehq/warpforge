@@ -24,22 +24,28 @@ function cacheFor(taskId: string, updates: SessionUpdate[]): FailureCacheEntry {
   const cached = failureCache.get(taskId);
   if (cached?.updates === updates) return cached;
 
-  // A live chunk either appends or replaces the tail entry (appendCoalescedUpdate),
-  // so the array before it can be reused. Anything else (a history merge) rebuilds.
+  // A live chunk either appends or extends the tail text (appendCoalescedUpdate).
+  // Tool calls, edits, and permissions merge anywhere in place, so a same-length
+  // array only proves a tail change when that tail is a text entry. Anything
+  // else (in-place merge, history merge) rebuilds.
   const extendsTail =
     cached !== undefined &&
     updates.length > cached.updates.length &&
     (cached.updates.length === 0 ||
       updates[cached.updates.length - 1] === cached.updates[cached.updates.length - 1]);
-  const replacesTail =
+  const oldTail = cached?.updates[cached.updates.length - 1];
+  const newTail = updates[updates.length - 1];
+  const extendsTextTail =
     cached !== undefined &&
-    cached.updates.length > 0 &&
+    oldTail !== undefined &&
+    newTail !== undefined &&
     updates.length === cached.updates.length &&
-    updates[updates.length - 1].kind === cached.updates[updates.length - 1].kind &&
+    newTail.kind === oldTail.kind &&
+    (newTail.kind === "agent_text" || newTail.kind === "agent_thought") &&
     (updates.length === 1 || updates[updates.length - 2] === cached.updates[updates.length - 2]);
 
   const entry: FailureCacheEntry =
-    cached && (extendsTail || replacesTail)
+    cached && (extendsTail || extendsTextTail)
       ? cached
       : {
           lastFailedIdx: -1,
@@ -49,7 +55,11 @@ function cacheFor(taskId: string, updates: SessionUpdate[]): FailureCacheEntry {
           updates,
         };
   const start =
-    cached && extendsTail ? cached.updates.length : cached && replacesTail ? updates.length - 1 : 0;
+    cached && extendsTail
+      ? cached.updates.length
+      : cached && extendsTextTail
+        ? updates.length - 1
+        : 0;
 
   for (let index = Math.max(start, 0); index < updates.length; index += 1) {
     const update = updates[index];

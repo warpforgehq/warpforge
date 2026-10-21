@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { SessionUpdate, TaskInfo, TaskStatus } from "@/protocol";
 
+import { appendCoalescedUpdate } from "./sessionStream";
 import { buildFailureList, detectFailure } from "./taskFailures";
 
 function task(id: string, overrides: Partial<TaskInfo> & { status?: TaskStatus } = {}): TaskInfo {
@@ -146,6 +147,50 @@ describe("detectFailure", () => {
 
   it("returns null for a healthy running task", () => {
     expect(detectFailure(task("a", { status: "running" }), [])).toBeNull();
+  });
+
+  it("sees a tool call that fails in place in the middle of the transcript", () => {
+    const t = task("a", { status: "running" });
+    let updates: SessionUpdate[] = [
+      toolCall("t1", "pending", "Run tests"),
+      toolCall("t2", "completed", "Read file"),
+      { kind: "agent_thought", text: "working" },
+    ];
+
+    updates = appendCoalescedUpdate(updates, toolCall("t1", "failed", "Run tests"));
+    expect(updates).toHaveLength(3);
+    expect(detectFailure(t, updates)).toStrictEqual({
+      kind: "tool_call",
+      reason: "tool call failed: Run tests",
+    });
+
+    const extended = appendCoalescedUpdate(updates, { kind: "agent_thought", text: " more" });
+    expect(detectFailure(t, extended)).toStrictEqual({
+      kind: "tool_call",
+      reason: "tool call failed: Run tests",
+    });
+  });
+
+  it("rebuilds after the cap shifts an entry off the front", () => {
+    const t = task("a", { status: "running" });
+    const thoughts = Array.from(
+      { length: 1999 },
+      (_, index): SessionUpdate => ({ kind: "agent_thought", text: `t${index}` }),
+    );
+    const plan: SessionUpdate = { kind: "plan", entries: [] };
+
+    // Failure near the front is dropped by the shift.
+    const dropped: SessionUpdate[] = [toolCall("bad", "failed", "Run tests"), ...thoughts];
+    expect(detectFailure(t, appendCoalescedUpdate(dropped, plan))).toBeNull();
+
+    // Failure at the tail survives the shift and is still reported.
+    const kept: SessionUpdate[] = [...thoughts, toolCall("bad", "failed", "Run tests")];
+    const shifted = appendCoalescedUpdate(kept, plan);
+    expect(shifted).toHaveLength(2000);
+    expect(detectFailure(t, shifted)).toStrictEqual({
+      kind: "tool_call",
+      reason: "tool call failed: Run tests",
+    });
   });
 });
 
