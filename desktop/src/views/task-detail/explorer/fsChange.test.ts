@@ -24,17 +24,21 @@ afterEach(() => {
 });
 
 describe("applyFsChange", () => {
-  it("refetches the named folders and the status, then the mention list", () => {
+  it("refetches the named folders and the status, then the mention list and the diff", () => {
     expect(invalidated({ taskId: "t1" }, { dirs: ["", "src"] })).toEqual([
       { exact: true, queryKey: ["dirList", "t1", ""] },
       { exact: true, queryKey: ["dirList", "t1", "src"] },
       { queryKey: ["gitStatus", "t1"] },
       { queryKey: ["fileList", "t1"] },
+      { queryKey: ["diff", "t1"] },
     ]);
   });
 
   it("leaves the mention list alone when only file contents changed", () => {
-    expect(invalidated({ taskId: "t1" }, {})).toEqual([{ queryKey: ["gitStatus", "t1"] }]);
+    expect(invalidated({ taskId: "t1" }, {})).toEqual([
+      { queryKey: ["gitStatus", "t1"] },
+      { queryKey: ["diff", "t1"] },
+    ]);
     expect(invalidated({ project: "demo" }, { index_changed: true })).toContainEqual({
       queryKey: ["projectFileList", "demo"],
     });
@@ -45,7 +49,14 @@ describe("applyFsChange", () => {
       { queryKey: ["dirList", "t1"] },
       { queryKey: ["gitStatus", "t1"] },
       { queryKey: ["fileList", "t1"] },
+      { queryKey: ["diff", "t1"] },
     ]);
+  });
+
+  it("has no diff to refetch for a project's own checkout", () => {
+    expect(invalidated({ project: "demo" }, { dirs: ["src"] })).not.toContainEqual(
+      expect.objectContaining({ queryKey: expect.arrayContaining(["diff"]) }),
+    );
   });
 });
 

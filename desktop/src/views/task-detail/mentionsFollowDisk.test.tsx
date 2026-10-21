@@ -43,14 +43,22 @@ function renderView(tree: boolean) {
   );
 }
 
-function createOnDisk(path: string) {
-  onDisk = [...onDisk, path];
+function changeOnDisk(dirs: string[]) {
   act(() =>
     emitDaemonEvent({
-      data: { degraded: false, dirs: [""], index_changed: true, rescan: false, root: "/repo" },
+      data: { degraded: false, dirs, index_changed: dirs.length > 0, rescan: false, root: "/repo" },
       event: "fs.changed",
     }),
   );
+}
+
+function createOnDisk(path: string) {
+  onDisk = [...onDisk, path];
+  changeOnDisk([""]);
+}
+
+function callsOf(method: string) {
+  return request.mock.calls.filter(([m]) => m === method).length;
 }
 
 function watchCalls() {
@@ -94,5 +102,17 @@ describe("the composer's @ list", () => {
     expect(await screen.findByRole("button", { name: "new.txt" })).toBeInTheDocument();
     const listed = request.mock.calls.filter(([method]) => method === "dir.list");
     expect(listed).toHaveLength(2);
+  });
+
+  it("refreshes the changes rail once for a burst of edits made in a terminal", async () => {
+    renderView(false);
+    await vi.waitFor(() => expect(watchCalls()).toHaveLength(1));
+    await vi.waitFor(() => expect(callsOf("diff.get")).toBe(1));
+
+    for (let i = 0; i < 20; i += 1) changeOnDisk([]);
+
+    await vi.waitFor(() => expect(callsOf("diff.get")).toBe(2), { timeout: 3000 });
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    expect(callsOf("diff.get")).toBe(2);
   });
 });

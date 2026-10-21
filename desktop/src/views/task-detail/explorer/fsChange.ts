@@ -5,18 +5,18 @@ import { explorerKeys, type ExplorerSubject } from "./useExplorerData";
 
 export type FsChange = Extract<DaemonEvent, { event: "fs.changed" }>["data"];
 
-/** Longest the mention list waits after the first change of a burst. */
+/** Longest the mention list and the diff wait after the first change of a burst. */
 export const TRACKED_REFRESH_MS = 1000;
 
-const pendingTracked = new WeakMap<QueryClient, Set<string>>();
+const pendingRefresh = new WeakMap<QueryClient, Set<string>>();
 
 /**
- * Refetches the tracked file list once, `TRACKED_REFRESH_MS` after the first
- * of a burst of changes, so twenty writes cost one listing.
+ * Refetches `queryKey` once, `TRACKED_REFRESH_MS` after the first of a burst
+ * of changes, so twenty writes cost one listing or one diff.
  */
-function refreshTracked(queryClient: QueryClient, queryKey: string[]) {
-  const pending = pendingTracked.get(queryClient) ?? new Set<string>();
-  pendingTracked.set(queryClient, pending);
+function refreshSoon(queryClient: QueryClient, queryKey: string[]) {
+  const pending = pendingRefresh.get(queryClient) ?? new Set<string>();
+  pendingRefresh.set(queryClient, pending);
   const id = JSON.stringify(queryKey);
   if (pending.has(id)) return;
   pending.add(id);
@@ -28,8 +28,8 @@ function refreshTracked(queryClient: QueryClient, queryKey: string[]) {
 
 /**
  * Refetches what an `fs.changed` says moved: the listed folders and the
- * checkout's git status at once, and the tracked file list — which also holds
- * untracked files — shortly after paths came or went.
+ * checkout's git status at once; shortly after, the tracked file list — which
+ * also holds untracked files — when paths came or went, and a task's diff.
  */
 export function applyFsChange(
   queryClient: QueryClient,
@@ -46,6 +46,7 @@ export function applyFsChange(
   }
   void queryClient.invalidateQueries({ queryKey: keys.status });
   if (change.index_changed || change.rescan || change.dirs.length > 0) {
-    refreshTracked(queryClient, keys.tracked);
+    refreshSoon(queryClient, keys.tracked);
   }
+  if (subject.taskId) refreshSoon(queryClient, ["diff", subject.taskId]);
 }
