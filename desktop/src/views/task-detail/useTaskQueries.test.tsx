@@ -98,14 +98,19 @@ describe("useTaskQueries file list", () => {
     expect(cached).toBeLessThan(200_000);
   });
 
-  it("does not refetch the file list when only the task's updatedAt moves", async () => {
-    const { hook } = renderQueries();
+  it("does not refetch the file list or the Explorer when only updatedAt moves", async () => {
+    const { hook, queryClient } = renderQueries();
     await waitFor(() => expect(hook.result.current.mentionFiles).toHaveLength(2_300));
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
 
     for (const updatedAt of [2, 3, 4]) hook.rerender({ updatedAt });
     await waitFor(() =>
       expect(request.mock.calls.filter(([method]) => method === "diff.get").length).toBe(4),
     );
     expect(fileListCalls()).toHaveLength(1);
+    const invalidated = invalidate.mock.calls.map(([filters]) => filters?.queryKey?.[0]);
+    expect(invalidated).not.toContain("dirList");
+    expect(invalidated).not.toContain("gitStatus");
+    expect(invalidated).toContain("diff");
   });
 });
