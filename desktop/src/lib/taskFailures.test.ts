@@ -61,6 +61,18 @@ describe("detectFailure", () => {
     expect(detectFailure(t, [toolCall("t1", "completed")])).toBeNull();
   });
 
+  it("finds a failure that is not the last update on a first read", () => {
+    const t = task("a", { status: "running" });
+    const updates: SessionUpdate[] = [
+      toolCall("t1", "failed", "Run tests"),
+      { kind: "agent_thought", text: "hm" },
+    ];
+    expect(detectFailure(t, updates)).toStrictEqual({
+      kind: "tool_call",
+      reason: "tool call failed: Run tests",
+    });
+  });
+
   it("uses the latest entry per tool call id", () => {
     const t = task("a", { status: "running" });
     const updates = [

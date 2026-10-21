@@ -8,36 +8,82 @@ export interface FailureInfo {
   reason: string;
 }
 
-function latestToolCallFailure(updates: SessionUpdate[]): { title: string } | null {
-  // Daemon merges by tool_call_id: the LAST entry per id is its terminal state.
-  const latest = new Map<string, { failed: boolean; idx: number; title: string }>();
-  updates.forEach((update, idx) => {
+interface FailureCacheEntry {
+  updates: SessionUpdate[];
+  /** Daemon merges by tool_call_id: the LAST entry per id is its terminal state. */
+  latest: Map<string, { failed: boolean; idx: number; title: string }>;
+  lastFailedIdx: number;
+  lastFailedTitle: string;
+  /** Highest index of a user/agent message, which marks a recovery. */
+  lastMessageIdx: number;
+}
+
+const failureCache = new Map<string, FailureCacheEntry>();
+
+function cacheFor(taskId: string, updates: SessionUpdate[]): FailureCacheEntry {
+  const cached = failureCache.get(taskId);
+  if (cached?.updates === updates) return cached;
+
+  // A live chunk either appends or replaces the tail entry (appendCoalescedUpdate),
+  // so the array before it can be reused. Anything else (a history merge) rebuilds.
+  const extendsTail =
+    cached !== undefined &&
+    updates.length > cached.updates.length &&
+    (cached.updates.length === 0 ||
+      updates[cached.updates.length - 1] === cached.updates[cached.updates.length - 1]);
+  const replacesTail =
+    cached !== undefined &&
+    cached.updates.length > 0 &&
+    updates.length === cached.updates.length &&
+    updates[updates.length - 1].kind === cached.updates[updates.length - 1].kind &&
+    (updates.length === 1 || updates[updates.length - 2] === cached.updates[updates.length - 2]);
+
+  const entry: FailureCacheEntry =
+    cached && (extendsTail || replacesTail)
+      ? cached
+      : {
+          lastFailedIdx: -1,
+          lastFailedTitle: "",
+          lastMessageIdx: -1,
+          latest: new Map(),
+          updates,
+        };
+  const start =
+    cached && extendsTail ? cached.updates.length : cached && replacesTail ? updates.length - 1 : 0;
+
+  for (let index = Math.max(start, 0); index < updates.length; index += 1) {
+    const update = updates[index];
     if (update.kind === "tool_call") {
-      latest.set(update.tool_call_id, {
+      entry.latest.set(update.tool_call_id, {
         failed: update.status === "failed",
-        idx,
+        idx: index,
         title: update.title,
       });
-    }
-  });
-
-  let lastFailedIdx = -1;
-  let title = "";
-  for (const entry of latest.values()) {
-    if (entry.failed && entry.idx > lastFailedIdx) {
-      lastFailedIdx = entry.idx;
-      title = entry.title;
+    } else if (update.kind === "user_message" || update.kind === "agent_text") {
+      entry.lastMessageIdx = index;
     }
   }
-  if (lastFailedIdx === -1) return null;
 
+  entry.lastFailedIdx = -1;
+  entry.lastFailedTitle = "";
+  for (const value of entry.latest.values()) {
+    if (value.failed && value.idx > entry.lastFailedIdx) {
+      entry.lastFailedIdx = value.idx;
+      entry.lastFailedTitle = value.title;
+    }
+  }
+  entry.updates = updates;
+  failureCache.set(taskId, entry);
+  return entry;
+}
+
+function latestToolCallFailure(taskId: string, updates: SessionUpdate[]): { title: string } | null {
+  const entry = cacheFor(taskId, updates);
+  if (entry.lastFailedIdx === -1) return null;
   // A later user/agent message after the last failed call means the session
   // moved on — treat it as recovered rather than failed.
-  for (let i = lastFailedIdx + 1; i < updates.length; i++) {
-    const kind = updates[i]?.kind;
-    if (kind === "user_message" || kind === "agent_text") return null;
-  }
-
+  if (entry.lastMessageIdx > entry.lastFailedIdx) return null;
+  const title = entry.lastFailedTitle;
   return { title: title.length > 60 ? `${title.slice(0, 57)}...` : title };
 }
 
@@ -56,7 +102,7 @@ export function detectFailure(
   }
 
   if (updates) {
-    const failedCall = latestToolCallFailure(updates);
+    const failedCall = latestToolCallFailure(task.id, updates);
     if (failedCall) {
       return { kind: "tool_call", reason: `tool call failed: ${failedCall.title}` };
     }
@@ -82,6 +128,10 @@ export function buildFailureList(
   sessionUpdates: Record<string, SessionUpdate[]>,
 ): Array<{ task: TaskInfo } & FailureInfo> {
   const failures: Array<{ task: TaskInfo } & FailureInfo> = [];
+  const liveIds = new Set(tasks.map((task) => task.id));
+  for (const taskId of failureCache.keys()) {
+    if (!liveIds.has(taskId)) failureCache.delete(taskId);
+  }
   for (const task of tasks) {
     const failure = detectFailure(task, sessionUpdates[task.id]);
     if (failure) failures.push({ task, ...failure });
