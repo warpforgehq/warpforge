@@ -3,6 +3,8 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { request } from "@/test/fakeDaemon";
+
 import type { SessionUpdate } from "../../protocol";
 import { useTaskFileEditCacheSync, useTaskQueries } from "./useTaskQueries";
 
@@ -48,10 +50,7 @@ describe("useTaskFileEditCacheSync", () => {
   });
 });
 
-const { request } = vi.hoisted(() => ({
-  request: vi.fn<(method: string, params: unknown) => Promise<unknown>>(),
-}));
-vi.mock("@/daemon", () => ({ daemon: { request } }));
+vi.mock("@/daemon", () => import("@/test/fakeDaemon"));
 
 /** Sized like this repository: 75k paths with ignored files, 2.3k without. */
 const ALL_PATHS = Array.from({ length: 75_000 }, (_, i) => `target/debug/deps/lib${i}.rlib`);

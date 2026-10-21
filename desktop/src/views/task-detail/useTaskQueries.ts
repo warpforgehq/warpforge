@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 
 import type { FileDiff, FileDoc, ProjectFile, SessionUpdate, TaskDiff } from "../../protocol";
 import { daemonQuery } from "../../query";
+import { useFsWatch } from "./explorer/useFsWatch";
 
 const EMPTY_PROJECT_FILES: ProjectFile[] = [];
 /** Diffs and file docs are the heaviest reads; drop them sooner than the
@@ -49,6 +50,9 @@ export function useTaskQueries(
   });
   const diff = diffQuery.data ?? null;
 
+  // The mention list holds untracked files too; the watch keeps it current
+  // while the task is open, whether or not its Explorer is on screen.
+  useFsWatch({ taskId });
   const mentionFilesQuery = useQuery({
     placeholderData: keepPreviousData,
     queryFn: daemonQuery<ProjectFile[]>("file.list", { task_id: taskId }),
