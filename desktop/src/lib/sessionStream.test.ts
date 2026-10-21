@@ -29,6 +29,36 @@ describe("session stream coalescing", () => {
     expect(next).toEqual([{ kind: "agent_text", text: "Hello!" }]);
   });
 
+  it("replaces only the tail entry when a chunk extends the last one", () => {
+    const previous = Array.from({ length: 100 }, (_, index): SessionUpdate =>
+      index === 99 ? { kind: "agent_text", text: "tail" } : { kind: "user_message", text: `${index}` },
+    );
+
+    const next = appendCoalescedUpdate(previous, { kind: "agent_text", text: "!" });
+
+    expect(next).toHaveLength(previous.length);
+    expect(next[98]).toBe(previous[98]);
+    expect(next[99]).toEqual({ kind: "agent_text", text: "tail!" });
+    expect(next[99]).not.toBe(previous[99]);
+  });
+
+  it("keeps the 2000-entry cap and the surviving identities when a new kind starts a row", () => {
+    const previous = Array.from({ length: 2000 }, (_, index): SessionUpdate => ({
+      kind: "agent_text",
+      text: `${index}`,
+    }));
+
+    const appended = appendCoalescedUpdate(previous, { kind: "agent_thought", text: "thinking" });
+    expect(appended).toHaveLength(2000);
+    expect(appended[0]).toBe(previous[1]);
+    expect(appended[1999]).toEqual({ kind: "agent_thought", text: "thinking" });
+
+    const extended = appendCoalescedUpdate(appended, { kind: "agent_thought", text: " more" });
+    expect(extended).toHaveLength(2000);
+    expect(extended[1998]).toBe(appended[1998]);
+    expect(extended[1999]).toEqual({ kind: "agent_thought", text: "thinking more" });
+  });
+
   it("preserves historical update identity when the streaming tail changes", () => {
     const historical: SessionUpdate = { kind: "user_message", text: "Question" };
     const previous: SessionUpdate[] = [historical, { kind: "agent_text", text: "Ans" }];

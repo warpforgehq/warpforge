@@ -342,8 +342,8 @@ export function appendCoalescedUpdate(
     last?.kind === update.kind
   ) {
     const merged = { ...last, text: truncateAgentText(last.text + update.text) };
-    const output = existing.slice(0, -1);
-    output.push(merged);
+    const output = existing.slice();
+    output[output.length - 1] = merged;
     return output;
   }
 
@@ -382,6 +382,12 @@ export function appendCoalescedUpdate(
     }
   }
   appendCoalesced(output, indexes, update);
+  // At the cap, one push means one element to drop. Shift in place instead of
+  // slicing a second full copy just to trim it.
+  if (output.length > MAX_SESSION_UPDATES && output.length === existing.length + 1) {
+    output.shift();
+    return output;
+  }
   return capSessionUpdates(output);
 }
 

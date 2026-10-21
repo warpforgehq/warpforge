@@ -155,8 +155,15 @@ function FocusPane({
     () => (Array.isArray(fileListQuery.data) ? fileListQuery.data : []),
     [fileListQuery.data],
   );
-  const capability = [...updates].reverse().find((update) => update.kind === "prompt_capabilities");
-  const imageSupported = capability?.kind === "prompt_capabilities" ? capability.image : false;
+  let capability: Extract<SessionUpdate, { kind: "prompt_capabilities" }> | undefined;
+  for (let index = updates.length - 1; index >= 0; index -= 1) {
+    const update = updates[index];
+    if (update.kind === "prompt_capabilities") {
+      capability = update;
+      break;
+    }
+  }
+  const imageSupported = capability?.image ?? false;
   const activity = sessionActivity(task, stream);
   const openTask = useUi((s) => s.openTask);
   const revealTask = useUi((s) => s.revealTask);
