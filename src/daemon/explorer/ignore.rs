@@ -56,7 +56,7 @@ impl IgnoreStack {
     /// Rules for `root`, asking git where its common dir is.
     pub(crate) async fn open(root: &Path) -> Self {
         let out = tokio::process::Command::new("git")
-            .arg("-C")
+            .args(["--no-optional-locks", "-C"])
             .arg(root)
             .args(["rev-parse", "--path-format=absolute", "--git-common-dir"])
             .output()
@@ -71,8 +71,12 @@ impl IgnoreStack {
     /// Treats `tracked` (tracked files under an ignore pattern, and their
     /// directories) as not ignored, as git does.
     pub(crate) fn with_tracked(mut self, tracked: Arc<super::TrackedIgnored>) -> Self {
-        self.tracked = tracked;
+        self.set_tracked(tracked);
         self
+    }
+
+    pub(crate) fn set_tracked(&mut self, tracked: Arc<super::TrackedIgnored>) {
+        self.tracked = tracked;
     }
 
     /// Classifies `rel`, a non-empty `/`-separated path under the root.
@@ -88,7 +92,6 @@ impl IgnoreStack {
     }
 
     /// Drops cached matchers and verdicts, after a `.gitignore` changed.
-    #[allow(dead_code)]
     pub(crate) fn forget(&mut self) {
         self.per_dir.clear();
         self.dir_ignored.clear();

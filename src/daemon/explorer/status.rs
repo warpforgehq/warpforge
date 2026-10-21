@@ -99,7 +99,15 @@ async fn snapshot(root: String) -> Result<Snapshot> {
 
 async fn tracked_ignored(root: &str) -> Result<TrackedIgnored> {
     let out = tokio::process::Command::new("git")
-        .args(["-C", root, "ls-files", "-z", "--cached", "--ignored"])
+        .args([
+            "--no-optional-locks",
+            "-C",
+            root,
+            "ls-files",
+            "-z",
+            "--cached",
+        ])
+        .arg("--ignored")
         .arg("--exclude-standard")
         .output()
         .await?;
@@ -150,7 +158,7 @@ async fn git_status(root: &str) -> Result<wire::GitStatus> {
 /// and git's localized error text is never parsed.
 async fn is_git_checkout(root: &str) -> bool {
     tokio::process::Command::new("git")
-        .args(["-C", root, "rev-parse", "--git-dir"])
+        .args(["--no-optional-locks", "-C", root, "rev-parse", "--git-dir"])
         .output()
         .await
         .is_ok_and(|out| out.status.success())

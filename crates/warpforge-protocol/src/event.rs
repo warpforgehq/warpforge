@@ -79,6 +79,20 @@ pub enum Event {
     TaskRemoved { id: String },
     /// A worktree task's pull request appeared, changed state or checks, or
     /// went away (`pull_request: null`).
+    /// Folders under a root a client watches (`fs.watch`) changed on disk.
+    /// `dirs` are relative to `root` ("" is the root itself); `index_changed`
+    /// means a visible path was created, removed or renamed; `rescan` means
+    /// every listing under the root is suspect; `degraded` means the watcher
+    /// could not cover the root and the client should poll instead.
+    #[serde(rename = "fs.changed")]
+    FsChanged {
+        root: String,
+        dirs: Vec<String>,
+        index_changed: bool,
+        rescan: bool,
+        degraded: bool,
+    },
+
     #[serde(rename = "task.pullRequest")]
     TaskPullRequest {
         task_id: String,

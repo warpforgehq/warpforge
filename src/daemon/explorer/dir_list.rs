@@ -7,7 +7,7 @@ use anyhow::{bail, Result};
 use tokio::sync::Semaphore;
 use warpforge_protocol as wire;
 
-use super::{Class, IgnoreStack, TrackedIgnored};
+use super::{Class, IgnoreStack, SharedStack, TrackedIgnored};
 use crate::daemon::diff::resolve_target_in_root;
 
 pub(crate) const DIR_LIST_CAP: usize = 5000;
@@ -22,17 +22,29 @@ pub(crate) async fn dir_list(
     path: &str,
     tracked: Arc<TrackedIgnored>,
 ) -> Result<wire::DirListing> {
+    let stack = IgnoreStack::open(Path::new(root))
+        .await
+        .with_tracked(tracked);
+    dir_list_with(root, path, Arc::new(std::sync::Mutex::new(stack))).await
+}
+
+/// [`dir_list`] with a watched root's cached matcher.
+pub(crate) async fn dir_list_with(
+    root: &str,
+    path: &str,
+    stack: SharedStack,
+) -> Result<wire::DirListing> {
     let rel = path.trim_matches('/').to_string();
     let dir = if rel.is_empty() {
         std::fs::canonicalize(root)?
     } else {
         resolve_target_in_root(root, &rel)?
     };
-    let mut stack = IgnoreStack::open(Path::new(root))
-        .await
-        .with_tracked(tracked);
     let _permit = PERMITS.acquire().await?;
-    tokio::task::spawn_blocking(move || list_blocking(&mut stack, &dir, &rel, DIR_LIST_CAP)).await?
+    tokio::task::spawn_blocking(move || {
+        list_blocking(&mut stack.lock().unwrap(), &dir, &rel, DIR_LIST_CAP)
+    })
+    .await?
 }
 
 fn list_blocking(

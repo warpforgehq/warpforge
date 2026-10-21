@@ -83,12 +83,24 @@ pub(super) async fn dir_list(
         .tracked_ignored(&root)
         .await
         .unwrap_or_default();
-    let listing = crate::daemon::explorer::dir_list(&root, &path, tracked)
-        .await
-        .map_err(|e| wire::RpcError {
-            code: wire::ErrorCode::NotFound,
-            message: format!("cannot list {path}: {e}"),
-        })?;
+    let canonical = std::fs::canonicalize(&root).unwrap_or_else(|_| root.clone().into());
+    let watched = crate::daemon::explorer::registry().stack(&canonical);
+    let listing = match watched {
+        Some(stack) => {
+            stack.lock().unwrap().set_tracked(tracked);
+            let listing = crate::daemon::explorer::dir_list_with(&root, &path, stack).await;
+            if listing.is_ok() {
+                let dir = canonical.join(path.trim_matches('/'));
+                crate::daemon::explorer::registry().listed(&canonical, &dir);
+            }
+            listing
+        }
+        None => crate::daemon::explorer::dir_list(&root, &path, tracked).await,
+    }
+    .map_err(|e| wire::RpcError {
+        code: wire::ErrorCode::NotFound,
+        message: format!("cannot list {path}: {e}"),
+    })?;
     serde_json::to_value(listing).map_err(|e| wire::RpcError {
         code: wire::ErrorCode::Internal,
         message: e.to_string(),

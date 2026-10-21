@@ -143,6 +143,14 @@ pub enum Event {
     AgentLimitsUpdated {
         accounts: Vec<wire::AgentAccountLimits>,
     },
+    /// Folders under a watched root changed on disk (ADR 0028).
+    FsChanged {
+        root: String,
+        dirs: Vec<String>,
+        index_changed: bool,
+        rescan: bool,
+        degraded: bool,
+    },
     /// A worktree task's pull request changed; `None` once it has none.
     TaskPullRequest {
         task_id: String,

@@ -151,7 +151,9 @@ pub(super) async fn dispatch(
         PortForwardStopAll { project } => runtime::port_forward_stop_all(handle, project).await,
         PortForwardLogs { project, name, after, limit, } => runtime::port_forward_logs(handle, project, name, after, limit).await,
         RuntimeList { project } => runtime::runtime_list(handle, project).await,
-        ClientRegister { .. } | ClientReply { .. } => clients::connection_scoped().await,
+        ClientRegister { .. } | ClientReply { .. } | FsWatch { .. } | FsUnwatch { .. } => {
+            clients::connection_scoped().await
+        }
         BrowserAct { project, task_id, action } => clients::browser_act(handle, lifecycle, project, task_id, action).await,
         HtmlRender { task_id, html, title, height } => html_render::html_render(handle, task_id, html, title, height).await,
         HtmlPreview { task_id, html, width, appearance } => html_render::html_preview(lifecycle, task_id, html, width, appearance).await,

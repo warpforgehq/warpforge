@@ -33,6 +33,7 @@ use method_policy::{method_is_mutation, method_runs_concurrently};
 mod client_hub;
 mod dispatch;
 mod endpoint;
+mod fs_watch;
 mod method_policy;
 mod origin;
 #[cfg(unix)]
@@ -312,6 +313,7 @@ async fn handle_conn(
         })
     });
     let hub_connection = lifecycle.clients.connection();
+    let fs_watches = fs_watch::FsWatches::new();
     // Caps the work one client can have in flight at once.
     let request_slots = Arc::new(Semaphore::new(MAX_CONCURRENT_REQUESTS));
 
@@ -379,6 +381,10 @@ async fn handle_conn(
                 let id = req.id;
 
                 if let Some(reply) = hub_connection.intercept(id, &mut req.method, &event_tx) {
+                    send!(reply);
+                    continue;
+                }
+                if let Some(reply) = fs_watches.intercept(&handle, id, &req.method).await {
                     send!(reply);
                     continue;
                 }

@@ -267,6 +267,19 @@ pub fn to_wire(ev: &Event) -> Option<wire::Event> {
         Event::AgentLimitsUpdated { accounts } => Some(wire::Event::AgentLimitsUpdated {
             accounts: accounts.clone(),
         }),
+        Event::FsChanged {
+            root,
+            dirs,
+            index_changed,
+            rescan,
+            degraded,
+        } => Some(wire::Event::FsChanged {
+            degraded: *degraded,
+            dirs: dirs.clone(),
+            index_changed: *index_changed,
+            rescan: *rescan,
+            root: root.clone(),
+        }),
         Event::TaskPullRequest {
             task_id,
             pull_request,

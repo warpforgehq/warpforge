@@ -47,6 +47,7 @@ impl WorktreeManager {
             .worktrees
             .remove(task_id)
             .with_context(|| format!("no worktree for task {task_id}"))?;
+        crate::daemon::explorer::registry().forget(&wt.path);
 
         // Remove the worktree (git cleans up the dir).
         let status = tokio::process::Command::new("git")

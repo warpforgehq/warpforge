@@ -662,6 +662,24 @@ pub enum Method {
         #[serde(default)]
         include_ignored: bool,
     },
+    /// Watch the task's or project's checkout for this connection: `fs.changed`
+    /// events follow until `fs.unwatch` or the connection closes. Answers
+    /// with a [`crate::WatchedRoot`].
+    #[serde(rename = "fs.watch")]
+    FsWatch {
+        #[serde(default)]
+        task_id: String,
+        #[serde(default)]
+        project: Option<String>,
+    },
+    /// Drop one `fs.watch` of the same checkout.
+    #[serde(rename = "fs.unwatch")]
+    FsUnwatch {
+        #[serde(default)]
+        task_id: String,
+        #[serde(default)]
+        project: Option<String>,
+    },
     /// Children of one directory in the task's or project's checkout, for the
     /// Explorer. `path` is relative to the root; empty lists the root.
     #[serde(rename = "dir.list")]

@@ -219,6 +219,7 @@ pub async fn create_branched_detached(
 /// A branch the task checked out rather than created is kept (see
 /// [`super::owns_branch`]).
 pub async fn remove_detached(base_repo: &Path, path: &Path, branch: &str) -> Result<()> {
+    crate::daemon::explorer::registry().forget(path);
     let status = tokio::process::Command::new("git")
         .args(["worktree", "remove", "--force", path.to_str().unwrap_or("")])
         .current_dir(base_repo)

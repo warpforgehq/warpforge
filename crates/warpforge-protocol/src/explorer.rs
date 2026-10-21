@@ -51,3 +51,13 @@ pub struct GitStatus {
     #[serde(default)]
     pub truncated: bool,
 }
+
+/// Result of `fs.watch`. `root` is the name `fs.changed` events carry;
+/// `degraded` means changes will not all be reported and the client should
+/// poll instead.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchedRoot {
+    pub root: String,
+    pub degraded: bool,
+}
