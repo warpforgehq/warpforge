@@ -1,4 +1,4 @@
-import type { FileLinkResolver } from "@/components/Markdown";
+import type { FileLinkResolver, FileOpenHandler } from "@/components/Markdown";
 import type { SessionActivity } from "@/lib/sessionActivity";
 
 import type {
@@ -20,7 +20,7 @@ interface Props {
   files: ProjectFile[];
   filesLoading: boolean;
   imageSupported: boolean;
-  onOpenFile: (path: string) => void;
+  onOpenFile: FileOpenHandler;
   onOpenFileDiff: (path: string, hunks?: EditHunk[]) => void;
   resolveFilePath: FileLinkResolver;
   task: TaskInfo;

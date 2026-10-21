@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { DEFAULT_SURFACE_TABS, type SurfaceTab } from "@/components/workspace";
 import { useTaskSession } from "@/hooks/useWorkspaceSession";
+import { parseFileLocation } from "@/lib/fileLocation";
 import {
   pruneTaskDiff,
   setTaskDiff,
@@ -45,7 +46,10 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     path: string;
     line: number;
     column: number;
+    endLine?: number;
+    nonce: number;
   } | null>(null);
+  const gotoNonce = useRef(0);
   const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null);
   const [restoreHunk, setRestoreHunk] = useState<{ path: string; hunkKey: string } | null>(null);
   const [commitExpanded, setCommitExpanded] = useState(false);
@@ -110,12 +114,23 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     useTaskQueries(task.id, activeFilePath, activeTabForQuery, task.updatedAt);
 
   const openFileTab = useCallback(
-    (path: string, location?: { line: number; column: number }) => {
+    (path: string, location?: { line?: number; column?: number; endLine?: number }) => {
       setOpenFileTabs((tabs) => (tabs.includes(path) ? tabs : [...tabs, path]));
       setActiveFilePath(path);
       setActiveSurface("files");
       setShowDiff(true);
-      setGotoLocation(location ? { path, ...location } : null);
+      if (location?.line === undefined) {
+        setGotoLocation(null);
+        return;
+      }
+      gotoNonce.current += 1;
+      setGotoLocation({
+        column: location.column ?? 1,
+        endLine: location.endLine,
+        line: location.line,
+        nonce: gotoNonce.current,
+        path,
+      });
     },
     [setActiveSurface, setShowDiff],
   );
@@ -286,8 +301,8 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
   }, [diff?.files, openFileTabs, projectFiles]);
   const resolveSessionFilePath = useCallback(
     (value: string): string | null => {
-      let path = value.trim().replace(/^['"`]+|['"`]+$/g, "");
-      path = path.replace(/:\d+(?::\d+)?$/, "");
+      const stripped = value.trim().replace(/^['"`]+|['"`]+$/g, "");
+      let path = parseFileLocation(stripped).path;
       path = path.replace(/[),;]+$/, "");
       path = path.replace(/^\.\/+/, "");
 

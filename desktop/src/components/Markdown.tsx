@@ -19,9 +19,26 @@ import { MarkdownAlert, splitMarkdownAlert } from "@/components/MarkdownAlert";
 import { MarkdownCodeBlock } from "@/components/MarkdownCodeBlock";
 import { MermaidDiagram } from "@/components/MermaidDiagram";
 import { isExternalLink, openExternalLink } from "@/lib/externalLinks";
+import { parseFileLocation, type FileLocation } from "@/lib/fileLocation";
 import { cn } from "@/lib/utils";
 
 export type FileLinkResolver = (text: string) => string | null;
+export type FileOpenHandler = (path: string, location?: FileLocation) => void;
+
+/** Plain text of rendered markdown children, for suffixes only present in the
+ *  link text rather than its href. */
+function plainText(node: React.ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(plainText).join("");
+  if (isValidElement<{ children?: React.ReactNode }>(node)) return plainText(node.props.children);
+  return "";
+}
+
+function locationForLink(href: string, content: React.ReactNode, path: string) {
+  const parsed = parseFileLocation(href);
+  const fallback = parsed.line === undefined ? parseFileLocation(plainText(content)) : parsed;
+  return fallback.line === undefined ? undefined : { ...fallback, path };
+}
 
 /**
  * A source the WebView can put in an `<img>` on its own, plus the pieces the
@@ -37,7 +54,7 @@ export interface MarkdownImageProps {
 
 interface MarkdownContextValue {
   resolveFilePath?: FileLinkResolver;
-  onOpenFile?: (path: string) => void;
+  onOpenFile?: FileOpenHandler;
   renderImage?: React.ComponentType<MarkdownImageProps>;
 }
 
@@ -57,7 +74,9 @@ const MarkdownAnchor: NonNullable<Components["a"]> = ({ children: content, href 
     const filePath = resolveFilePath?.(href);
     if (filePath && onOpenFile) {
       event.preventDefault();
-      onOpenFile(filePath);
+      const location = locationForLink(href, content, filePath);
+      if (location) onOpenFile(filePath, location);
+      else onOpenFile(filePath);
     }
   };
 
@@ -88,7 +107,11 @@ const MarkdownCode: NonNullable<Components["code"]> = ({
         type="button"
         className="rounded bg-muted px-1 py-0.5 font-mono text-[0.85em] text-primary underline decoration-primary/40 underline-offset-2 hover:bg-secondary hover:decoration-primary"
         title={`Open ${filePath}`}
-        onClick={() => onOpenFile(filePath)}
+        onClick={() => {
+          const location = locationForLink(text, text, filePath);
+          if (location) onOpenFile(filePath, location);
+          else onOpenFile(filePath);
+        }}
       >
         {content}
       </button>
@@ -289,7 +312,7 @@ export function Markdown({
   className?: string;
   density?: MarkdownDensity;
   resolveFilePath?: FileLinkResolver;
-  onOpenFile?: (path: string) => void;
+  onOpenFile?: FileOpenHandler;
   /** Replaces how images load — see `MarkdownImageProps`. */
   renderImage?: React.ComponentType<MarkdownImageProps>;
   /**
@@ -379,7 +402,7 @@ export function CollapsibleMarkdown({
   children: string;
   className?: string;
   resolveFilePath?: FileLinkResolver;
-  onOpenFile?: (path: string) => void;
+  onOpenFile?: FileOpenHandler;
   remarkPlugins?: PluggableList;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -439,7 +462,7 @@ export const BufferedMarkdown = memo(function BufferedMarkdown({
   children: string;
   className?: string;
   resolveFilePath?: FileLinkResolver;
-  onOpenFile?: (path: string) => void;
+  onOpenFile?: FileOpenHandler;
   intervalMs?: number;
 }) {
   const [display, setDisplay] = useState(children);

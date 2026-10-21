@@ -14,7 +14,7 @@ import {
   splitAnnotations,
 } from "../../components/BrowserAnnotationCard";
 import { HtmlRenderFrame } from "../../components/HtmlRenderFrame";
-import type { FileLinkResolver } from "../../components/Markdown";
+import type { FileLinkResolver, FileOpenHandler } from "../../components/Markdown";
 import { BufferedMarkdown, CollapsibleMarkdown, Markdown } from "../../components/Markdown";
 import { PeerMessageLine } from "../../components/PeerMessageLine";
 import { ThinkingBlock } from "../../components/ThinkingBlock";
@@ -219,7 +219,7 @@ export function StreamLine({
   /** Request_id → recorded outcome, from persisted permission_resolved updates. */
   resolved?: Record<string, string>;
   resolveFilePath?: FileLinkResolver;
-  onOpenFile?: (path: string) => void;
+  onOpenFile?: FileOpenHandler;
   onOpenFileDiff?: (path: string, hunks?: EditHunk[]) => void;
   /** Opens a workflow stage/reviewer child from an inline timeline card. */
   onOpenTask?: (id: string) => void;

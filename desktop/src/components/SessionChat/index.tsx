@@ -3,6 +3,7 @@ import { ArrowDown } from "lucide-react";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { ContinueSessionDialog } from "@/components/ContinueSessionDialog";
+import type { FileOpenHandler } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSessionHistory } from "@/hooks/useSessionHistory";
@@ -62,7 +63,7 @@ export interface SessionChatProps {
   files: ProjectFile[];
   filesLoading: boolean;
   imageSupported: boolean;
-  onOpenFile: (path: string) => void;
+  onOpenFile: FileOpenHandler;
   onOpenFileDiff: (path: string, hunks?: EditHunk[]) => void;
   resolveFilePath: (value: string) => string | null;
   task: TaskInfo;

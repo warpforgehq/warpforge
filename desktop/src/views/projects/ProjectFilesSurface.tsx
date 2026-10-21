@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { daemon } from "@/daemon";
 import { useProjectSession } from "@/hooks/useWorkspaceSession";
@@ -52,9 +52,12 @@ export function ProjectFilesSurface({ project, rootPath }: ProjectFilesSurfacePr
     path: string;
     line: number;
     column: number;
+    endLine?: number;
+    nonce: number;
   } | null>(null);
+  const gotoNonce = useRef(0);
   const openFile = useCallback(
-    (path: string, location?: { line: number; column: number }) => {
+    (path: string, location?: { line: number; column?: number; endLine?: number }) => {
       setProjectFiles(
         project,
         {
@@ -63,7 +66,18 @@ export function ProjectFilesSurface({ project, rootPath }: ProjectFilesSurfacePr
         },
         rootPath,
       );
-      setGotoLocation(location ? { path, ...location } : null);
+      if (!location) {
+        setGotoLocation(null);
+        return;
+      }
+      gotoNonce.current += 1;
+      setGotoLocation({
+        column: location.column ?? 1,
+        endLine: location.endLine,
+        line: location.line,
+        nonce: gotoNonce.current,
+        path,
+      });
     },
     [open.tabs, project, rootPath],
   );

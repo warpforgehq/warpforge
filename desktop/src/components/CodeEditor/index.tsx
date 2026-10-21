@@ -51,8 +51,9 @@ export function CodeEditor({
   onGotoDefinition?: (query: string) => Promise<SymbolMatch[]>;
   /** Open a found symbol's file at its line/column. */
   onOpenSymbol?: (path: string, line: number, column: number) => void;
-  /** Move the editor to a pending 1-based source location after it loads. */
-  gotoLocation?: { line: number; column: number };
+  /** Move the editor to a pending 1-based source location after it loads. A
+   *  `nonce` lets the same location be requested again. */
+  gotoLocation?: { line: number; column: number; endLine?: number; nonce?: number };
   onGotoLocationHandled?: () => void;
   /** When provided, a floating "Send to chat" action appears over text
    * selections that sends the highlighted line range to the task chat as a
@@ -201,19 +202,27 @@ export function CodeEditor({
       }
       return;
     }
-    const key = `${gotoLocation.line}:${gotoLocation.column}`;
+    const key = `${gotoLocation.line}:${gotoLocation.column}:${gotoLocation.endLine ?? ""}:${gotoLocation.nonce ?? 0}`;
     if (gotoLocationKey.current === key) {
       return;
     }
     const lineNumber = Math.min(Math.max(gotoLocation.line, 1), view.state.doc.lines);
     const line = view.state.doc.line(lineNumber);
     const column = Math.min(Math.max(gotoLocation.column - 1, 0), line.length);
+    const anchor = line.from + column;
+    const endNumber = Math.min(
+      Math.max(gotoLocation.endLine ?? lineNumber, lineNumber),
+      view.state.doc.lines,
+    );
+    // A range runs from its first column to the end of its last line; a single
+    // location is a collapsed selection at the column.
+    const head = gotoLocation.endLine === undefined ? anchor : view.state.doc.line(endNumber).to;
     view.dispatch({
-      selection: { anchor: line.from + column },
+      selection: { anchor, head },
       // Centered, not merely "in view": a plain scrollIntoView stops as soon as
       // the line touches an edge, leaving the jump target glued to the bottom
       // with no context under it.
-      effects: EditorView.scrollIntoView(line.from + column, { y: "center" }),
+      effects: EditorView.scrollIntoView(anchor, { y: "center" }),
       userEvent: "select.goto",
     });
     // Without focus the caret sits at the target invisibly and the first

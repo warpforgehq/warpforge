@@ -67,7 +67,13 @@ export function FilesSurface({
   onRefresh: () => void;
   onGotoDefinition?: (query: string) => Promise<SymbolMatch[]>;
   onOpenSymbol?: (path: string, line: number, column: number) => void;
-  gotoLocation?: { path: string; line: number; column: number } | null;
+  gotoLocation?: {
+    path: string;
+    line: number;
+    column: number;
+    endLine?: number;
+    nonce?: number;
+  } | null;
   onGotoLocationHandled?: () => void;
   /** Send a selected editor line range to the task chat as a file reference. */
   onAskFile?: (path: string, range: FileRange) => void;

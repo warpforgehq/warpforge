@@ -3,14 +3,14 @@ import { memo, useEffect, useId, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-import type { FileLinkResolver } from "./Markdown";
+import type { FileLinkResolver, FileOpenHandler } from "./Markdown";
 import { Markdown } from "./Markdown";
 
 interface ThinkingBlockProps {
   text: string;
   streaming: boolean;
   resolveFilePath?: FileLinkResolver;
-  onOpenFile?: (path: string) => void;
+  onOpenFile?: FileOpenHandler;
   /**
    * Render only the reasoning body, with no card and no disclosure of its own.
    * For callers where the surrounding row is already the accordion (an activity

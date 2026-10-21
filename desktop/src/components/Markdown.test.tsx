@@ -90,6 +90,54 @@ describe("Markdown links", () => {
     expect(onOpenFile).toHaveBeenCalledWith("src/main.rs");
     expect(window.open).not.toHaveBeenCalled();
   });
+
+  it("opens a markdown file link at its line range", async () => {
+    const user = userEvent.setup();
+    const onOpenFile = vi.fn<(path: string, location?: unknown) => void>();
+    render(
+      <Markdown
+        resolveFilePath={(text) => (text.startsWith("src/main.rs") ? "src/main.rs" : null)}
+        onOpenFile={onOpenFile}
+      >
+        {"[src/main.rs:53-60](src/main.rs:53-60)"}
+      </Markdown>,
+    );
+
+    await user.click(screen.getByRole("link", { name: "src/main.rs:53-60" }));
+
+    expect(onOpenFile).toHaveBeenCalledWith("src/main.rs", {
+      endLine: 60,
+      line: 53,
+      path: "src/main.rs",
+    });
+  });
+
+  it("opens inline code at its line and column, or the one in its text", async () => {
+    const user = userEvent.setup();
+    const onOpenFile = vi.fn<(path: string, location?: unknown) => void>();
+    render(
+      <Markdown
+        resolveFilePath={(text) => (text.startsWith("src/main.rs") ? "src/main.rs" : null)}
+        onOpenFile={onOpenFile}
+      >
+        {"Run `src/main.rs:53:12` or [this](src/main.rs#L70-L72)."}
+      </Markdown>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "src/main.rs:53:12" }));
+    expect(onOpenFile).toHaveBeenCalledWith("src/main.rs", {
+      column: 12,
+      line: 53,
+      path: "src/main.rs",
+    });
+
+    await user.click(screen.getByRole("link", { name: "this" }));
+    expect(onOpenFile).toHaveBeenCalledWith("src/main.rs", {
+      endLine: 72,
+      line: 70,
+      path: "src/main.rs",
+    });
+  });
 });
 
 describe("CollapsibleMarkdown", () => {

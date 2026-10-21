@@ -1,6 +1,6 @@
 import { createContext, memo, type MouseEvent } from "react";
 
-import type { FileLinkResolver } from "@/components/Markdown";
+import type { FileLinkResolver, FileOpenHandler } from "@/components/Markdown";
 
 import { useContextMenu } from "../../hooks/useContextMenu";
 import type { AgentConfig, EditHunk, SessionUpdate } from "../../protocol";
@@ -9,7 +9,7 @@ import { MessageActions } from "../MessageActions";
 
 export interface TranscriptRowContextValue {
   agents: AgentConfig[];
-  onOpenFile: (path: string) => void;
+  onOpenFile: FileOpenHandler;
   onOpenFileDiff: (path: string, hunks?: EditHunk[]) => void;
   onOpenTask: (id: string) => void;
   onRequestBranch: (agent: string, throughIndex: number) => void;
@@ -43,7 +43,7 @@ export const TranscriptRow = memo(function TranscriptRow({
   taskId: string;
   resolved: Record<string, string>;
   resolveFilePath: FileLinkResolver;
-  onOpenFile: (path: string) => void;
+  onOpenFile: FileOpenHandler;
   onOpenFileDiff: (path: string, hunks?: EditHunk[]) => void;
   agents: AgentConfig[];
   branchIndex: number;
