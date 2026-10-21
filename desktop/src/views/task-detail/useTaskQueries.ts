@@ -74,9 +74,10 @@ export function useTaskQueries(
   });
   const fileDoc = fileContentsEnabled ? (fileDocQuery.data ?? null) : null;
 
+  // `updatedAt` moves on every streamed chunk. The file list changes only with
+  // a file edit or a git operation, and both invalidate it where they happen.
   useEffect(() => {
     void queryClient.invalidateQueries({ queryKey: ["diff", taskId] });
-    void queryClient.invalidateQueries({ queryKey: ["fileList", taskId] });
     invalidateExplorer(queryClient, { taskId });
     void queryClient.invalidateQueries({ queryKey: ["fileContents", taskId] });
   }, [queryClient, taskId, updatedAt]);
