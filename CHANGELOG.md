@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.27.1
+
+### Patch Changes
+
+- [`e69d3b2`](https://github.com/warpforgehq/warpforge/commit/e69d3b29a5b750ed56123a56f8c55e949884775b) Thanks [@ephor](https://github.com/ephor)! - Warpforge now ships a native build for Intel Macs alongside Apple Silicon.
+
+- [`c52277c`](https://github.com/warpforgehq/warpforge/commit/c52277cf0b477efae36f3ff4e254b556a487375a) Thanks [@ephor](https://github.com/ephor)! - Row action menus in the sidebar and chat stay where you opened them.
+
 ## 0.27.0
 
 ### Minor Changes
