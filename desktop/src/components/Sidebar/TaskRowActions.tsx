@@ -87,6 +87,9 @@ export function RowActions({
         "absolute inset-y-0 right-1 hidden items-center gap-px",
         "pointer-events-none group-hover/row:pointer-events-auto group-hover/row:flex",
         "group-focus-within/row:pointer-events-auto group-focus-within/row:flex",
+        // An open menu lives in a portal: the row is no longer hovered, so keep
+        // the lane displayed or the trigger loses its box and the menu jumps.
+        "has-[[data-state=open]]:flex has-[[data-state=open]]:pointer-events-auto",
       )}
     >
       {state === "snoozed" ? (

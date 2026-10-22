@@ -63,7 +63,7 @@ export const MessageActions = memo(function MessageActions({
   return (
     <div
       className={cn(
-        "hidden items-center rounded-md border border-border bg-background/95 p-0.5 text-muted-foreground shadow-sm group-hover/message:flex group-focus-within/message:flex",
+        "hidden items-center rounded-md border border-border bg-background/95 p-0.5 text-muted-foreground shadow-sm group-hover/message:flex group-focus-within/message:flex has-[[data-state=open]]:flex has-[[data-state=open]]:pointer-events-auto",
         className,
       )}
     >

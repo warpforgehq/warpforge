@@ -56,7 +56,27 @@ describe("MessageActions", () => {
     expect(actions.className).toContain("hidden");
     expect(actions.className).toContain("group-hover/message:flex");
     expect(actions.className).toContain("group-focus-within/message:flex");
+    expect(actions.className).toContain("has-[[data-state=open]]:flex");
     expect(actions.className).not.toContain("opacity-0");
+  });
+
+  it("keeps the actions displayed while the branch menu is open", async () => {
+    const user = userEvent.setup();
+    render(
+      <MessageActions
+        agents={AGENTS}
+        text="Keep the menu anchored"
+        onContinue={vi.fn<(agent: string) => Promise<void>>().mockResolvedValue(undefined)}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: "Continue with another agent" });
+    const actions = trigger.parentElement!;
+
+    await user.click(trigger);
+
+    expect(trigger).toHaveAttribute("data-state", "open");
+    expect(actions.className).toContain("has-[[data-state=open]]:flex");
   });
 
   it("lists every enabled harness supplied by the transcript", async () => {
