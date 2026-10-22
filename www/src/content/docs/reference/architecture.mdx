@@ -21,7 +21,7 @@ A local Rust daemon owns all state — projects, services, agent sessions, task 
 
 Warpforge is young software, shipped and built in the open:
 
-- macOS Apple Silicon is validated; Windows and Linux remain unvalidated previews;
+- macOS (Apple Silicon and Intel) is validated; Windows and Linux remain unvalidated previews;
 - automatic config detection covers a `package.json` `dev` script and basic Docker Compose services, with the [bootstrap wizard](/guides/projects-and-runtime/) for anything richer;
 - runtime state is local to one machine, and running processes do not survive a machine restart;
 - interrupted task recovery depends on the underlying agent's session-load support;

@@ -34,7 +34,7 @@ It does not replace Claude Code, Codex, or OpenCode; those tools still do the co
 
 ## Install
 
-### macOS Apple Silicon
+### macOS (Apple Silicon and Intel)
 
 **Homebrew:**
 
@@ -45,11 +45,11 @@ brew install --cask ephor/tap/warpforge
 **Or manually:**
 
 1. Open the [latest Warpforge release](https://github.com/warpforgehq/warpforge/releases/latest).
-2. Download `Warpforge_<version>_aarch64.dmg`.
+2. Download `Warpforge_<version>_aarch64.dmg` on Apple Silicon or `Warpforge_<version>_x64.dmg` on Intel.
 3. Open the DMG and drag **Warpforge** into **Applications**.
 4. Launch it and select the coding agents you want enabled.
 
-The build is signed with a Developer ID certificate and notarized by Apple, so it opens without Gatekeeper workarounds. It needs macOS 11 or newer on an Apple Silicon Mac and ships its own daemon — no Rust toolchain or source checkout required.
+The build is signed with a Developer ID certificate and notarized by Apple, so it opens without Gatekeeper workarounds. It needs macOS 11 or newer and ships its own daemon — no Rust toolchain or source checkout required.
 
 ### Linux (Fedora / Debian / Ubuntu)
 
@@ -77,7 +77,7 @@ Download the assets from the [latest release](https://github.com/warpforgehq/war
 **Updates are built in and signed.** The in-app updater is the primary update channel for both install methods — Homebrew performs the initial install, and Warpforge keeps itself current afterwards (`auto_updates` is declared in the cask, so `brew upgrade` never fights the built-in updater). Warpforge checks the release feed shortly after its daemon comes up, and on demand from the app. Downloading and installing are always explicit actions — nothing installs in the background. An update carries both the desktop UI and its matching daemon, verifies an exact version and protocol handshake, and is refused with a clear list of blockers while agent tasks or runtime transitions are still active rather than interrupting work.
 
 > [!NOTE]
-> macOS Apple Silicon and Linux x64 (Fedora 46+, Debian/Ubuntu via rpm/deb/AppImage) are validated desktop targets. Windows remains an opt-in preview.
+> macOS (Apple Silicon and Intel) and Linux x64 (Fedora 46+, Debian/Ubuntu via rpm/deb/AppImage) are validated desktop targets. Windows remains an opt-in preview.
 
 Two features shell out to CLIs the app doesn't bundle: **Node.js/`npm`** for one-click agent install/update, and the **[GitHub CLI](https://cli.github.com/)** (`gh`, authenticated via `gh auth login`) for **Open pull request** — commit and push don't need it. See **[Install → Requirements](https://warpforge.app/getting-started/install/#requirements-beyond-the-app-itself)** for details.
 
@@ -150,7 +150,7 @@ warpforge daemon   # run the local daemon by hand (development)
 
 ## Current scope
 
-Warpforge is young software, shipped and built in the open: macOS Apple Silicon and Linux x64 are validated, Windows remains an unvalidated preview, and runtime state is local to one machine. See **[Architecture and current scope](https://warpforge.app/reference/architecture/)** for the full picture.
+Warpforge is young software, shipped and built in the open: macOS (Apple Silicon and Intel) and Linux x64 are validated, Windows remains an unvalidated preview, and runtime state is local to one machine. See **[Architecture and current scope](https://warpforge.app/reference/architecture/)** for the full picture.
 
 Bug reports, design feedback, and focused pull requests are welcome. If you use Warpforge on a real multi-agent workflow, sharing what felt smooth — and what still sent you back to terminal juggling — is especially useful. Release notes live in [CHANGELOG.md](CHANGELOG.md).
 

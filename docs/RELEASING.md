@@ -7,7 +7,7 @@ GitHub Release draft with the desktop bundles, updater metadata, signatures, CLI
 archives, and checksums. Neither workflow ever publishes the release: you
 smoke-test the draft and publish it yourself.
 
-macOS Apple Silicon and Linux x64 (rpm/deb/AppImage) are the primary release targets and are built on every tag. Windows x64 remains an opt-in preview (`include_windows_x64`).
+macOS (Apple Silicon and Intel) and Linux x64 (rpm/deb/AppImage) are the primary release targets and are built on every tag. Windows x64 remains an opt-in preview (`include_windows_x64`).
 
 ## One-time repository setup
 
@@ -52,7 +52,8 @@ require users to install a new build manually.
 
 Export the updater private key and password, then bundle both the app and DMG
 targets. The public verification key is committed in `tauri.conf.json` because
-it is public by design:
+it is public by design. Use `x86_64-apple-darwin` instead of
+`aarch64-apple-darwin` to package the Intel build:
 
 ```bash
 cd desktop
@@ -134,7 +135,7 @@ not match it.
 ## Build the draft
 
 **Draft release** starts by itself from the tag that **Version release** pushed,
-building macOS Apple Silicon and Linux x64 (AppImage + deb + rpm + CLI) by default. Nothing to do but approve
+building macOS (Apple Silicon and Intel) and Linux x64 (AppImage + deb + rpm + CLI) by default. Nothing to do but approve
 the `release` environment when it asks.
 
 Dispatch it manually when you need something the tag push cannot select: an
@@ -168,8 +169,8 @@ already published release.
 Do not publish merely because the workflow is green. Download assets from the
 draft and test the artifacts that will actually be advertised.
 
-For the primary macOS Apple Silicon release, verify on a clean or representative
-machine that:
+For the primary macOS releases (Apple Silicon and Intel), verify on a clean or
+representative machine of each architecture that:
 
 1. the DMG installs and macOS accepts the signature and notarization;
 2. Warpforge launches without a development daemon or build tree;
