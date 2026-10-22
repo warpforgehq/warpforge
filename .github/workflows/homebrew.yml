@@ -44,16 +44,20 @@ jobs:
       - name: Extract checksums
         id: sha
         run: |
-          dmg_sha="$(awk -v pat="Warpforge_${VERSION#v}_aarch64.dmg" '$2 == pat {print $1}' SHA256SUMS)"
-          test -n "$dmg_sha" || { echo "No Warpforge_${VERSION#v}_aarch64.dmg in SHA256SUMS" >&2; exit 1; }
+          arm_dmg_sha="$(awk -v pat="Warpforge_${VERSION#v}_aarch64.dmg" '$2 == pat {print $1}' SHA256SUMS)"
+          test -n "$arm_dmg_sha" || { echo "No Warpforge_${VERSION#v}_aarch64.dmg in SHA256SUMS" >&2; exit 1; }
+          intel_dmg_sha="$(awk -v pat="Warpforge_${VERSION#v}_x64.dmg" '$2 == pat {print $1}' SHA256SUMS)"
+          test -n "$intel_dmg_sha" || { echo "No Warpforge_${VERSION#v}_x64.dmg in SHA256SUMS" >&2; exit 1; }
           appimage_sha="$(awk '$2 ~ /^Warpforge_.*_amd64\.AppImage$/ {print $1}' SHA256SUMS | head -n1)"
           test -n "$appimage_sha" || { echo "No AppImage in SHA256SUMS (expected Warpforge_*_amd64.AppImage)" >&2; exit 1; }
-          echo "dmg_sha=$dmg_sha" >> "$GITHUB_OUTPUT"
+          echo "arm_dmg_sha=$arm_dmg_sha" >> "$GITHUB_OUTPUT"
+          echo "intel_dmg_sha=$intel_dmg_sha" >> "$GITHUB_OUTPUT"
           echo "appimage_sha=$appimage_sha" >> "$GITHUB_OUTPUT"
 
       - name: Bump the cask and push
         env:
-          SHA_DMG: ${{ steps.sha.outputs.dmg_sha }}
+          SHA_ARM_DMG: ${{ steps.sha.outputs.arm_dmg_sha }}
+          SHA_INTEL_DMG: ${{ steps.sha.outputs.intel_dmg_sha }}
           SHA_APPIMAGE: ${{ steps.sha.outputs.appimage_sha }}
           TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
         run: |
@@ -64,8 +68,14 @@ jobs:
             version "${VERSION#v}"
 
             on_macos do
-              sha256 "${SHA_DMG}"
-              url "https://github.com/warpforgehq/warpforge/releases/download/v#{version}/Warpforge_#{version}_aarch64.dmg"
+              on_arm do
+                sha256 "${SHA_ARM_DMG}"
+                url "https://github.com/warpforgehq/warpforge/releases/download/v#{version}/Warpforge_#{version}_aarch64.dmg"
+              end
+              on_intel do
+                sha256 "${SHA_INTEL_DMG}"
+                url "https://github.com/warpforgehq/warpforge/releases/download/v#{version}/Warpforge_#{version}_x64.dmg"
+              end
             end
             on_linux do
               sha256 "${SHA_APPIMAGE}"
