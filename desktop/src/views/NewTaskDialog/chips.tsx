@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Folder, GitBranch } from "lucide-react";
+import { Check, ChevronDown, GitBranch } from "lucide-react";
 
 import { SmithAvatar } from "@/components/SmithAvatar";
 import {
@@ -13,59 +13,17 @@ import { agentDisplayName } from "@/lib/agentNames";
 import { cn } from "@/lib/utils";
 
 import { AgentLogo } from "../../components/AgentLogo";
-import type { AgentConfig, Smith, Snapshot } from "../../protocol";
+import type { AgentConfig, Smith } from "../../protocol";
 
 /** Deliberately the same shape and weight as `AgentConfigBar`'s selectors —
- *  these sit in the same toolbar row, so anything heavier makes the project and
- *  harness pickers read as a different kind of control than the model picker. */
+ *  these sit in the same toolbar row, so anything heavier makes the harness
+ *  picker read as a different kind of control than the model picker. */
 export const CHIP =
   "flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground";
 export const CHIP_ACTIVE = "bg-secondary text-foreground";
 
 export function ChipDivider() {
   return <span aria-hidden className="mx-0.5 h-3.5 w-px shrink-0 bg-border" />;
-}
-
-export function ProjectChip({
-  onChange,
-  project,
-  projects,
-  title,
-}: {
-  onChange: (next: string) => void;
-  project: string;
-  projects: Snapshot["projects"];
-  title: string;
-}) {
-  if (projects.length === 0) {
-    return <span className="px-1.5">No projects added.</span>;
-  }
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" aria-label="Project" title={title} className={CHIP}>
-          <Folder aria-hidden className="size-3 shrink-0" />
-          <span className="max-w-32 truncate">{project}</span>
-          <ChevronDown aria-hidden className="size-3 shrink-0 opacity-60" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56">
-        {projects.map((candidate) => (
-          <DropdownMenuItem
-            key={candidate.name}
-            className="text-[13px]"
-            onSelect={() => onChange(candidate.name)}
-          >
-            <Check
-              aria-hidden
-              className={cn("size-3.5 shrink-0", project === candidate.name ? "" : "opacity-0")}
-            />
-            <span className="truncate">{candidate.name}</span>
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
 }
 
 const NO_SMITHS: Smith[] = [];

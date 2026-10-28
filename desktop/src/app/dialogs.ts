@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import type { TaskMode } from "@/components/TaskComposeBar";
@@ -20,6 +20,8 @@ export interface AppDialogs {
   newTaskPrompt: string | undefined;
   newTaskBacklogItemId: string | null;
   newTaskOptions: NewTaskOptions;
+  /** A project added while the composer was open; it switches to it. */
+  newTaskAddedProject: string | null;
   pushOpen: boolean;
   setPushOpen: (open: boolean) => void;
   addProjectOpen: boolean;
@@ -48,11 +50,32 @@ export function useAppDialogs(): AppDialogs {
   // created task can be linked back to it.
   const [newTaskBacklogItemId, setNewTaskBacklogItemId] = useState<string | null>(null);
   const [newTaskOptions, setNewTaskOptions] = useState<NewTaskOptions>({});
-  const [newTaskOpen, setNewTaskOpen] = useState(false);
+  // The app launches on the new-task composer.
+  const [newTaskOpen, setNewTaskOpen] = useState(true);
+  const [newTaskAddedProject, setNewTaskAddedProject] = useState<string | null>(null);
   const [pushOpen, setPushOpen] = useState(false);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   const [wizardProject, setWizardProject] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // The composer has no close control: any navigation leaves it, including the
+  // store actions sidebar rows call directly. Synchronous, so a caller that
+  // navigates and then opens New Task in one handler still lands on it.
+  useEffect(
+    () =>
+      useUi.subscribe((next, prev) => {
+        if (
+          next.view !== prev.view ||
+          next.openTaskId !== prev.openTaskId ||
+          next.selectedProjectId !== prev.selectedProjectId ||
+          next.teamSelection !== prev.teamSelection ||
+          next.attentionTargetNonce !== prev.attentionTargetNonce
+        ) {
+          setNewTaskOpen(false);
+        }
+      }),
+    [],
+  );
 
   const startNewTask = useCallback(
     (project?: string, prompt?: string, backlogItemId?: string, options?: NewTaskOptions) => {
@@ -60,6 +83,7 @@ export function useAppDialogs(): AppDialogs {
       setNewTaskPrompt(prompt);
       setNewTaskBacklogItemId(backlogItemId ?? null);
       setNewTaskOptions(options ?? {});
+      setNewTaskAddedProject(null);
       setNewTaskOpen(true);
     },
     [],
@@ -67,7 +91,9 @@ export function useAppDialogs(): AppDialogs {
 
   const handleProjectAdded = useCallback(
     (name: string) => {
-      openProject(name);
+      // Added from the composer's project picker: pick it there, keep the draft.
+      if (newTaskOpen) setNewTaskAddedProject(name);
+      else openProject(name);
       toast("Project added", {
         description: `Run the setup wizard for ${name}`,
         duration: Number.POSITIVE_INFINITY,
@@ -77,7 +103,7 @@ export function useAppDialogs(): AppDialogs {
         },
       });
     },
-    [openProject],
+    [newTaskOpen, openProject],
   );
 
   return {
@@ -87,6 +113,7 @@ export function useAppDialogs(): AppDialogs {
     newTaskPrompt,
     newTaskBacklogItemId,
     newTaskOptions,
+    newTaskAddedProject,
     pushOpen,
     setPushOpen,
     addProjectOpen,
