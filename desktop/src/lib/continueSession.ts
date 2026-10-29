@@ -34,13 +34,30 @@ export function canContinueHere(task: TaskInfo, agentId: string): boolean {
   return task.agent === agentId && task.blockedKind === "session_lost";
 }
 
-/** Frame a generated handoff document as the opening prompt of a new session. */
-export function buildHandoffSeed(task: TaskInfo, document: string): string {
-  const workspace = task.worktree
-    ? `This work has a git worktree at ${task.worktree}.`
-    : isChat(task)
-      ? "This work started in a chat outside any project, in its own folder."
-      : `This work runs in the main ${task.project} checkout.`;
+/**
+ * Where the work lives once a chat's files were copied into a new project.
+ * @param folder The new project's folder.
+ * @returns The line the seed carries instead of the chat's own workspace.
+ */
+export function copiedChatNote(folder: string): string {
+  return `The chat's files were copied into the new project folder ${folder}, where this session runs. Work there; the chat keeps its own copy.`;
+}
+
+/**
+ * Frame a generated handoff document as the opening prompt of a new session.
+ * @param task The task the work comes from.
+ * @param document The handoff document.
+ * @param workspaceNote Replaces the line saying where the work lives.
+ * @returns The seed prompt.
+ */
+export function buildHandoffSeed(task: TaskInfo, document: string, workspaceNote?: string): string {
+  const workspace =
+    workspaceNote ??
+    (task.worktree
+      ? `This work has a git worktree at ${task.worktree}.`
+      : isChat(task)
+        ? "This work started in a chat outside any project, in its own folder."
+        : `This work runs in the main ${task.project} checkout.`);
 
   return [
     `Continue the work described below. It comes from Warpforge task ${task.id}, whose session could not be carried over, so this handoff document is the only context you have.`,

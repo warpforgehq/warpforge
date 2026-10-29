@@ -21,6 +21,7 @@ import {
 import { agentDisplayName } from "@/lib/agentNames";
 import {
   buildHandoffSeed,
+  copiedChatNote,
   canContinueHere,
   type CarryMode,
   defaultCarryMode,
@@ -140,6 +141,7 @@ export function ContinueSessionDialog({
   throughIndex,
   targetAgent,
   targetProject,
+  targetFolder,
   onOpenTask,
 }: {
   open: boolean;
@@ -152,6 +154,8 @@ export function ContinueSessionDialog({
   targetAgent: string;
   /** Project the new task runs in, when it is not the task's own: a chat moving into one. */
   targetProject?: string;
+  /** Folder a chat's files were just copied into, as `targetProject`'s checkout. */
+  targetFolder?: string;
   onOpenTask: (id: string) => void;
 }) {
   const daemonState = useSyncExternalStore(daemon.subscribe, daemon.getState);
@@ -163,6 +167,7 @@ export function ContinueSessionDialog({
   );
   const estimate = useMemo(() => estimateTokens(transcript), [transcript]);
   const continueHereAllowed = !targetProject && canContinueHere(task, targetAgent);
+  const workspaceNote = targetFolder ? copiedChatNote(targetFolder) : undefined;
 
   const [carry, setCarry] = useState<CarryMode>(() => defaultCarryMode(estimate));
   const [destination, setDestination] = useState<Destination>(continueHereAllowed ? "here" : "new");
@@ -211,9 +216,9 @@ export function ContinueSessionDialog({
           }));
         if (!document.trim()) throw new Error("The handoff came back empty");
         handoffCache.current = document;
-        text = buildHandoffSeed(task, document);
+        text = buildHandoffSeed(task, document, workspaceNote);
       } else {
-        text = buildConversationBranchPrompt(task, updates, throughIndex);
+        text = buildConversationBranchPrompt(task, updates, throughIndex, workspaceNote);
         if (!text) throw new Error("There is nothing to carry over");
       }
 
@@ -233,7 +238,7 @@ export function ContinueSessionDialog({
           project: targetProject ?? task.project,
           prompt: text,
           tags: ["conversation-branch", `branched-from:${task.id}`],
-          worktree: branchWorktree,
+          worktree: branchWorktree && !targetFolder,
         });
         const createdTaskId = (result as { taskId?: string })?.taskId;
         if (!createdTaskId) throw new Error("Warpforge did not return the new task id");
@@ -395,7 +400,7 @@ export function ContinueSessionDialog({
           </p>
         )}
 
-        {destination === "new" && (
+        {destination === "new" && !targetFolder && (
           <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
             <input
               type="checkbox"

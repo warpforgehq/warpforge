@@ -57,20 +57,30 @@ function filesTouched(updates: SessionUpdate[], throughIndex: number): string[] 
   return [...paths].sort();
 }
 
-/** Build the portable context handed to a new harness for a conversation fork. */
+/**
+ * Build the portable context handed to a new harness for a conversation fork.
+ * @param task The source task.
+ * @param updates Its conversation.
+ * @param throughIndex Last update carried over.
+ * @param workspaceNote Replaces the line saying where the source work lives.
+ * @returns The prompt; empty when there is nothing to carry.
+ */
 export function buildConversationBranchPrompt(
   task: TaskInfo,
   updates: SessionUpdate[],
   throughIndex: number,
+  workspaceNote?: string,
 ): string {
   if (throughIndex < 0 || throughIndex >= updates.length) return "";
   const transcript = renderTranscript(updates, throughIndex);
 
-  const workspace = task.worktree
-    ? `The source task uses this worktree: ${task.worktree}`
-    : isChat(task)
-      ? "The source task is a chat outside any project, in its own folder."
-      : `The source task uses the main ${task.project} project checkout.`;
+  const workspace =
+    workspaceNote ??
+    (task.worktree
+      ? `The source task uses this worktree: ${task.worktree}`
+      : isChat(task)
+        ? "The source task is a chat outside any project, in its own folder."
+        : `The source task uses the main ${task.project} project checkout.`);
 
   const paths = filesTouched(updates, throughIndex);
   const files =

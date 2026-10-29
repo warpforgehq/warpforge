@@ -10,6 +10,7 @@ import type { TaskInfo } from "@/protocol";
 import { AdvisorIndicator } from "./AdvisorIndicator";
 import { ChatFolderButton } from "./ChatFolderButton";
 import { ContinueInProject } from "./ContinueInProject";
+import { CreateProjectFromChat } from "./CreateProjectFromChat";
 import { GitWorkspaceControls } from "./GitWorkspaceControls";
 
 interface Props {
@@ -57,6 +58,7 @@ export function TaskStatusStrip({
         {isChat(task) ? (
           <>
             <ContinueInProject task={task} />
+            <CreateProjectFromChat task={task} />
             <ChatFolderButton taskId={task.id} />
           </>
         ) : (
