@@ -3,10 +3,13 @@ import { useSyncExternalStore } from "react";
 
 import { TaskAccountMenu } from "@/components/TaskAccountMenu";
 import { daemon } from "@/daemon";
+import { isChat } from "@/lib/taskKind";
 import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 
 import { AdvisorIndicator } from "./AdvisorIndicator";
+import { ChatFolderButton } from "./ChatFolderButton";
+import { ContinueInProject } from "./ContinueInProject";
 import { GitWorkspaceControls } from "./GitWorkspaceControls";
 
 interface Props {
@@ -51,13 +54,20 @@ export function TaskStatusStrip({
         </span>
       )}
       <span className={cn("flex items-center gap-2", !repositoryOperation && "ml-auto")}>
-        <GitWorkspaceControls
-          taskId={task.id}
-          branch={branch}
-          task={task}
-          onOpenCommit={onOpenCommit}
-          onOpenPush={onOpenPush}
-        />
+        {isChat(task) ? (
+          <>
+            <ContinueInProject task={task} />
+            <ChatFolderButton taskId={task.id} />
+          </>
+        ) : (
+          <GitWorkspaceControls
+            taskId={task.id}
+            branch={branch}
+            task={task}
+            onOpenCommit={onOpenCommit}
+            onOpenPush={onOpenPush}
+          />
+        )}
       </span>
     </div>
   );
