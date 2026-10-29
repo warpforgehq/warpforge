@@ -40,3 +40,4 @@ stale and then misleads.
 | [0026](0026-peer-sessions.md) | Parallel sessions see each other in a directory and message as peers |
 | [0027](0027-smiths.md) | A Smith is a persistent, named, universal agent that outlives its tasks |
 | [0028](0028-explorer-lazy-tree.md) | The Explorer reads directories on demand, and a watcher says what changed |
+| [0029](0029-projectless-chats.md) | A chat is a task with no project, run in its own folder |
