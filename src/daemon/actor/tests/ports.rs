@@ -2,21 +2,11 @@
 //! declared ranges relocate sticky ones, and everything is persisted.
 
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
-
-use tokio::sync::{Mutex, MutexGuard};
+use tokio::sync::MutexGuard;
 
 use crate::daemon::actor::ports::PortRangeSink;
 use crate::daemon::actor::Daemon;
 use crate::registry::{self, PortRange, ProjectEntry};
-
-/// The registry reads its home directory from a process-global env var, and
-/// cargo runs tests in parallel threads — serialize the tests that touch it.
-/// A tokio mutex because the guard is deliberately held across `.await`s.
-async fn registry_lock() -> MutexGuard<'static, ()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(())).lock().await
-}
 
 fn temp_home(tag: &str) -> PathBuf {
     let dir =
@@ -33,7 +23,7 @@ fn register(tag: &str, name: &str) -> ProjectEntry {
 
 /// Point the registry at a throwaway directory for the duration of a test.
 async fn with_registry(tag: &str) -> MutexGuard<'static, ()> {
-    let guard = registry_lock().await;
+    let guard = registry::test_home_lock().await;
     std::env::set_var("WARPFORGE_HOME", temp_home(tag));
     guard
 }

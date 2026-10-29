@@ -34,6 +34,16 @@ struct ProjectsData {
     projects: Vec<ProjectEntry>,
 }
 
+/// The registry's home is a process-global env var and tests run on parallel
+/// threads, so every test that moves it holds this for as long as it uses it.
+#[cfg(test)]
+pub(crate) async fn test_home_lock() -> tokio::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
+    LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
+        .lock()
+        .await
+}
+
 pub(crate) fn warpforge_dir() -> PathBuf {
     // Test seam: lets the suite point the registry at a throwaway directory.
     if let Ok(dir) = std::env::var("WARPFORGE_HOME") {
