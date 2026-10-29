@@ -90,6 +90,9 @@ impl Daemon {
         start: StartPoint,
     ) -> Option<WorktreeRequest> {
         let path = self.project_path(project)?;
+        // A chat's folder is not a checkout, so a task continued from one
+        // starts fresh rather than inheriting its tree.
+        let branched_from = branched_from.filter(|src| !self.is_chat(src));
         // Resolve the source's working directory before borrowing the manager.
         // A source task without a worktree runs in the project checkout, and
         // that is still the tree its branch must inherit from.
