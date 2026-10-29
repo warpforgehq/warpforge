@@ -280,3 +280,98 @@ async fn deleting_with_its_folder_touches_only_a_chat_folder() {
     assert_eq!(error.code, wire::ErrorCode::NotFound);
     handle.shutdown().await;
 }
+
+#[tokio::test]
+async fn only_a_chat_can_become_a_project() {
+    let handle = spawn();
+    let task = handle
+        .create_task(
+            "demo",
+            "p",
+            "claude",
+            Vec::new(),
+            false,
+            false,
+            None,
+            Vec::new(),
+            None,
+            Default::default(),
+            None,
+        )
+        .await;
+    let lookalike = scratch::root().join(&task);
+    std::fs::create_dir_all(&lookalike).unwrap();
+    std::fs::write(lookalike.join("keep.txt"), "mine").unwrap();
+    let target = std::env::temp_dir().join(format!(
+        "wf-not-a-project-{}",
+        &uuid::Uuid::new_v4().to_string()[..8]
+    ));
+    for id in [task.as_str(), "t_nope", "../x", "/etc"] {
+        let error = call(
+            &handle,
+            json!({ "method": "chat.createProject", "params": { "task_id": id, "path": target } }),
+        )
+        .await
+        .expect_err("refused");
+        assert_eq!(error.code, wire::ErrorCode::NotFound, "{id}");
+    }
+    assert!(!target.exists());
+    assert!(handle.projects().await.is_empty());
+    let _ = std::fs::remove_dir_all(&lookalike);
+    handle.shutdown().await;
+}
+
+#[tokio::test]
+async fn a_chat_becomes_a_project_holding_a_copy_of_its_files() {
+    let _home = crate::registry::test_home_lock().await;
+    let base = tempfile::tempdir().unwrap();
+    std::env::set_var("WARPFORGE_HOME", base.path().join("home"));
+    std::fs::create_dir_all(base.path().join("home")).unwrap();
+    let handle = spawn();
+    let chat = create_chat(&handle, false).await;
+    let dir = scratch::chat_dir(&chat).unwrap();
+    std::fs::create_dir_all(dir.join("node_modules/dep")).unwrap();
+    std::fs::write(dir.join("node_modules/dep/index.js"), "x").unwrap();
+    std::fs::write(dir.join("notes.md"), "mine").unwrap();
+
+    let busy = base.path().join("busy");
+    std::fs::create_dir_all(&busy).unwrap();
+    std::fs::write(busy.join("theirs.txt"), "keep").unwrap();
+    let error = call(
+        &handle,
+        json!({ "method": "chat.createProject", "params": { "task_id": chat, "path": busy, "init_git": false } }),
+    )
+    .await
+    .expect_err("a folder with files is refused");
+    assert_eq!(error.code, wire::ErrorCode::InvalidRequest);
+    assert!(error.message.contains("not empty"), "{}", error.message);
+    assert_eq!(std::fs::read_dir(&busy).unwrap().count(), 1);
+
+    let target = base.path().join("notes-app");
+    let created = call(
+        &handle,
+        json!({ "method": "chat.createProject", "params": { "task_id": chat, "path": target, "init_git": false } }),
+    )
+    .await
+    .expect("project created");
+    assert_eq!(created["name"], "notes-app");
+    assert_eq!(
+        std::fs::read_to_string(target.join("notes.md")).unwrap(),
+        "mine"
+    );
+    assert!(!target.join("node_modules").exists());
+    assert!(dir.join("notes.md").exists(), "the chat keeps its folder");
+    let projects = handle.projects().await;
+    assert_eq!(projects.len(), 1);
+    assert_eq!(projects[0].name, "notes-app");
+
+    let again = call(
+        &handle,
+        json!({ "method": "chat.createProject", "params": { "task_id": chat, "path": target } }),
+    )
+    .await
+    .expect_err("the name is taken");
+    assert_eq!(again.code, wire::ErrorCode::InvalidRequest);
+    let _ = std::fs::remove_dir_all(&dir);
+    handle.shutdown().await;
+}

@@ -1,6 +1,8 @@
 //! Folders for chats: tasks with no project, each run in its own directory
 //! under the data dir instead of a checkout.
 
+pub mod export;
+
 use std::path::{Path, PathBuf};
 
 /// @returns the directory every chat folder lives in

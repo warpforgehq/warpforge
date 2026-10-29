@@ -127,6 +127,7 @@ pub(super) async fn dispatch(
         TaskArchive { task_id, remove_worktree } => tasks::task_archive(handle, task_id, remove_worktree).await,
         TaskDelete { task_id, delete_folder } => chats::task_delete(handle, task_id, delete_folder).await,
         ChatFolder { task_id } => chats::chat_folder(handle, task_id).await,
+        ChatCreateProject { task_id, path, init_git } => chats::chat_create_project(handle, task_id, path, init_git).await,
         TaskDeleteSettled { project } => tasks::task_delete_settled(handle, project).await,
         TaskSetTitle { task_id, title } => tasks::task_set_title(handle, task_id, title).await,
         TaskAdopt { task_id } => tasks::task_adopt(handle, task_id).await,
