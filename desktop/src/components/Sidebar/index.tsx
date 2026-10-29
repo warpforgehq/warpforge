@@ -16,7 +16,7 @@ import { ConnectionDot } from "./ConnectionDot";
 import { DeleteShelfDialog } from "./DeleteShelfDialog";
 import { SIDEBAR_BODY_ID, SIDEBAR_MODES } from "./modes";
 import { NAV } from "./nav";
-import { EmptyRow, ProjectRow, ShelfRow } from "./rows";
+import { ChatsRow, EmptyRow, ProjectRow, ShelfRow } from "./rows";
 import { SmithsBody } from "./SmithsBody";
 import { useSidebarTree } from "./useSidebarTree";
 
@@ -336,6 +336,8 @@ function Sidebar({
                                 : undefined
                             }
                           />
+                        ) : row.kind === "chats" ? (
+                          <ChatsRow row={row} onToggle={toggleProject} />
                         ) : row.kind === "shelf" ? (
                           <ShelfRow row={row} onToggle={toggleShelf} onDelete={setDeletingShelf} />
                         ) : (

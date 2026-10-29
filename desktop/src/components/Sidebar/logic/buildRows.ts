@@ -1,10 +1,14 @@
 import type { AttentionItem } from "@/lib/attentionRail";
 import { flattenTaskTree, isSettledTask, settleableTasks, type TaskTree } from "@/lib/taskGroups";
+import { isChat } from "@/lib/taskKind";
 import type { TaskInfo } from "@/protocol";
 
 import type { SidebarRow } from "./row";
 import { needsHuman, resolveTaskState } from "./taskState";
 import { isSettledTree } from "./tree";
+
+/** The group key chats collapse and shelve under: their project, which is empty. */
+export const CHATS_GROUP = "";
 
 export interface SidebarRowsInput {
   tasks: readonly TaskInfo[];
@@ -63,7 +67,6 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
       kind: "empty",
       label: "No projects yet",
     });
-    return rows;
   }
 
   const rank = (task: TaskInfo) => (needsHuman(stateOf(task)) ? 0 : 1);
@@ -120,8 +123,48 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
     sorted.forEach((tree, index) => pushTree(tree, 0, [], index === sorted.length - 1, null));
   };
 
+  /** Rows under a group header; chats are the group whose project is `CHATS_GROUP`. */
+  const pushGroup = (name: string, groupTasks: readonly TaskInfo[]) => {
+    const roots = forest.filter(
+      (tree) => tree.task.project === name && isChat(tree.task) === (name === CHATS_GROUP),
+    );
+    if (roots.length === 0) {
+      rows.push({ hint: null, key: `empty:project:${name}`, kind: "empty", label: "No tasks yet" });
+      return;
+    }
+
+    const shelved: TaskTree[] = [];
+    const active: TaskTree[] = [];
+    for (const tree of roots) (isSettledTree(tree) ? shelved : active).push(tree);
+    pushRoots(active, byPriority);
+    if (shelved.length === 0) return;
+
+    const forced = shelved.some((tree) =>
+      flattenTaskTree(tree).some((task) => forceVisibleTaskIds.has(task.id)),
+    );
+    const shelfExpanded = expandedShelves.has(name) || forced;
+    // Mirrors the daemon's keep rule: a stale `filesChanged` with no worktree
+    // left to protect is nothing at risk, so only a live worktree with
+    // unmerged changes is kept.
+    const settledInProject = groupTasks.filter(isSettledTask);
+    const deletableIds = settledInProject
+      .filter((task) => !(Boolean(task.worktree) && task.filesChanged > 0))
+      .map((task) => task.id);
+    rows.push({
+      count: shelved.length,
+      deletableIds,
+      expanded: shelfExpanded,
+      key: `shelf:${name}`,
+      keptCount: settledInProject.length - deletableIds.length,
+      kind: "shelf",
+      project: name,
+    });
+    if (!shelfExpanded) return;
+    pushRoots(shelved, byRecency);
+  };
+
   for (const name of input.projectOrder) {
-    const projectTasks = tasks.filter((task) => task.project === name);
+    const projectTasks = tasks.filter((task) => task.project === name && !isChat(task));
     const live = projectTasks.filter((task) => !isSettledTask(task));
     const expanded = !collapsedProjects.has(name);
     const settleCandidates = settleableTasks(projectTasks, nowSec);
@@ -136,42 +179,21 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
       settleIds: settleCandidates.map((task) => task.id),
       settlePreview: settleCandidates.slice(0, 3).map((task) => task.title),
     });
-    if (!expanded) continue;
+    if (expanded) pushGroup(name, projectTasks);
+  }
 
-    const roots = forest.filter((tree) => tree.task.project === name);
-    if (roots.length === 0) {
-      rows.push({ hint: null, key: `empty:project:${name}`, kind: "empty", label: "No tasks yet" });
-      continue;
-    }
-
-    const shelved: TaskTree[] = [];
-    const active: TaskTree[] = [];
-    for (const tree of roots) (isSettledTree(tree) ? shelved : active).push(tree);
-    pushRoots(active, byPriority);
-    if (shelved.length === 0) continue;
-
-    const forced = shelved.some((tree) =>
-      flattenTaskTree(tree).some((task) => forceVisibleTaskIds.has(task.id)),
-    );
-    const shelfExpanded = expandedShelves.has(name) || forced;
-    // Mirrors the daemon's keep rule: a stale `filesChanged` with no worktree
-    // left to protect is nothing at risk, so only a live worktree with
-    // unmerged changes is kept.
-    const settledInProject = projectTasks.filter(isSettledTask);
-    const deletableIds = settledInProject
-      .filter((task) => !(Boolean(task.worktree) && task.filesChanged > 0))
-      .map((task) => task.id);
+  const chats = tasks.filter(isChat);
+  if (chats.length > 0) {
+    const live = chats.filter((task) => !isSettledTask(task));
+    const expanded = !collapsedProjects.has(CHATS_GROUP);
     rows.push({
-      count: shelved.length,
-      deletableIds,
-      expanded: shelfExpanded,
-      key: `shelf:${name}`,
-      keptCount: settledInProject.length - deletableIds.length,
-      kind: "shelf",
-      project: name,
+      attentionCount: live.filter((task) => needsHuman(stateOf(task))).length,
+      count: live.length,
+      expanded,
+      key: "chats",
+      kind: "chats",
     });
-    if (!shelfExpanded) continue;
-    pushRoots(shelved, byRecency);
+    if (expanded) pushGroup(CHATS_GROUP, chats);
   }
 
   return rows;

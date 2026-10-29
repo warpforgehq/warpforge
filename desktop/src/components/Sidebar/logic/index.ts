@@ -11,7 +11,7 @@
  * is happening and nothing is needed from you".
  */
 
-export { buildSidebarRows, type SidebarRowsInput } from "./buildRows";
+export { buildSidebarRows, CHATS_GROUP, type SidebarRowsInput } from "./buildRows";
 export { projectActivityAt, projectNames, sortProjectsByActivity } from "./projects";
 export {
   LANE_GLYPH_PX,
