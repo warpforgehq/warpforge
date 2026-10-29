@@ -17,9 +17,22 @@ import type {
  */
 export type TaskStatus = "queued" | "running" | "waiting" | "blocked" | "interrupted" | "done";
 
+/** `chat` is a task with no project, run in its own folder. */
+export type TaskKind = "task" | "chat";
+
+/** A chat's folder, for the delete confirmation and "Open folder". */
+export interface ChatFolder {
+  path: string;
+  /** Files under it, nested ones included. */
+  fileCount: number;
+}
+
 export interface TaskInfo {
   id: string;
+  /** Empty for a chat. */
   project: string;
+  /** Omitted for an ordinary task. */
+  kind?: TaskKind;
   prompt: string;
   agent: string;
   status: TaskStatus;

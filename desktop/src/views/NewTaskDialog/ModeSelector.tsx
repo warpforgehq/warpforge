@@ -9,11 +9,14 @@ const MODES: { id: TaskMode; label: string }[] = [
 ];
 
 export function ModeSelector({
+  chat = false,
   factoryOnly = false,
   hasValidWorkflows,
   mode,
   onChange,
 }: {
+  /** A chat without a project runs a single agent. */
+  chat?: boolean;
   /** Several backlog items only start in Factory. */
   factoryOnly?: boolean;
   hasValidWorkflows: boolean;
@@ -27,7 +30,11 @@ export function ModeSelector({
       className="flex max-w-full items-center gap-0.5 overflow-x-auto rounded-lg bg-card p-0.5"
     >
       {MODES.map(({ id, label }) => {
-        const disabled = id === "factory" ? !hasValidWorkflows : factoryOnly;
+        const disabled = chat
+          ? id !== "single"
+          : id === "factory"
+            ? !hasValidWorkflows
+            : factoryOnly;
         return (
           <button
             key={id}
@@ -38,9 +45,11 @@ export function ModeSelector({
             title={
               !disabled
                 ? undefined
-                : id === "factory"
-                  ? "This project has no valid workflow templates"
-                  : "Several backlog items start in Factory"
+                : chat
+                  ? "Without a project, only a single agent runs"
+                  : id === "factory"
+                    ? "This project has no valid workflow templates"
+                    : "Several backlog items start in Factory"
             }
             onClick={() => onChange(id)}
             className={cn(

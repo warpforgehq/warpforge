@@ -1,4 +1,4 @@
-import { FolderPlus, Search } from "lucide-react";
+import { FolderPlus, MessageSquare, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { ProjectBadge } from "@/components/Sidebar/ProjectBadge";
@@ -21,6 +21,8 @@ import type { Snapshot } from "../../protocol";
  * @param props.locked Whether the project cannot be changed here.
  * @param props.onChange Called with the newly picked project.
  * @param props.onAddProject Opens Add project; absent, the picker offers none.
+ * @param props.chat Whether "No project" is picked.
+ * @param props.onNoProject Picks "No project"; absent, the picker offers none.
  * @returns The heading element.
  */
 export function ComposerHeading({
@@ -29,30 +31,36 @@ export function ComposerHeading({
   locked,
   onChange,
   onAddProject,
+  chat = false,
+  onNoProject,
 }: {
   project: string;
   projects: Snapshot["projects"];
   locked: boolean;
   onChange: (next: string) => void;
   onAddProject?: () => void;
+  chat?: boolean;
+  onNoProject?: () => void;
 }) {
-  if (!project && !onAddProject) {
+  if (!project && !onAddProject && !onNoProject) {
     return <h1 className={HEADING}>What should we build?</h1>;
   }
+  const picker = locked ? (
+    project
+  ) : (
+    <ProjectPicker
+      project={project}
+      projects={projects}
+      chat={chat}
+      onChange={onChange}
+      onAddProject={onAddProject}
+      onNoProject={onNoProject}
+    />
+  );
   return (
     <h1 className={HEADING}>
-      What should we build in{" "}
-      {locked ? (
-        project
-      ) : (
-        <ProjectPicker
-          project={project}
-          projects={projects}
-          onChange={onChange}
-          onAddProject={onAddProject}
-        />
-      )}
-      ?
+      {chat ? "What should we work on " : "What should we build in "}
+      {picker}?
     </h1>
   );
 }
@@ -62,13 +70,17 @@ const HEADING = "max-w-full text-center text-2xl font-semibold tracking-tight";
 function ProjectPicker({
   project,
   projects,
+  chat,
   onChange,
   onAddProject,
+  onNoProject,
 }: {
   project: string;
   projects: Snapshot["projects"];
+  chat: boolean;
   onChange: (next: string) => void;
   onAddProject?: () => void;
+  onNoProject?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -102,11 +114,13 @@ function ProjectPicker({
           title={
             selected
               ? `${selected.path} · ports ${selected.portRange[0]}–${selected.portRange[1]}`
-              : "Choose a project"
+              : chat
+                ? "Runs in its own folder, outside any project"
+                : "Choose a project"
           }
           className="rounded-sm underline decoration-muted-foreground/50 decoration-2 underline-offset-[6px] transition-colors hover:decoration-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
-          {project || "a project"}
+          {chat ? "without a project" : project || "a project"}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64 p-0 text-left tracking-normal">
@@ -141,9 +155,21 @@ function ProjectPicker({
           {needle && visible.length === 0 && (
             <p className="px-2 py-1.5 text-[13px] text-muted-foreground">No matches</p>
           )}
-          {onAddProject && (
+          {onNoProject && (
             <>
               {projects.length > 0 && <DropdownMenuSeparator />}
+              <DropdownMenuItem
+                className={cn("text-[13px]", chat && "bg-secondary/60")}
+                onSelect={onNoProject}
+              >
+                <MessageSquare aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                No project
+              </DropdownMenuItem>
+            </>
+          )}
+          {onAddProject && (
+            <>
+              {(projects.length > 0 || onNoProject) && <DropdownMenuSeparator />}
               <DropdownMenuItem className="text-[13px]" onSelect={onAddProject}>
                 <FolderPlus aria-hidden className="size-4 shrink-0 text-muted-foreground" />
                 Add project

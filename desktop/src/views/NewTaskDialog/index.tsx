@@ -29,6 +29,7 @@ import { useFactoryOptions } from "./useFactoryOptions";
 import { useSmithStart } from "./useSmithStart";
 import { splitConfigPicks, useTaskCreation } from "./useTaskCreation";
 import { useTaskSelection } from "./useTaskSelection";
+import { CHAT_LINE, worktreeLine } from "./workspaceLine";
 
 export type { FactorySeed } from "./useFactoryBatch";
 
@@ -80,6 +81,8 @@ export default function NewTaskDialog({
     changeProject,
     changeSmith,
     changeWorkflow,
+    chat,
+    chooseNoProject,
     configPicks,
     currentAgent,
     ejectWorkflow,
@@ -132,7 +135,7 @@ export default function NewTaskDialog({
   });
   const isolated = inFactory
     ? factory.resolved === "worktree"
-    : useWorktree && mode !== "orchestrator";
+    : useWorktree && mode !== "orchestrator" && !chat;
   const picksBase = isolated && !(inFactory && factory.deliver);
   const branch =
     inFactory && factory.deliver
@@ -160,6 +163,7 @@ export default function NewTaskDialog({
     mode,
     onCreated,
     project,
+    chat,
     selectedWorkflow,
     useWorktree,
     workflow,
@@ -196,7 +200,7 @@ export default function NewTaskDialog({
   );
   const canStart = factorySeed
     ? !!selectedWorkflow && (batch.count ?? 0) > 0
-    : !!prompt.trim() && !!project && (!inFactory || !!selectedWorkflow);
+    : !!prompt.trim() && (!!project || chat) && (!inFactory || !!selectedWorkflow);
   const startLabel = factorySeed
     ? `Start ${batch.count ?? ""} in Factory`.replace("  ", " ")
     : inFactory
@@ -208,7 +212,9 @@ export default function NewTaskDialog({
         : smith
           ? `Start as ${smith.name}`
           : "Start task";
-  const workspaceLine = inFactory ? (
+  const workspaceLine = chat ? (
+    CHAT_LINE
+  ) : inFactory ? (
     <FactoryLocationNote options={factory} />
   ) : mode === "orchestrator" ? (
     "Lead and workers share your current checkout."
@@ -260,7 +266,7 @@ export default function NewTaskDialog({
         </>
       )}
       <ChipDivider />
-      {!inFactory && (
+      {!inFactory && !chat && (
         <ToggleChip
           active={useWorktree && mode !== "orchestrator"}
           disabled={mode === "orchestrator"}
@@ -282,7 +288,7 @@ export default function NewTaskDialog({
           onChange={setWorktreeBase}
         />
       )}
-      {!factorySeed && !smith && (
+      {!factorySeed && !smith && !chat && (
         <ToggleChip
           active={shareContext}
           icon={Share2}
@@ -320,8 +326,11 @@ export default function NewTaskDialog({
               locked={!!factorySeed}
               onChange={changeProject}
               onAddProject={onAddProject}
+              chat={chat}
+              onNoProject={factorySeed ? undefined : chooseNoProject}
             />
             <ModeSelector
+              chat={chat}
               mode={mode}
               hasValidWorkflows={hasValidWorkflows}
               factoryOnly={!!factorySeed}
@@ -439,17 +448,4 @@ export default function NewTaskDialog({
       </div>
     </div>
   );
-}
-
-function worktreeLine(base: WorktreeBase | null): string {
-  switch (base?.kind) {
-    case "origin":
-      return "Runs in an isolated worktree on a new branch from origin's latest.";
-    case "existing":
-      return "Runs in an isolated worktree on this branch; pushes go to it.";
-    case "pullRequest":
-      return "Runs in an isolated worktree on pull request #" + base.number + "'s branch.";
-    default:
-      return "Runs in an isolated git worktree.";
-  }
 }

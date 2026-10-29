@@ -38,7 +38,9 @@ export function useTaskSelection({
   // Unset picks fall back to the snapshot on every render: the launch composer
   // mounts before the daemon's first snapshot arrives.
   const [pickedProject, setProject] = useState<string | null>(defaultProject);
-  const project = pickedProject ?? firstProjectName;
+  /** "No project": the task is a chat, run in its own folder. */
+  const [chat, setChat] = useState(false);
+  const project = chat ? "" : (pickedProject ?? firstProjectName);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   /** Whether the person picked the harness; Factory defaults never override that. */
   const [agentPicked, setAgentPicked] = useState(false);
@@ -112,6 +114,7 @@ export function useTaskSelection({
   }, [mode, workflow, workflows]);
 
   const changeProject = (nextProject: string) => {
+    setChat(false);
     setProject(nextProject);
     // Only the workflow is project-scoped, so only the workflow is dropped.
     // Realising you picked the wrong project must not cost you the harness,
@@ -128,6 +131,14 @@ export function useTaskSelection({
   };
 
   const changeSmith = (id: string) => setStoredSmith(id);
+
+  /** A chat runs one agent: no workflow, orchestrator or Smith. */
+  const chooseNoProject = () => {
+    setChat(true);
+    setWorkflow(null);
+    setMode("single");
+    setStoredSmith(null);
+  };
 
   const changeWorkflow = (nextWorkflow: string | null) => {
     setWorkflow(nextWorkflow);
@@ -173,6 +184,8 @@ export function useTaskSelection({
     changeProject,
     changeSmith,
     changeWorkflow,
+    chat,
+    chooseNoProject,
     configPicks,
     currentAgent,
     ejectWorkflow,

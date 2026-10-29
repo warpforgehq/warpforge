@@ -56,6 +56,38 @@ describe("ComposerHeading", () => {
     expect(onAddProject).toHaveBeenCalledOnce();
   });
 
+  it("offers No project and names the choice once it is picked", async () => {
+    const user = userEvent.setup();
+    const onNoProject = vi.fn<() => void>();
+    const { rerender } = render(
+      <ComposerHeading
+        project="warpforge"
+        projects={projects}
+        locked={false}
+        onChange={vi.fn<(next: string) => void>()}
+        onNoProject={onNoProject}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Project" }));
+    await user.click(screen.getByRole("menuitem", { name: "No project" }));
+    expect(onNoProject).toHaveBeenCalledOnce();
+
+    rerender(
+      <ComposerHeading
+        project=""
+        projects={projects}
+        locked={false}
+        chat
+        onChange={vi.fn<(next: string) => void>()}
+        onNoProject={onNoProject}
+      />,
+    );
+    expect(screen.getByRole("heading")).toHaveTextContent(
+      "What should we work on without a project?",
+    );
+  });
+
   it("shows a fixed project as plain text", () => {
     render(
       <ComposerHeading
