@@ -18,6 +18,7 @@ pub(crate) struct Session {
     pub(crate) project: String,
     pub(crate) is_orchestrator: bool,
     pub(crate) mode: BridgeMode,
+    pub(crate) chat: bool,
 }
 
 /// The MCP stdio loop: newline-delimited JSON-RPC 2.0 with the agent.
@@ -147,12 +148,16 @@ async fn session_call(
         let text = handle::ask_advisor(client, &session.parent_task, &args).await?;
         return Ok(vec![json!({ "type": "text", "text": text })]);
     }
+    let confined = match session.chat {
+        true => crate::mcp::chat::confine(name, params)?,
+        false => None,
+    };
     handle::tool_content(
         client,
         &session.parent_task,
         &session.project,
         session.is_orchestrator,
-        params,
+        confined.as_ref().or(params),
     )
     .await
 }
@@ -184,6 +189,7 @@ mod tests {
             } else {
                 BridgeMode::Single
             },
+            chat: false,
         };
         let mut output = Vec::new();
         serve(input, &mut output, &mut client, &session)
@@ -273,6 +279,7 @@ mod tests {
                 project: project.into(),
                 is_orchestrator: false,
                 mode: BridgeMode::Single,
+                chat: false,
             };
             let tools = session_tools(&session);
             let names: Vec<&str> = tools
@@ -292,6 +299,7 @@ mod tests {
             project: "demo".into(),
             is_orchestrator: mode.is_orchestrator(),
             mode,
+            chat: false,
         };
         session_tools(&session)
             .as_array()
@@ -385,6 +393,7 @@ mod tests {
             project: "demo".into(),
             is_orchestrator: false,
             mode: BridgeMode::Advisor,
+            chat: false,
         };
         let mut output = Vec::new();
         let input = format!(

@@ -47,6 +47,7 @@ use tokio::io::BufReader;
 
 mod agents;
 mod automations;
+pub(crate) mod chat;
 mod daemon_client;
 mod format;
 mod handle;
@@ -70,10 +71,13 @@ const MCP_VERSION: &str = "2024-11-05";
 /// Entry point for the hidden `wf __mcp-orchestrator` subcommand.
 pub async fn run() -> Result<()> {
     let identity = identity::resolve(|name| std::env::var(name).ok())?;
-    let project = identity
-        .project
-        .or_else(project_from_cwd)
-        .unwrap_or_default();
+    let project = match identity.chat {
+        true => String::new(),
+        false => identity
+            .project
+            .or_else(project_from_cwd)
+            .unwrap_or_default(),
+    };
     log(&format!(
         "starting: parent_task={} project={project} mode={} from={}",
         identity.parent_task,
@@ -98,6 +102,7 @@ pub async fn run() -> Result<()> {
         project,
         is_orchestrator: identity.is_orchestrator,
         mode: identity.mode,
+        chat: identity.chat,
     };
     let stdin = BufReader::new(tokio::io::stdin());
     serve::serve(stdin, tokio::io::stdout(), &mut client, &session).await

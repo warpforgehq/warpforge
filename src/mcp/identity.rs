@@ -7,6 +7,7 @@ use anyhow::{anyhow, Result};
 pub(crate) const SESSION_TASK: &str = "WARPFORGE_SESSION_TASK";
 pub(crate) const SESSION_PROJECT: &str = "WARPFORGE_SESSION_PROJECT";
 pub(crate) const SESSION_MODE: &str = "WARPFORGE_SESSION_MODE";
+pub(crate) const SESSION_KIND: &str = "WARPFORGE_SESSION_KIND";
 
 /// Set when Claude Code's Remote Control spawner starts a child. A Claude
 /// Code that inherits it drops every stdio server passed over ACP.
@@ -19,6 +20,7 @@ pub(crate) fn forget_inherited_session() {
         SESSION_TASK,
         SESSION_PROJECT,
         SESSION_MODE,
+        SESSION_KIND,
         REMOTE_CONTROL_CARRIER,
     ] {
         std::env::remove_var(name);
@@ -97,6 +99,8 @@ pub(crate) struct Identity {
     pub(crate) mode: BridgeMode,
     /// Whether the identity came from the launching session.
     pub(crate) from_session: bool,
+    /// The session is a chat: it has no project and must not reach one.
+    pub(crate) chat: bool,
 }
 
 /// Resolve the identity from environment variables.
@@ -112,6 +116,7 @@ pub(crate) fn resolve(var: impl Fn(&str) -> Option<String>) -> Result<Identity> 
             is_orchestrator: mode.is_orchestrator(),
             mode,
             from_session: true,
+            chat: var(SESSION_KIND).as_deref() == Some(crate::mcp::chat::CHAT),
         });
     }
     // A legacy daemon sets `WF_ORCH_TASK` but not `WF_MODE`; treat that as an
@@ -137,6 +142,7 @@ pub(crate) fn resolve(var: impl Fn(&str) -> Option<String>) -> Result<Identity> 
             parsed => parsed,
         },
         from_session: false,
+        chat: var("WF_KIND").as_deref() == Some(crate::mcp::chat::CHAT),
     })
 }
 
@@ -186,6 +192,7 @@ mod tests {
                 is_orchestrator: true,
                 mode: BridgeMode::Orchestrator,
                 from_session: true,
+                chat: false,
             }
         );
     }
@@ -231,6 +238,18 @@ mod tests {
         ])
         .unwrap();
         assert_eq!(advisor.mode, BridgeMode::Advisor);
+    }
+
+    #[test]
+    fn a_chat_is_marked_by_the_session_or_the_entry() {
+        let session = resolve_from(&[(SESSION_TASK, "t_chat"), (SESSION_KIND, "chat")]).unwrap();
+        assert!(session.chat);
+        assert!(
+            resolve_from(&[("WF_TASK", "t_chat"), ("WF_KIND", "chat")])
+                .unwrap()
+                .chat
+        );
+        assert!(!resolve_from(&[(SESSION_TASK, "t_task")]).unwrap().chat);
     }
 
     #[test]
