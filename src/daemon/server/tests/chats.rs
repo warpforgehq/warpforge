@@ -140,3 +140,72 @@ async fn a_chat_cannot_run_a_workflow() {
     assert!(handle.tasks().await.is_empty());
     handle.shutdown().await;
 }
+
+#[tokio::test]
+async fn a_task_continued_from_a_chat_gets_a_fresh_worktree() {
+    let dir = tempfile::tempdir().unwrap();
+    crate::daemon::diff::testsupport::init_repo(dir.path()).await;
+    crate::daemon::diff::testsupport::git(
+        dir.path(),
+        &["commit", "-q", "--allow-empty", "-m", "i"],
+    )
+    .await;
+    let projects = vec![crate::registry::ProjectEntry {
+        name: "demo".into(),
+        path: dir.path().to_string_lossy().into_owned(),
+        added_at: "0".into(),
+        port_range: None,
+        port_range_override: None,
+    }];
+    let handle = Daemon::spawn(
+        projects,
+        Store::open_at(std::path::Path::new(":memory:")).ok(),
+    );
+    let chat = create_chat(&handle, false).await;
+    let created = call(
+        &handle,
+        json!({
+            "method": "task.create",
+            "params": {
+                "project": "demo",
+                "prompt": "carry on",
+                "agent": format!("node {TOUCH_AGENT}"),
+                "worktree": true,
+                "tags": ["conversation-branch", format!("branched-from:{chat}")],
+            }
+        }),
+    )
+    .await
+    .expect("task created");
+    let id = created["taskId"].as_str().unwrap().to_string();
+
+    let mut worktree = None;
+    tokio::time::timeout(Duration::from_secs(20), async {
+        loop {
+            let task = handle
+                .tasks()
+                .await
+                .into_iter()
+                .find(|t| t.id == id)
+                .unwrap();
+            assert_ne!(
+                task.status,
+                crate::daemon::task::TaskStatus::Blocked,
+                "{:?}",
+                task.blocked_reason
+            );
+            if let Some(path) = task
+                .worktree
+                .filter(|p| std::path::Path::new(p).join("touched.txt").exists())
+            {
+                worktree = Some(path);
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    })
+    .await
+    .expect("the task ran in its own worktree");
+    assert!(worktree.is_some());
+    handle.shutdown().await;
+}
