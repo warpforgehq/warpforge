@@ -58,6 +58,9 @@ pub(super) fn export_with(
     init_git: bool,
     git_env: &[(&str, &str)],
 ) -> Result<(), String> {
+    if !std::fs::symlink_metadata(src).is_ok_and(|meta| meta.is_dir()) {
+        return Err("the chat's folder is missing or is a link; nothing was copied".into());
+    }
     refuse_non_empty(dest)?;
     let parent = dest.parent().ok_or("the project folder has no parent")?;
     std::fs::create_dir_all(parent)
