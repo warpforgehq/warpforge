@@ -57,14 +57,12 @@ describe("chats in the sidebar", () => {
 
   it("shows chats even before any project exists", () => {
     const rows = build([chat("c1")], []);
-    expect(rows.map((row) => row.key)).toEqual(["empty:workspace", "chats", "workspace:c1"]);
+    expect(rows.map((row) => row.key)).toEqual(["chats", "workspace:c1"]);
   });
 
   it("folds the group and leaves no header without chats", () => {
-    expect(build([chat("c1")], [], [CHATS_GROUP]).map((row) => row.key)).toEqual([
-      "empty:workspace",
-      "chats",
-    ]);
+    expect(build([chat("c1")], [], [CHATS_GROUP]).map((row) => row.key)).toEqual(["chats"]);
+    expect(build([], []).map((row) => row.key)).toEqual(["empty:workspace"]);
     expect(build([task("a")]).some((row) => row.kind === "chats")).toBe(false);
   });
 });

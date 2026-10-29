@@ -3,6 +3,7 @@ import type {
   ChatFolder,
   DeleteSettledResult,
   ExternalSession,
+  TaskKind,
   TaskPullRequest,
 } from "../protocol";
 import type { CoreClient } from "./client";
@@ -103,9 +104,10 @@ export function TaskMethods<TBase extends Constructor<CoreClient>>(Base: TBase) 
       })) as { name: string; path: string };
     }
 
-    /** Bulk-delete every settled task on a project's "N done" shelf. */
-    async deleteSettledTasks(project?: string): Promise<DeleteSettledResult> {
-      return (await this.request("task.deleteSettled", { project })) as DeleteSettledResult;
+    /** Bulk-delete every settled task on a project's "N done" shelf, or with
+     *  `kind: "chat"` on the Chats shelf; a chat whose folder holds files is kept. */
+    async deleteSettledTasks(project?: string, kind?: TaskKind): Promise<DeleteSettledResult> {
+      return (await this.request("task.deleteSettled", { kind, project })) as DeleteSettledResult;
     }
 
     /** With `removeWorktree`, the checkout and its local branch go too; the

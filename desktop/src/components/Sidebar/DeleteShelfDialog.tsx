@@ -1,6 +1,6 @@
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
-import type { SidebarRow } from "./logic";
+import { CHATS_GROUP, type SidebarRow } from "./logic";
 
 export function DeleteShelfDialog({
   row,
@@ -17,15 +17,19 @@ export function DeleteShelfDialog({
       title="Delete finished tasks?"
       description={
         row &&
-        `Delete ${row.deletableIds.length} finished task${
-          row.deletableIds.length === 1 ? "" : "s"
-        } in ${row.project || "Chats"}?${
-          row.keptCount > 0
-            ? ` ${row.keptCount} kept because ${
-                row.keptCount === 1 ? "its worktree still has" : "their worktrees still have"
-              } uncommitted changes.`
-            : ""
-        }`
+        (row.project === CHATS_GROUP
+          ? `Delete ${row.deletableIds.length} finished chat${
+              row.deletableIds.length === 1 ? "" : "s"
+            }? A chat whose folder still holds files is kept; delete it on its own to choose what happens to them.`
+          : `Delete ${row.deletableIds.length} finished task${
+              row.deletableIds.length === 1 ? "" : "s"
+            } in ${row.project}?${
+              row.keptCount > 0
+                ? ` ${row.keptCount} kept because ${
+                    row.keptCount === 1 ? "its worktree still has" : "their worktrees still have"
+                  } uncommitted changes.`
+                : ""
+            }`)
       }
       confirmLabel="Delete"
       busyLabel="Deleting…"
