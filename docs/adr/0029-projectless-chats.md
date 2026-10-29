@@ -44,6 +44,18 @@ default). Bulk deletes never send it.
 **Continuing in a project is the existing continue flow.** It creates a new task
 in the chosen project from the transcript or a handoff summary; the chat stays.
 
+**A chat becomes a project by copy, not move** (`chat.createProject`). The
+daemon copies the chat's folder into a sibling staging folder, optionally runs
+`git init` and a first commit there, renames it onto the target, then registers
+it; the continue flow starts the new task, told where the files are. The chat
+keeps its folder and stays usable. `node_modules` and `.venv` are skipped at any
+depth; symlinks are skipped, since one could name files outside the chat. With
+git on, the chat's own `.git` is left behind so the first commit runs no
+hooks the chat wrote.
+*Rejected:* moving the folder — the chat's session would lose its working
+directory. *Rejected:* merging into a non-empty target — the user's files and
+the chat's would mix with no way to tell them apart.
+
 ## Invariants
 
 1. **Nothing decides "chat" from the project name.** Use `kind`
@@ -59,3 +71,7 @@ in the chosen project from the transcript or a handoff summary; the chat stays.
 5. **Every client-supplied id goes through `scratch::chat_dir`**, which refuses
    anything but `[A-Za-z0-9_-]`: an id is joined onto the root, and `..` or an
    absolute path would otherwise name any folder on the disk.
+6. **A project is made only from a known chat, into a missing or empty folder**
+   (`dispatch/chats.rs`, `scratch/export.rs`). The rename is the final check:
+   it fails on a folder that gained files after the first look, and a failure
+   leaves only the staging folder, which is removed.
