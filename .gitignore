@@ -32,6 +32,7 @@ ref-projects/
 
 # Personal scratch/misc (never shared)
 scratch/
+!src/daemon/scratch/
 
 # Task worktree submodules (runtime state, never tracked as gitlinks)
 .worktrees/

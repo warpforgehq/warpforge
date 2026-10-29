@@ -72,3 +72,47 @@ pub(super) async fn chat_folder(
         file_count,
     }))
 }
+
+/// The chat, the target and the project name are all checked here; the
+/// client's word for any of them is not taken.
+pub(super) async fn chat_create_project(
+    handle: &DaemonHandle,
+    task_id: String,
+    path: String,
+    init_git: bool,
+) -> Result<serde_json::Value, wire::RpcError> {
+    let src = match is_chat(handle, &task_id).await {
+        true => scratch::chat_dir(&task_id),
+        false => None,
+    }
+    .ok_or_else(|| wire::RpcError {
+        code: wire::ErrorCode::NotFound,
+        message: format!("no chat {task_id}"),
+    })?;
+    let dest =
+        scratch::export::resolve_target(&path, dirs::home_dir().as_deref()).map_err(invalid)?;
+    let name = dest
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .into_owned();
+    if handle.projects().await.iter().any(|p| p.name == name) {
+        return Err(invalid(format!(
+            "a project named {name} already exists; choose another folder name"
+        )));
+    }
+    {
+        let dest = dest.clone();
+        tokio::task::spawn_blocking(move || scratch::export::export(&src, &dest, init_git))
+            .await
+            .map_err(crate::daemon::server::util::rpc_err)?
+            .map_err(invalid)?;
+    }
+    let path = dest.to_string_lossy().into_owned();
+    let entry = handle.add_project(&path, None, None).await.map_err(|e| {
+        invalid(format!(
+            "the files are in {path}, but it could not be added as a project: {e}"
+        ))
+    })?;
+    Ok(json!({ "name": entry.name, "path": entry.path }))
+}

@@ -28,6 +28,7 @@ pub(super) fn method_runs_concurrently(method: &wire::Method) -> bool {
             | TextGenerate { .. }
             | AgentsInstall { .. }
             | AgentsProbe { .. }
+            | ChatCreateProject { .. }
             | SessionSetConfigOption { .. }
             | LanguageServersInstall { .. }
             | DiffGet { .. }

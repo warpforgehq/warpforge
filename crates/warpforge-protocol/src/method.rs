@@ -321,6 +321,16 @@ pub enum Method {
     /// A chat's folder and how many files it holds. Returns `ChatFolder`.
     #[serde(rename = "chat.folder")]
     ChatFolder { task_id: String },
+    /// Copy a chat's files into a new folder and register it as a project.
+    /// `path` may start with `~`; it must be missing or empty. Returns
+    /// `{ name, path }` of the new project. The chat keeps its own folder.
+    #[serde(rename = "chat.createProject")]
+    ChatCreateProject {
+        task_id: String,
+        path: String,
+        #[serde(default = "default_true")]
+        init_git: bool,
+    },
     /// Bulk-delete every settled task (`status == "done"` or manually marked
     /// handled) — the shelf's "N done" clear-all action. Scoped to `project`
     /// when given, else every project. A settled task that still holds
