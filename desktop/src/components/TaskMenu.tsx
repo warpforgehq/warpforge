@@ -1,7 +1,7 @@
 import { Archive, MoreHorizontal, Pin, PinOff, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -66,17 +66,12 @@ export function TaskMenu({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <ConfirmDialog
+      <DeleteTaskDialog
+        task={task}
+        label={taskLabel(task)}
         open={confirmingDelete}
-        title="Delete this task?"
-        description={
-          <>“{taskLabel(task)}” and its conversation will be gone. This cannot be undone.</>
-        }
-        confirmLabel="Delete task"
-        busyLabel="Deleting…"
         onCancel={() => setConfirmingDelete(false)}
-        onConfirm={async () => {
-          await daemon.deleteTask(task.id);
+        onDeleted={() => {
           setConfirmingDelete(false);
           onClose();
         }}

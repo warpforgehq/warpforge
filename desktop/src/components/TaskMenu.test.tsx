@@ -52,7 +52,7 @@ describe("TaskMenu", () => {
     expect(deleteTask).not.toHaveBeenCalled();
 
     await user.click(await screen.findByRole("button", { name: "Delete task" }));
-    await vi.waitFor(() => expect(deleteTask).toHaveBeenCalledWith("task-1"));
+    await vi.waitFor(() => expect(deleteTask).toHaveBeenCalledWith("task-1", false));
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 });
