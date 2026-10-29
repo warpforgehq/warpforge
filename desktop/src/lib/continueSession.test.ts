@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import type { TaskInfo } from "@/protocol";
 
-import { buildHandoffSeed, canContinueHere, defaultCarryMode } from "./continueSession";
+import {
+  buildHandoffSeed,
+  canContinueHere,
+  copiedChatNote,
+  defaultCarryMode,
+} from "./continueSession";
 import { estimateTokens } from "./tokenEstimate";
 
 const task = {
@@ -63,5 +68,13 @@ describe("buildHandoffSeed", () => {
     const seed = buildHandoffSeed({ ...task, worktree: "/tmp/wt" }, "doc");
 
     expect(seed).toContain("git worktree at /tmp/wt");
+  });
+
+  it("says where a chat's files went when it became a project", () => {
+    const chat = { ...task, kind: "chat" as const, project: "" };
+    const seed = buildHandoffSeed(chat, "doc", copiedChatNote("/Users/me/workspace/notes"));
+
+    expect(seed).toContain("copied into the new project folder /Users/me/workspace/notes");
+    expect(seed).not.toContain("outside any project");
   });
 });

@@ -84,6 +84,25 @@ export function TaskMethods<TBase extends Constructor<CoreClient>>(Base: TBase) 
       return (await this.request("chat.folder", { task_id: taskId })) as ChatFolder;
     }
 
+    /**
+     * Copy a chat's files into a new folder and register it as a project.
+     * @param taskId The chat.
+     * @param path The new folder; may start with `~`, must be missing or empty.
+     * @param initGit Whether to make it a git repository with a first commit.
+     * @returns The new project's name and resolved folder.
+     */
+    async createProjectFromChat(
+      taskId: string,
+      path: string,
+      initGit: boolean,
+    ): Promise<{ name: string; path: string }> {
+      return (await this.request("chat.createProject", {
+        init_git: initGit,
+        path,
+        task_id: taskId,
+      })) as { name: string; path: string };
+    }
+
     /** Bulk-delete every settled task on a project's "N done" shelf. */
     async deleteSettledTasks(project?: string): Promise<DeleteSettledResult> {
       return (await this.request("task.deleteSettled", { project })) as DeleteSettledResult;

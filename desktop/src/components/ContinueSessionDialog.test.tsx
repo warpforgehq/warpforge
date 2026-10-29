@@ -149,4 +149,36 @@ describe("ContinueSessionDialog", () => {
     // a summary of itself would be pure loss.
     expect(screen.queryByRole("radio", { name: /Continue in this task/ })).toBeNull();
   });
+
+  it("tells a task in a project made from a chat where the files are, without a worktree", async () => {
+    const user = userEvent.setup();
+    const request = vi.spyOn(daemon, "request").mockResolvedValue({ taskId: "t_new" });
+    render(
+      <ContinueSessionDialog
+        open
+        onOpenChange={() => {}}
+        task={{ ...task, kind: "chat", project: "" }}
+        updates={updates}
+        throughIndex={updates.length - 1}
+        targetAgent="claude"
+        targetProject="notes"
+        targetFolder="/Users/me/workspace/notes"
+        onOpenTask={() => {}}
+      />,
+    );
+    expect(screen.queryByText("Run it in a new worktree")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => expect(request).toHaveBeenCalled());
+    const [method, params] = request.mock.calls[0] as [
+      string,
+      { project: string; prompt: string; worktree: boolean },
+    ];
+    expect(method).toBe("task.create");
+    expect(params.project).toBe("notes");
+    expect(params.worktree).toBe(false);
+    expect(params.prompt).toContain("copied into the new project folder /Users/me/workspace/notes");
+    expect(params.prompt).not.toContain("outside any project");
+  });
 });
