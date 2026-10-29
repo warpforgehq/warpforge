@@ -19,7 +19,7 @@ export function DeleteShelfDialog({
         row &&
         `Delete ${row.deletableIds.length} finished task${
           row.deletableIds.length === 1 ? "" : "s"
-        } in ${row.project}?${
+        } in ${row.project || "Chats"}?${
           row.keptCount > 0
             ? ` ${row.keptCount} kept because ${
                 row.keptCount === 1 ? "its worktree still has" : "their worktrees still have"
