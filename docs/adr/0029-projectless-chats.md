@@ -53,5 +53,9 @@ in the chosen project from the transcript or a handoff summary; the chat stays.
    a checkout. Tested in `server/tests/chats.rs`.
 3. **The scratch root is checked against enclosing checkouts before a chat is
    created** (`scratch::create`, `dispatch/chats.rs`).
-4. **A folder holding files is removed only on an explicit `delete_folder`.**
-   (`scratch::remove`)
+4. **A folder holding files is removed only on an explicit `delete_folder`,
+   and only for an id the board knows as a chat** (`dispatch/chats.rs`).
+   `task.delete` answers Ok for an unknown id, so its success proves nothing.
+5. **Every client-supplied id goes through `scratch::chat_dir`**, which refuses
+   anything but `[A-Za-z0-9_-]`: an id is joined onto the root, and `..` or an
+   absolute path would otherwise name any folder on the disk.
