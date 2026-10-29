@@ -195,3 +195,15 @@ fn a_chat_repository_is_replaced_by_a_fresh_one_only_when_git_is_on() {
     export_with(&src, &kept, false, &IDENTITY).unwrap();
     assert!(kept.join(".git/hooks/pre-commit").exists());
 }
+
+#[test]
+fn a_chat_folder_replaced_by_a_link_is_not_followed() {
+    let outside = chat_with_files();
+    let src = temp("linked").join("t_chat");
+    std::os::unix::fs::symlink(&outside, &src).unwrap();
+    let dest = temp("linked-dest").join("project");
+    let error = export_with(&src, &dest, false, &IDENTITY).unwrap_err();
+    assert!(error.contains("link"), "{error}");
+    assert!(!dest.exists());
+    assert!(outside.join("notes.md").exists());
+}

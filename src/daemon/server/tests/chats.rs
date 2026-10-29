@@ -375,3 +375,36 @@ async fn a_chat_becomes_a_project_holding_a_copy_of_its_files() {
     let _ = std::fs::remove_dir_all(&dir);
     handle.shutdown().await;
 }
+
+#[tokio::test]
+async fn deleting_a_chat_whose_folder_became_a_link_removes_only_the_link() {
+    let handle = spawn();
+    let chat = create_chat(&handle, false).await;
+    let dir = scratch::chat_dir(&chat).unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    std::fs::write(outside.path().join("keep.txt"), "not the chat's").unwrap();
+    std::fs::remove_dir_all(&dir).unwrap();
+    std::os::unix::fs::symlink(outside.path(), &dir).unwrap();
+
+    let error = call(
+        &handle,
+        json!({ "method": "chat.createProject", "params": { "task_id": chat, "path": outside.path().join("copy"), "init_git": false } }),
+    )
+    .await
+    .expect_err("a linked folder is not copied");
+    assert!(error.message.contains("link"), "{}", error.message);
+    assert!(!outside.path().join("copy").exists());
+
+    call(
+        &handle,
+        json!({ "method": "task.delete", "params": { "task_id": chat, "delete_folder": true } }),
+    )
+    .await
+    .expect("deleted");
+    assert!(std::fs::symlink_metadata(&dir).is_err(), "the link is gone");
+    assert_eq!(
+        std::fs::read_to_string(outside.path().join("keep.txt")).unwrap(),
+        "not the chat's"
+    );
+    handle.shutdown().await;
+}
