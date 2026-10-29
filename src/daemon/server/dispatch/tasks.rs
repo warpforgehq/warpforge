@@ -12,6 +12,7 @@ use warpforge_protocol as wire;
 pub(super) async fn task_create(
     handle: &DaemonHandle,
     project: String,
+    kind: wire::TaskKind,
     prompt: String,
     agent: String,
     tags: Vec<String>,
@@ -29,6 +30,14 @@ pub(super) async fn task_create(
     advisor: Option<wire::AdvisorPick>,
     factory: Option<wire::FactoryCreate>,
 ) -> Result<serde_json::Value, wire::RpcError> {
+    let chat = kind == wire::TaskKind::Chat;
+    if chat {
+        super::chats::check_create(workflow.is_some() || factory.is_some())?;
+    }
+    let (project, worktree, include_runtime_context) = match chat {
+        true => (String::new(), false, false),
+        false => (project, worktree, include_runtime_context),
+    };
     let orchestrated = workflow.is_some() || tags.iter().any(|tag| tag == "orchestrator-chat");
     if advisor.is_some() && orchestrated {
         return Err(wire::RpcError {
@@ -114,6 +123,7 @@ pub(super) async fn task_create(
     handle
         .send(Command::CreateTask {
             project,
+            kind,
             prompt,
             agent,
             tags,

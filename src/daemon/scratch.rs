@@ -68,7 +68,10 @@ pub fn remove(task_id: &str, with_files: bool) -> std::io::Result<()> {
     if !dir.exists() || (!with_files && file_count(&dir) > 0) {
         return Ok(());
     }
-    std::fs::remove_dir_all(dir)
+    match std::fs::remove_dir_all(dir) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        other => other,
+    }
 }
 
 #[cfg(test)]

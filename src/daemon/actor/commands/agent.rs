@@ -38,7 +38,11 @@ impl Daemon {
                 task_id,
                 reply,
             } => {
-                let Some(root) = self.project_path(&project) else {
+                let chat_root = task_id
+                    .as_deref()
+                    .filter(|id| project.is_empty() && self.is_chat(id))
+                    .and_then(|id| self.task_repo_path(id));
+                let Some(root) = chat_root.or_else(|| self.project_path(&project)) else {
                     let _ = reply.send(Err(anyhow::anyhow!("unknown project: {project}")));
                     return;
                 };

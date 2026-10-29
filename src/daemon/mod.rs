@@ -34,6 +34,7 @@ pub mod prompt;
 pub mod pull_status;
 pub mod runner;
 pub mod runtime;
+pub mod scratch;
 pub mod search;
 pub mod server;
 pub mod sessions;

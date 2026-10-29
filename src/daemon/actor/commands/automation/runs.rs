@@ -287,6 +287,7 @@ impl Daemon {
                 let sent = cmd_tx
                     .send(Command::CreateTask {
                         project: a.project.clone(),
+                        kind: Default::default(),
                         prompt,
                         agent: a.agent.clone(),
                         tags: vec!["automation".into()],

@@ -40,6 +40,7 @@ mod accounts;
 mod acp_update;
 pub(crate) mod advisor;
 mod agent_health;
+mod chat;
 mod command;
 mod config_observer;
 mod dispatch_gate;

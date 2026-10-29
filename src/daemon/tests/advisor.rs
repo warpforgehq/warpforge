@@ -70,6 +70,7 @@ async fn advised_task(limits: Vec<wire::AgentAccountLimits>) -> Setup {
     daemon
         .send(Command::CreateTask {
             project: "demo".into(),
+            kind: Default::default(),
             prompt: "Build the parser".into(),
             agent: format!("node {EXECUTOR}"),
             tags: Vec::new(),

@@ -175,6 +175,7 @@ pub enum Command {
     },
     CreateTask {
         project: String,
+        kind: wire::TaskKind,
         prompt: String,
         agent: String,
         tags: Vec<String>,

@@ -62,6 +62,7 @@ impl DaemonHandle {
         let (tx, rx) = oneshot::channel();
         self.send(Command::CreateTask {
             project: project.to_string(),
+            kind: Default::default(),
             prompt: prompt.to_string(),
             agent: agent.to_string(),
             tags,
@@ -103,6 +104,7 @@ impl DaemonHandle {
         let (tx, rx) = oneshot::channel();
         self.send(Command::CreateTask {
             project: project.to_string(),
+            kind: Default::default(),
             prompt: prompt.to_string(),
             agent: agent.to_string(),
             tags,

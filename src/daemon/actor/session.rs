@@ -210,12 +210,10 @@ impl Daemon {
         config_overrides: std::collections::HashMap<String, String>,
     ) {
         // Resolve cwd: worktree path if set, otherwise project root.
-        let cwd = self.advisor_cwd(task_id).or_else(|| {
-            self.tasks
-                .get(task_id)
-                .and_then(|task| task.worktree.clone())
-                .or_else(|| self.project_path(project))
-        });
+        let cwd = self
+            .advisor_cwd(task_id)
+            .or_else(|| self.task_repo_path(task_id))
+            .or_else(|| self.project_path(project));
         let Some(cwd) = cwd else {
             self.drop_session(task_id);
             if let Some(task) = self.tasks.get_mut(task_id) {
@@ -272,8 +270,9 @@ impl Daemon {
         // spawn_agent / read_inbox tools. A plain task gets the core tools only.
         let mode = self.session_bridge_mode(task_id);
         let is_orchestrator = mode.is_orchestrator();
-        let mcp_servers = mcp_servers(task_id, project, mode);
+        let mut mcp_servers = mcp_servers(task_id, project, mode);
         bridge_env(&mut env, task_id, project, mode);
+        self.chat_bridge(task_id, &mut env, &mut mcp_servers);
         self.smith_thread_env(task_id, agent, &mut env);
         // A resume keeps whatever mode the person chose; only a fresh start
         // falls back to auto. The advisor's read-only mode still wins.

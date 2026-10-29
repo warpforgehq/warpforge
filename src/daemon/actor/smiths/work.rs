@@ -60,6 +60,7 @@ impl Daemon {
         let (tx, mut rx) = tokio::sync::oneshot::channel();
         self.handle_task_command(Command::CreateTask {
             project: project.to_string(),
+            kind: Default::default(),
             prompt: brief,
             agent: smith.agent.clone(),
             tags: if start.orchestrator {

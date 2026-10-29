@@ -103,6 +103,10 @@ impl Daemon {
     }
 
     pub(crate) fn task_repo_path(&self, task_id: &str) -> Option<String> {
+        if self.is_chat(task_id) {
+            let dir = crate::daemon::scratch::chat_dir(task_id);
+            return dir.to_str().map(str::to_string);
+        }
         self.tasks.get(task_id).and_then(|task| {
             task.worktree
                 .clone()

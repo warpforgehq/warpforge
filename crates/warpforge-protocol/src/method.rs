@@ -6,8 +6,9 @@
 use crate::{
     default_true, AdvisorPick, AgentConfig, AutomationPatch, AutomationTrigger, BacklogStorageMode,
     BootstrapAnswers, EntryRunLocation, FactoryCreate, HunkResolution, OrchestratorConfigDto,
-    PermissionOutcome, PromptAttachment, RunnerSettingsPatch, SmithCreate, SmithPatch, TextGenKind,
-    WorkItemPriority, WorkflowDecision, WorktreeBase, DEFAULT_MISSED_RUN_GRACE_MINUTES,
+    PermissionOutcome, PromptAttachment, RunnerSettingsPatch, SmithCreate, SmithPatch, TaskKind,
+    TextGenKind, WorkItemPriority, WorkflowDecision, WorktreeBase,
+    DEFAULT_MISSED_RUN_GRACE_MINUTES,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -222,7 +223,12 @@ pub enum Method {
     // ── Tasks (agent sessions on the board) ──
     #[serde(rename = "task.create")]
     TaskCreate {
+        /// Ignored for a chat.
         project: String,
+        /// `chat` creates a task with no project, run in its own folder:
+        /// no worktree, workflow, Factory or runtime context.
+        #[serde(default)]
+        kind: TaskKind,
         /// Prompt / instruction handed to the agent.
         prompt: String,
         /// Agent template name from .warpforge.yaml, or a raw command.
@@ -304,8 +310,17 @@ pub enum Method {
         remove_worktree: bool,
     },
     /// Delete a task and its persisted session history permanently.
+    /// A chat's folder goes with it when empty; one holding files only with
+    /// `delete_folder`.
     #[serde(rename = "task.delete")]
-    TaskDelete { task_id: String },
+    TaskDelete {
+        task_id: String,
+        #[serde(default)]
+        delete_folder: bool,
+    },
+    /// A chat's folder and how many files it holds. Returns `ChatFolder`.
+    #[serde(rename = "chat.folder")]
+    ChatFolder { task_id: String },
     /// Bulk-delete every settled task (`status == "done"` or manually marked
     /// handled) — the shelf's "N done" clear-all action. Scoped to `project`
     /// when given, else every project. A settled task that still holds

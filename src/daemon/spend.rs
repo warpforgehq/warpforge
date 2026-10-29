@@ -169,6 +169,7 @@ mod tests {
         wire::TaskInfo {
             id: "t1".into(),
             project: "p".into(),
+            kind: Default::default(),
             prompt: String::new(),
             agent: "claude".into(),
             status: wire::TaskStatus::Waiting,

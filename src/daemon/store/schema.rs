@@ -205,6 +205,11 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
     let _ = conn.execute("ALTER TABLE tasks ADD COLUMN smith TEXT", []);
     // Migration: a Smith's write paths inherited by a task spawned under it (ADR 0027).
     let _ = conn.execute("ALTER TABLE tasks ADD COLUMN write_limit TEXT", []);
+    // Migration: a chat has no project and runs in its own scratch folder.
+    let _ = conn.execute(
+        "ALTER TABLE tasks ADD COLUMN kind TEXT NOT NULL DEFAULT 'task'",
+        [],
+    );
     super::runner::init(conn)?;
     super::peers::init(conn)?;
     super::smiths::init(conn)

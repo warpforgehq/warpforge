@@ -29,8 +29,8 @@ impl Store {
                  created_at, updated_at, files_changed, blocked_reason, config_options, worktree,
                  base_branch, parent_task_id, settled_override, settled_at, snoozed_until,
                  snoozed_at, account_id, backlog_item_id, blocked_kind, model, origin, advisor, smith,
-                 write_limit)
-            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28)
+                 write_limit, kind)
+            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28,?29)
             ON CONFLICT(id) DO UPDATE SET
                 session_id=excluded.session_id,
                 agent=excluded.agent,
@@ -84,6 +84,7 @@ impl Store {
                 advisor,
                 smith,
                 write_limit,
+                kind_str(task.kind),
             ],
         )?;
         Ok(())
@@ -99,7 +100,7 @@ impl Store {
              created_at, updated_at, files_changed, blocked_reason, config_options, worktree, \
              parent_task_id, title, settled_override, settled_at, snoozed_until, snoozed_at, \
              account_id, backlog_item_id, blocked_kind, model, origin, base_branch, advisor, \
-             smith, write_limit FROM tasks",
+             smith, write_limit, kind FROM tasks",
         )?;
         let rows = stmt.query_map([], |row| {
             let tags_json: String = row.get(6)?;
@@ -116,6 +117,7 @@ impl Store {
                 id: row.get(0)?,
                 session_id: row.get(1)?,
                 project: row.get(2)?,
+                kind: parse_kind(&row.get::<_, String>(28)?),
                 prompt: row.get(3)?,
                 agent: row.get(4)?,
                 status,
@@ -317,5 +319,19 @@ fn parse_status(s: &str) -> TaskStatus {
         // `Queued` to `Interrupted`, so finished work would come back looking
         // like it had been cut short.
         _ => TaskStatus::Waiting,
+    }
+}
+
+fn kind_str(kind: wire::TaskKind) -> &'static str {
+    match kind {
+        wire::TaskKind::Task => "task",
+        wire::TaskKind::Chat => "chat",
+    }
+}
+
+fn parse_kind(s: &str) -> wire::TaskKind {
+    match s {
+        "chat" => wire::TaskKind::Chat,
+        _ => wire::TaskKind::Task,
     }
 }

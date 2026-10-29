@@ -34,6 +34,7 @@ pub(super) fn method_runs_concurrently(method: &wire::Method) -> bool {
             | FileContents { .. }
             | FileList { .. }
             | DirList { .. }
+            | ChatFolder { .. }
             | FileSearch { .. }
             | GitBranches { .. }
             | GitRoots { .. }
@@ -110,6 +111,7 @@ pub(super) fn method_is_mutation(method: &wire::Method) -> bool {
             | FileContents { .. }
             | FileList { .. }
             | DirList { .. }
+            | ChatFolder { .. }
             | FileSearch { .. }
             | GitBranches { .. }
             | GitRoots { .. }
