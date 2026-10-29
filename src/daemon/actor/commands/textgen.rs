@@ -22,18 +22,19 @@ impl Daemon {
                     None => crate::daemon::accounts::SpawnAccount::Active,
                 };
                 let resolved = self.tasks.get(&task_id).map(|task| {
-                    let repo = task
-                        .worktree
-                        .clone()
-                        .or_else(|| self.project_path(&task.project))
-                        .unwrap_or_else(|| ".".to_string());
+                    let repo = self
+                        .task_repo_path(&task_id)
+                        .ok_or_else(|| format!("project `{}` is not registered", task.project))?;
                     let command = self.resolve_agent_command(&task.project, &agent_id);
                     let env = self.resolve_agent_env(&agent_id, account);
                     let prompt = task.prompt.clone();
-                    (repo, command, prompt, env)
+                    Ok((repo, command, prompt, env))
                 });
                 match resolved {
-                    Some((repo, command, prompt, env)) => {
+                    Some(Err(error)) => {
+                        let _ = reply.send(Err(error));
+                    }
+                    Some(Ok((repo, command, prompt, env))) => {
                         tokio::spawn(async move {
                             let message = match kind {
                                 wire::TextGenKind::TaskTitle => Some(prompt.as_str()),
