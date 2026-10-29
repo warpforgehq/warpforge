@@ -6,16 +6,23 @@ use std::path::{Path, PathBuf};
 /// @returns the directory every chat folder lives in
 pub fn root() -> PathBuf {
     if cfg!(test) {
-        std::env::temp_dir().join(format!("wf-scratch-test-{}", std::process::id()))
+        std::env::temp_dir().join("wf-scratch-test")
     } else {
         crate::registry::warpforge_dir().join("scratch")
     }
 }
 
+/// Ids reach here from clients, so anything that could name a path outside
+/// the root (a separator, `..`, an absolute path) is refused.
 /// @param task_id the chat
-/// @returns the chat's folder, whether or not it exists yet
-pub fn chat_dir(task_id: &str) -> PathBuf {
-    root().join(task_id)
+/// @returns the chat's folder, whether or not it exists yet; `None` for an id
+///   that is not a plain name
+pub fn chat_dir(task_id: &str) -> Option<PathBuf> {
+    let plain = !task_id.is_empty()
+        && task_id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-');
+    plain.then(|| root().join(task_id))
 }
 
 /// Inside a checkout, git commands an agent runs in a chat folder would act on
@@ -37,7 +44,7 @@ pub fn create(task_id: &str) -> Result<PathBuf, String> {
     if let Some(reason) = refusal(&root) {
         return Err(reason);
     }
-    let dir = root.join(task_id);
+    let dir = chat_dir(task_id).ok_or_else(|| format!("`{task_id}` is not a chat id"))?;
     std::fs::create_dir_all(&dir)
         .map_err(|e| format!("could not create chat folder {}: {e}", dir.display()))?;
     Ok(dir)
@@ -64,7 +71,9 @@ pub fn file_count(dir: &Path) -> u64 {
 /// @param task_id the chat being deleted
 /// @param with_files whether the user agreed to delete the files in it
 pub fn remove(task_id: &str, with_files: bool) -> std::io::Result<()> {
-    let dir = chat_dir(task_id);
+    let Some(dir) = chat_dir(task_id) else {
+        return Ok(());
+    };
     if !dir.exists() || (!with_files && file_count(&dir) > 0) {
         return Ok(());
     }
@@ -94,6 +103,14 @@ mod tests {
         let reason = refusal(&repo.join("home/.warpforge/scratch")).expect("refused");
         assert!(reason.contains(repo.to_str().unwrap()), "{reason}");
         assert!(refusal(&temp("plain").join("scratch")).is_none());
+    }
+
+    #[test]
+    fn an_id_that_names_a_path_has_no_folder() {
+        for id in ["", "..", "../x", "/Users/someone", "a/b", "t_ok\0"] {
+            assert!(chat_dir(id).is_none(), "{id:?}");
+        }
+        assert_eq!(chat_dir("t_1a2b-3c"), Some(root().join("t_1a2b-3c")));
     }
 
     #[test]

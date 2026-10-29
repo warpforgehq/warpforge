@@ -60,7 +60,7 @@ fn spawn() -> DaemonHandle {
 async fn a_chat_runs_in_its_own_folder_without_a_project() {
     let handle = spawn();
     let id = create_chat(&handle, true).await;
-    let dir = scratch::chat_dir(&id);
+    let dir = scratch::chat_dir(&id).unwrap();
     let touched = dir.join("touched.txt");
     wait_for("the agent's file", || touched.exists()).await;
 
@@ -97,9 +97,12 @@ async fn deleting_a_chat_keeps_its_files_unless_asked() {
     let removed = create_chat(&handle, false).await;
     let empty = create_chat(&handle, false).await;
     for id in [&kept, &removed] {
-        std::fs::write(scratch::chat_dir(id).join("notes.md"), "mine").unwrap();
+        std::fs::write(scratch::chat_dir(id).unwrap().join("notes.md"), "mine").unwrap();
     }
-    assert!(scratch::chat_dir(&empty).is_dir(), "created with the chat");
+    assert!(
+        scratch::chat_dir(&empty).unwrap().is_dir(),
+        "created with the chat"
+    );
 
     for (id, delete_folder) in [(&kept, false), (&removed, true), (&empty, false)] {
         call(
@@ -110,9 +113,9 @@ async fn deleting_a_chat_keeps_its_files_unless_asked() {
         .expect("deleted");
     }
 
-    assert!(scratch::chat_dir(&kept).join("notes.md").exists());
-    assert!(!scratch::chat_dir(&removed).exists());
-    let empty_dir = scratch::chat_dir(&empty);
+    assert!(scratch::chat_dir(&kept).unwrap().join("notes.md").exists());
+    assert!(!scratch::chat_dir(&removed).unwrap().exists());
+    let empty_dir = scratch::chat_dir(&empty).unwrap();
     wait_for("the empty folder to go", || !empty_dir.exists()).await;
     assert!(handle.tasks().await.is_empty());
     handle.shutdown().await;
@@ -207,5 +210,73 @@ async fn a_task_continued_from_a_chat_gets_a_fresh_worktree() {
     .await
     .expect("the task ran in its own worktree");
     assert!(worktree.is_some());
+    handle.shutdown().await;
+}
+
+#[tokio::test]
+async fn deleting_with_its_folder_touches_only_a_chat_folder() {
+    let handle = spawn();
+    let victim = std::env::temp_dir().join(format!(
+        "wf-victim-{}",
+        &uuid::Uuid::new_v4().to_string()[..8]
+    ));
+    std::fs::create_dir_all(&victim).unwrap();
+    std::fs::write(victim.join("keep.txt"), "mine").unwrap();
+    let relative = format!("../{}", victim.file_name().unwrap().to_string_lossy());
+    for id in [victim.to_string_lossy().into_owned(), relative] {
+        let _ = call(
+            &handle,
+            json!({ "method": "task.delete", "params": { "task_id": id, "delete_folder": true } }),
+        )
+        .await;
+        let _ = call(
+            &handle,
+            json!({ "method": "chat.folder", "params": { "task_id": id } }),
+        )
+        .await;
+    }
+    assert!(
+        victim.join("keep.txt").exists(),
+        "nothing outside a chat folder is removed"
+    );
+
+    let task = handle
+        .create_task(
+            "demo",
+            "p",
+            "claude",
+            Vec::new(),
+            false,
+            false,
+            None,
+            Vec::new(),
+            None,
+            Default::default(),
+            None,
+        )
+        .await;
+    let lookalike = scratch::root().join(&task);
+    std::fs::create_dir_all(&lookalike).unwrap();
+    std::fs::write(lookalike.join("keep.txt"), "mine").unwrap();
+    call(
+        &handle,
+        json!({ "method": "task.delete", "params": { "task_id": task, "delete_folder": true } }),
+    )
+    .await
+    .expect("deleted");
+    assert!(
+        lookalike.join("keep.txt").exists(),
+        "a task's delete never takes a folder"
+    );
+    let _ = std::fs::remove_dir_all(&lookalike);
+    let _ = std::fs::remove_dir_all(&victim);
+
+    let error = call(
+        &handle,
+        json!({ "method": "chat.folder", "params": { "task_id": "t_nope" } }),
+    )
+    .await
+    .expect_err("no such chat");
+    assert_eq!(error.code, wire::ErrorCode::NotFound);
     handle.shutdown().await;
 }

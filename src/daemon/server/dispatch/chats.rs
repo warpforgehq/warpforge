@@ -24,13 +24,23 @@ pub(super) fn check_create(pipeline: bool) -> Result<(), wire::RpcError> {
     }
 }
 
+/// @returns whether `task_id` names a chat on the board
+async fn is_chat(handle: &DaemonHandle, task_id: &str) -> bool {
+    handle
+        .tasks()
+        .await
+        .iter()
+        .any(|task| task.id == task_id && task.kind == wire::TaskKind::Chat)
+}
+
 pub(super) async fn task_delete(
     handle: &DaemonHandle,
     task_id: String,
     delete_folder: bool,
 ) -> Result<serde_json::Value, wire::RpcError> {
+    let chat = delete_folder && is_chat(handle, &task_id).await;
     super::tasks::task_delete(handle, task_id.clone()).await?;
-    if delete_folder {
+    if chat {
         tokio::task::spawn_blocking(move || scratch::remove(&task_id, true))
             .await
             .map_err(crate::daemon::server::util::rpc_err)?
@@ -39,8 +49,18 @@ pub(super) async fn task_delete(
     Ok(json!(null))
 }
 
-pub(super) async fn chat_folder(task_id: String) -> Result<serde_json::Value, wire::RpcError> {
-    let dir = scratch::chat_dir(&task_id);
+pub(super) async fn chat_folder(
+    handle: &DaemonHandle,
+    task_id: String,
+) -> Result<serde_json::Value, wire::RpcError> {
+    let dir = match is_chat(handle, &task_id).await {
+        true => scratch::chat_dir(&task_id),
+        false => None,
+    }
+    .ok_or_else(|| wire::RpcError {
+        code: wire::ErrorCode::NotFound,
+        message: format!("no chat {task_id}"),
+    })?;
     let file_count = {
         let dir = dir.clone();
         tokio::task::spawn_blocking(move || scratch::file_count(&dir))
