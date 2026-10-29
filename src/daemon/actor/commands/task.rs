@@ -10,6 +10,7 @@ impl Daemon {
         match cmd {
             Command::CreateTask {
                 project,
+                kind,
                 prompt,
                 agent,
                 tags,
@@ -34,6 +35,9 @@ impl Daemon {
                     .find_map(|t| t.strip_prefix("branched-from:"))
                     .map(str::to_string);
                 let mut task = Task::new(&project, &prompt, &agent, tags);
+                if kind == warpforge_protocol::TaskKind::Chat {
+                    Self::make_chat(&mut task);
+                }
                 task.write_limit = self.inherited_write_limit(parent_task_id.as_deref());
                 task.parent_task_id = parent_task_id;
                 task.backlog_item_id = backlog_item_id;
@@ -92,7 +96,12 @@ impl Daemon {
                     self.sweep_pr_review_tasks();
                 }
 
-                if start {
+                if start
+                    && self
+                        .tasks
+                        .get(&id)
+                        .is_some_and(|t| t.status != TaskStatus::Blocked)
+                {
                     let start = PendingSessionStart {
                         project: project.clone(),
                         agent: agent.clone(),
@@ -354,7 +363,8 @@ impl Daemon {
                     }
                     let renders_of = id.clone();
                     tokio::task::spawn_blocking(move || {
-                        crate::daemon::html_render::store::remove_task(&renders_of)
+                        crate::daemon::html_render::store::remove_task(&renders_of);
+                        let _ = crate::daemon::scratch::remove(&renders_of, false);
                     });
                     self.emit(Event::TaskRemoved { id: id.clone() });
                     self.advisor_task_deleted(&id);

@@ -129,6 +129,7 @@ pub fn task_info(t: &Task) -> wire::TaskInfo {
     wire::TaskInfo {
         id: t.id.clone(),
         project: t.project.clone(),
+        kind: t.kind,
         prompt: t.prompt.clone(),
         agent: t.agent.clone(),
         status: task_status(&t.status),

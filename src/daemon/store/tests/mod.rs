@@ -8,6 +8,8 @@ use super::snapshot::MAX_SESSION_SNAPSHOT_UPDATES;
 use super::{Store, StoredAccount};
 use crate::daemon::task::{Task, TaskStatus, TaskWriteLimit};
 
+mod kind;
+
 #[test]
 fn roundtrip_and_interrupted_recovery() {
     let store = Store::open_at(std::path::Path::new(":memory:")).unwrap();

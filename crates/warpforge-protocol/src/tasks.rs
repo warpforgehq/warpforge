@@ -13,7 +13,11 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct TaskInfo {
     pub id: String,
+    /// Empty for a chat.
     pub project: String,
+    /// `chat` runs in its own scratch folder outside any project.
+    #[serde(default, skip_serializing_if = "TaskKind::is_task")]
+    pub kind: TaskKind,
     pub prompt: String,
     pub agent: String,
     pub status: TaskStatus,
@@ -106,6 +110,31 @@ pub struct TaskInfo {
     /// empty after a restart.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status_note: Option<String>,
+}
+
+/// What a task is: project work, or a chat with no project.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskKind {
+    #[default]
+    Task,
+    Chat,
+}
+
+impl TaskKind {
+    /// @returns whether this is ordinary project work
+    pub fn is_task(&self) -> bool {
+        *self == TaskKind::Task
+    }
+}
+
+/// A chat's folder, for the delete confirmation and "Open folder".
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatFolder {
+    pub path: String,
+    /// Files under it, nested ones included; 0 when it is empty or gone.
+    pub file_count: u64,
 }
 
 /// One message waiting behind the running turn.

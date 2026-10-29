@@ -12,6 +12,7 @@ async fn successful_update_safety_check_stops_commands_queued_behind_it() {
     daemon
         .send(Command::CreateTask {
             project: "demo".into(),
+            kind: Default::default(),
             prompt: "must not start".into(),
             agent: "claude".into(),
             tags: Vec::new(),

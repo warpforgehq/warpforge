@@ -222,6 +222,7 @@ fn request_wire_shape() {
         id: 7,
         method: Method::TaskCreate {
             project: "my-app".into(),
+            kind: TaskKind::Task,
             prompt: "fix the login bug".into(),
             agent: "claude".into(),
             tags: vec!["bug".into()],

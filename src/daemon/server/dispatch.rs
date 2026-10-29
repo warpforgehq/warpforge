@@ -14,6 +14,7 @@ mod agents;
 mod automations;
 mod backlog;
 mod branch;
+mod chats;
 mod clients;
 mod files;
 mod git;
@@ -67,7 +68,7 @@ pub(super) async fn dispatch(
         ServiceStopAll { project } => runtime::service_stop_all(handle, project).await,
         PortForwardStartAll { project } => runtime::port_forward_start_all(handle, project).await,
         PortForwardStart { project, name } => runtime::port_forward_start(handle, project, name).await,
-        TaskCreate { project, prompt, agent, tags, include_runtime_context, worktree, worktree_base, parent_task_id, attachments, default_model, config_overrides, workflow, backlog_item_id, origin, start, advisor, factory, } => tasks::task_create(handle, project, prompt, agent, tags, include_runtime_context, worktree, worktree_base, parent_task_id, attachments, default_model, config_overrides, workflow, backlog_item_id, origin, start, advisor, factory).await,
+        TaskCreate { project, kind, prompt, agent, tags, include_runtime_context, worktree, worktree_base, parent_task_id, attachments, default_model, config_overrides, workflow, backlog_item_id, origin, start, advisor, factory, } => tasks::task_create(handle, project, kind, prompt, agent, tags, include_runtime_context, worktree, worktree_base, parent_task_id, attachments, default_model, config_overrides, workflow, backlog_item_id, origin, start, advisor, factory).await,
         OrchestratorReadInbox { parent_task_id } => orchestration::orchestrator_read_inbox(handle, parent_task_id).await,
         OrchestratorListAgents { parent_task_id, project, } => orchestration::orchestrator_list_agents(handle, parent_task_id, project).await,
         AdvisorAsk { task_id, question, context } => advisor::advisor_ask(handle, task_id, question, context).await,
@@ -124,7 +125,8 @@ pub(super) async fn dispatch(
         TextEnhance { project, agent_id, prompt, model, } => agents::text_enhance(handle, project, agent_id, prompt, model).await,
         TaskCancel { task_id } => tasks::task_cancel(handle, task_id).await,
         TaskArchive { task_id, remove_worktree } => tasks::task_archive(handle, task_id, remove_worktree).await,
-        TaskDelete { task_id } => tasks::task_delete(handle, task_id).await,
+        TaskDelete { task_id, delete_folder } => chats::task_delete(handle, task_id, delete_folder).await,
+        ChatFolder { task_id } => chats::chat_folder(task_id).await,
         TaskDeleteSettled { project } => tasks::task_delete_settled(handle, project).await,
         TaskSetTitle { task_id, title } => tasks::task_set_title(handle, task_id, title).await,
         TaskAdopt { task_id } => tasks::task_adopt(handle, task_id).await,
