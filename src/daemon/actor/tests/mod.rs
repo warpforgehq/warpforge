@@ -8,4 +8,5 @@ mod project_removal;
 mod service_deps;
 mod service_liveness;
 mod transcript_projection;
+mod unknown_project;
 mod worktree_start;

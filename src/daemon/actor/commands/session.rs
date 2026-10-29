@@ -112,21 +112,19 @@ impl Daemon {
                 peer_message,
                 reply,
             } => {
-                let root = self.tasks.get(&task_id).map(|task| {
-                    task.worktree
-                        .clone()
-                        .or_else(|| self.project_path(&task.project))
-                        .unwrap_or_else(|| ".".into())
+                let root = match self.tasks.get(&task_id) {
+                    None => Err(format!("unknown task {task_id}")),
+                    Some(task) => self
+                        .task_repo_path(&task_id)
+                        .ok_or_else(|| format!("project `{}` is not registered", task.project)),
+                };
+                let prepared = root.and_then(|root| {
+                    crate::daemon::prompt::prepare_prompt(
+                        std::path::Path::new(&root),
+                        text.clone(),
+                        &attachments,
+                    )
                 });
-                let prepared = root
-                    .ok_or_else(|| format!("unknown task {task_id}"))
-                    .and_then(|root| {
-                        crate::daemon::prompt::prepare_prompt(
-                            std::path::Path::new(&root),
-                            text.clone(),
-                            &attachments,
-                        )
-                    });
                 let prepared = match prepared {
                     Ok(value) => value,
                     Err(error) => {

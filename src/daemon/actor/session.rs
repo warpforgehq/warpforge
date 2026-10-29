@@ -210,18 +210,25 @@ impl Daemon {
         config_overrides: std::collections::HashMap<String, String>,
     ) {
         // Resolve cwd: worktree path if set, otherwise project root.
-        let cwd = if let Some(cwd) = self.advisor_cwd(task_id) {
-            cwd
-        } else if let Some(task) = self.tasks.get(task_id) {
-            if let Some(ref wt_path) = task.worktree {
-                wt_path.clone()
-            } else {
-                self.project_path(project)
-                    .unwrap_or_else(|| ".".to_string())
+        let cwd = self.advisor_cwd(task_id).or_else(|| {
+            self.tasks
+                .get(task_id)
+                .and_then(|task| task.worktree.clone())
+                .or_else(|| self.project_path(project))
+        });
+        let Some(cwd) = cwd else {
+            self.drop_session(task_id);
+            if let Some(task) = self.tasks.get_mut(task_id) {
+                task.blocked_reason = Some(format!(
+                    "project `{project}` is not registered; add it to Warpforge or \
+                     delete the task"
+                ));
+                task.set_status(TaskStatus::Blocked);
+                let updated = task.clone();
+                self.persist(&updated);
+                self.emit(Event::TaskUpdated(updated));
             }
-        } else {
-            self.project_path(project)
-                .unwrap_or_else(|| ".".to_string())
+            return;
         };
         let command = self.resolve_agent_command(project, agent);
         if let Some(reason) = self.smith_start_refusal(task_id) {
