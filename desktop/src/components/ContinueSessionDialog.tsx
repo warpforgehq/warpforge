@@ -139,6 +139,7 @@ export function ContinueSessionDialog({
   updates,
   throughIndex,
   targetAgent,
+  targetProject,
   onOpenTask,
 }: {
   open: boolean;
@@ -149,6 +150,8 @@ export function ContinueSessionDialog({
   throughIndex: number;
   /** Harness that continues the work. */
   targetAgent: string;
+  /** Project the new task runs in, when it is not the task's own: a chat moving into one. */
+  targetProject?: string;
   onOpenTask: (id: string) => void;
 }) {
   const daemonState = useSyncExternalStore(daemon.subscribe, daemon.getState);
@@ -159,7 +162,7 @@ export function ContinueSessionDialog({
     [updates, throughIndex],
   );
   const estimate = useMemo(() => estimateTokens(transcript), [transcript]);
-  const continueHereAllowed = canContinueHere(task, targetAgent);
+  const continueHereAllowed = !targetProject && canContinueHere(task, targetAgent);
 
   const [carry, setCarry] = useState<CarryMode>(() => defaultCarryMode(estimate));
   const [destination, setDestination] = useState<Destination>(continueHereAllowed ? "here" : "new");
@@ -227,7 +230,7 @@ export function ContinueSessionDialog({
           attachments: [],
           config_overrides: {},
           include_runtime_context: true,
-          project: task.project,
+          project: targetProject ?? task.project,
           prompt: text,
           tags: ["conversation-branch", `branched-from:${task.id}`],
           worktree: branchWorktree,
@@ -256,7 +259,9 @@ export function ContinueSessionDialog({
     >
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Continue in a new session</DialogTitle>
+          <DialogTitle>
+            {targetProject ? `Continue in ${targetProject}` : "Continue in a new session"}
+          </DialogTitle>
           <DialogDescription>
             {agentDisplayName(targetAgent)} starts fresh, so the earlier conversation has to travel
             with it. Warpforge kept the transcript either way — this only decides what the new

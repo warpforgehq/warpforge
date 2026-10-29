@@ -1,5 +1,7 @@
 import type { SessionUpdate, TaskInfo } from "@/protocol";
 
+import { isChat } from "./taskKind";
+
 /** Longest tool output kept per call — one result can be a whole file. */
 const TOOL_CONTENT_LIMIT = 400;
 
@@ -66,7 +68,9 @@ export function buildConversationBranchPrompt(
 
   const workspace = task.worktree
     ? `The source task uses this worktree: ${task.worktree}`
-    : `The source task uses the main ${task.project} project checkout.`;
+    : isChat(task)
+      ? "The source task is a chat outside any project, in its own folder."
+      : `The source task uses the main ${task.project} project checkout.`;
 
   const paths = filesTouched(updates, throughIndex);
   const files =

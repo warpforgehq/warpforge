@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { DEFAULT_SURFACE_TABS, type SurfaceTab } from "@/components/workspace";
+import { useChatFolder } from "@/hooks/useChatFolder";
 import { useTaskSession } from "@/hooks/useWorkspaceSession";
 import {
   pruneTaskDiff,
@@ -11,6 +11,7 @@ import {
   setTaskSurface,
 } from "@/lib/sessionStore";
 import { buildTaskGroupIndex } from "@/lib/taskGroups";
+import { isChat } from "@/lib/taskKind";
 
 import { type ComposerHandle, type ContextChip } from "../../components/Composer";
 import { daemon } from "../../daemon";
@@ -29,6 +30,7 @@ import { hunkKey } from "./diffAnchors";
 import { type DiffWorkspaceHandle } from "./DiffWorkspace";
 import { useVanishedPaths } from "./explorer/useVanishedPaths";
 import { formatFileDiffAsMessage } from "./FileDiffView";
+import { taskSurfaceTabs, visibleSurface } from "./surfaceTabs";
 import { useSessionFilePath } from "./useSessionFilePath";
 import { useSplitResize } from "./useSplitResize";
 import { useTaskQueries, type ActiveTab } from "./useTaskQueries";
@@ -63,7 +65,11 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
   const setShowChat = useUi((s) => s.setShowChat);
   const setShowDiff = useUi((s) => s.setShowDiff);
   const toggleChat = useUi((s) => s.toggleChat);
-  const activeSurface = useUi((s) => s.activeSurface);
+  const chat = isChat(task);
+  const activeSurface = visibleSurface(
+    useUi((s) => s.activeSurface),
+    chat,
+  );
   const setActiveSurface = useUi((s) => s.setActiveSurface);
   const openTaskNav = useUi((s) => s.openTaskNav);
   const clearOpenTaskNav = useUi((s) => s.clearOpenTaskNav);
@@ -287,9 +293,13 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
     const changed = new Set((diff?.files ?? []).map((f) => f.path));
     return openFileTabs.map((path) => ({ changed: changed.has(path), path }));
   }, [diff?.files, openFileTabs]);
+  const chatFolder = useChatFolder(chat ? task.id : null);
   const projectRoot = useMemo(
-    () => snapshot.projects.find((p) => p.name === task.project)?.path.replace(/\/+$/, ""),
-    [snapshot.projects, task.project],
+    () =>
+      chat
+        ? chatFolder?.path
+        : snapshot.projects.find((p) => p.name === task.project)?.path.replace(/\/+$/, ""),
+    [chat, chatFolder?.path, snapshot.projects, task.project],
   );
   const resolveSessionFilePath = useSessionFilePath({
     diffFiles: diff?.files,
@@ -405,25 +415,17 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
   );
   const pipelineCount = task.orchestrationGraph?.nodes.length || childTrees.length || undefined;
 
-  const surfaceTabs = useMemo<SurfaceTab[]>(() => {
-    const diffCount = diff && diff.files.length > 0 ? diff.files.length : undefined;
-    const runtimeCount = services.length + portforwards.length || undefined;
-    const terminalCount = terminals.length || undefined;
-    return (
-      DEFAULT_SURFACE_TABS
-        // Hidden unless this task actually farmed work out: an ordinary
-        // single-agent task has no pipeline, and a permanently empty tab is
-        // just a dead affordance on most of the screens in the app.
-        .filter((tab) => tab.id !== "pipeline" || pipelineCount !== undefined)
-        .map((tab) => {
-          if (tab.id === "diff") return { ...tab, count: diffCount };
-          if (tab.id === "runtime") return { ...tab, count: runtimeCount };
-          if (tab.id === "terminal") return { ...tab, count: terminalCount };
-          if (tab.id === "pipeline") return { ...tab, count: pipelineCount };
-          return tab;
-        })
-    );
-  }, [diff, pipelineCount, portforwards.length, services.length, terminals.length]);
+  const surfaceTabs = useMemo(
+    () =>
+      taskSurfaceTabs({
+        chat,
+        diffCount: diff && diff.files.length > 0 ? diff.files.length : undefined,
+        pipelineCount,
+        runtimeCount: services.length + portforwards.length || undefined,
+        terminalCount: terminals.length || undefined,
+      }),
+    [chat, diff, pipelineCount, portforwards.length, services.length, terminals.length],
+  );
 
   return {
     activeFilePath,
