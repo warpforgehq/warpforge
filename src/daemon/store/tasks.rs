@@ -259,21 +259,28 @@ impl Store {
     /// `settled_override`), with `files_changed` and whether a worktree still
     /// exists for it — together they tell the caller whether there is
     /// actually unmerged work at risk, not just a stale count from the last
-    /// run. Scoped to `project` when given. Backs the shelf's bulk-delete
-    /// action.
-    pub fn find_settled_tasks(&self, project: Option<&str>) -> Result<Vec<(String, i64, bool)>> {
+    /// run. Scoped to `project` and `kind` when given. Backs the shelf's
+    /// bulk-delete action; the last field says whether the row is a chat.
+    pub fn find_settled_tasks(
+        &self,
+        project: Option<&str>,
+        kind: Option<wire::TaskKind>,
+    ) -> Result<Vec<(String, i64, bool, bool)>> {
         let mut stmt = self.conn.prepare(&format!(
-            "SELECT id, files_changed, (worktree IS NOT NULL AND worktree <> '') FROM tasks
+            "SELECT id, files_changed, (worktree IS NOT NULL AND worktree <> ''), kind = 'chat'
+               FROM tasks
               WHERE origin IS NULL
                 AND {SETTLED_TASK}
-                AND (?1 IS NULL OR project = ?1)"
+                AND (?1 IS NULL OR project = ?1)
+                AND (?2 IS NULL OR kind = ?2)"
         ))?;
         let rows = stmt
-            .query_map(rusqlite::params![project], |row| {
+            .query_map(rusqlite::params![project, kind.map(kind_str)], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, i64>(1)?,
                     row.get::<_, bool>(2)?,
+                    row.get::<_, bool>(3)?,
                 ))
             })?
             .filter_map(|r| r.ok())

@@ -162,10 +162,18 @@ impl DaemonHandle {
 
     /// Bulk-delete every settled task, scoped to `project` when given —
     /// the shelf's "N done" clear-all action.
-    pub async fn delete_settled_tasks(&self, project: Option<String>) -> wire::DeleteSettledResult {
+    pub async fn delete_settled_tasks(
+        &self,
+        project: Option<String>,
+        kind: Option<wire::TaskKind>,
+    ) -> wire::DeleteSettledResult {
         let (tx, rx) = oneshot::channel();
-        self.send(Command::DeleteSettledTasks { project, reply: tx })
-            .await;
+        self.send(Command::DeleteSettledTasks {
+            project,
+            kind,
+            reply: tx,
+        })
+        .await;
         rx.await.unwrap_or_default()
     }
 

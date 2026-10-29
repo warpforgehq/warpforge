@@ -345,6 +345,8 @@ pub enum Command {
     /// each survivor through the same `DeleteTask` path one at a time.
     DeleteSettledTasks {
         project: Option<String>,
+        /// `chat` for the Chats shelf, whose tasks have no project.
+        kind: Option<wire::TaskKind>,
         reply: oneshot::Sender<wire::DeleteSettledResult>,
     },
     /// Override a task's title, persist, and emit TaskUpdated.
