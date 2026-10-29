@@ -92,6 +92,11 @@ pub fn add_project(
             .to_string()
     });
 
+    // Clients key per-project state by name, and chats use the empty one.
+    if project_name.trim().is_empty() {
+        bail!("a project needs a name");
+    }
+
     let mut data = load()?;
 
     if data.projects.iter().any(|p| p.name == project_name) {
@@ -159,4 +164,22 @@ fn chrono_now() -> String {
         .unwrap_or_default()
         .as_secs();
     format!("{secs}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_project_without_a_name_is_refused() {
+        let dir = std::env::temp_dir();
+        for (path, name) in [
+            (dir.to_str().unwrap(), Some("")),
+            (dir.to_str().unwrap(), Some("  ")),
+            ("/", None),
+        ] {
+            let error = add_project(path, name, None).expect_err("refused");
+            assert!(error.to_string().contains("needs a name"), "{error}");
+        }
+    }
 }
