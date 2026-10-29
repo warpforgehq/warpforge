@@ -52,10 +52,14 @@ pub fn create(task_id: &str) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
-/// Counts files, not directories, and does not follow symlinks.
+/// Counts files, not directories, and does not follow symlinks, `dir` itself
+/// included.
 /// @param dir the folder to count
-/// @returns how many files are under it; 0 when it does not exist
+/// @returns how many files are under it; 0 when it does not exist or is a link
 pub fn file_count(dir: &Path) -> u64 {
+    if !std::fs::symlink_metadata(dir).is_ok_and(|meta| meta.is_dir()) {
+        return 0;
+    }
     let Ok(entries) = std::fs::read_dir(dir) else {
         return 0;
     };
@@ -124,6 +128,9 @@ mod tests {
         std::fs::write(dir.join("a/b/two.txt"), "2").unwrap();
         assert_eq!(file_count(&dir), 2);
         assert_eq!(file_count(&dir.join("missing")), 0);
+        let link = temp("count-link").join("chat");
+        std::os::unix::fs::symlink(&dir, &link).unwrap();
+        assert_eq!(file_count(&link), 0, "a linked folder is not counted");
     }
 
     #[test]
