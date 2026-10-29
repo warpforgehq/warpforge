@@ -35,6 +35,7 @@ export function ConfirmDialog({
   destructive = true,
   onCancel,
   onConfirm,
+  children,
 }: {
   open: boolean;
   title: string;
@@ -48,6 +49,8 @@ export function ConfirmDialog({
   destructive?: boolean;
   onCancel: () => void;
   onConfirm: () => void | Promise<void>;
+  /** Options for the action, between the question and the buttons. */
+  children?: React.ReactNode;
 }) {
   const [busy, setBusy] = useState(false);
 
@@ -91,6 +94,7 @@ export function ConfirmDialog({
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
+          {children}
           <DialogFooter>
             <Button variant="ghost" disabled={busy} onClick={onCancel}>
               {cancelLabel}

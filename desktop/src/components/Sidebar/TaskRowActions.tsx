@@ -11,7 +11,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
 import { ArchiveMergedTaskDialog } from "@/components/pullRequest/ArchiveMergedTaskDialog";
 import {
   DropdownMenu,
@@ -207,17 +207,12 @@ export function RowActions({
           onOpenChange={setConfirmingArchive}
         />
       )}
-      <ConfirmDialog
+      <DeleteTaskDialog
+        task={task}
+        label={label}
         open={confirmingDelete}
-        title="Delete this task?"
-        description={<>“{label}” and its conversation will be gone. This cannot be undone.</>}
-        confirmLabel="Delete task"
-        busyLabel="Deleting…"
         onCancel={() => setConfirmingDelete(false)}
-        onConfirm={async () => {
-          await daemon.deleteTask(task.id);
-          setConfirmingDelete(false);
-        }}
+        onDeleted={() => setConfirmingDelete(false)}
       />
     </div>
   );
