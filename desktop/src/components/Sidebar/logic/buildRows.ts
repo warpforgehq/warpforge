@@ -60,7 +60,7 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
   const stateOf = (task: TaskInfo) =>
     resolveTaskState(task, { attention: attentionIds.has(task.id), nowSec });
 
-  if (input.projectOrder.length === 0) {
+  if (input.projectOrder.length === 0 && !tasks.some(isChat)) {
     rows.push({
       hint: "Add one to get started",
       key: "empty:workspace",

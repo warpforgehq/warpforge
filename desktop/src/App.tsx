@@ -20,6 +20,7 @@ import { AppOverlays } from "./app/AppOverlays";
 import { useAppDialogs } from "./app/dialogs";
 import { getConnection, getConnectionError, getSnapshot, LiveSidebar } from "./app/hosts";
 import { useShellShortcuts } from "./app/shortcuts";
+import { CHATS_GROUP } from "./components/Sidebar/logic";
 import { useDaemonEvents } from "./hooks/useDaemonEvents";
 import { useFontScaling } from "./hooks/useFontScaling";
 import { useMediaQuery } from "./hooks/useMediaQuery";
@@ -130,13 +131,19 @@ export default function App() {
   }, []);
 
   const deleteSettledShelf = useCallback(async (project: string) => {
-    const result = await daemon.deleteSettledTasks(project);
-    toast(`Deleted ${result.deleted} finished task${result.deleted === 1 ? "" : "s"}`, {
-      description:
-        result.kept > 0
-          ? `${result.kept} kept — worktree still has uncommitted changes`
-          : undefined,
-    });
+    const chats = project === CHATS_GROUP;
+    const result = chats
+      ? await daemon.deleteSettledTasks(undefined, "chat")
+      : await daemon.deleteSettledTasks(project);
+    toast(
+      `Deleted ${result.deleted} finished ${chats ? "chat" : "task"}${result.deleted === 1 ? "" : "s"}`,
+      {
+        description:
+          result.kept > 0
+            ? `${result.kept} kept — ${chats ? "folder still holds files" : "worktree still has uncommitted changes"}`
+            : undefined,
+      },
+    );
   }, []);
 
   const projectNames = useMemo(
