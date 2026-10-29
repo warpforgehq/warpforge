@@ -53,6 +53,7 @@ export interface AppContentProps {
   newTaskPrompt: string | undefined;
   newTaskBacklogItemId: string | null;
   newTaskOptions?: NewTaskOptions;
+  newTaskAddedProject?: string | null;
   onNewTaskOpenChange: (open: boolean) => void;
   onOpenTask: (id: string) => void;
   onCloseTask: () => void;
@@ -79,6 +80,7 @@ export function AppContent({
   newTaskPrompt,
   newTaskBacklogItemId,
   newTaskOptions,
+  newTaskAddedProject,
   onNewTaskOpenChange,
   onOpenTask,
   onCloseTask,
@@ -142,6 +144,8 @@ export function AppContent({
                 initialMode={newTaskOptions?.mode}
                 factorySeed={newTaskOptions?.factory}
                 onCreated={newTaskOptions?.onCreated}
+                onAddProject={onAddProject}
+                addedProject={newTaskAddedProject}
               />
             ) : openTask ? (
               <TaskDetail

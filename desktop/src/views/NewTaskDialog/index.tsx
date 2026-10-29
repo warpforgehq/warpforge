@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { GitBranch, Share2, X } from "lucide-react";
+import { GitBranch, Share2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,8 @@ import { daemonQuery } from "../../query";
 import { useUi } from "../../store/ui";
 import { AdvisorPicker } from "./AdvisorPicker";
 import { BasePicker } from "./BasePicker";
-import { ChipDivider, HarnessChip, ProjectChip, SmithLockedChips, ToggleChip } from "./chips";
+import { ChipDivider, HarnessChip, SmithLockedChips, ToggleChip } from "./chips";
+import { ComposerHeading } from "./ComposerHeading";
 import { FactoryItems } from "./FactoryItems";
 import { FactoryLocationNote, FactoryOptions } from "./FactoryOptions";
 import { ModeSelector } from "./ModeSelector";
@@ -46,13 +47,16 @@ interface Props {
   factorySeed?: FactorySeed | null;
   /** Called with the new task's id once it is created. */
   onCreated?: (taskId: string) => void;
+  /** Opens Add project from the project picker. */
+  onAddProject?: () => void;
+  /** A project just added from here; the composer switches to it. */
+  addedProject?: string | null;
 }
 
 /**
- * New-task surface. It is mounted inside the app shell rather than in a modal
- * portal: the sidebar remains available, while this transient state replaces
- * the current main view. Sending the first prompt creates the task and closes
- * the surface.
+ * New-task composer: the screen the app launches on, mounted in the main area
+ * beside the sidebar. It has no close control; sending the first prompt
+ * creates the task and leaves it, and so does navigating from the sidebar.
  */
 export default function NewTaskDialog({
   open,
@@ -64,6 +68,8 @@ export default function NewTaskDialog({
   initialMode,
   factorySeed,
   onCreated,
+  onAddProject,
+  addedProject,
 }: Props) {
   const {
     agent,
@@ -111,6 +117,11 @@ export default function NewTaskDialog({
   const [worktreeBase, setWorktreeBase] = useState<WorktreeBase | null>(null);
   const composerRef = useRef<ComposerHandle>(null);
 
+  useEffect(() => {
+    if (addedProject) changeProject(addedProject);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when a project is added
+  }, [addedProject]);
+
   // A base names a branch of one repo; it means nothing in another project.
   useEffect(() => setWorktreeBase(null), [project]);
 
@@ -137,20 +148,6 @@ export default function NewTaskDialog({
   const projectFiles = Array.isArray(filesQuery.data) ? filesQuery.data : [];
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      // Escape inside an open chip menu closes that menu, not the page.
-      if (event.target instanceof Element && event.target.closest("[role=menu]")) return;
-      event.preventDefault();
-      event.stopPropagation();
-      close();
-    };
-    window.addEventListener("keydown", handler, true);
-    return () => window.removeEventListener("keydown", handler, true);
-  }, [close, open]);
 
   const { create, setShareContext, setTags, shareContext, tags } = useTaskCreation({
     agent,
@@ -193,7 +190,6 @@ export default function NewTaskDialog({
     if (result) close();
   };
 
-  const selectedProject = snapshot.projects.find((candidate) => candidate.name === project) ?? null;
   const runningForProject = snapshot.services.filter(
     (service) =>
       service.project === project && service.status === "running" && service.allocatedPort > 0,
@@ -224,22 +220,6 @@ export default function NewTaskDialog({
 
   const toolbar = (
     <>
-      {!factorySeed && (
-        <ProjectChip
-          projects={snapshot.projects}
-          project={project}
-          title={
-            selectedProject
-              ? selectedProject.path +
-                " · ports " +
-                selectedProject.portRange[0] +
-                "–" +
-                selectedProject.portRange[1]
-              : "Choose a project"
-          }
-          onChange={changeProject}
-        />
-      )}
       <HarnessChip
         agents={agentChoices}
         agent={agent}
@@ -328,32 +308,19 @@ export default function NewTaskDialog({
       data-testid="new-task-page"
       className="glass-opaque flex h-full min-h-0 flex-col bg-background"
     >
-      <header className="flex shrink-0 items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          New task
-        </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-8 shrink-0"
-          onClick={close}
-          aria-label="Close new task"
-          title="Close (Esc)"
-          type="button"
-        >
-          <X className="size-4" />
-        </Button>
-      </header>
-
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex min-h-full w-full max-w-[1100px] flex-col justify-center gap-6 px-4 pb-14 sm:px-6">
           {/* Nothing between the title and the composer may appear or disappear
               with the mode: this block anchors the screen, and the pipeline
               picker lives in the run-context row below instead. */}
           <div className="flex flex-col items-center gap-3">
-            <h1 className="text-center text-2xl font-semibold tracking-tight">
-              What are you trying to ship?
-            </h1>
+            <ComposerHeading
+              project={project}
+              projects={snapshot.projects}
+              locked={!!factorySeed}
+              onChange={changeProject}
+              onAddProject={onAddProject}
+            />
             <ModeSelector
               mode={mode}
               hasValidWorkflows={hasValidWorkflows}

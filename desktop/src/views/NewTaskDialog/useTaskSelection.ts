@@ -35,8 +35,11 @@ export function useTaskSelection({
     () => snapshot.agents?.filter((candidate) => candidate.enabled) ?? [],
     [snapshot.agents],
   );
-  const [project, setProject] = useState(defaultProject ?? firstProjectName);
-  const [selectedAgent, setSelectedAgent] = useState(enabledAgents[0]?.id ?? "claude");
+  // Unset picks fall back to the snapshot on every render: the launch composer
+  // mounts before the daemon's first snapshot arrives.
+  const [pickedProject, setProject] = useState<string | null>(defaultProject);
+  const project = pickedProject ?? firstProjectName;
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   /** Whether the person picked the harness; Factory defaults never override that. */
   const [agentPicked, setAgentPicked] = useState(false);
   const [defaultsApplied, setDefaultsApplied] = useState<string | null>(null);
@@ -57,9 +60,10 @@ export function useTaskSelection({
       ? undefined
       : projectSmiths.find((candidate) => candidate.id === storedSmith);
 
-  const agent = enabledAgents.some((candidate) => candidate.id === selectedAgent)
-    ? selectedAgent
-    : (enabledAgents[0]?.id ?? "claude");
+  const agent =
+    enabledAgents.find((candidate) => candidate.id === selectedAgent)?.id ??
+    enabledAgents[0]?.id ??
+    "claude";
   const currentAgent = (snapshot.agents ?? []).find((candidate) => candidate.id === agent);
   const agentOptions = currentAgent?.models ?? [];
   const probeLoading = !!currentAgent && currentAgent.enabled && agentOptions.length === 0;

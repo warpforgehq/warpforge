@@ -80,7 +80,14 @@ vi.mock("./views/Settings", () => ({
   default: ({ open }: { open: boolean }) => (open ? <div data-testid="settings" /> : null),
 }));
 vi.mock("./views/NewTaskDialog", () => ({
-  default: ({ open }: { open: boolean }) => (open ? <div data-testid="new-task-dialog" /> : null),
+  default: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) =>
+    open ? (
+      <div data-testid="new-task-dialog">
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Create task
+        </button>
+      </div>
+    ) : null,
 }));
 vi.mock("./views/PushDialog", () => ({
   default: ({ open }: { open: boolean }) => (open ? <div data-testid="push-dialog" /> : null),
@@ -126,9 +133,11 @@ function setWide(wide: boolean) {
  * `findBy` timeout and leave the tree uncommitted — an assertion right after
  * `render` then flakes. Render, settle, then touch the DOM.
  */
-async function renderApp() {
-  render(<App />);
-  await screen.findByTestId("mission-control", undefined, { timeout: 5_000 });
+async function renderApp(view = "mission-control") {
+  const result = render(<App />);
+  fireEvent.click(await screen.findByRole("button", { name: "Create task" }, { timeout: 5_000 }));
+  await screen.findByTestId(view, undefined, { timeout: 5_000 });
+  return result;
 }
 
 beforeEach(() => {
@@ -185,7 +194,32 @@ describe("App sidebar layout", () => {
     expect(screen.queryByTestId("sidebar-resize-handle")).not.toBeInTheDocument();
   });
 
-  it("⌘N opens the new task dialog", async () => {
+  it("launches on the new task composer, not the stored view", async () => {
+    useUi.setState({ view: "project", selectedProjectId: "warpforge" });
+    render(<App />);
+
+    expect(
+      await screen.findByTestId("new-task-dialog", undefined, { timeout: 5_000 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("projects")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Inbox mode" }));
+    expect(await screen.findByTestId("inbox")).toBeInTheDocument();
+    expect(screen.queryByTestId("new-task-dialog")).not.toBeInTheDocument();
+  });
+
+  it("leaves the composer when a store action navigates", async () => {
+    useUi.setState({ view: "team", sidebarMode: "team" });
+    render(<App />);
+    await screen.findByTestId("new-task-dialog", undefined, { timeout: 5_000 });
+
+    act(() => useUi.getState().openTeam({ id: "ada", kind: "teammate" }));
+
+    expect(await screen.findByTestId("team")).toBeInTheDocument();
+    expect(screen.queryByTestId("new-task-dialog")).not.toBeInTheDocument();
+  });
+
+  it("⌘N reopens the new task composer", async () => {
     await renderApp();
 
     expect(screen.queryByTestId("new-task-dialog")).not.toBeInTheDocument();
@@ -232,8 +266,7 @@ describe("Responsive behavior", () => {
   it("hides the sidebar when viewport narrows", async () => {
     setWide(true);
 
-    const { rerender } = render(<App />);
-    await screen.findByTestId("mission-control", undefined, { timeout: 5_000 });
+    const { rerender } = await renderApp();
     expect(screen.getByTestId("persistent-sidebar")).toBeInTheDocument();
 
     setWide(false);
@@ -245,8 +278,7 @@ describe("Responsive behavior", () => {
   it("shows the sidebar when viewport widens", async () => {
     setWide(false);
 
-    const { rerender } = render(<App />);
-    await screen.findByTestId("mission-control", undefined, { timeout: 5_000 });
+    const { rerender } = await renderApp();
     expect(screen.queryByTestId("persistent-sidebar")).not.toBeInTheDocument();
 
     setWide(true);
@@ -258,8 +290,7 @@ describe("Responsive behavior", () => {
   it("renders no off-canvas overlay on any viewport", async () => {
     setWide(true);
 
-    const { rerender } = render(<App />);
-    await screen.findByTestId("mission-control", undefined, { timeout: 5_000 });
+    const { rerender } = await renderApp();
     expect(screen.queryByRole("button", { name: "Close sessions rail" })).not.toBeInTheDocument();
 
     setWide(false);
@@ -273,17 +304,15 @@ describe("App view branches", () => {
   it("renders the project page for the project subject", async () => {
     useUi.setState({ selectedProjectId: "warpforge", view: "project" });
 
-    render(<App />);
+    await renderApp("projects");
 
-    expect(
-      await screen.findByTestId("projects", undefined, { timeout: 5_000 }),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("projects")).toBeInTheDocument();
   });
 
   it("gives every global view its own branch", async () => {
     useUi.setState({ view: "inbox" });
-    const { rerender } = render(<App />);
-    expect(await screen.findByTestId("inbox", undefined, { timeout: 5_000 })).toBeInTheDocument();
+    const { rerender } = await renderApp("inbox");
+    expect(screen.getByTestId("inbox")).toBeInTheDocument();
 
     act(() => useUi.setState({ view: "automations" }));
     rerender(<App />);
@@ -308,8 +337,7 @@ describe("Sidebar modes", () => {
     // Persisted across a restart in which the task was deleted: the offer has
     // to be checked against the snapshot, not taken on trust.
     useUi.setState({ lastTaskId: "deleted-while-away", view: "inbox" });
-    render(<App />);
-    await screen.findByTestId("inbox", undefined, { timeout: 5_000 });
+    await renderApp("inbox");
 
     fireEvent.click(screen.getByRole("button", { name: "Tasks mode" }));
 

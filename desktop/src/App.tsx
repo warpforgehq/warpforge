@@ -234,6 +234,7 @@ export default function App() {
                   newTaskPrompt={dialogs.newTaskPrompt}
                   newTaskBacklogItemId={dialogs.newTaskBacklogItemId}
                   newTaskOptions={dialogs.newTaskOptions}
+                  newTaskAddedProject={dialogs.newTaskAddedProject}
                   onNewTaskOpenChange={setNewTaskOpen}
                   onOpenTask={handleRevealTask}
                   onCloseTask={() => setOpenTaskId(null)}
