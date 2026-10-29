@@ -59,6 +59,7 @@ export function useTaskCreation({
   mode,
   onCreated,
   project,
+  chat,
   selectedWorkflow,
   useWorktree,
   workflow,
@@ -76,6 +77,8 @@ export function useTaskCreation({
   mode: TaskMode;
   onCreated?: (taskId: string) => void;
   project: string;
+  /** "No project": create a chat, which runs in its own folder. */
+  chat: boolean;
   selectedWorkflow: WorkflowMeta | null;
   useWorktree: boolean;
   workflow: string | null;
@@ -90,7 +93,7 @@ export function useTaskCreation({
   const [shareContext, setShareContext] = useState(true);
 
   const create = async (submission: PromptSubmission) => {
-    if (!submission.text.trim() || !project) return;
+    if (!submission.text.trim() || (!project && !chat)) return;
     const userTags = tags
       .split(",")
       .map((tag) => tag.trim())
@@ -104,17 +107,22 @@ export function useTaskCreation({
     const inFactory = mode === "factory";
     const delivers = inFactory && factory.deliver;
     const isolated =
-      mode === "orchestrator" ? false : inFactory ? factory.resolved === "worktree" : useWorktree;
+      chat || mode === "orchestrator"
+        ? false
+        : inFactory
+          ? factory.resolved === "worktree"
+          : useWorktree;
 
     let response: unknown;
     try {
       response = await daemon.request("task.create", {
+        kind: chat ? "chat" : undefined,
         project,
         prompt: submission.text.trim(),
         attachments: submission.attachments,
         agent,
         tags: mode === "orchestrator" ? [...userTags, "orchestrator-chat"] : userTags,
-        include_runtime_context: shareContext,
+        include_runtime_context: shareContext && !chat,
         worktree: isolated,
         worktree_base: isolated && !delivers ? (worktreeBase ?? undefined) : undefined,
         default_model: modelPick,
@@ -164,9 +172,11 @@ export function useTaskCreation({
           ? "It starts on its own as soon as the project's limits allow."
           : selectedWorkflow
             ? selectedWorkflow.name + " running in " + project
-            : (mode === "orchestrator" ? "Orchestrator" : "Agent") +
-              " session created for " +
-              project,
+            : chat
+              ? "Runs in its own folder, outside any project."
+              : (mode === "orchestrator" ? "Orchestrator" : "Agent") +
+                " session created for " +
+                project,
         action: {
           label: "Open task",
           onClick: () => openTask(taskId),

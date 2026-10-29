@@ -1,5 +1,6 @@
 import type {
   AdvisorPick,
+  ChatFolder,
   DeleteSettledResult,
   ExternalSession,
   TaskPullRequest,
@@ -73,8 +74,14 @@ export function TaskMethods<TBase extends Constructor<CoreClient>>(Base: TBase) 
       return result?.message ?? "Merged";
     }
 
-    async deleteTask(taskId: string) {
-      await this.request("task.delete", { task_id: taskId });
+    /** A chat's folder goes too when empty, or with `deleteFolder` when it holds files. */
+    async deleteTask(taskId: string, deleteFolder = false) {
+      await this.request("task.delete", { delete_folder: deleteFolder, task_id: taskId });
+    }
+
+    /** A chat's folder and how many files it holds. */
+    async chatFolder(taskId: string): Promise<ChatFolder> {
+      return (await this.request("chat.folder", { task_id: taskId })) as ChatFolder;
     }
 
     /** Bulk-delete every settled task on a project's "N done" shelf. */
