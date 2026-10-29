@@ -341,6 +341,10 @@ pub enum Method {
     TaskDeleteSettled {
         #[serde(default)]
         project: Option<String>,
+        /// `chat` scopes it to chats, which have no project. A chat whose
+        /// folder holds files is kept: a bulk delete never takes files.
+        #[serde(default)]
+        kind: Option<TaskKind>,
     },
     /// Override a task's title (e.g. after async title generation completes).
     #[serde(rename = "task.setTitle")]

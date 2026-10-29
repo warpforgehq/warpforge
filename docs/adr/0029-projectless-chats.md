@@ -39,7 +39,9 @@ never falls back to the project its working directory sits in.
 **A chat's folder is deleted only when the user says so.** Deleting a chat
 removes an empty folder; one holding files goes only with `task.delete
 { delete_folder: true }`, which the confirmation's checkbox sends (on by
-default). Bulk deletes never send it.
+default). Bulk deletes never send it: the Chats shelf deletes by `kind = 'chat'`
+(an old task can have an empty project too) and keeps, as `kept`, every chat
+whose folder still holds files, so no folder is left behind without its chat.
 
 **Continuing in a project is the existing continue flow.** It creates a new task
 in the chosen project from the transcript or a handoff summary; the chat stays.

@@ -292,6 +292,7 @@ impl Daemon {
     pub(crate) fn delete_settled_tasks(
         &self,
         project: Option<String>,
+        kind: Option<wire::TaskKind>,
         reply: tokio::sync::oneshot::Sender<wire::DeleteSettledResult>,
     ) {
         let unsafe_ids: HashSet<String> = self
@@ -307,7 +308,7 @@ impl Daemon {
         tokio::spawn(async move {
             let rows = crate::daemon::runtime::store_read(store, move |store| {
                 store
-                    .find_settled_tasks(project.as_deref())
+                    .find_settled_tasks(project.as_deref(), kind)
                     .unwrap_or_default()
             })
             .await
@@ -315,12 +316,15 @@ impl Daemon {
 
             let mut deleted = 0u64;
             let mut kept = 0u64;
-            for (task_id, files_changed, has_worktree) in rows {
+            for (task_id, files_changed, has_worktree, chat) in rows {
+                // A bulk delete never takes files, so a chat holding some stays
+                // where its own delete can still offer them.
                 if !settled_candidate_is_deletable(
                     files_changed,
                     has_worktree,
                     unsafe_ids.contains(&task_id),
-                ) {
+                ) || (chat && chat_holds_files(&task_id).await)
+                {
                     kept += 1;
                     continue;
                 }
@@ -357,4 +361,13 @@ pub(crate) fn settled_candidate_is_deletable(
     unsafe_state: bool,
 ) -> bool {
     !(has_worktree && files_changed > 0) && !unsafe_state
+}
+
+async fn chat_holds_files(task_id: &str) -> bool {
+    let Some(dir) = crate::daemon::scratch::chat_dir(task_id) else {
+        return false;
+    };
+    tokio::task::spawn_blocking(move || crate::daemon::scratch::file_count(&dir) > 0)
+        .await
+        .unwrap_or(true)
 }

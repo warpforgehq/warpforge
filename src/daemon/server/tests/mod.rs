@@ -1,6 +1,7 @@
 use super::*;
 
 mod archive_worktree;
+mod chat_shelf;
 mod chats;
 mod config;
 mod connection;

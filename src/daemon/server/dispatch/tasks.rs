@@ -224,8 +224,9 @@ pub(super) async fn task_delete(
 pub(super) async fn task_delete_settled(
     handle: &DaemonHandle,
     project: Option<String>,
+    kind: Option<wire::TaskKind>,
 ) -> Result<serde_json::Value, wire::RpcError> {
-    Ok(json!(handle.delete_settled_tasks(project).await))
+    Ok(json!(handle.delete_settled_tasks(project, kind).await))
 }
 
 pub(super) async fn task_set_title(

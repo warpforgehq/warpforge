@@ -613,25 +613,25 @@ fn find_settled_tasks_matches_done_and_manual_override_only() {
     other_project.set_status(TaskStatus::Done);
     store.upsert_task(&other_project).unwrap();
 
-    let all = store.find_settled_tasks(None).unwrap();
-    let ids: Vec<&str> = all.iter().map(|(id, _, _)| id.as_str()).collect();
+    let all = store.find_settled_tasks(None, None).unwrap();
+    let ids: Vec<&str> = all.iter().map(|(id, ..)| id.as_str()).collect();
     assert!(ids.contains(&done.id.as_str()));
     assert!(ids.contains(&handled.id.as_str()));
     assert!(ids.contains(&handled_with_worktree.id.as_str()));
     assert!(ids.contains(&other_project.id.as_str()));
     assert!(!ids.contains(&waiting.id.as_str()));
 
-    let row_for = |id: &str| all.iter().find(|(row_id, _, _)| row_id == id).unwrap();
-    let (_, files_changed, has_worktree) = row_for(&handled.id);
+    let row_for = |id: &str| all.iter().find(|(row_id, ..)| row_id == id).unwrap();
+    let (_, files_changed, has_worktree, _) = row_for(&handled.id);
     assert_eq!(*files_changed, 2);
     assert!(!has_worktree, "no worktree column was ever set");
 
-    let (_, files_changed, has_worktree) = row_for(&handled_with_worktree.id);
+    let (_, files_changed, has_worktree, _) = row_for(&handled_with_worktree.id);
     assert_eq!(*files_changed, 5);
     assert!(*has_worktree);
 
-    let scoped = store.find_settled_tasks(Some("proj-a")).unwrap();
-    let scoped_ids: Vec<&str> = scoped.iter().map(|(id, _, _)| id.as_str()).collect();
+    let scoped = store.find_settled_tasks(Some("proj-a"), None).unwrap();
+    let scoped_ids: Vec<&str> = scoped.iter().map(|(id, ..)| id.as_str()).collect();
     assert!(scoped_ids.contains(&done.id.as_str()));
     assert!(!scoped_ids.contains(&other_project.id.as_str()));
 }
@@ -758,7 +758,7 @@ fn board_sweeps_ignore_surface_owned_tasks() {
     store.upsert_task(&shadow).unwrap();
 
     assert!(store.find_expired_closed_tasks(cutoff).unwrap().is_empty());
-    assert!(store.find_settled_tasks(None).unwrap().is_empty());
+    assert!(store.find_settled_tasks(None, None).unwrap().is_empty());
 
     let mut waiting = Task::new("demo", "pr assistant idle", "claude", vec![]);
     waiting.origin = Some("pr-review".into());
