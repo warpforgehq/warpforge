@@ -1,4 +1,4 @@
-import { ArrowUpRight, CheckCheck, ChevronRight, Inbox, MessageSquare, Trash2 } from "lucide-react";
+import { ArrowUpRight, CheckCheck, ChevronRight, Inbox, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -9,7 +9,7 @@ import {
   sidebarTwistyLeft,
   type SidebarRow,
 } from "./logic";
-import { ProjectBadge } from "./ProjectBadge";
+import { ChatsBadge, ProjectBadge } from "./ProjectBadge";
 
 /**
  * Closes a project group with the history it hides: "12 done". Settled work is
@@ -229,7 +229,7 @@ export function ChatsRow({
             className={cn("size-3 shrink-0 transition-transform", row.expanded && "rotate-90")}
           />
         </span>
-        <MessageSquare aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+        <ChatsBadge />
         <strong className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight text-foreground/70">
           Chats
         </strong>
