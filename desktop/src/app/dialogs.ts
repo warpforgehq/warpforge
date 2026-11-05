@@ -9,6 +9,8 @@ import type { FactorySeed } from "@/views/NewTaskDialog/useFactoryBatch";
 export interface NewTaskOptions {
   mode?: TaskMode;
   factory?: FactorySeed | null;
+  /** Opens on No project: the task becomes a chat. */
+  chat?: boolean;
   /** Called with the new task's id once it is created. */
   onCreated?: (taskId: string) => void;
 }

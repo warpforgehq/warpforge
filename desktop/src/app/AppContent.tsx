@@ -144,6 +144,7 @@ export function AppContent({
                 initialMode={newTaskOptions?.mode}
                 factorySeed={newTaskOptions?.factory}
                 onCreated={newTaskOptions?.onCreated}
+                noProjectRequest={newTaskOptions?.chat ? newTaskOptions : null}
                 onAddProject={onAddProject}
                 addedProject={newTaskAddedProject}
               />

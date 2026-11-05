@@ -178,6 +178,7 @@ function Sidebar({
               <button
                 type="button"
                 onClick={onNewTask}
+                title="New task (⌘N) · without a project (⌥⌘N)"
                 className="flex h-8 w-full items-center gap-2 rounded-md bg-primary/15 px-2.5 text-left text-[13px] font-semibold text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
               >
                 <Plus className="size-4 shrink-0" />

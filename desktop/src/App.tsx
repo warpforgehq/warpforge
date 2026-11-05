@@ -152,7 +152,9 @@ export default function App() {
   );
   usePullShortcut(snapshot.tasks);
   usePushShortcut(snapshot.tasks, setPushOpen);
-  useShellShortcuts(startNewTask, toggleSidebarCollapsed, handleSelectMode);
+  useShellShortcuts(startNewTask, toggleSidebarCollapsed, handleSelectMode, () =>
+    startNewTask(undefined, undefined, undefined, { chat: true }),
+  );
 
   const sidebarProps = {
     collapsed: sidebarCollapsed,
