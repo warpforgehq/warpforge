@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.28.0
+
+### Minor Changes
+
+- [#60](https://github.com/warpforgehq/warpforge/pull/60) [`12cc4cb`](https://github.com/warpforgehq/warpforge/commit/12cc4cb14098ba928d62fafa77f287cfdde53352) Thanks [@ephor](https://github.com/ephor)! - Turn a chat into a project. When the files a chat produced deserve a home of their own, **Create project from chat…** in the chat's footer copies them into a new folder (`~/workspace/<chat title>` by default), adds it as a project, optionally makes it a git repository with a first commit, and continues the conversation in a new task there. Dependency folders such as `node_modules` and `.venv` are left behind to be reinstalled, a folder that already holds files is never merged into, and the chat keeps its own copy.
+
+- [#60](https://github.com/warpforgehq/warpforge/pull/60) [`f38896a`](https://github.com/warpforgehq/warpforge/commit/f38896ae606ebe0134107851cb53edea82773dc9) Thanks [@ephor](https://github.com/ephor)! - Start a chat without a project. Press ⌥⌘N, click **or start without a project** under the New task title, or pick **No project** in the project picker, and the agent works in a folder of its own: good for questions, drafts and experiments that do not belong to a codebase yet. Chats sit in their own **Chats** group at the top of the sidebar, above your projects, with the Explorer and a Terminal on that folder and **Open folder** to see it in Finder. When the idea turns into real work, **Continue in project…** carries the conversation into a new task in the project you pick, and the chat stays available. Deleting a chat asks whether its files go too.
+
+### Patch Changes
+
+- [#59](https://github.com/warpforgehq/warpforge/pull/59) [`bef0aeb`](https://github.com/warpforgehq/warpforge/commit/bef0aebadb2c1dd99d4f5299b5255b180379fbe4) Thanks [@ephor](https://github.com/ephor)! - Warpforge now opens on the New Task composer, so you can start typing the moment the app is up. The title names the project the task runs in: click it to switch projects, search them, or add a new one without losing your draft. Your recent tasks stay one click away in the sidebar, and **New task** or ⌘N brings the composer back.
+
+- [#60](https://github.com/warpforgehq/warpforge/pull/60) [`7af2e82`](https://github.com/warpforgehq/warpforge/commit/7af2e82127dea0e9ca3640ac972e7049ca7cc45a) Thanks [@ephor](https://github.com/ephor)! - A task whose project is no longer in Warpforge now stops with a clear "project is not registered" message instead of quietly running its agent in the wrong folder. Add the project back or delete the task.
+
 ## 0.27.1
 
 ### Patch Changes
