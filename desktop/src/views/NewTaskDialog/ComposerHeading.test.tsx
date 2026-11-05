@@ -83,9 +83,40 @@ describe("ComposerHeading", () => {
         onNoProject={onNoProject}
       />,
     );
-    expect(screen.getByRole("heading")).toHaveTextContent(
-      "What should we work on without a project?",
+    expect(screen.getByRole("heading").textContent).toBe(
+      "What should we explore without a project?",
     );
+  });
+
+  it("links to No project under the heading, hidden once it is picked", async () => {
+    const user = userEvent.setup();
+    const onNoProject = vi.fn<() => void>();
+    const props = {
+      onChange: vi.fn<(next: string) => void>(),
+      onNoProject,
+      projects,
+    };
+    const { rerender } = render(<ComposerHeading {...props} project="warpforge" locked={false} />);
+
+    await user.click(screen.getByRole("button", { name: "or start without a project" }));
+    expect(onNoProject).toHaveBeenCalledOnce();
+
+    rerender(<ComposerHeading {...props} project="" locked={false} chat />);
+    expect(screen.getByText("or start without a project")).toHaveClass("invisible");
+  });
+
+  it("asks without a dangling preposition when a fixed project is empty", () => {
+    render(
+      <ComposerHeading
+        project=""
+        projects={[]}
+        locked
+        onChange={vi.fn<(next: string) => void>()}
+        onAddProject={vi.fn<() => void>()}
+      />,
+    );
+
+    expect(screen.getByRole("heading").textContent).toBe("What should we build?");
   });
 
   it("shows a fixed project as plain text", () => {
@@ -98,7 +129,7 @@ describe("ComposerHeading", () => {
       />,
     );
 
-    expect(screen.getByRole("heading")).toHaveTextContent("What should we build in warpforge?");
+    expect(screen.getByRole("heading").textContent).toBe("What should we build in warpforge?");
     expect(screen.queryByRole("button", { name: "Project" })).toBeNull();
   });
 });

@@ -23,7 +23,7 @@ import type { Snapshot } from "../../protocol";
  * @param props.onAddProject Opens Add project; absent, the picker offers none.
  * @param props.chat Whether "No project" is picked.
  * @param props.onNoProject Picks "No project"; absent, the picker offers none.
- * @returns The heading element.
+ * @returns The heading, and below it a link to No project when that can be picked.
  */
 export function ComposerHeading({
   project,
@@ -42,7 +42,7 @@ export function ComposerHeading({
   chat?: boolean;
   onNoProject?: () => void;
 }) {
-  if (!project && !onAddProject && !onNoProject) {
+  if (!chat && !project && (locked || (!onAddProject && !onNoProject))) {
     return <h1 className={HEADING}>What should we build?</h1>;
   }
   const picker = locked ? (
@@ -58,10 +58,26 @@ export function ComposerHeading({
     />
   );
   return (
-    <h1 className={HEADING}>
-      {chat ? "What should we work on " : "What should we build in "}
-      {picker}?
-    </h1>
+    <>
+      <h1 className={HEADING}>
+        {chat ? "What should we explore " : "What should we build in "}
+        {/* The picker is an inline-block, so without this the "?" can wrap alone. */}
+        <span className="whitespace-nowrap">{picker}?</span>
+      </h1>
+      {onNoProject && !locked && (
+        // Hidden rather than removed while chatting, so the screen does not shift.
+        <button
+          type="button"
+          onClick={onNoProject}
+          className={cn(
+            "-mt-2 rounded-sm text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            chat && "invisible",
+          )}
+        >
+          or start without a project
+        </button>
+      )}
+    </>
   );
 }
 
@@ -118,7 +134,7 @@ function ProjectPicker({
                 ? "Runs in its own folder, outside any project"
                 : "Choose a project"
           }
-          className="rounded-sm underline decoration-muted-foreground/50 decoration-2 underline-offset-[6px] transition-colors hover:decoration-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="whitespace-normal rounded-sm underline decoration-muted-foreground/50 decoration-2 underline-offset-[6px] transition-colors hover:decoration-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           {chat ? "without a project" : project || "a project"}
         </button>
