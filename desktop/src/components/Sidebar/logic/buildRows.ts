@@ -163,6 +163,20 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
     pushRoots(shelved, byRecency);
   };
 
+  const chats = tasks.filter(isChat);
+  if (chats.length > 0) {
+    const live = chats.filter((task) => !isSettledTask(task));
+    const expanded = !collapsedProjects.has(CHATS_GROUP);
+    rows.push({
+      attentionCount: live.filter((task) => needsHuman(stateOf(task))).length,
+      count: live.length,
+      expanded,
+      key: "chats",
+      kind: "chats",
+    });
+    if (expanded) pushGroup(CHATS_GROUP, chats);
+  }
+
   for (const name of input.projectOrder) {
     const projectTasks = tasks.filter((task) => task.project === name && !isChat(task));
     const live = projectTasks.filter((task) => !isSettledTask(task));
@@ -180,20 +194,6 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
       settlePreview: settleCandidates.slice(0, 3).map((task) => task.title),
     });
     if (expanded) pushGroup(name, projectTasks);
-  }
-
-  const chats = tasks.filter(isChat);
-  if (chats.length > 0) {
-    const live = chats.filter((task) => !isSettledTask(task));
-    const expanded = !collapsedProjects.has(CHATS_GROUP);
-    rows.push({
-      attentionCount: live.filter((task) => needsHuman(stateOf(task))).length,
-      count: live.length,
-      expanded,
-      key: "chats",
-      kind: "chats",
-    });
-    if (expanded) pushGroup(CHATS_GROUP, chats);
   }
 
   return rows;

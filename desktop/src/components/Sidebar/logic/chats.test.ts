@@ -43,14 +43,14 @@ function build(tasks: TaskInfo[], projectOrder = ["warpforge"], collapsed: strin
 }
 
 describe("chats in the sidebar", () => {
-  it("lists chats under their own group after the projects", () => {
+  it("lists chats under their own group above the projects", () => {
     const rows = build([task("a"), chat("c1"), chat("c2")]);
     expect(rows.map((row) => row.key)).toEqual([
-      "project:warpforge",
-      "workspace:a",
       "chats",
       "workspace:c1",
       "workspace:c2",
+      "project:warpforge",
+      "workspace:a",
     ]);
     expect(rows.find((row) => row.kind === "chats")).toMatchObject({ count: 2, expanded: true });
   });
