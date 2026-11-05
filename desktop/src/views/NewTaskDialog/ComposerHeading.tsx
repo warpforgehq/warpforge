@@ -64,20 +64,21 @@ export function ComposerHeading({
         {/* The picker is an inline-block, so without this the "?" can wrap alone. */}
         <span className="whitespace-nowrap">{picker}?</span>
       </h1>
-      {onNoProject && !locked && (
-        // Hidden rather than removed while chatting, so the screen does not shift.
-        <button
-          type="button"
-          onClick={onNoProject}
-          title="⌥⌘N"
-          className={cn(
-            "-mt-2 rounded-sm text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-            chat && "invisible",
-          )}
-        >
-          or start without a project
-        </button>
-      )}
+      {onNoProject &&
+        !locked && (
+          // Hidden rather than removed while chatting, so the screen does not shift.
+          <button
+            type="button"
+            onClick={onNoProject}
+            title="⌥⌘N"
+            className={cn(
+              "-mt-2 rounded-sm text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              chat && "invisible",
+            )}
+          >
+            or start without a project
+          </button>
+        )}
     </>
   );
 }
