@@ -253,7 +253,7 @@ export function GitWorkspaceControls({
                     <GitMenuAction
                       icon={<Plus className="size-3.5" />}
                       label="New Branch…"
-                      shortcut="⌥⌘N"
+                      shortcut=""
                       disabled={busy || !branch}
                       onClick={() => openActionDialog({ kind: "create", from: branch })}
                     />
