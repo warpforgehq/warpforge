@@ -52,6 +52,8 @@ interface Props {
   onAddProject?: () => void;
   /** A project just added from here; the composer switches to it. */
   addedProject?: string | null;
+  /** Set to a new object on each request to switch to No project. */
+  noProjectRequest?: object | null;
 }
 
 /**
@@ -71,6 +73,7 @@ export default function NewTaskDialog({
   onCreated,
   onAddProject,
   addedProject,
+  noProjectRequest,
 }: Props) {
   const {
     agent,
@@ -124,6 +127,11 @@ export default function NewTaskDialog({
     if (addedProject) changeProject(addedProject);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when a project is added
   }, [addedProject]);
+
+  useEffect(() => {
+    if (noProjectRequest) chooseNoProject();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on each request
+  }, [noProjectRequest]);
 
   // A base names a branch of one repo; it means nothing in another project.
   useEffect(() => setWorktreeBase(null), [project]);

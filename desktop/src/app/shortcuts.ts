@@ -18,12 +18,21 @@ export function useShellShortcuts(
   onNewTask: () => void,
   onToggleSidebarCollapsed: () => void,
   onSelectMode?: (mode: SidebarMode) => void,
+  onNewChat?: () => void,
 ): void {
   const selectMode = useRef(onSelectMode);
   selectMode.current = onSelectMode;
+  const newChat = useRef(onNewChat);
+  newChat.current = onNewChat;
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || !event.altKey || event.shiftKey) return;
+      // ⌥⌘N, New task with No project; by physical key, since ⌥N is a dead key on macOS.
+      if (event.code === "KeyN" && newChat.current) {
+        event.preventDefault();
+        newChat.current();
+        return;
+      }
       const mode = MODE_KEYS[event.code];
       if (!mode || !selectMode.current) return;
       event.preventDefault();

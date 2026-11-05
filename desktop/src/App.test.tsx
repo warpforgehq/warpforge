@@ -80,9 +80,17 @@ vi.mock("./views/Settings", () => ({
   default: ({ open }: { open: boolean }) => (open ? <div data-testid="settings" /> : null),
 }));
 vi.mock("./views/NewTaskDialog", () => ({
-  default: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) =>
+  default: ({
+    open,
+    onOpenChange,
+    noProjectRequest,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    noProjectRequest?: object | null;
+  }) =>
     open ? (
-      <div data-testid="new-task-dialog">
+      <div data-testid="new-task-dialog" data-no-project={noProjectRequest ? "" : undefined}>
         <button type="button" onClick={() => onOpenChange(false)}>
           Create task
         </button>
@@ -225,6 +233,15 @@ describe("App sidebar layout", () => {
     expect(screen.queryByTestId("new-task-dialog")).not.toBeInTheDocument();
     fireEvent.keyDown(window, { key: "n", metaKey: true });
     expect(await screen.findByTestId("new-task-dialog")).toBeInTheDocument();
+  });
+
+  it("⌥⌘N opens the composer on No project, by physical key", async () => {
+    await renderApp();
+
+    fireEvent.keyDown(window, { altKey: true, code: "KeyN", key: "Dead", metaKey: true });
+    expect(await screen.findByTestId("new-task-dialog")).toHaveAttribute("data-no-project");
+    fireEvent.keyDown(window, { key: "n", metaKey: true });
+    expect(screen.getByTestId("new-task-dialog")).not.toHaveAttribute("data-no-project");
   });
 
   it("⌘\\ toggles the sidebar collapse", async () => {

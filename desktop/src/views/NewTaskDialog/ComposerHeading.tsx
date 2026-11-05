@@ -69,6 +69,7 @@ export function ComposerHeading({
         <button
           type="button"
           onClick={onNoProject}
+          title="⌥⌘N"
           className={cn(
             "-mt-2 rounded-sm text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             chat && "invisible",

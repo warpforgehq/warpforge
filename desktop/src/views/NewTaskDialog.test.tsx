@@ -210,6 +210,35 @@ describe("NewTaskDialog", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
+  it("switches to No project on each request, even when already open", async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = (noProjectRequest: object | null) => (
+      <QueryClientProvider client={queryClient}>
+        <NewTaskDialog
+          defaultProject="warpforge"
+          onOpenChange={vi.fn<(open: boolean) => void>()}
+          open
+          snapshot={snapshot}
+          noProjectRequest={noProjectRequest}
+        />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(view({}));
+    expect(screen.getByRole("heading").textContent).toBe(
+      "What should we explore without a project?",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Project" }));
+    await user.click(screen.getByRole("menuitem", { name: /warpforge/ }));
+    expect(screen.getByRole("heading").textContent).toBe("What should we build in warpforge?");
+
+    rerender(view({}));
+    expect(screen.getByRole("heading").textContent).toBe(
+      "What should we explore without a project?",
+    );
+  });
+
   it("keeps the prompt and harness when the project changes", async () => {
     const user = userEvent.setup();
     renderDialog();
