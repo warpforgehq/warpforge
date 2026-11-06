@@ -229,6 +229,7 @@ mod tests {
             blocked_kind: None,
             snoozed: false,
             orchestrator: false,
+            started: false,
             project: "demo".into(),
             worktree: None,
             base_branch: None,
