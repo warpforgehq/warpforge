@@ -152,3 +152,15 @@ export function surfaceTally(
 export function liveItemLabel(item: LiveItem): string {
   return `${KIND_LABEL[item.kind]} ${item.name} · ${item.detail ?? item.state}`;
 }
+
+/**
+ * Tone for a live mark: red when something failed; a keeper still checking
+ * pulses grey, since green would read as "passed"; anything else running is green.
+ * @param state The mark's state.
+ * @param checking Every running item is a keeper's check.
+ * @returns The colour classes.
+ */
+export function liveToneClass(state: LiveState, checking: boolean): string {
+  if (state === "failed") return "text-destructive";
+  return checking ? "text-muted-foreground motion-safe:animate-pulse" : "text-ok/80";
+}
