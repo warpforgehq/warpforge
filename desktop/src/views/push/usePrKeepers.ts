@@ -48,7 +48,14 @@ export function usePrKeepers({
   const [error, setError] = useState<string | null>(null);
   const [head, setHead] = useState<string | null>(null);
   const asked = useRef(false);
+  const fetched = useRef(false);
   const filled = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!eligible || !task || state !== undefined || fetched.current) return;
+    fetched.current = true;
+    void daemon.refreshTaskKeepers(task.id).catch(() => {});
+  }, [eligible, state, task]);
 
   const due = active && eligible && state !== undefined && ready.length > 0;
   useEffect(() => {

@@ -16,6 +16,7 @@ const { client, emit, store } = vi.hoisted(() => {
         vi.fn<(taskId: string) => Promise<{ head: string | null; started: string[] }>>(),
       getState: () => state,
       listKeepers: vi.fn<() => Promise<unknown[]>>(),
+      refreshTaskKeepers: vi.fn<(taskId: string) => Promise<void>>(),
       request: vi.fn<(method: string) => Promise<unknown>>(),
       subscribe: (listener: () => void) => {
         listeners.add(listener);
@@ -63,12 +64,13 @@ function setRuns(runs: KeeperRun[]) {
   });
 }
 
-async function openPrForm(runs: KeeperRun[]) {
-  setRuns(runs);
+async function openPrForm(runs: KeeperRun[] | null, of: TaskInfo = task) {
+  if (runs) setRuns(runs);
+  else store.taskKeepers = {};
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <PushDialog open onOpenChange={() => {}} task={task} />
+      <PushDialog open onOpenChange={() => {}} task={of} />
     </QueryClientProvider>,
   );
   const user = userEvent.setup({ pointerEventsCheck: 0 });
@@ -146,5 +148,12 @@ describe("Create PR dialog keepers", () => {
     await openPrForm([]);
     expect(await screen.findByText(/Not checked: .*the checkout is on main/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Create Pull Request/ })).toBeEnabled();
+  });
+
+  it("loads the keeper state of a task the sidebar does not track, then checks", async () => {
+    client.refreshTaskKeepers.mockImplementation(async () => setRuns([]));
+    await openPrForm(null, { ...task, status: "done" } as TaskInfo);
+    await waitFor(() => expect(client.checkReadyKeepers).toHaveBeenCalledWith("t1"));
+    expect(client.refreshTaskKeepers).toHaveBeenCalledTimes(1);
   });
 });
