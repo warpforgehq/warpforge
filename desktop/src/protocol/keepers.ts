@@ -41,8 +41,6 @@ export interface KeeperEntry {
 /** A task's per-keeper switches over each file's `default`. */
 export interface TaskKeepers {
   overrides: Record<string, boolean>;
-  /** Keeper id → its fix loop on this task. */
-  loops?: Record<string, KeeperLoop>;
   /** The branch a task without a worktree owns: the one its last turn ended on. */
   branch?: string | null;
   /** Why the task's keepers are not checking it now. */
@@ -51,21 +49,6 @@ export interface TaskKeepers {
 
 /** Why a keeper's fix loop stopped and waits for the owner. */
 export type KeeperStop = "max_rounds" | "no_progress";
-
-/** One keeper's fix loop on a task, persisted with the task's switches. */
-export interface KeeperLoop {
-  /** Fix rounds handed to the task's session since the keeper's last green. */
-  rounds: number;
-  /** Rounds the owner added with Extend. */
-  extraRounds: number;
-  roundHead?: string | null;
-  pendingHead?: string | null;
-  stop?: KeeperStop | null;
-  extendedRun?: string | null;
-  /** The HEAD the owner accepted as it is. */
-  acceptedHead?: string | null;
-  guidance?: string | null;
-}
 
 export type KeeperLoopStatus = "idle" | "waiting" | "fixing" | "needs_you" | "accepted";
 

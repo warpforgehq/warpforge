@@ -294,7 +294,7 @@ impl Daemon {
             .collect();
         Ok(wire::KeeperTaskState {
             task_id: task_id.to_string(),
-            switches: task.keepers.clone().unwrap_or_default(),
+            switches: task.keepers.clone().unwrap_or_default().for_clients(),
             loops,
             runs: state.runs,
             findings: state.findings,

@@ -63,6 +63,8 @@ pub(super) async fn until(what: &str, check: impl Fn() -> bool) {
     .unwrap_or_else(|_| panic!("timed out waiting for {what}"));
 }
 
+/// `keepers.state` for t_a, with the switches as the daemon keeps them: the
+/// reply leaves the saved loops out, and these tests read them.
 pub(super) async fn state(setup: &Setup) -> wire::KeeperTaskState {
     let (tx, rx) = tokio::sync::oneshot::channel();
     let ask = KeeperCommand::State {
@@ -70,7 +72,16 @@ pub(super) async fn state(setup: &Setup) -> wire::KeeperTaskState {
         reply: tx,
     };
     setup.daemon.send(Command::Keepers(ask)).await;
-    rx.await.unwrap().unwrap()
+    let mut state = rx.await.unwrap().unwrap();
+    assert!(state.switches.loops.is_empty(), "loops stay in the daemon");
+    let task = setup
+        .daemon
+        .tasks()
+        .await
+        .into_iter()
+        .find(|t| t.id == "t_a");
+    state.switches = task.and_then(|t| t.keepers).unwrap_or_default();
+    state
 }
 
 /// The next `task.keeper` event whose loop state satisfies `done`.
