@@ -1,0 +1,12 @@
+version: 1
+name: Slop
+description: Code that reads as generated rather than written for its file.
+when: commit
+result: findings
+min_severity: low
+prompt: |
+  Find code that reads as generated rather than written for this file:
+  comments restating the line, defensive checks and try/catch on trusted
+  paths, `any` or casts to silence types, needless nesting, helpers that wrap
+  one call, patterns alien to the surrounding file. Each finding must be
+  fixable without changing behaviour; say the mechanical fix.

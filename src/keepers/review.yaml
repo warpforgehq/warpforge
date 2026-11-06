@@ -1,0 +1,10 @@
+version: 1
+name: Review
+description: Bugs, regressions and edge cases in the change.
+when: commit
+result: findings
+prompt: |
+  Find bugs, regressions and unhandled edge cases introduced by this change.
+  For each: the input or state that breaks, what happens, `file:line`. No
+  style, naming or speculative concerns. A finding without a concrete failure
+  scenario is not a finding.

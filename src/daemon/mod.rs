@@ -22,6 +22,7 @@ pub(crate) mod explorer;
 pub mod handoff;
 pub mod history_config;
 pub mod html_render;
+pub mod keepers;
 pub mod limits;
 pub mod lsp;
 pub mod lsp_servers;

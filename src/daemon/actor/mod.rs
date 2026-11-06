@@ -46,6 +46,7 @@ mod config_observer;
 mod dispatch_gate;
 mod event;
 mod html_render;
+pub(crate) mod keepers;
 pub(crate) mod lifecycle;
 mod origin_sweep;
 mod output;
@@ -87,6 +88,7 @@ pub use command::AgentProbeContext;
 pub use command::Command;
 pub use event::{ChildResult, Event, GitEffect, ProjectRemovalError};
 pub use handle::DaemonHandle;
+pub use keepers::KeeperCommand;
 pub use peers::PeerCommand;
 pub use smiths::SmithCommand;
 
@@ -239,6 +241,8 @@ pub struct Daemon {
     peers: peers::PeersState,
     /// Smiths and where their identity repos live (ADR 0027).
     smiths: smiths::SmithsState,
+    /// Keeper runs and findings per task (ADR 0030).
+    keepers: keepers::KeepersState,
 }
 
 impl Daemon {
@@ -360,6 +364,7 @@ impl Daemon {
             Command::Runner(cmd) => self.handle_runner_command(cmd).await,
             Command::Peers(cmd) => self.handle_peer_command(cmd).await,
             Command::Smiths(cmd) => self.handle_smith_command(cmd).await,
+            Command::Keepers(cmd) => self.handle_keeper_command(cmd).await,
             #[cfg(test)]
             Command::InjectAcpUpdate { task_id, update } => {
                 self.handle_acp_update(task_id, update).await

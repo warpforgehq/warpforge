@@ -78,6 +78,7 @@ pub enum Write {
     DeleteSmith(String),
     /// A deleted Smith's `smith:<id>`, taken off local backlog items.
     ClearBacklogAssignee(String),
+    Keeper(crate::daemon::store::KeeperWrite),
 }
 
 impl Write {
@@ -120,6 +121,7 @@ impl Write {
             Write::Smith(smith) => store.upsert_smith(&smith),
             Write::DeleteSmith(id) => store.delete_smith(&id),
             Write::ClearBacklogAssignee(assignee) => store.clear_backlog_assignee(&assignee),
+            Write::Keeper(write) => store.apply_keeper_write(&write),
         }
     }
 }
