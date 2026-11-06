@@ -5,6 +5,7 @@ import { finding, run } from "@/test/keepers";
 
 import {
   activeKeepers,
+  keeperPushWarnings,
   applyKeeperEvent,
   currentFindings,
   keeperOn,
@@ -137,6 +138,23 @@ describe("task.keeper", () => {
       ["review", "running"],
       ["slop", "needs_you"],
     ]);
+  });
+
+  it("warns a push about every keeper that is not green, and not about the green ones", () => {
+    const s = state({
+      loops: { slop: { maxRounds: 3, rounds: 3, status: "needs_you", stop: "max_rounds" } },
+      runs: [
+        run({ id: "r1", outcome: null }),
+        run({ id: "r2", keeperId: "conventions", outcome: "findings", count: 1 }),
+        run({ id: "r3", keeperId: "intent", outcome: "green" }),
+      ],
+    });
+    expect(keeperPushWarnings(s)).toEqual([
+      "Conventions: 1 finding",
+      "Review is still checking",
+      "Slop needs you",
+    ]);
+    expect(keeperPushWarnings(undefined)).toEqual([]);
   });
 });
 
