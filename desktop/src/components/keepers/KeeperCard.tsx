@@ -52,9 +52,13 @@ export function KeeperCard({
   const findings = on ? currentFindings(state, runs) : [];
   const [sending, setSending] = useState(false);
   const canSend = status !== "fixing" && findings.some((finding) => finding.status === "open");
-  const send = () => {
+  const send = async () => {
     setSending(true);
-    void actions.onSend(entry.id).finally(() => setSending(false));
+    try {
+      await actions.onSend(entry.id);
+    } finally {
+      setSending(false);
+    }
   };
   const precision = keeperPrecision(state, entry.id);
   const draft = on ? latestDraft(runs) : null;
