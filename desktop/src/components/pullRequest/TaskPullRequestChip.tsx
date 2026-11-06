@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 
 import { ArchiveMergedTaskDialog } from "./ArchiveMergedTaskDialog";
+import { KEEPER_WORST_META, KeeperDot, useKeeperWorst } from "./KeeperDot";
 import { liveChecks, PULL_CHECKS_META, PULL_STATE_META, pullRequestSummary } from "./meta";
 
 const CHIP =
@@ -20,24 +21,31 @@ const CHIP =
 export function TaskPullRequestChip({ task }: { task: TaskInfo }) {
   useOpenTaskPullRequestRefresh(task.id, Boolean(task.worktree));
   const pr = useTaskPullRequest(task.id);
+  const keepers = useKeeperWorst(task.id);
   const [confirming, setConfirming] = useState(false);
   if (!pr) return null;
   const state = PULL_STATE_META[pr.state];
   const checks = liveChecks(pr);
   const StateIcon = state.icon;
   const ChecksIcon = checks ? PULL_CHECKS_META[checks].icon : null;
+  const summary = [pullRequestSummary(pr), keepers && KEEPER_WORST_META[keepers].label]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <>
       <button
         type="button"
         data-task-pr={pr.state}
-        aria-label={`${pullRequestSummary(pr)}: open on GitHub`}
+        aria-label={`${summary}: open on GitHub`}
         title={pr.title}
         onClick={() => void openExternalLink(pr.url)}
         className={CHIP}
       >
-        <StateIcon aria-hidden className={cn("size-3 shrink-0", state.toneClass)} />
+        <span className="relative inline-flex shrink-0">
+          <StateIcon aria-hidden className={cn("size-3", state.toneClass)} />
+          <KeeperDot worst={keepers} />
+        </span>
         <span className="tnum">#{pr.number}</span>
         {state.label}
         {checks && ChecksIcon && (
