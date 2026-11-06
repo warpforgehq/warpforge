@@ -188,6 +188,13 @@ impl Daemon {
     /// Why the task is not quiet enough for a fix prompt (invariant 3), or
     /// out of quota.
     fn keepers_fix_busy(&self, task_id: &str) -> Option<String> {
+        self.keepers_session_busy(task_id)
+            .or_else(|| self.keepers_checkout_busy(task_id))
+            .or_else(|| self.keepers_quota_refusal(task_id))
+    }
+
+    /// Why the task's own session cannot take a turn now.
+    pub(super) fn keepers_session_busy(&self, task_id: &str) -> Option<String> {
         let task = self.tasks.get(task_id)?;
         if !self.sessions.contains_key(task_id) && task.session_id.is_none() {
             return Some("the task's agent has no session to resume".into());
@@ -201,9 +208,11 @@ impl Daemon {
         if task.queued_prompts.iter().any(|q| q.initiator == "user") {
             return Some("a message of yours is queued".into());
         }
-        if let Some(reason) = self.keepers_checkout_busy(task_id) {
-            return Some(reason);
-        }
+        None
+    }
+
+    pub(super) fn keepers_quota_refusal(&self, task_id: &str) -> Option<String> {
+        let task = self.tasks.get(task_id)?;
         let account = self.spawn_account(task_id);
         self.dispatch_refusal(&task.agent, account)
             .map(|reason| format!("{QUOTA_SKIP}: {reason}"))
@@ -330,7 +339,7 @@ impl Daemon {
         self.keepers_fix_send(task_id, text);
     }
 
-    fn keepers_fix_send(&self, task_id: &str, text: String) {
+    pub(super) fn keepers_fix_send(&self, task_id: &str, text: String) {
         let cmd_tx = self.cmd_tx.clone();
         let task_id = task_id.to_string();
         tokio::spawn(async move {

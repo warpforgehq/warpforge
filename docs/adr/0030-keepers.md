@@ -320,6 +320,22 @@ without a severity floor instead.
 say "Keepers asked", and `Keeper` turns, like `System`, are never batched
 into a force-send (ADR 0011).
 
+**Send to agent is the owner's manual fix.** The automatic loop sends
+findings only while they are on the HEAD it is fixing, so a ready keeper's
+findings are lost to it once anyone commits again, and a task that lost its
+branch, or a keeper the owner accepted, has no way back. The Keepers tab's
+**Send to agent** (`keepers.sendFindings`) sends one keeper's open findings of
+its latest counted run as one `Keeper` fix turn, whatever HEAD they were
+found on: the owner has read them and decides they still matter. The prompt
+names the commit they were found on and asks the agent to check each one
+still holds before fixing it. It skips the HEAD match and the folder task's
+branch claim, but not invariant 20, and it never waits and never interrupts: it is refused, with the
+reason, while the agent is mid-turn, a `User` prompt is queued, the worktree has
+tracked changes (invariant 3), a fix is already sent, the task has no session
+to resume, the account is refused, or nothing is open. It is a round like an automatic fix (invariant 5): counted
+once per HEAD, reverted when the turn is cut short or the prompt is not
+delivered, and it clears a stop, since sending is the owner's answer to it.
+
 ### Concurrency with the user's own work
 
 **A fix prompt waits for a quiet task.** It is dispatched only when the
@@ -529,7 +545,9 @@ The meta lane keeps its width.
 3. **No fix prompt into a busy or dirty task.** Mid-turn, a queued `User`
    prompt, or a tracked change in `git status --porcelain` defers it.
 4. **A result belongs to the HEAD it was computed on.** A run whose HEAD moved
-   is `superseded` and its findings are never sent to a fixer.
+   is `superseded` and its findings are never sent to a fixer. Only the
+   owner's **Send to agent** sends findings from an older HEAD, and its prompt
+   names that commit.
 5. **Rounds count once.** A round increments when its fix prompt is handed
    over; an interrupted fix turn, a quota refusal and a restart re-entering the
    same round do not count (ADR 0001 invariant 8, ADR 0019 invariant 3).

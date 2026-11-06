@@ -11,6 +11,7 @@ mod loops;
 mod mirror;
 mod owner;
 mod ready;
+mod send;
 #[cfg(test)]
 mod tests;
 mod trigger;
@@ -86,6 +87,21 @@ pub enum KeeperCommand {
         task_id: String,
         keeper_id: String,
         on: bool,
+        reply: Reply<()>,
+    },
+    /// The owner sends a keeper's open findings to the task's agent.
+    SendFindings {
+        task_id: String,
+        keeper_id: String,
+        reply: Reply<()>,
+    },
+    /// What `SendFindings` read off the loop: the keeper's name and whether
+    /// the worktree is clean.
+    SendRead {
+        task_id: String,
+        keeper_id: String,
+        name: String,
+        clean: Result<bool, String>,
         reply: Reply<()>,
     },
     /// Run the task's `when: ready` keepers on its HEAD now; replies with
@@ -254,6 +270,21 @@ impl Daemon {
                 reply,
             } => {
                 let _ = reply.send(self.keepers_set_switch(&task_id, &keeper_id, on));
+            }
+            KeeperCommand::SendFindings {
+                task_id,
+                keeper_id,
+                reply,
+            } => self.keepers_send_read(&task_id, &keeper_id, reply),
+            KeeperCommand::SendRead {
+                task_id,
+                keeper_id,
+                name,
+                clean,
+                reply,
+            } => {
+                let sent = self.keepers_send_findings(&task_id, &keeper_id, &name, clean);
+                let _ = reply.send(sent);
             }
             KeeperCommand::CheckReady { task_id, reply } => {
                 self.keepers_check_ready(&task_id, reply);

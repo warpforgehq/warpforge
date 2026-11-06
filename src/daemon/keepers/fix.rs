@@ -16,10 +16,31 @@ pub struct FixItem<'a> {
 /// @returns the text sent as a `Keeper` turn
 pub fn fix_prompt(head: &str, items: &[FixItem<'_>], guidance: &[(&str, &str)]) -> String {
     let short = &head[..head.len().min(10)];
-    let mut out = format!(
+    let intro = format!(
         "Keepers checked commit {short} and found the problems below. For each one, either \
 fix it or, if it is not a real problem, rebut it by explaining why. Change nothing else.\n\n"
     );
+    prompt(intro, items, guidance)
+}
+
+/// The prompt the owner sends by hand with **Send to agent**: the findings
+/// may predate HEAD, so the agent first checks each still holds.
+/// @param head the HEAD the findings were computed on
+/// @param items the findings to fix or rebut
+/// @param guidance (keeper name, the owner's note) pairs from Extend
+/// @returns the text sent as a `Keeper` turn
+pub fn owner_fix_prompt(head: &str, items: &[FixItem<'_>], guidance: &[(&str, &str)]) -> String {
+    let short = &head[..head.len().min(10)];
+    let intro = format!(
+        "Keepers checked commit {short} and found the problems below; the owner sent them to \
+you. HEAD may have moved since {short}, so first check whether each one still holds in the \
+current code. For each that does, either fix it or, if it is not a real problem, rebut it by \
+explaining why; for each that no longer holds, say so. Change nothing else.\n\n"
+    );
+    prompt(intro, items, guidance)
+}
+
+fn prompt(mut out: String, items: &[FixItem<'_>], guidance: &[(&str, &str)]) -> String {
     for (index, item) in items.iter().enumerate() {
         let f = item.finding;
         let place = match (&f.file, f.line) {
@@ -121,6 +142,30 @@ mod tests {
         assert!(prompt.contains("1. [Review, high] src/lib.rs:4 — panics on empty input"));
         assert!(prompt.contains("2. [Slop, low] comment restates the line"));
         assert!(prompt.contains("- Review: keep the API"));
+        assert!(prompt.contains("Never use --no-verify. Do not push."));
+    }
+
+    #[test]
+    fn the_owners_prompt_names_the_commit_and_asks_to_recheck() {
+        let a = wire::KeeperFinding {
+            description: "panics on empty input".into(),
+            severity: KeeperSeverity::High,
+            ..Default::default()
+        };
+        let items = [FixItem {
+            keeper: "Security",
+            finding: &a,
+        }];
+        let prompt = owner_fix_prompt("abcdef0123456789", &items, &[]);
+        assert!(
+            prompt.starts_with("Keepers checked commit abcdef0123 "),
+            "{prompt}"
+        );
+        assert!(
+            prompt.contains("HEAD may have moved since abcdef0123"),
+            "{prompt}"
+        );
+        assert!(prompt.contains("1. [Security, high] panics on empty input"));
         assert!(prompt.contains("Never use --no-verify. Do not push."));
     }
 

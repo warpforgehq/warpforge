@@ -1820,4 +1820,9 @@ pub enum Method {
     /// now. Returns `{ started: string[] }`, the keeper ids started.
     #[serde(rename = "keepers.checkReady")]
     KeepersCheckReady { task_id: String },
+    /// Send one keeper's open findings to the task's agent as a fix turn,
+    /// even when HEAD moved since they were found. Refused while the agent
+    /// is busy or nothing is open.
+    #[serde(rename = "keepers.sendFindings")]
+    KeepersSendFindings { task_id: String, keeper_id: String },
 }

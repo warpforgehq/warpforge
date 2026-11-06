@@ -170,6 +170,16 @@ impl Daemon {
         if let Some(held) = task.keepers.as_ref().and_then(|k| k.held.clone()) {
             return Some(held);
         }
+        self.keepers_shared_checkout_busy(task_id)
+    }
+
+    /// Another folder session of the project is mid-turn in the checkout a
+    /// folder task shares (invariant 20).
+    pub(super) fn keepers_shared_checkout_busy(&self, task_id: &str) -> Option<String> {
+        let task = self.tasks.get(task_id)?;
+        if task.worktree.is_some() {
+            return None;
+        }
         let shared = self.tasks.values().any(|other| {
             other.id != task.id
                 && other.project == task.project
