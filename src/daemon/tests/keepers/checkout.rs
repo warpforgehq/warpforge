@@ -1,7 +1,7 @@
 //! Keepers on tasks without a worktree: the branch a turn ended on, the
 //! shared checkout's guards.
 
-use super::fixer::{fix_task, loop_event};
+use super::fixer::{fix_task, loop_event, prompts, until};
 use super::*;
 use crate::daemon::actor::keepers::checkout::{NO_BRANCH, SHARED_CHECKOUT_BUSY};
 use wire::KeeperLoopStatus;
@@ -163,4 +163,52 @@ async fn no_fix_while_another_session_works_in_the_checkout() {
     .await;
     assert_eq!(busy.rounds, 0);
     setup.daemon.shutdown().await;
+}
+
+/// An orchestrator's turns end all the time without a commit; they must not
+/// take the branch from the session whose commit it is.
+#[tokio::test]
+async fn a_turn_that_moved_no_head_does_not_take_the_branch() {
+    let setup = setup(&[("review", REVIEW)], |wt| {
+        let mut talker = fix_task("t_b", wt);
+        talker.worktree = None;
+        vec![task("t_a", None), talker]
+    })
+    .await;
+    on_branch(&setup, Some("feat/x"));
+    commit(&setup, "t_a").await;
+    until_branch(&setup, "t_a", Some("feat/x")).await;
+    until_held(&setup, "t_b", Some(NO_BRANCH)).await;
+
+    setup
+        .daemon
+        .session_prompt("t_b", "how is it going?", Vec::new())
+        .await
+        .unwrap();
+    until("the turn to end", || prompts(&setup.fix_log).len() == 1).await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    until_held(&setup, "t_b", Some(NO_BRANCH)).await;
+    assert_eq!(
+        switches(&setup.daemon, "t_a").await.branch.as_deref(),
+        Some("feat/x"),
+        "the committer keeps its branch"
+    );
+    setup.daemon.shutdown().await;
+}
+
+async fn until_branch(setup: &Setup, task_id: &str, branch: Option<&str>) {
+    timeout(Duration::from_secs(10), async {
+        loop {
+            setup
+                .daemon
+                .send(Command::Keepers(KeeperCommand::Poll))
+                .await;
+            if switches(&setup.daemon, task_id).await.branch.as_deref() == branch {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("{task_id} owns {branch:?}"));
 }

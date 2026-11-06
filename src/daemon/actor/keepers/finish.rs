@@ -32,6 +32,10 @@ impl Daemon {
     }
 
     pub(crate) fn keepers_turn_started(&mut self, task_id: &str) {
+        if let Some(task) = self.tasks.get(task_id).filter(|t| t.worktree.is_none()) {
+            let head = self.keepers.folder_heads.get(&task.project).cloned();
+            self.keepers.turn_heads.insert(task_id.to_string(), head);
+        }
         let Some(run_id) = self.keeper_flight_of(task_id) else {
             return;
         };

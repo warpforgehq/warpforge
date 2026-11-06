@@ -41,6 +41,9 @@ pub const MAX_CHECKERS: usize = 4;
 /// such a run does not count as a check of its HEAD.
 pub const QUOTA_SKIP: &str = "quota";
 pub const SUPERSEDED: &str = "superseded";
+/// `KeeperRun::error` of a run the previous daemon left unfinished; its HEAD
+/// is checked again.
+pub const RESTARTED: &str = "the daemon restarted during the check";
 
 /// @param project_path the project's root
 /// @returns where its keeper files live

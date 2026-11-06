@@ -105,7 +105,7 @@ impl Daemon {
             if let Some(branch) = &read.branch {
                 self.keepers_adopt(task_id, branch);
             }
-            if !self.keepers_checkout(task_id, read.branch.as_deref(), mid_turn) {
+            if !self.keepers_checkout(task_id, read.branch.as_deref(), &head, mid_turn) {
                 let held = self
                     .tasks
                     .get(task_id)
