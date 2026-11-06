@@ -269,7 +269,7 @@ impl Daemon {
                 if !interrupted {
                     self.advisor_turn_ended(&task_id, success);
                 }
-                self.keepers_turn_ended(&task_id, success, interrupted, initiator);
+                self.keepers_turn_ended(&task_id, success, interrupted);
                 if stage_finished {
                     // A workflow stage finished — advance the pipeline. Parse
                     // only the latest turn's text from the in-memory turn buffer

@@ -2,6 +2,7 @@
 //! a scripted git and a mock checker agent.
 
 mod checkout;
+mod fix_turn;
 mod fixer;
 
 use std::path::{Path, PathBuf};
