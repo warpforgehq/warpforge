@@ -1,9 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { DaemonState } from "../../daemon";
+import { daemon, type DaemonState } from "../../daemon";
 import { buildLiveStripItems } from "../../lib/liveStrip";
 import type { SessionUpdate, TaskInfo } from "../../protocol";
 import { LiveStrip } from "./LiveStrip";
@@ -96,6 +96,33 @@ describe("LiveStrip", () => {
     expect(screen.getByText("Alpha task")).toBeInTheDocument();
     // elapsed: 5s (10s - 5s)
     expect(screen.getByText("5s")).toBeInTheDocument();
+  });
+
+  it("shows the task's pull request with its keepers' dot", () => {
+    const item = {
+      agent: "claude",
+      detail: "",
+      label: "working",
+      previewText: null,
+      project: "warpforge",
+      startedAt: null,
+      taskId: "a",
+      title: "Alpha",
+      tone: "working" as const,
+      toolCount: 0,
+    };
+    const { container } = render(createElement(LiveStrip, { items: [item], nowMs: 0 }));
+    expect(container.querySelector("[data-task-pr]")).toBeNull();
+    const internals = daemon as unknown as { setState: (patch: object) => void };
+    act(() =>
+      internals.setState({
+        taskPullRequests: {
+          a: { checks: null, number: 7, state: "open", title: "Alpha", url: "https://x/7" },
+        },
+      }),
+    );
+    expect(screen.getByTitle("PR #7 · Open")).toBeInTheDocument();
+    act(() => internals.setState({ taskPullRequests: {} }));
   });
 
   it("renders multiple tiles and count badge", () => {

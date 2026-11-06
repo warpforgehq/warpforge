@@ -1,6 +1,7 @@
 import { memo, useEffect, useState } from "react";
 
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { TaskPullRequestGlyph } from "@/components/pullRequest/TaskPullRequestGlyph";
 import { TaskSmithByline } from "@/components/TaskSmith";
 import { formatElapsed, type LiveStripItem } from "@/lib/liveStrip";
 import { cn } from "@/lib/utils";
@@ -56,6 +57,7 @@ export const LiveStrip = memo(function LiveStrip({ items, nowMs, onOpenTask }: L
             <span className="flex min-w-0 items-center gap-1.5">
               <TaskSmithByline task={item} />
               <span className="truncate text-[15px] font-medium text-foreground">{item.title}</span>
+              <TaskPullRequestGlyph taskId={item.taskId} receded={false} />
             </span>
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
               <span className="truncate uppercase tracking-wide">{item.project}</span>
