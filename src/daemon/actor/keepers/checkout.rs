@@ -100,6 +100,8 @@ impl Daemon {
 
     /// An explicit check claims a branch no folder task of the project owns,
     /// for a task that owns none yet.
+    /// @param task_id a task without a worktree
+    /// @param branch the checkout's branch
     pub(super) fn keepers_adopt(&mut self, task_id: &str, branch: &str) {
         let Some(task) = self.tasks.get(task_id) else {
             return;

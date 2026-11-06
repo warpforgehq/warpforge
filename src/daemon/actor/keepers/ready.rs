@@ -24,6 +24,8 @@ pub struct ReadyRead {
 impl Daemon {
     /// Read the task's ready keepers, HEAD and branch off the loop; the
     /// reply waits for [`KeeperCommand::ReadyRead`].
+    /// @param task_id the task asked about
+    /// @param reply gets the HEAD and the keeper ids started, or the refusal
     pub(super) fn keepers_check_ready(
         &mut self,
         task_id: &str,
@@ -88,6 +90,9 @@ impl Daemon {
 
     /// Start the ready keepers not already checking. One that finished on
     /// this HEAD runs again: the request is explicit.
+    /// @param task_id the task asked about
+    /// @param read its ready keepers, HEAD and branch as read off the loop
+    /// @returns the HEAD and the keeper ids started, or why nothing ran
     pub(super) fn keepers_ready_read(
         &mut self,
         task_id: &str,
