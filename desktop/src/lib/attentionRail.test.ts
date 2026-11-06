@@ -524,3 +524,15 @@ describe("buildAttentionQueue — peer message limit", () => {
     });
   });
 });
+
+describe("buildAttentionQueue — keepers", () => {
+  it("lists a task whose keeper waits for the owner beside PR feedback", () => {
+    const tasks = [task("kept"), task("stuck", { status: "blocked", blockedReason: "no disk" })];
+    const keepers = new Map([["kept", "Review keeper needs your decision"]]);
+    const queue = buildAttentionQueue(tasks, {}, undefined, undefined, keepers);
+    expect(queue.map((item) => [item.task.id, item.priority, item.reason])).toEqual([
+      ["stuck", 2, "no disk"],
+      ["kept", 3.5, "Review keeper needs your decision"],
+    ]);
+  });
+});

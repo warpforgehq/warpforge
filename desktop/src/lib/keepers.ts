@@ -275,3 +275,43 @@ export function keeperPushWarnings(state: KeeperTaskState | undefined): string[]
     return [];
   });
 }
+
+export type KeeperWorst = "failing" | "running";
+
+/**
+ * The task's keepers folded into one mark for the pull-request glyph: a keeper
+ * that needs the owner or has open findings beats a check still running.
+ * @param state The task's keeper state.
+ * @returns The worst state, or null when every keeper is green or there are none.
+ */
+export function keeperWorst(state: KeeperTaskState | undefined): KeeperWorst | null {
+  const keepers = activeKeepers(state);
+  const failing = keepers.some(
+    ({ findings, status }) =>
+      status === "needs_you" ||
+      (findings > 0 && (status === "findings" || status === "waiting" || status === "fixing")),
+  );
+  if (failing) return "failing";
+  return keepers.some(({ status }) => status === "running") ? "running" : null;
+}
+
+/**
+ * Attention-queue reasons for tasks whose keepers stopped to ask the owner.
+ * @param taskKeepers Keeper state by task id.
+ * @returns One line per such task, by task id.
+ */
+export function keeperAttentionReasons(
+  taskKeepers: Readonly<Record<string, KeeperTaskState>> | undefined,
+): ReadonlyMap<string, string> {
+  const reasons = new Map<string, string>();
+  for (const [taskId, state] of Object.entries(taskKeepers ?? {})) {
+    const names = activeKeepers(state)
+      .filter(({ status }) => status === "needs_you")
+      .map(({ id }) => keeperIdLabel(id));
+    if (names.length === 0) continue;
+    const who =
+      names.length === 1 ? `${names[0]} keeper needs` : `${names.join(", ")} keepers need`;
+    reasons.set(taskId, `${who} your decision`);
+  }
+  return reasons;
+}
