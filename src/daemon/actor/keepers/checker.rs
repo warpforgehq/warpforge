@@ -161,9 +161,7 @@ impl Daemon {
         };
         let prompt = render_prompt(&definition, &vars);
         let mut run = self.keeper_new_run(&task.id, &definition.id, head, Some(change));
-        let existing = self
-            .keeper_checker(&task.id, &definition.id)
-            .filter(|checker| self.tasks.contains_key(checker));
+        let existing = self.keeper_checker(&task.id, &definition.id);
         let checker = match existing.clone() {
             Some(checker) => checker,
             None => self.keeper_create_checker(task, &definition, &agent, &prompt),

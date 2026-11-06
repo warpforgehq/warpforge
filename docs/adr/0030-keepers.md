@@ -313,7 +313,7 @@ into a force-send (ADR 0011).
 
 **A fix prompt waits for a quiet task.** It is dispatched only when the
 task's session is not mid-turn, has no queued `User` prompt, and the worktree
-is clean (`git status --porcelain` empty). Otherwise the keeper shows
+is clean (`git status --porcelain --untracked-files=no` empty: an untracked file is nobody's edit in progress, and the keeper files **Add keeper** writes start untracked). A session that is not live but can be resumed counts as quiet: the fix prompt resumes it, as a user prompt would. Otherwise the keeper shows
 "waiting" with the reason and retries on the next `TurnEnded` or poll. A
 dirty tree means someone is editing; mixing a fix into it would commit their
 half-done work.
@@ -513,7 +513,7 @@ The meta lane keeps its width.
 2. **One writer per worktree.** Only the task's own session applies keeper
    findings. No path spawns a writing session for a keeper.
 3. **No fix prompt into a busy or dirty task.** Mid-turn, a queued `User`
-   prompt, or a non-empty `git status --porcelain` defers it.
+   prompt, or a tracked change in `git status --porcelain` defers it.
 4. **A result belongs to the HEAD it was computed on.** A run whose HEAD moved
    is `superseded` and its findings are never sent to a fixer.
 5. **Rounds count once.** A round increments when its fix prompt is handed

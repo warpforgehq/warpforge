@@ -181,8 +181,8 @@ impl Daemon {
     /// out of quota.
     fn keepers_fix_busy(&self, task_id: &str) -> Option<String> {
         let task = self.tasks.get(task_id)?;
-        if !self.sessions.contains_key(task_id) {
-            return Some("the task's agent is not running".into());
+        if !self.sessions.contains_key(task_id) && task.session_id.is_none() {
+            return Some("the task's agent has no session to resume".into());
         }
         if matches!(
             task.status,

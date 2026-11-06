@@ -120,7 +120,7 @@ impl GitSource {
         }
         #[cfg(not(test))]
         {
-            let status = git(cwd, &["status", "--porcelain"]).await?;
+            let status = git(cwd, &["status", "--porcelain", "--untracked-files=no"]).await?;
             let head = git(cwd, &["rev-parse", "HEAD"]).await?;
             Ok((head, status.is_empty()))
         }
