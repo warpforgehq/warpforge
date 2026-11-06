@@ -112,12 +112,12 @@ async fn an_unowned_branch_goes_to_the_latest_folder_task() {
     })
     .await;
     on_branch(&setup, Some("feat/x"));
+    until_held(&setup, "t_a", Some(NO_BRANCH)).await;
     until_held(&setup, "t_b", None).await;
     assert_eq!(
         switches(&setup.daemon, "t_b").await.branch.as_deref(),
         Some("feat/x")
     );
-    until_held(&setup, "t_a", Some(NO_BRANCH)).await;
 
     let root = setup.projects[0].path.clone();
     setup
