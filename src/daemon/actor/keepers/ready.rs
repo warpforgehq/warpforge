@@ -124,18 +124,20 @@ impl Daemon {
             .keepers
             .into_iter()
             .partition(|d| self.keeper_busy(task_id, &d.id));
+        let (current, behind): (Vec<_>, Vec<_>) = busy
+            .into_iter()
+            .partition(|d| self.keeper_checking(task_id, &d.id, &head));
         let mut asked = start.clone();
-        asked.extend(
-            busy.into_iter()
-                .filter(|d| self.keeper_checking(task_id, &d.id, &head)),
-        );
+        asked.extend(current);
+        asked.extend(behind.iter().cloned());
+        let mut started: Vec<String> = start.iter().map(|d| d.id.clone()).collect();
+        started.extend(behind.iter().map(|d| d.id.clone()));
         let ready = Ready {
             head: head.clone(),
             keepers: asked,
-            queued: Vec::new(),
+            queued: behind,
         };
         self.keepers.ready.insert(task_id.to_string(), ready);
-        let started: Vec<String> = start.iter().map(|d| d.id.clone()).collect();
         if !start.is_empty() {
             self.keepers_gather(task_id, head.clone(), start, wire::KeeperWhen::Ready);
         }
@@ -185,7 +187,8 @@ impl Daemon {
         true
     }
 
-    /// Start ready keepers that found every checker slot taken.
+    /// Start queued ready keepers: those that found every checker slot taken,
+    /// and those still checking an older HEAD once that run is over.
     pub(super) fn keepers_ready_resume(&mut self) {
         let waiting: Vec<(String, String)> = self
             .keepers
@@ -202,7 +205,15 @@ impl Daemon {
                 continue;
             };
             let queued = std::mem::take(&mut ready.queued);
-            self.keepers_gather(&task_id, head, queued, wire::KeeperWhen::Ready);
+            let (wait, free): (Vec<_>, Vec<_>) = queued
+                .into_iter()
+                .partition(|d| self.keeper_busy(&task_id, &d.id));
+            if let Some(ready) = self.keepers.ready.get_mut(&task_id) {
+                ready.queued = wait;
+            }
+            if !free.is_empty() {
+                self.keepers_gather(&task_id, head, free, wire::KeeperWhen::Ready);
+            }
         }
     }
 }
