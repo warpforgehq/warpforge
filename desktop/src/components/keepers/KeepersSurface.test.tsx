@@ -12,7 +12,9 @@ const { client, store } = vi.hoisted(() => {
   return {
     client: {
       addKeeper: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
-      checkReadyKeepers: vi.fn<(taskId: string) => Promise<string[]>>(() => Promise.resolve([])),
+      checkReadyKeepers: vi.fn<
+        (taskId: string) => Promise<{ head: string | null; started: string[] }>
+      >(() => Promise.resolve({ head: null, started: [] })),
       decideKeeper: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       dismissKeeperFinding: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       getState: () => state,

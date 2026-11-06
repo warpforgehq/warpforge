@@ -15,8 +15,8 @@ function isPrReady(entry: KeeperEntry): boolean {
 
 /**
  * The Create PR dialog's ready keepers. The first time `active` is true it
- * runs them on HEAD once; a draft from PR-ready that arrives after that goes
- * to `onDraft`, unless the owner already wrote a description.
+ * runs them on HEAD once; PR-ready's draft of that HEAD goes to `onDraft`,
+ * unless the owner already wrote a description.
  * @param task The task the pull request is for.
  * @param active Whether the dialog shows its pull request form.
  * @param bodyEdited Whether the owner typed or generated the description.
@@ -46,7 +46,7 @@ export function usePrKeepers({
   });
   const ready = readyKeepers(list.data ?? [], state);
   const [error, setError] = useState<string | null>(null);
-  const [before, setBefore] = useState<ReadonlySet<string> | null>(null);
+  const [head, setHead] = useState<string | null>(null);
   const asked = useRef(false);
   const filled = useRef<string | null>(null);
 
@@ -54,19 +54,17 @@ export function usePrKeepers({
   useEffect(() => {
     if (!due || !task || asked.current) return;
     asked.current = true;
-    setBefore(
-      new Set(
-        ready.flatMap(({ runs }) => runs.filter((run) => run.outcome != null).map((run) => run.id)),
-      ),
-    );
-    daemon.checkReadyKeepers(task.id).catch((cause: unknown) => {
-      setError(cause instanceof DaemonRpcError ? cause.detail : String(cause));
-    });
+    daemon
+      .checkReadyKeepers(task.id)
+      .then((reply) => setHead(reply.head))
+      .catch((cause: unknown) => {
+        setError(cause instanceof DaemonRpcError ? cause.detail : String(cause));
+      });
   }, [due, ready, task]);
 
   const prReady = ready.find(({ entry }) => isPrReady(entry));
   const draft =
-    before && prReady ? latestDraft(prReady.runs.filter((run) => !before.has(run.id))) : null;
+    head && prReady ? latestDraft(prReady.runs.filter((run) => run.headSha === head)) : null;
   const replaceable = !bodyEdited || body.trim() === "";
   useEffect(() => {
     if (!draft || filled.current === draft || !replaceable) return;

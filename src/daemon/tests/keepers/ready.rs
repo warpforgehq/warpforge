@@ -17,7 +17,10 @@ async fn check_ready(setup: &Setup, task_id: &str) -> Result<Vec<String>, String
         reply: tx,
     };
     setup.daemon.send(Command::Keepers(ask)).await;
-    rx.await.unwrap()
+    rx.await.unwrap().map(|(head, started)| {
+        assert_eq!(head, "sha1", "the reply names the HEAD it checks");
+        started
+    })
 }
 
 fn go(setup: &Setup, reply: &str) {

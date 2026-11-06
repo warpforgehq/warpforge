@@ -24,7 +24,11 @@ pub struct ReadyRead {
 impl Daemon {
     /// Read the task's ready keepers, HEAD and branch off the loop; the
     /// reply waits for [`KeeperCommand::ReadyRead`].
-    pub(super) fn keepers_check_ready(&mut self, task_id: &str, reply: Reply<Vec<String>>) {
+    pub(super) fn keepers_check_ready(
+        &mut self,
+        task_id: &str,
+        reply: Reply<(String, Vec<String>)>,
+    ) {
         let Some(task) = self.tasks.get(task_id) else {
             let _ = reply.send(Err(format!("unknown task {task_id}")));
             return;
@@ -87,7 +91,7 @@ impl Daemon {
         &mut self,
         task_id: &str,
         read: ReadyRead,
-    ) -> Result<Vec<String>, String> {
+    ) -> Result<(String, Vec<String>), String> {
         let task = self
             .tasks
             .get(task_id)
@@ -127,9 +131,9 @@ impl Daemon {
         self.keepers.ready.insert(task_id.to_string(), ready);
         let started: Vec<String> = start.iter().map(|d| d.id.clone()).collect();
         if !start.is_empty() {
-            self.keepers_gather(task_id, head, start, wire::KeeperWhen::Ready);
+            self.keepers_gather(task_id, head.clone(), start, wire::KeeperWhen::Ready);
         }
-        Ok(started)
+        Ok((head, started))
     }
 
     /// Its change is being read, or its checker is on `head`.

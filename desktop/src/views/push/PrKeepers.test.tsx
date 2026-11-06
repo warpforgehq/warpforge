@@ -12,7 +12,8 @@ const { client, emit, store } = vi.hoisted(() => {
   const state: { taskKeepers: Record<string, unknown> } = { taskKeepers: {} };
   return {
     client: {
-      checkReadyKeepers: vi.fn<(taskId: string) => Promise<string[]>>(),
+      checkReadyKeepers:
+        vi.fn<(taskId: string) => Promise<{ head: string | null; started: string[] }>>(),
       getState: () => state,
       listKeepers: vi.fn<() => Promise<unknown[]>>(),
       request: vi.fn<(method: string) => Promise<unknown>>(),
@@ -75,7 +76,13 @@ async function openPrForm(runs: KeeperRun[]) {
   return user;
 }
 
-const oldDraft = run({ draft: "Old text", id: "p0", keeperId: "pr-ready", outcome: "draft" });
+const oldDraft = run({
+  draft: "Old text",
+  headSha: "0ld0000000",
+  id: "p0",
+  keeperId: "pr-ready",
+  outcome: "draft",
+});
 const fresh = (outcome: KeeperRun["outcome"], draft?: string) =>
   run({ draft, id: "p1", keeperId: "pr-ready", outcome, runNumber: 2, startedAt: 2 });
 
@@ -93,7 +100,10 @@ beforeEach(() => {
     entry("intent", "Intent", "pass_fail"),
     entry("pr-ready", "PR-ready", "draft"),
   ]);
-  client.checkReadyKeepers.mockResolvedValue(["intent", "pr-ready"]);
+  client.checkReadyKeepers.mockResolvedValue({
+    head: "abcdef0123",
+    started: ["intent", "pr-ready"],
+  });
 });
 
 describe("Create PR dialog keepers", () => {

@@ -92,13 +92,13 @@ pub enum KeeperCommand {
     /// the keeper ids started.
     CheckReady {
         task_id: String,
-        reply: Reply<Vec<String>>,
+        reply: Reply<(String, Vec<String>)>,
     },
     /// What `CheckReady` read off the loop.
     ReadyRead {
         task_id: String,
         read: ReadyRead,
-        reply: Reply<Vec<String>>,
+        reply: Reply<(String, Vec<String>)>,
     },
     #[cfg(test)]
     Script(GitSource),
