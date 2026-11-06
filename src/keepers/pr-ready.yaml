@@ -1,0 +1,10 @@
+version: 1
+name: PR-ready
+description: A pull request description drafted from the change.
+when: ready
+result: draft
+prompt: |
+  Write a pull request description: a TL;DR that matches the diff, then what
+  changed and why, grouped so mechanical changes stand apart from logic. If
+  the change is too big to review in one sitting, propose a split as a list
+  of PRs. Output only the description.

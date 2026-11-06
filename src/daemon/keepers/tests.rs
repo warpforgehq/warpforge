@@ -177,19 +177,32 @@ fn file_values_override_the_presets() {
 
 #[test]
 fn a_missing_preset_is_an_error_listing_the_built_ins() {
-    let error = error("preset: thermonuclear");
-    assert!(error.contains("thermonuclear"), "{error}");
-    assert!(error.contains("review, slop, conventions"), "{error}");
+    let error = error("preset: nuclear");
+    assert!(error.contains("nuclear"), "{error}");
+    assert!(
+        error.contains("review, slop, conventions, security"),
+        "{error}"
+    );
 }
 
 #[test]
 fn every_preset_resolves_from_a_file_naming_it() {
-    assert_eq!(PRESETS.len(), 3);
-    for (id, _) in PRESETS {
+    use wire::{KeeperResultKind as Kind, KeeperWhen as When};
+    let expected = [
+        ("review", When::Commit, Kind::Findings),
+        ("slop", When::Commit, Kind::Findings),
+        ("conventions", When::Commit, Kind::Findings),
+        ("security", When::Ready, Kind::PassFail),
+        ("thermonuclear", When::Ready, Kind::Findings),
+        ("intent", When::Ready, Kind::PassFail),
+        ("verify", When::Ready, Kind::Verdict),
+        ("pr-ready", When::Ready, Kind::Draft),
+    ];
+    assert_eq!(PRESETS.len(), expected.len());
+    for (id, when, result) in expected {
         let definition = valid(&format!("version: 1\npreset: {id}"));
-        assert_eq!(definition.preset.as_deref(), Some(*id));
-        assert_eq!(definition.when, wire::KeeperWhen::Commit);
-        assert_eq!(definition.result, wire::KeeperResultKind::Findings);
+        assert_eq!(definition.preset.as_deref(), Some(id));
+        assert_eq!((definition.when, definition.result), (when, result), "{id}");
     }
 }
 

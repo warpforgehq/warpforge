@@ -1,0 +1,10 @@
+version: 1
+name: Verify
+description: The task's claim turned into a check, run against the change.
+when: ready
+result: verdict
+prompt: |
+  Turn the task's claim into a falsifiable check. Run it against the base and
+  the change in the running app or browser when available. Report pass, fail
+  or blocked with evidence, and whether a committed test now guards the
+  behaviour; if none does, a finding asks for one.

@@ -1,0 +1,10 @@
+version: 1
+name: Security
+description: Vulnerabilities with a plausible exploit path through the change.
+when: ready
+result: pass_fail
+prompt: |
+  Report only vulnerabilities with a plausible exploit path through the
+  changed code: who controls the input, how it reaches the sink, what they
+  gain. Ignore hardening advice, missing defence in depth, and issues that
+  exist unchanged on the base branch.

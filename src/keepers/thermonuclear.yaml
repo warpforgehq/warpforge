@@ -1,0 +1,10 @@
+version: 1
+name: Thermonuclear
+description: Complexity the change could delete rather than relocate.
+when: ready
+result: findings
+prompt: |
+  Judge maintainability. Look for moves that delete complexity rather than
+  relocate it: duplicated helpers, thin wrappers, ad-hoc branching that a
+  data shape would remove, files over the project's size cap. Report at most
+  five findings, each with the simpler shape. Silence beats a weak finding.
