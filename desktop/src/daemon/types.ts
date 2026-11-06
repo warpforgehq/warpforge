@@ -4,6 +4,7 @@ import type {
   AgentSpend,
   DaemonEvent,
   DetectedAgent,
+  KeeperTaskState,
   SessionUpdate,
   Snapshot,
   TaskPullRequest,
@@ -41,6 +42,9 @@ export interface DaemonState {
   /** Task id → the pull request its worktree branch has. A task without one
    *  is absent. Seeded by `task.pullRequests`, kept live by `task.pullRequest`. */
   taskPullRequests?: Record<string, TaskPullRequest>;
+  /** Task id → its keepers' runs, findings and loops. Seeded by `keepers.state`,
+   *  kept live by `task.keeper`. */
+  taskKeepers?: Record<string, KeeperTaskState>;
 }
 
 export const MAX_SERVICE_LOGS = 1000;

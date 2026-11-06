@@ -1,4 +1,11 @@
-import { Activity, PlugZap, Server, TerminalSquare, type LucideIcon } from "lucide-react";
+import {
+  Activity,
+  PlugZap,
+  Server,
+  ShieldCheck,
+  TerminalSquare,
+  type LucideIcon,
+} from "lucide-react";
 
 import { useLiveItems } from "@/hooks/useLiveItems";
 import {
@@ -11,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const KIND_ICON: Record<LiveKind, LucideIcon> = {
+  keeper: ShieldCheck,
   portforward: PlugZap,
   service: Server,
   terminal: TerminalSquare,

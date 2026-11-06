@@ -19,6 +19,9 @@ export class DaemonStore {
    *  `task.pullRequests` reply computed earlier cannot undo a newer event. */
   protected pullRequestEventSeq = 0;
   protected pullRequestEventAt = new Map<string, number>();
+  /** Same guard for `task.keeper` against an older `keepers.state` reply. */
+  protected keeperEventSeq = 0;
+  protected keeperEventAt = new Map<string, number>();
   protected terminalDataSubscribers = new Map<string, Set<TerminalDataListener>>();
   protected terminalDataBuffers = new Map<
     string,

@@ -1,3 +1,4 @@
+import { applyKeeperEvent } from "../lib/keepers";
 import { forgetTask } from "../lib/sessionStore";
 import { appendCoalescedUpdate, coalesceUpdates } from "../lib/sessionStream";
 import { stampSessionHistoryStartTimes } from "../lib/sessionTiming";
@@ -255,6 +256,17 @@ export class DaemonEvents extends DaemonStore {
           taskPullRequests: ev.data.pull_request
             ? { ...rest, [ev.data.task_id]: ev.data.pull_request }
             : rest,
+        });
+        break;
+      }
+      case "task.keeper": {
+        this.keeperEventAt.set(ev.data.task_id, ++this.keeperEventSeq);
+        const current = this.state.taskKeepers?.[ev.data.task_id];
+        this.setState({
+          taskKeepers: {
+            ...this.state.taskKeepers,
+            [ev.data.task_id]: applyKeeperEvent(current, ev.data),
+          },
         });
         break;
       }

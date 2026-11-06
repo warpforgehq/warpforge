@@ -68,7 +68,7 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
   const chat = isChat(task);
   const activeSurface = visibleSurface(
     useUi((s) => s.activeSurface),
-    chat,
+    task,
   );
   const setActiveSurface = useUi((s) => s.setActiveSurface);
   const openTaskNav = useUi((s) => s.openTaskNav);

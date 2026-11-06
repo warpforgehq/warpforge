@@ -1,0 +1,103 @@
+---
+title: Keeper files
+description: The .warpforge/keepers/*.yaml format — every key, the built-in presets, placeholders and validation.
+sidebar:
+  order: 6
+  label: Keeper files
+---
+
+A [keeper](/guides/keepers/) is a YAML file in `.warpforge/keepers/`. Warpforge ships three built-ins — **Review**, **Slop** and **Conventions** — but none of them runs until a file in the project names it. **Add keeper** in a task's Keepers tab writes that file for you:
+
+```yaml title=".warpforge/keepers/review.yaml"
+version: 1
+preset: review
+```
+
+That is a complete keeper: the built-in Review with its prompt and defaults. Commit the file and everyone who checks out the repository gets it.
+
+## Where files live, and who wins
+
+<Steps>
+
+1. Keepers are read from `.warpforge/keepers/*.yaml` (and `.yml`) in the **project** directory.
+
+2. The **file stem is the id** — `strict-review.yaml` is the keeper `strict-review`. When two files share a stem, the first one wins.
+
+3. A task's switch for a keeper is stored with the task on your machine, not in the file. The file's `default` only decides whether new tasks start with it on.
+
+</Steps>
+
+## A file of your own
+
+Start from a preset and change what you need. Any key you set overrides the preset's value; the rest are inherited.
+
+```yaml title=".warpforge/keepers/api-review.yaml"
+version: 1
+name: API review
+description: Breaking changes to the public HTTP API.
+preset: review
+model: opus
+max_rounds: 2
+min_severity: high
+paths: ["src/api/**", "!**/*.test.ts"]
+instructions: |
+  Treat any change to a response shape or status code as a finding unless
+  the commit message says it is intended.
+```
+
+## Keys
+
+| Key | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `version` | number | `1` | File format version. Only `1` is understood; anything else makes the file invalid. |
+| `name` | string | the preset's | **Required** without a preset. What the Keepers tab shows; one or two words. |
+| `description` | string | the preset's | One line under the name. |
+| `preset` | string | — | `review`, `slop` or `conventions`: inherit that built-in's prompt and defaults. An unknown preset makes the file invalid. |
+| `when` | string | `commit` | When the keeper runs. `commit` checks each new commit on the task's branch. `ready`, `ci` and `comments` are accepted but do not run yet. |
+| `result` | string | `findings` | How the reply is read — see [Results](#results). |
+| `agent` | string | the task's agent | The harness that checks, such as `claude` or `codex`. |
+| `model` | string | the agent's default | |
+| `effort` | string | the agent's default | Reasoning effort passed to the agent. |
+| `time_limit` | duration | `15m` | How long one check may take, such as `10m` or `90s`. A check that runs out is **inconclusive**. Values above `60m` are clamped with a warning. |
+| `max_rounds` | number | `3` | Fix rounds since the keeper's last green before it stops and asks you. Must be ≥ 1; values above **5** are clamped with a warning. |
+| `min_severity` | string | `medium` | `critical`, `high`, `medium` or `low`. Findings below it are shown but never sent to the agent to fix, and do not turn the keeper red. |
+| `default` | `on` / `off` | `on` | Whether a new task starts with this keeper on. Each task can switch it in the Keepers tab. |
+| `paths` | list of globs | every path | Run only when the change touches a matching path. A leading `!` excludes. |
+| `instructions` | string | — | Added after the preset's prompt — or, without a preset, the whole prompt. |
+| `prompt` | string | the preset's | Replaces the preset's prompt. With `instructions` as well, the instructions follow it. |
+
+An unknown key is a **warning**, not an error — the keeper still loads, and the Keepers tab lists the warning under the file's name. An invalid file is listed there with its error and does not run.
+
+A keeper needs something to say: a file with no `preset`, `prompt` or `instructions` is invalid.
+
+## Results
+
+Every run ends **green**, with **findings**, **inconclusive** (a timeout, or a reply that could not be read), **error** (the check could not start) or **skipped** (out of quota, `paths` did not match, or a newer commit replaced it). Green is a green cell in the strip; findings a red cell with the count; the rest are grey.
+
+| `result` | The keeper replies with | Green when |
+| --- | --- | --- |
+| `findings` | a list of findings with severity and `file:line` | no finding at or above `min_severity` |
+| `pass_fail` | approve or request changes, with findings | it approves |
+| `verdict` | pass, fail or blocked, with findings | pass; blocked is inconclusive |
+| `draft` | text for you | never — a draft is neither green nor red |
+
+The reply format is added to the prompt for you; a custom `prompt` only says what to look for.
+
+## Placeholders
+
+Every keeper's prompt starts with a short built-in preamble: the keeper only reads, reports what it verified, and does not raise what you dismissed. A custom `prompt` or `instructions` may use the same placeholders. **An unknown placeholder makes the file invalid** rather than sending the agent a prompt with a hole in it.
+
+| Placeholder | Becomes |
+| --- | --- |
+| `{{name}}` | The keeper's `name` |
+| `{{task_title}}` | The task's title |
+| `{{task_brief}}` | What the task was asked to do |
+| `{{diff}}` | The change from the branch's merge base to the commit being checked |
+| `{{commits}}` | The commits since the keeper's previous run |
+| `{{dismissed}}` | Findings you dismissed on this task |
+| `{{rules}}` | The project's written rules: `CLAUDE.md`, `AGENTS.md` and the invariants in `docs/adr/` |
+
+## See also
+
+- [Keepers](/guides/keepers/) — adding one, reading the strip, dismissing, and the stop choice
+- [Workflow files](/reference/workflow-files/) — the same idea for Factory pipelines

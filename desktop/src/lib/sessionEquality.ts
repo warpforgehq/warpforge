@@ -27,6 +27,7 @@ export function sessionUpdatesSemanticallyEqual(a: SessionUpdate, b: SessionUpda
     case "agent_thought":
       return a.text === (b as typeof a).text;
     case "user_message":
+    case "keeper_request":
       return a.text === (b as typeof a).text;
     case "tool_call":
       return (
