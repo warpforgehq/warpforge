@@ -59,7 +59,8 @@ pub(super) async fn dispatch(
         | KeepersState { .. }
         | KeepersDismiss { .. }
         | KeepersDecide { .. }
-        | KeepersSetSwitch { .. } => keepers::keepers(handle, method).await,
+        | KeepersSetSwitch { .. }
+        | KeepersCheckReady { .. } => keepers::keepers(handle, method).await,
         RuntimeStopAll {} => runtime::runtime_stop_all(handle).await,
         LspStart { task_id, language, project, } => lsp::lsp_start(handle, task_id, language, project).await,
         LspSend { server_id, payload } => lsp::lsp_send(handle, server_id, payload).await,

@@ -10,6 +10,7 @@ mod fixer;
 mod loops;
 mod mirror;
 mod owner;
+mod ready;
 #[cfg(test)]
 mod tests;
 mod trigger;
@@ -24,6 +25,7 @@ use crate::daemon::actor::Daemon;
 use crate::daemon::keepers::{precision, Change, GitSource, HeadWatch, KeeperState};
 use crate::daemon::store::Store;
 
+pub(crate) use ready::ReadyRead;
 pub(crate) use trigger::spawn_poll;
 
 /// `Task::origin` of a keeper's checker task.
@@ -47,6 +49,7 @@ pub enum KeeperCommand {
     Gathered {
         task_id: String,
         head: String,
+        trigger: wire::KeeperWhen,
         keepers: Vec<wire::KeeperDefinition>,
         change: Result<Change, String>,
     },
@@ -84,6 +87,18 @@ pub enum KeeperCommand {
         keeper_id: String,
         on: bool,
         reply: Reply<()>,
+    },
+    /// Run the task's `when: ready` keepers on its HEAD now; replies with
+    /// the keeper ids started.
+    CheckReady {
+        task_id: String,
+        reply: Reply<Vec<String>>,
+    },
+    /// What `CheckReady` read off the loop.
+    ReadyRead {
+        task_id: String,
+        read: ReadyRead,
+        reply: Reply<Vec<String>>,
     },
     #[cfg(test)]
     Script(GitSource),
@@ -133,6 +148,16 @@ pub(crate) struct KeepersState {
     on: HashMap<String, Vec<wire::KeeperDefinition>>,
     /// A task's fix prompt from "findings ready" to the end of its turn.
     fixes: HashMap<String, Fix>,
+    /// Each task's latest `CheckReady`.
+    ready: HashMap<String, Ready>,
+}
+
+/// The ready keepers asked for on one HEAD; the fixer waits for all of them.
+struct Ready {
+    head: String,
+    keepers: Vec<wire::KeeperDefinition>,
+    /// Asked for while every checker slot was taken.
+    queued: Vec<wire::KeeperDefinition>,
 }
 
 struct Fix {
@@ -183,9 +208,10 @@ impl Daemon {
             KeeperCommand::Gathered {
                 task_id,
                 head,
+                trigger,
                 keepers,
                 change,
-            } => self.keepers_gathered(&task_id, &head, keepers, change),
+            } => self.keepers_gathered(&task_id, &head, trigger, keepers, change),
             KeeperCommand::Undelivered { run_id, error } => {
                 self.keeper_run_failed(&run_id, wire::KeeperOutcome::Error, error);
             }
@@ -224,6 +250,16 @@ impl Daemon {
                 reply,
             } => {
                 let _ = reply.send(self.keepers_set_switch(&task_id, &keeper_id, on));
+            }
+            KeeperCommand::CheckReady { task_id, reply } => {
+                self.keepers_check_ready(&task_id, reply);
+            }
+            KeeperCommand::ReadyRead {
+                task_id,
+                read,
+                reply,
+            } => {
+                let _ = reply.send(self.keepers_ready_read(&task_id, read));
             }
             #[cfg(test)]
             KeeperCommand::Script(git) => self.keepers.git = git,
@@ -269,6 +305,7 @@ impl Daemon {
         self.keepers.watches.remove(task_id);
         self.keepers.on.remove(task_id);
         self.keepers.fixes.remove(task_id);
+        self.keepers.ready.remove(task_id);
         self.keepers.gathering.retain(|(task, _)| task != task_id);
         self.keepers
             .in_flight

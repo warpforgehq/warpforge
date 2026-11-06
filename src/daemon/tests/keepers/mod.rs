@@ -4,6 +4,7 @@
 mod checkout;
 mod fix_turn;
 mod fixer;
+mod ready;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};

@@ -1816,4 +1816,8 @@ pub enum Method {
         keeper_id: String,
         on: bool,
     },
+    /// Run every `when: ready` keeper that is on for the task, on its HEAD
+    /// now. Returns `{ started: string[] }`, the keeper ids started.
+    #[serde(rename = "keepers.checkReady")]
+    KeepersCheckReady { task_id: String },
 }

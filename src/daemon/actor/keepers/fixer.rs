@@ -23,7 +23,7 @@ impl Daemon {
     /// worktree off the loop, then hand it over. `quiet` is the HEAD the
     /// worktree was just read clean at.
     pub(super) fn keepers_fix(&mut self, task_id: &str, quiet: Option<&str>) {
-        if !self.keepers.on.contains_key(task_id) {
+        if !self.keepers.on.contains_key(task_id) && !self.keepers.ready.contains_key(task_id) {
             return;
         }
         self.keepers_fix_orphans(task_id);
@@ -95,13 +95,21 @@ impl Daemon {
 
     /// Every keeper on the task finished on its HEAD; each one's open
     /// findings at or above `min_severity`, unless its loop stops here.
+    /// Ready keepers count when they were asked for on that HEAD.
     fn keepers_fix_plan(&mut self, task_id: &str) -> Option<Plan> {
         let task = self.tasks.get(task_id)?;
         if !self.keeper_candidate(task) {
             return None;
         }
-        let head = self.keepers.watches.get(task_id)?.head()?.to_string();
-        let on = self.keepers.on.get(task_id)?.clone();
+        let ready = self.keepers.ready.get(task_id);
+        let head = match self.keepers.watches.get(task_id).and_then(|w| w.head()) {
+            Some(head) => head.to_string(),
+            None => ready?.head.clone(),
+        };
+        let mut on = self.keepers.on.get(task_id).cloned().unwrap_or_default();
+        if let Some(ready) = ready.filter(|ready| ready.head == head) {
+            on.extend(ready.keepers.iter().cloned());
+        }
         for definition in &on {
             let key = (task_id.to_string(), definition.id.clone());
             let busy = self.keepers.gathering.contains(&key)

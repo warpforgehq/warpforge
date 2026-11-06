@@ -179,6 +179,7 @@ impl Daemon {
             self.keeper_settle_run(&flight.task_id, run_id);
         }
         self.keepers_fix(&flight.task_id, None);
+        self.keepers_ready_resume();
         self.keepers_poll();
     }
 }

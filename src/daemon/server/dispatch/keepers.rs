@@ -80,6 +80,22 @@ pub(super) async fn keepers(
             })
             .await
         }
+        wire::Method::KeepersCheckReady { task_id } => {
+            let (tx, rx) = oneshot::channel();
+            handle
+                .send(Command::Keepers(KeeperCommand::CheckReady {
+                    task_id,
+                    reply: tx,
+                }))
+                .await;
+            rx.await
+                .unwrap_or_else(|_| Err("daemon dropped the reply".into()))
+                .map(|started| json!({ "started": started }))
+                .map_err(|message| wire::RpcError {
+                    code: wire::ErrorCode::InvalidRequest,
+                    message,
+                })
+        }
         _ => Err(wire::RpcError {
             code: wire::ErrorCode::InvalidRequest,
             message: "not a keepers method".into(),
