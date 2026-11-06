@@ -1,0 +1,94 @@
+---
+title: Keepers
+description: Agents that check every commit on a task's branch, ask the task's agent to fix what they find, and stop to ask you when the fixes stall.
+sidebar:
+  order: 13
+  label: Keepers
+---
+
+A keeper is an agent attached to a task that checks each commit the task makes. It reads the change, reports what is wrong, and hands its findings to the task's own agent to fix. When the commit is clean, the keeper goes green and stays quiet until the next one.
+
+You keep reviewing the work, but you stop being the first one to catch the off-by-one, the missing error path or the code that does not match the project's rules. By the time you open the diff, the keepers have already been through it.
+
+<Aside type="note">
+  Keepers check **committed** work in tasks that run in their **own worktree**. A task in your project folder shares one checkout with your other sessions, so nothing says which commit is its own — keepers skip it. Chats and Factory tasks have no keepers either. An agent that never commits gets no checks: the commit is the signal that a piece of work is ready.
+</Aside>
+
+## Add a keeper
+
+Nothing runs until you add one. Open a worktree task, choose the **Keepers** tab at the end of the rail, and pick **Add keeper**:
+
+| Keeper | Looks for |
+| --- | --- |
+| **Review** | Bugs, regressions and unhandled edge cases introduced by the change |
+| **Slop** | Code that reads as generated rather than written for its file: comments that restate the line, defensive checks on trusted paths, helpers that wrap one call |
+| **Conventions** | The change checked against the project's written rules (`CLAUDE.md`, `AGENTS.md` and the invariants in `docs/adr/`) |
+
+Adding one writes a two-line file into the project, such as `.warpforge/keepers/review.yaml`. Commit it and every teammate who uses Warpforge gets the same keeper. To change its model, its rounds or what it looks for, edit the file — see [Keeper files](/reference/keeper-files/).
+
+A new keeper is on for every worktree task in the project. The switch on each keeper turns it off, or back on, for **this task only**.
+
+## What happens on a commit
+
+<Steps>
+
+1. **The task commits.** Shortly after the commit settles — or right away when the agent's turn ends — each keeper that is on starts a read-only check of the change. It cannot edit files, commit or push.
+
+2. **The keeper reports.** A clean change turns the keeper green. Otherwise its findings appear in the Keepers tab, each with a severity and a `file:line` link.
+
+3. **The task's agent fixes them.** All open findings, from every keeper, go to the task's agent as **one** message once it is idle and the worktree has no uncommitted changes. In the chat it shows as a compact **Keepers asked for a fix** line; click it to read the full request. Fixing is the agent's next turn in the same conversation, so the fix lands as a normal commit you can review. Findings below a keeper's `min_severity` are shown but never sent.
+
+4. **The next commit is checked again.** Findings the fix resolved are marked fixed; anything still there goes round once more.
+
+</Steps>
+
+Only the task's own agent ever changes the code. A keeper never writes.
+
+## Read the Keepers tab
+
+Each keeper shows its state, its last ten runs and its current findings.
+
+| State | Meaning |
+| --- | --- |
+| **Off** | Switched off for this task |
+| **Running** | Checking the latest commit |
+| **Fixing** | Its findings were handed to the task's agent |
+| **Waiting** | Findings are ready but the task is busy, has uncommitted changes, or is out of quota. The reason is shown underneath |
+| **Green** | The latest commit is clean |
+| **Findings** | The latest commit has problems |
+| **Needs you** | The fixes stalled — see [When a keeper stops](#when-a-keeper-stops) |
+
+**The strip** is one cell per run, oldest on the left. Green is a clean run. Red is a run with findings, with the count inside. Grey is a run that settled nothing: it timed out, could not read the change, or a newer commit replaced it before it finished. Hover a cell for the run number, its commit and the result.
+
+**Precision** under each keeper is the share of its resolved findings that were fixed rather than dismissed, with how many findings that covers. A keeper whose findings you keep dismissing is costing you more than it saves — change its instructions or switch it off.
+
+The Keepers button on the right rail lights up green while a keeper is checking or fixing, and red when a keeper has findings or needs you. The task's row in the sidebar shows the same mark, so you can see it without opening the task.
+
+## Dismiss a finding
+
+Not every finding is right. **Dismiss** removes it from the next fix request, and you can say why. The keeper's next check is told you rejected it and not to raise it again. Dismissals count against the keeper's precision.
+
+Click a finding's `file:line` to open it in the Explorer at that line before you decide.
+
+## When a keeper stops
+
+A keeper does not loop forever. It stops and asks you when:
+
+- it has used its fix rounds since its last green — three by default, set by `max_rounds` — or
+- two runs in a row found as many problems or more, so the fixes are not making progress.
+
+The keeper turns red with **Needs you** and offers three choices:
+
+| Choice | What it does |
+| --- | --- |
+| **Extend** | Gives the agent more rounds. Add guidance — "keep the public API unchanged" — and it goes with the next fix request |
+| **Accept** | Records the change as it is. The keeper stays quiet until the next commit |
+| **Off for this task** | Switches the keeper off on this task |
+
+Guidance is advice to the agent, not a command it must follow.
+
+## See also
+
+- [Keeper files](/reference/keeper-files/) — every key in `.warpforge/keepers/*.yaml`
+- [Working in a task](/guides/working-in-a-task/) — the diff, review notes and the rest of the task workspace
+- [Git in Warpforge](/guides/git-in-warpforge/) — committing from the task

@@ -2,9 +2,10 @@ import { act, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { daemon } from "@/daemon";
-import { EMPTY_SNAPSHOT, type Snapshot } from "@/protocol";
+import { type DaemonEvent, EMPTY_SNAPSHOT, type Snapshot } from "@/protocol";
+import { run } from "@/test/keepers";
 
-import { LiveActivityGlyph, ProjectLiveGlyph } from "./LiveActivityGlyph";
+import { LiveActivityGlyph, ProjectLiveGlyph, TaskLiveGlyph } from "./LiveActivityGlyph";
 
 const setSnapshot = (patch: Partial<Snapshot>) =>
   act(() =>
@@ -57,5 +58,39 @@ describe("ProjectLiveGlyph", () => {
       "title",
       "Service web · running",
     );
+  });
+});
+
+describe("TaskLiveGlyph", () => {
+  it("follows task.keeper events: green while checking, red when the keeper needs you", () => {
+    const apply = (event: DaemonEvent) =>
+      act(() => (daemon as unknown as { applyEvent: (e: DaemonEvent) => void }).applyEvent(event));
+    const keeperEvent = (
+      fields: Partial<Extract<DaemonEvent, { event: "task.keeper" }>["data"]>,
+    ): DaemonEvent => ({
+      data: {
+        findings: [],
+        keeper_id: "review",
+        run: run({ id: "r1", outcome: null, taskId: "kt" }),
+        state: { maxRounds: 3, rounds: 0, status: "idle" },
+        task_id: "kt",
+        ...fields,
+      },
+      event: "task.keeper",
+    });
+    const { container } = render(<TaskLiveGlyph project="demo" taskId="kt" receded={false} />);
+    apply(keeperEvent({}));
+    const glyph = () => container.querySelector("[data-live-activity]");
+    expect(glyph()).toHaveAttribute("data-live-activity", "running");
+    expect(glyph()).toHaveAttribute("title", "Keeper Review · checking");
+
+    apply(
+      keeperEvent({
+        run: run({ count: 2, id: "r1", outcome: "findings", taskId: "kt" }),
+        state: { maxRounds: 3, rounds: 3, status: "needs_you", stop: "max_rounds" },
+      }),
+    );
+    expect(glyph()).toHaveAttribute("data-live-activity", "failed");
+    expect(glyph()).toHaveAttribute("title", "Keeper Review · needs you");
   });
 });

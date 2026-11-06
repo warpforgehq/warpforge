@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 import { AgentLimitsExhaustedBanner } from "../../components/AgentLimitsExhaustedBanner";
 import { DiffNotesProvider } from "../../components/diffNotes/DiffNotesContext";
+import { KeepersSurface } from "../../components/keepers/KeepersSurface";
 import { ModelMismatchBanner } from "../../components/ModelMismatchBanner";
 import { PrFeedbackNotice } from "../../components/pullRequest/PrFeedbackNotice";
 import { TerminalWorkspaceView } from "../../components/runtime/TerminalWorkspace";
@@ -298,6 +299,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
               />
             </DiffNotesProvider>
           )}
+          {activeSurface === "keepers" && <KeepersSurface task={task} onOpenFile={openFileTab} />}
           {activeSurface === "runtime" && (
             <RuntimePanel
               project={task.project}

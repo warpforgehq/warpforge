@@ -1,6 +1,7 @@
 import { useMemo, useSyncExternalStore } from "react";
 
 import { daemon } from "@/daemon";
+import { useTaskKeepers } from "@/hooks/useTaskKeepers";
 import { type LiveItem, liveItems } from "@/lib/liveActivity";
 
 /**
@@ -22,8 +23,9 @@ export function useLiveItems(project: string, taskId: string | null): LiveItem[]
     daemon.subscribe,
     () => daemon.getState().snapshot.portforwards,
   );
+  const keepers = useTaskKeepers(taskId);
   return useMemo(
-    () => liveItems({ portforwards, services, terminals }, { project, taskId }),
-    [portforwards, project, services, taskId, terminals],
+    () => liveItems({ portforwards, services, terminals }, { project, taskId }, keepers),
+    [keepers, portforwards, project, services, taskId, terminals],
   );
 }

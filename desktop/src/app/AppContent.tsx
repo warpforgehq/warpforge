@@ -5,6 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { daemon } from "@/daemon";
 import type { ConnectionState } from "@/daemon/types";
+import { useTaskKeepersSync } from "@/hooks/useTaskKeepers";
 import { useTaskPullRequestSync } from "@/hooks/useTaskPullRequest";
 import { runOnIdle } from "@/lib/idle";
 import type { Snapshot, TaskInfo } from "@/protocol";
@@ -98,6 +99,7 @@ export function AppContent({
     return runOnIdle(prefetchRouteChunks);
   }, [connection]);
   useTaskPullRequestSync(connection);
+  useTaskKeepersSync(connection);
   const sidebarMode = useUi((state) => state.sidebarMode);
 
   return (

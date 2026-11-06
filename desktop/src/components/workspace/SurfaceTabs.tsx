@@ -4,6 +4,7 @@ import {
   Globe,
   ListTodo,
   Server,
+  ShieldCheck,
   TerminalSquare,
   type LucideIcon,
 } from "lucide-react";
@@ -13,7 +14,14 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { LiveTally } from "@/lib/liveActivity";
 import { cn } from "@/lib/utils";
 
-export type WorkspaceSurface = "files" | "diff" | "runtime" | "terminal" | "browser" | "pipeline";
+export type WorkspaceSurface =
+  | "files"
+  | "diff"
+  | "keepers"
+  | "runtime"
+  | "terminal"
+  | "browser"
+  | "pipeline";
 
 /**
  * Generic over the tab id so the same bar can drive a different set of
@@ -42,6 +50,7 @@ export const DEFAULT_SURFACE_TABS: readonly SurfaceTab[] = [
   // "Pipeline", not "Plan": `plan` is one of the stage kinds this surface
   // lists, so the old name labelled the whole thing after one of its rows.
   { id: "pipeline", label: "Pipeline", icon: ListTodo },
+  { id: "keepers", label: "Keepers", icon: ShieldCheck },
 ];
 
 export interface SurfaceTabsProps<T extends string = WorkspaceSurface> extends Omit<

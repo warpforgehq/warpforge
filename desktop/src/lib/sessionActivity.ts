@@ -52,6 +52,8 @@ export function sessionActivity(
   switch (last.kind) {
     case "user_message":
       return { detail: "reading your instruction", label: "thinking", tone: "thinking" };
+    case "keeper_request":
+      return { detail: "reading the keepers' findings", label: "thinking", tone: "thinking" };
     case "agent_thought":
       return { detail: "planning the next move", label: "thinking", tone: "thinking" };
     case "agent_text":

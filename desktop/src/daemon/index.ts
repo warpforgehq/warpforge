@@ -14,6 +14,7 @@ import { AgentMethods } from "./agents";
 import { AutomationMethods } from "./automations";
 import { BacklogMethods } from "./backlog";
 import { CoreClient } from "./client";
+import { KeeperMethods } from "./keepers";
 import { MemoryMethods } from "./memory";
 import { OrchestrationMethods } from "./orchestration";
 import { PeerMethods } from "./peers";
@@ -35,21 +36,25 @@ export { DaemonRpcError } from "./rpcError";
 export { DAEMON_PROTOCOL_VERSION } from "./types";
 export type { ConnectionState, DaemonState, TerminalDataListener } from "./types";
 
-const ComposedClient = SmithMethods(
-  PeerMethods(
-    TerminalMethods(
-      RunnerMethods(
-        AutomationMethods(
-          OrchestrationMethods(
-            ProjectMethods(
-              RuntimeMethods(
-                TaskMethods(
-                  MemoryMethods(
-                    BacklogMethods(
-                      WorkItemMethods(
-                        PullMethods(
-                          TrackerMethods(
-                            TextMethods(AgentMethods(SessionMethods(WorktreeMethods(CoreClient)))),
+const ComposedClient = KeeperMethods(
+  SmithMethods(
+    PeerMethods(
+      TerminalMethods(
+        RunnerMethods(
+          AutomationMethods(
+            OrchestrationMethods(
+              ProjectMethods(
+                RuntimeMethods(
+                  TaskMethods(
+                    MemoryMethods(
+                      BacklogMethods(
+                        WorkItemMethods(
+                          PullMethods(
+                            TrackerMethods(
+                              TextMethods(
+                                AgentMethods(SessionMethods(WorktreeMethods(CoreClient))),
+                              ),
+                            ),
                           ),
                         ),
                       ),

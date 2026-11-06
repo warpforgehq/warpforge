@@ -14,6 +14,7 @@ import {
   splitAnnotations,
 } from "../../components/BrowserAnnotationCard";
 import { HtmlRenderFrame } from "../../components/HtmlRenderFrame";
+import { KeeperRequestLine } from "../../components/KeeperRequestLine";
 import type { FileLinkResolver, FileOpenHandler } from "../../components/Markdown";
 import { BufferedMarkdown, CollapsibleMarkdown, Markdown } from "../../components/Markdown";
 import { PeerMessageLine } from "../../components/PeerMessageLine";
@@ -302,6 +303,8 @@ export function StreamLine({
       );
     case "workflow_event":
       return <WorkflowEventLine update={update} compact={compact} onOpenTask={onOpenTask} />;
+    case "keeper_request":
+      return <KeeperRequestLine update={update} compact={compact} />;
     case "peer_message":
       return <PeerMessageLine update={update} compact={compact} onOpenTask={onOpenTask} />;
     case "advisor_consultation":

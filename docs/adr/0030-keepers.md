@@ -476,7 +476,7 @@ and Smiths, which open new tasks.
 
 ### UI
 
-**Keepers is a surface tab**, after Diff in `DEFAULT_SURFACE_TABS`, hidden for
+**Keepers is a surface tab**, last in `DEFAULT_SURFACE_TABS`, so existing shortcuts keep their keys, hidden for
 chats and Factory parents, carrying #146's activity badge. It lists the
 project's keepers with their per-task switch, state, strip, findings (each
 with Dismiss and a link to `file:line`), drafts, and the waiting choice.

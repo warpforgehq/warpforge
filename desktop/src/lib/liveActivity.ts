@@ -1,7 +1,8 @@
 import type { WorkspaceSurface } from "@/components/workspace/SurfaceTabs";
-import type { Snapshot } from "@/protocol";
+import { activeKeepers, keeperIdLabel } from "@/lib/keepers";
+import type { KeeperTaskState, Snapshot } from "@/protocol";
 
-export type LiveKind = "terminal" | "service" | "portforward";
+export type LiveKind = "terminal" | "service" | "portforward" | "keeper";
 export type LiveState = "running" | "failed";
 /** `task` when the item belongs to the task itself; `project` when the whole project shares it. */
 export type LiveScope = "task" | "project";
@@ -11,6 +12,8 @@ export interface LiveItem {
   name: string;
   state: LiveState;
   scope: LiveScope;
+  /** Replaces the state word in the label, such as `needs you`. */
+  detail?: string;
 }
 
 export interface LiveTally {
@@ -20,12 +23,14 @@ export interface LiveTally {
 
 /** The surface that shows each kind of live item. */
 export const LIVE_SURFACE: Record<LiveKind, WorkspaceSurface> = {
+  keeper: "keepers",
   portforward: "runtime",
   service: "runtime",
   terminal: "terminal",
 };
 
 const KIND_LABEL: Record<LiveKind, string> = {
+  keeper: "Keeper",
   portforward: "Port-forward",
   service: "Service",
   terminal: "Terminal",
@@ -50,15 +55,17 @@ const FORWARD_STATE: Record<Snapshot["portforwards"][number]["status"], LiveStat
  * What is live for a task or a project: open terminals, and services and
  * port-forwards that are up or failed. Stopped ones are not live.
  * Services and port-forwards are per project, so a task sees its project's
- * with `scope: "project"`; terminals are the owner's own.
+ * with `scope: "project"`; terminals and keepers are the task's own.
  * @param snapshot The daemon snapshot, or the three lists of it.
  * @param owner.project The project to read.
  * @param owner.taskId The task whose terminals to include; absent for the project's own.
- * @returns The live items, terminals first.
+ * @param keepers The task's keeper state; ignored without a task.
+ * @returns The live items, terminals first, then keepers.
  */
 export function liveItems(
   snapshot: Pick<Snapshot, "terminals" | "services" | "portforwards">,
   owner: { project: string; taskId?: string | null },
+  keepers?: KeeperTaskState,
 ): LiveItem[] {
   const taskId = owner.taskId ?? null;
   const items: LiveItem[] = [];
@@ -71,6 +78,7 @@ export function liveItems(
       state: "running",
     });
   }
+  if (taskId) items.push(...keeperLiveItems(keepers));
   for (const service of snapshot.services) {
     const state = service.project === owner.project ? SERVICE_STATE[service.status] : null;
     if (state) items.push({ kind: "service", name: service.name, scope: "project", state });
@@ -78,6 +86,29 @@ export function liveItems(
   for (const forward of snapshot.portforwards) {
     const state = forward.project === owner.project ? FORWARD_STATE[forward.status] : null;
     if (state) items.push({ kind: "portforward", name: forward.name, scope: "project", state });
+  }
+  return items;
+}
+
+/**
+ * Keepers checking or fixing are running; one that waits for the owner or
+ * found something is failed. Green, idle and waiting keepers are not live.
+ * @param state A task's keeper state.
+ * @returns One item per live keeper.
+ */
+export function keeperLiveItems(state: KeeperTaskState | undefined): LiveItem[] {
+  const items: LiveItem[] = [];
+  for (const { findings, id, status } of activeKeepers(state)) {
+    const item = { kind: "keeper", name: keeperIdLabel(id), scope: "task" } as const;
+    if (status === "running" || status === "fixing")
+      items.push({
+        ...item,
+        detail: status === "running" ? "checking" : "fixing",
+        state: "running",
+      });
+    else if (status === "needs_you") items.push({ ...item, detail: "needs you", state: "failed" });
+    else if (status === "findings")
+      items.push({ ...item, detail: `${findings} findings`, state: "failed" });
   }
   return items;
 }
@@ -119,5 +150,5 @@ export function surfaceTally(
  * @returns One line such as `Service web · failed`.
  */
 export function liveItemLabel(item: LiveItem): string {
-  return `${KIND_LABEL[item.kind]} ${item.name} · ${item.state}`;
+  return `${KIND_LABEL[item.kind]} ${item.name} · ${item.detail ?? item.state}`;
 }

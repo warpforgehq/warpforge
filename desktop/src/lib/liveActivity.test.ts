@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { normalizeKeeperState } from "@/lib/keepers";
 import type { PortForwardInfo, ServiceInfo, TerminalInfo } from "@/protocol";
+import { run } from "@/test/keepers";
 
 import { liveItemLabel, liveItems, liveState, liveTally, surfaceTally } from "./liveActivity";
 
@@ -105,5 +107,37 @@ describe("tallies", () => {
 
   it("labels an item by kind, name and state", () => {
     expect(liveItemLabel(items[3])).toBe("Service cron · failed");
+  });
+});
+
+describe("keepers", () => {
+  const keepers = {
+    ...normalizeKeeperState("task-1", null),
+    loops: {
+      slop: { maxRounds: 3, rounds: 3, status: "needs_you" as const, stop: "no_progress" as const },
+    },
+    runs: [
+      run({ id: "r1", outcome: null }),
+      run({ count: 2, id: "r2", keeperId: "conventions", outcome: "findings" }),
+      run({ id: "r3", keeperId: "green" }),
+    ],
+  };
+  const empty = { portforwards: [], services: [], terminals: [] };
+
+  it("shows a checking keeper as running and one with findings or a stop as failed", () => {
+    const items = liveItems(empty, { project: "demo", taskId: "task-1" }, keepers);
+    expect(items.map((item) => [item.kind, item.name, item.state])).toEqual([
+      ["keeper", "Conventions", "failed"],
+      ["keeper", "Review", "running"],
+      ["keeper", "Slop", "failed"],
+    ]);
+    expect(items.every((item) => item.scope === "task")).toBe(true);
+    expect(surfaceTally(items, "keepers")).toEqual({ failed: 2, running: 1 });
+    expect(liveItemLabel(items[2])).toBe("Keeper Slop · needs you");
+    expect(liveItemLabel(items[0])).toBe("Keeper Conventions · 2 findings");
+  });
+
+  it("leaves keepers off the project's own items", () => {
+    expect(liveItems(empty, { project: "demo" }, keepers)).toEqual([]);
   });
 });
