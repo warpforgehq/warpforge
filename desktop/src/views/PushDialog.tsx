@@ -1,42 +1,26 @@
-import {
-  ArrowRight,
-  FileCode2,
-  FolderTree,
-  GitBranch,
-  GitCommitHorizontal,
-  RefreshCw,
-} from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { EmptyState } from "@/components/ui/empty-state";
 import { openExternalLink } from "@/lib/externalLinks";
 import { cn } from "@/lib/utils";
 import { useUi } from "@/store/ui";
 
 import { daemon } from "../daemon";
-import type { GitOpResult, GitPushCommit, GitPushInfo, TaskInfo } from "../protocol";
+import type { GitOpResult, GitPushInfo, TaskInfo } from "../protocol";
 import { KeeperWarning } from "./push/KeeperWarning";
 import { PrFooter } from "./push/PrFooter";
 import { PrForm } from "./push/PrForm";
 import { PushFooter } from "./push/PushFooter";
-import { PushPreviewSkeleton } from "./push/PushPreviewSkeleton";
+import { PushPreview } from "./push/PushPreview";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: TaskInfo | null;
 }
-
-const statusTone: Record<string, string> = {
-  A: "text-ok",
-  C: "text-warn",
-  D: "text-destructive",
-  M: "text-primary",
-  R: "text-warn",
-};
 
 export default function PushDialog({ open, onOpenChange, task }: Props) {
   const [info, setInfo] = useState<GitPushInfo | null>(null);
@@ -246,86 +230,14 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
         )}
 
         {mode === "push" && (
-          <div className="flex min-h-0 flex-1">
-            <section className="flex min-w-0 basis-[46%] flex-col border-r">
-              {info && (
-                <div className="flex h-11 shrink-0 items-center gap-2 border-b bg-primary/10 px-4 font-mono text-sm">
-                  <GitBranch className="size-4 shrink-0 text-primary" />
-                  <span className="truncate text-foreground">{info.branch}</span>
-                  <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate text-primary">{info.upstream}</span>
-                </div>
-              )}
-              <div className="min-h-0 flex-1 overflow-y-auto p-2">
-                {loading && !info && <PushPreviewSkeleton />}
-                {error && (
-                  <div className="m-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                    {error}
-                  </div>
-                )}
-                {info && info.commits.length === 0 && (
-                  <EmptyState
-                    icon={GitCommitHorizontal}
-                    title="Nothing to push"
-                    hint={`${info.branch} is up to date with ${info.upstream}.`}
-                  />
-                )}
-                {info?.commits.map((commit) => (
-                  <CommitRow
-                    key={commit.hash}
-                    commit={commit}
-                    selected={commit.hash === selectedHash}
-                    onSelect={() => setSelectedHash(commit.hash)}
-                  />
-                ))}
-              </div>
-            </section>
-
-            <section className="flex min-w-0 flex-1 flex-col">
-              <div className="flex h-11 shrink-0 items-center gap-2 border-b px-4 text-sm text-muted-foreground">
-                <FolderTree className="size-4" />
-                <span className="font-medium text-foreground">Files</span>
-                {selected && (
-                  <span>
-                    {selected.files.length} {selected.files.length === 1 ? "file" : "files"}
-                  </span>
-                )}
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto p-3">
-                {selected ? (
-                  <div className="space-y-0.5">
-                    {selected.files.map((file) => (
-                      <div
-                        key={`${file.status}-${file.path}`}
-                        className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-secondary/60"
-                      >
-                        <FileCode2 className="size-4 shrink-0 text-muted-foreground" />
-                        <span className="min-w-0 flex-1 truncate font-mono text-xs">
-                          {file.path}
-                        </span>
-                        <span
-                          className={cn(
-                            "w-5 text-center font-mono text-xs font-semibold",
-                            statusTone[file.status] ?? "text-muted-foreground",
-                          )}
-                        >
-                          {file.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  !loading && (
-                    <EmptyState
-                      icon={FileCode2}
-                      title="Select a commit"
-                      hint="Its changed files will appear here."
-                    />
-                  )
-                )}
-              </div>
-            </section>
-          </div>
+          <PushPreview
+            info={info}
+            loading={loading}
+            error={error}
+            selected={selected}
+            selectedHash={selectedHash}
+            onSelect={setSelectedHash}
+          />
         )}
 
         <KeeperWarning taskId={task?.id ?? null} />
@@ -355,43 +267,5 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-function CommitRow({
-  commit,
-  selected,
-  onSelect,
-}: {
-  commit: GitPushCommit;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "flex w-full items-start gap-2 rounded-md px-3 py-2 text-left transition-colors",
-        selected ? "bg-primary/15 text-foreground" : "hover:bg-secondary/60",
-      )}
-    >
-      <GitCommitHorizontal
-        className={cn(
-          "mt-0.5 size-4 shrink-0",
-          selected ? "text-primary" : "text-muted-foreground",
-        )}
-      />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm">{commit.subject}</span>
-        <span className="mt-0.5 flex items-center gap-2 text-[13px] text-muted-foreground">
-          <span className="font-mono">{commit.shortHash}</span>
-          <span className="truncate">{commit.author}</span>
-          <span className="ml-auto shrink-0">
-            {commit.files.length} {commit.files.length === 1 ? "file" : "files"}
-          </span>
-        </span>
-      </span>
-    </button>
   );
 }
