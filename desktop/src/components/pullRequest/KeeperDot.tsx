@@ -1,5 +1,4 @@
-import { useTaskKeepers } from "@/hooks/useTaskKeepers";
-import { keeperWorst, type KeeperWorst } from "@/lib/keepers";
+import type { KeeperWorst } from "@/lib/keepers";
 import { cn } from "@/lib/utils";
 
 export const KEEPER_WORST_META: Record<KeeperWorst, { label: string; dotClass: string }> = {
@@ -16,14 +15,6 @@ export const KEEPER_WORST_META: Record<KeeperWorst, { label: string; dotClass: s
  */
 export function withKeeperLabel(summary: string, worst: KeeperWorst | null): string {
   return worst ? `${summary} · ${KEEPER_WORST_META[worst].label}` : summary;
-}
-
-/**
- * @param taskId The task.
- * @returns The worst state of the task's keepers, or null when there is nothing to show.
- */
-export function useKeeperWorst(taskId: string): KeeperWorst | null {
-  return keeperWorst(useTaskKeepers(taskId));
 }
 
 /**
