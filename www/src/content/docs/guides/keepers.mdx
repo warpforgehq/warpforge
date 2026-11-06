@@ -24,6 +24,8 @@ Nothing runs until you add one. Open a task, choose the **Keepers** tab at the e
 | **Slop** | Code that reads as generated rather than written for its file: comments that restate the line, defensive checks on trusted paths, helpers that wrap one call |
 | **Conventions** | The change checked against the project's written rules (`CLAUDE.md`, `AGENTS.md` and the invariants in `docs/adr/`) |
 
+The menu lists these under **On every commit**. The keepers under **Before the pull request** run only when you ask — see [Before the pull request](#before-the-pull-request).
+
 Adding one writes a two-line file into the project, such as `.warpforge/keepers/review.yaml`. Commit it and every teammate who uses Warpforge gets the same keeper. To change its model, its rounds or what it looks for, edit the file — see [Keeper files](/reference/keeper-files/).
 
 A new keeper is on for every task in the project. The switch on each keeper turns it off, or back on, for **this task only**.
@@ -57,6 +59,7 @@ Each keeper shows its state, its last ten runs and its current findings. The run
 | **Green** | The latest commit is clean |
 | **Findings** | The latest commit has problems |
 | **Needs you** | The fixes stalled — see [When a keeper stops](#when-a-keeper-stops) |
+| **Draft ready** | A keeper that writes text, such as PR-ready, finished its draft |
 
 **The strip** is one cell per run, oldest on the left. Green is a clean run. Red is a run with findings, with the count inside. Grey is a run that settled nothing: it timed out, could not read the change, or a newer commit replaced it before it finished. Hover a cell for the run number, its commit and the result.
 
@@ -88,6 +91,27 @@ The keeper turns red with **Needs you** and offers three choices:
 | **Off for this task** | Switches the keeper off on this task |
 
 Guidance is advice to the agent, not a command it must follow.
+
+## Before the pull request
+
+Some checks are worth running once, when the work is done, rather than on every commit. Add them from the **Before the pull request** group of **Add keeper**:
+
+| Keeper | What it does |
+| --- | --- |
+| **Security** | Reports only vulnerabilities with a plausible exploit path through the changed code |
+| **Thermonuclear** | Looks for complexity the change could delete rather than move: duplicated helpers, thin wrappers, oversized files. At most five findings |
+| **Intent** | Compares the change with the task's brief: what was asked and not done, and what was done and not asked |
+| **Verify** | Turns the task's claim into a check and runs it against the change, in the running app when one is available |
+| **PR-ready** | Writes a pull request description: a TL;DR, then what changed and why, with a proposed split when the change is too big to review at once |
+
+These keepers run in two places, always on the branch's latest commit:
+
+- **Check before PR** in the Keepers tab header, next to **Add keeper**. It appears once the task has one of these keepers switched on, and stays disabled while one of them is still checking. Pressing it again re-runs them, even on a commit they already checked.
+- **Create PR** in the push dialog. Opening the pull request form starts them once; going **Back** and returning does not start them again. The form lists each one with its state — checking, green, the number of findings, or draft ready.
+
+Their findings go to the task's agent like any other keeper's. PR-ready's result is text, never a pass or a failure: the Keepers tab shows the draft with **Copy** and **Show all**, and when it arrives while the pull request form is open and you have not written a description, it fills the **Description** field for you. Text you typed or generated is never replaced.
+
+Nothing here blocks you. **Create Pull Request** stays available while the keepers are checking, and you can open the pull request with findings still open.
 
 ## Pushing before the keepers are green
 
