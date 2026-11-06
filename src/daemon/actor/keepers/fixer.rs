@@ -248,7 +248,12 @@ impl Daemon {
                 self.keepers_fix(task_id, Some(head));
                 return;
             }
-            Ok((now, _)) if now != head => "HEAD moved; the new commit is checked first".into(),
+            Ok((now, _)) if now != head => {
+                if self.keepers_ready_moved(task_id, head) {
+                    return;
+                }
+                "HEAD moved; the new commit is checked first".into()
+            }
             Ok(_) => "the worktree has uncommitted changes".into(),
             Err(error) => format!("the worktree could not be read: {error}"),
         };

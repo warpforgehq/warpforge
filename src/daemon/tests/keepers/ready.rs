@@ -11,6 +11,10 @@ const SECURITY: &str = "version: 1\npreset: security\nagent: mockkeep\n";
 const PR_READY: &str = "version: 1\npreset: pr-ready\nagent: mockkeep\n";
 
 async fn check_ready(setup: &Setup, task_id: &str) -> Result<Vec<String>, String> {
+    check_ready_on(setup, task_id, "sha1").await
+}
+
+async fn check_ready_on(setup: &Setup, task_id: &str, sha: &str) -> Result<Vec<String>, String> {
     let (tx, rx) = tokio::sync::oneshot::channel();
     let ask = KeeperCommand::CheckReady {
         task_id: task_id.into(),
@@ -18,7 +22,7 @@ async fn check_ready(setup: &Setup, task_id: &str) -> Result<Vec<String>, String
     };
     setup.daemon.send(Command::Keepers(ask)).await;
     rx.await.unwrap().map(|(head, started)| {
-        assert_eq!(head, "sha1", "the reply names the HEAD it checks");
+        assert_eq!(head, sha, "the reply names the HEAD it checks");
         started
     })
 }
@@ -163,5 +167,44 @@ async fn a_folder_task_on_the_base_is_refused_with_the_reason() {
         .find(|t| t.id == "t_a");
     let keepers = task.and_then(|t| t.keepers).unwrap();
     assert_eq!(keepers.branch.as_deref(), Some("feat/x"));
+    setup.daemon.shutdown().await;
+}
+
+/// A ready-only task is never polled: when HEAD moved past the findings, the
+/// fix is dropped instead of waiting for a check nothing would run.
+#[tokio::test]
+async fn a_fix_from_a_ready_check_is_dropped_when_head_moved() {
+    let mut setup = setup(&[("security", SECURITY)], |wt| vec![fix_task("t_a", wt)]).await;
+    std::fs::write(&setup.replies, "WAIT").unwrap();
+    assert_eq!(check_ready(&setup, "t_a").await.unwrap(), vec!["security"]);
+    keeper_event(&mut setup, |run| run.checker_task_id.is_some()).await;
+    move_head(&setup, "sha2").await;
+    go(&setup, FINDING);
+    let (run, _) = keeper_event(&mut setup, finished).await;
+    assert_eq!(
+        (run.outcome, run.head_sha.as_str()),
+        (Some(Outcome::Findings), "sha1")
+    );
+    timeout(Duration::from_secs(10), async {
+        while state(&setup).await.loops["security"].status != wire::KeeperLoopStatus::Idle {
+            tokio::time::sleep(Duration::from_millis(30)).await;
+        }
+    })
+    .await
+    .expect("the fix is dropped, not left waiting");
+    let state = state(&setup).await;
+    assert!(
+        state.findings.iter().all(|f| f.status == Status::Open),
+        "still shown"
+    );
+    assert!(fix_prompts(&setup).is_empty());
+
+    std::fs::write(&setup.replies, APPROVE).unwrap();
+    assert_eq!(
+        check_ready_on(&setup, "t_a", "sha2").await.unwrap(),
+        vec!["security"]
+    );
+    let (next, _) = keeper_event(&mut setup, |r| finished(r) && r.head_sha == "sha2").await;
+    assert_eq!(next.outcome, Some(Outcome::Green));
     setup.daemon.shutdown().await;
 }
