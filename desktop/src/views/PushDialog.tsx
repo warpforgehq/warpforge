@@ -15,6 +15,8 @@ import { PrFooter } from "./push/PrFooter";
 import { PrForm } from "./push/PrForm";
 import { PushFooter } from "./push/PushFooter";
 import { PushPreview } from "./push/PushPreview";
+import { ReadyKeepers } from "./push/ReadyKeepers";
+import { usePrKeepers } from "./push/usePrKeepers";
 
 interface Props {
   open: boolean;
@@ -32,6 +34,7 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
   const [mode, setMode] = useState<"push" | "pr">("push");
   const [prTitle, setPrTitle] = useState("");
   const [prBody, setPrBody] = useState("");
+  const [prBodyEdited, setPrBodyEdited] = useState(false);
   const [prBase, setPrBase] = useState("");
   const [creatingPr, setCreatingPr] = useState(false);
   const [prStep, setPrStep] = useState<"pushing" | "creating" | null>(null);
@@ -40,6 +43,14 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
   const textGenModel = useUi((state) => state.textGenModel);
   const repositoryOperation = useUi((state) => state.repositoryOperation);
   const setRepositoryOperation = useUi((state) => state.setRepositoryOperation);
+
+  const prKeepers = usePrKeepers({
+    active: mode === "pr",
+    body: prBody,
+    bodyEdited: prBodyEdited,
+    onDraft: setPrBody,
+    task,
+  });
 
   const taskId = task?.id;
   const load = useCallback(async () => {
@@ -132,6 +143,7 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
       const [first = "", ...rest] = text.split("\n");
       setPrTitle(first.replace(/^#+\s*/, "").trim());
       setPrBody(rest.join("\n").trim());
+      setPrBodyEdited(true);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
@@ -220,7 +232,10 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
             prTitle={prTitle}
             setPrTitle={setPrTitle}
             prBody={prBody}
-            setPrBody={setPrBody}
+            setPrBody={(body) => {
+              setPrBody(body);
+              setPrBodyEdited(true);
+            }}
             prBase={prBase}
             setPrBase={setPrBase}
             generatingPr={generatingPr}
@@ -240,6 +255,7 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
           />
         )}
 
+        {mode === "pr" && <ReadyKeepers {...prKeepers} />}
         <KeeperWarning taskId={task?.id ?? null} />
         {mode === "pr" ? (
           <PrFooter
