@@ -208,3 +208,23 @@ async fn a_fix_from_a_ready_check_is_dropped_when_head_moved() {
     assert_eq!(next.outcome, Some(Outcome::Green));
     setup.daemon.shutdown().await;
 }
+
+/// A ready keeper still checking an older HEAD is checked on the new one
+/// once that run ends.
+#[tokio::test]
+async fn a_ready_keeper_busy_on_an_older_head_runs_on_the_new_one_after() {
+    let mut setup = setup(&[("security", SECURITY)], |wt| vec![task("t_a", Some(wt))]).await;
+    std::fs::write(&setup.replies, "WAIT").unwrap();
+    assert_eq!(check_ready(&setup, "t_a").await.unwrap(), vec!["security"]);
+    keeper_event(&mut setup, |run| run.checker_task_id.is_some()).await;
+    move_head(&setup, "sha2").await;
+    let queued = check_ready_on(&setup, "t_a", "sha2").await.unwrap();
+    assert_eq!(queued, vec!["security"]);
+
+    go(&setup, APPROVE);
+    let (old, _) = keeper_event(&mut setup, |r| finished(r) && r.head_sha == "sha1").await;
+    assert_eq!(old.run_number, 1);
+    let (next, _) = keeper_event(&mut setup, |r| finished(r) && r.head_sha == "sha2").await;
+    assert_eq!((next.run_number, next.outcome), (2, Some(Outcome::Green)));
+    setup.daemon.shutdown().await;
+}
