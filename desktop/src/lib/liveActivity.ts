@@ -1,5 +1,5 @@
 import type { WorkspaceSurface } from "@/components/workspace/SurfaceTabs";
-import { activeKeepers, keeperIdLabel } from "@/lib/keepers";
+import { activeKeepers, keeperIdLabel, keeperMark } from "@/lib/keepers";
 import type { KeeperTaskState, Snapshot } from "@/protocol";
 
 export type LiveKind = "terminal" | "service" | "portforward" | "keeper";
@@ -98,17 +98,22 @@ export function liveItems(
  */
 export function keeperLiveItems(state: KeeperTaskState | undefined): LiveItem[] {
   const items: LiveItem[] = [];
-  for (const { findings, id, status } of activeKeepers(state)) {
+  for (const keeper of activeKeepers(state)) {
+    const { findings, id, status } = keeper;
     const item = { kind: "keeper", name: keeperIdLabel(id), scope: "task" } as const;
-    if (status === "running" || status === "fixing")
+    const mark = keeperMark(keeper);
+    if (mark === "checking")
       items.push({
         ...item,
-        detail: status === "running" ? "checking" : "fixing",
+        detail: status === "fixing" ? "fixing" : "checking",
         state: "running",
       });
-    else if (status === "needs_you") items.push({ ...item, detail: "needs you", state: "failed" });
-    else if (status === "findings")
-      items.push({ ...item, detail: `${findings} findings`, state: "failed" });
+    else if (mark === "failing")
+      items.push({
+        ...item,
+        detail: status === "needs_you" ? "needs you" : `${findings} findings`,
+        state: "failed",
+      });
   }
   return items;
 }

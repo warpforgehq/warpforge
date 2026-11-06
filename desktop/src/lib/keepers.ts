@@ -368,12 +368,27 @@ export type KeeperWorst = "failing" | "running";
  * @returns The worst state, or null when every keeper is green or there are none.
  */
 export function keeperWorst(state: KeeperTaskState | undefined): KeeperWorst | null {
-  const keepers = activeKeepers(state);
-  const failing = keepers.some(
-    (keeper) => keeper.status === "needs_you" || hasOpenFindings(keeper),
-  );
-  if (failing) return "failing";
-  return keepers.some(({ status }) => status === "running") ? "running" : null;
+  const marks = activeKeepers(state).map(keeperMark);
+  if (marks.includes("failing")) return "failing";
+  return marks.includes("checking") ? "running" : null;
+}
+
+/**
+ * The one rule every keeper mark follows: findings nobody is fixing, or a
+ * stop that waits for the owner, fail; a check or a fix in progress is checking.
+ * @param keeper A keeper's status and its latest finding count.
+ * @returns The keeper's mark, or null when it shows none.
+ */
+export function keeperMark({
+  findings,
+  status,
+}: {
+  findings: number;
+  status: KeeperStatus;
+}): "failing" | "checking" | null {
+  if (status === "needs_you") return "failing";
+  if (status === "running" || status === "fixing") return "checking";
+  return findings > 0 && (status === "findings" || status === "waiting") ? "failing" : null;
 }
 
 /**
