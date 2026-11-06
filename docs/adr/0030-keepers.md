@@ -260,6 +260,14 @@ not a change anyone asked to check.
 section, and opening the Create PR dialog, run every `ready` keeper on the
 current HEAD. The dialog shows their state and takes PR-ready's draft as the
 description. It never blocks creating the PR: the owner may open it red.
+An explicit check re-runs a ready keeper even on a HEAD it already checked,
+but never one still running. Ready keepers past the cap of four checkers
+queue and start as checkers finish. Their findings join the commit keepers'
+fix prompt for that HEAD; after the fix, nothing re-checks a ready keeper
+until the owner asks again, and a ready run is not marked superseded when
+HEAD moves — the fix gate's HEAD check already keeps it from feeding a fix.
+A folder task asking for a check adopts the checkout's branch when no other
+folder task owns it; otherwise the request is refused with the held reason.
 
 ### Mapping onto tasks and the engine
 
