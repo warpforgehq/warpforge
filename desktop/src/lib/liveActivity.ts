@@ -173,7 +173,7 @@ export function liveToneClass(state: LiveState, checking: boolean): string {
  * @param surface The surface the dot marks; the Keepers surface runs checks.
  * @returns The dot's colour classes.
  */
-export function liveDotClass(state: LiveState, surface: WorkspaceSurface | null): string {
+export function liveDotClass(state: LiveState, surface: WorkspaceSurface): string {
   if (state === "failed") return "bg-destructive";
   return surface === LIVE_SURFACE.keeper ? `bg-muted-foreground ${CHECKING_PULSE}` : "bg-ok";
 }

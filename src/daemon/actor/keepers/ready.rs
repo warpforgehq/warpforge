@@ -130,8 +130,7 @@ impl Daemon {
         let mut asked = start.clone();
         asked.extend(current);
         asked.extend(behind.iter().cloned());
-        let mut started: Vec<String> = start.iter().map(|d| d.id.clone()).collect();
-        started.extend(behind.iter().map(|d| d.id.clone()));
+        let started: Vec<String> = start.iter().chain(&behind).map(|d| d.id.clone()).collect();
         let ready = Ready {
             head: head.clone(),
             keepers: asked,
