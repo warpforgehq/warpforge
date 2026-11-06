@@ -90,7 +90,7 @@ pub(super) async fn keepers(
                 .await;
             rx.await
                 .unwrap_or_else(|_| Err("daemon dropped the reply".into()))
-                .map(|started| json!({ "started": started }))
+                .map(|(head, started)| json!({ "head": head, "started": started }))
                 .map_err(|message| wire::RpcError {
                     code: wire::ErrorCode::InvalidRequest,
                     message,

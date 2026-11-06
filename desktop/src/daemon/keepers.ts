@@ -64,10 +64,13 @@ export function KeeperMethods<TBase extends Constructor<CoreClient>>(Base: TBase
      * @param taskId The task.
      * @returns The ids of the keepers started; one already checking is not restarted.
      */
-    async checkReadyKeepers(taskId: string): Promise<string[]> {
+    async checkReadyKeepers(taskId: string): Promise<{ head: string | null; started: string[] }> {
       const result = await this.request("keepers.checkReady", { task_id: taskId });
-      const started = (result as { started?: string[] } | null)?.started;
-      return Array.isArray(started) ? started : [];
+      const reply = result as { head?: string; started?: string[] } | null;
+      return {
+        head: typeof reply?.head === "string" ? reply.head : null,
+        started: Array.isArray(reply?.started) ? reply.started : [],
+      };
     }
 
     /** Write a built-in keeper's two-line file into the project's checkout. */
