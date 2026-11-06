@@ -126,6 +126,18 @@ pub struct TaskKeepers {
     pub held: Option<String>,
 }
 
+impl TaskKeepers {
+    /// The switches as clients see them; the loops are the daemon's own
+    /// bookkeeping, and clients read `KeeperTaskState::loops` instead.
+    /// @returns a copy without `loops`
+    pub fn for_clients(&self) -> TaskKeepers {
+        TaskKeepers {
+            loops: BTreeMap::new(),
+            ..self.clone()
+        }
+    }
+}
+
 /// Why a keeper's fix loop stopped and waits for the owner.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

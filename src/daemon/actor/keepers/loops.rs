@@ -35,17 +35,22 @@ impl Daemon {
         keepers
             .loops
             .retain(|_, fix| *fix != wire::KeeperLoop::default());
-        if task.keepers.clone().unwrap_or_default() == keepers {
+        let before = task.keepers.clone().unwrap_or_default();
+        if before == keepers {
             return;
         }
-        task.keepers = Some(keepers.clone());
+        let shown = keepers.for_clients();
+        let changed_for_clients = before.for_clients() != shown;
+        task.keepers = Some(keepers);
         let updated = task.clone();
         self.persist(&updated);
         self.emit(Event::TaskUpdated(updated));
-        self.emit(Event::TaskKeeperSwitches {
-            task_id: task_id.to_string(),
-            switches: keepers,
-        });
+        if changed_for_clients {
+            self.emit(Event::TaskKeeperSwitches {
+                task_id: task_id.to_string(),
+                switches: shown,
+            });
+        }
     }
 
     pub(super) fn keeper_set_loop(
