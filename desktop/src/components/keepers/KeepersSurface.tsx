@@ -1,23 +1,18 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, ShieldCheck, TriangleAlert } from "lucide-react";
-import { useEffect } from "react";
+import { ShieldCheck, TriangleAlert } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { daemon } from "@/daemon";
 import { DaemonRpcError } from "@/daemon/rpcError";
 import { useTaskKeepers } from "@/hooks/useTaskKeepers";
-import { type KeeperPresetId, missingPresets } from "@/lib/keepers";
+import { type KeeperPresetId, readyKeepers } from "@/lib/keepers";
 import type { KeeperEntry, TaskInfo } from "@/protocol";
 
+import { AddKeeper } from "./AddKeeper";
 import { KeeperCard, type KeeperActions } from "./KeeperCard";
 
 function failed(what: string) {
@@ -28,38 +23,19 @@ function failed(what: string) {
   };
 }
 
-function AddKeeper({
-  entries,
-  onAdd,
-}: {
-  entries: readonly KeeperEntry[];
-  onAdd: (preset: KeeperPresetId) => void;
-}) {
-  const presets = missingPresets(entries);
-  if (presets.length === 0) return null;
+function CheckBeforePr({ taskId, running }: { taskId: string; running: boolean }) {
+  const [asking, setAsking] = useState(false);
+  const check = () => {
+    setAsking(true);
+    void daemon
+      .checkReadyKeepers(taskId)
+      .catch(failed("Could not check before the pull request"))
+      .finally(() => setAsking(false));
+  };
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button size="sm" variant="outline">
-          <Plus aria-hidden />
-          Add keeper
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64 text-left">
-        {presets.map((preset) => (
-          <DropdownMenuItem
-            key={preset.id}
-            className="items-start py-1.5"
-            onSelect={() => onAdd(preset.id)}
-          >
-            <span className="flex flex-col gap-0.5">
-              <span className="text-[13px] font-medium">{preset.name}</span>
-              <span className="text-xs text-muted-foreground">{preset.hint}</span>
-            </span>
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button size="sm" variant="outline" disabled={asking || running} onClick={check}>
+      Check before PR
+    </Button>
   );
 }
 
@@ -162,6 +138,7 @@ export function KeepersSurface({
       />
     );
   }
+  const ready = readyKeepers(valid, state);
   const branch = state?.switches.branch;
   const held = state?.switches.held;
   return (
@@ -175,7 +152,12 @@ export function KeepersSurface({
           </p>
           {held ? <p className="text-warn">Paused: {held}.</p> : null}
         </div>
-        <AddKeeper entries={entries} onAdd={add} />
+        <div className="flex shrink-0 items-center gap-2">
+          {ready.length > 0 && (
+            <CheckBeforePr taskId={task.id} running={ready.some((keeper) => keeper.running)} />
+          )}
+          <AddKeeper entries={entries} onAdd={add} />
+        </div>
       </div>
       <FileProblems entries={entries} />
       {valid.map((entry) => (

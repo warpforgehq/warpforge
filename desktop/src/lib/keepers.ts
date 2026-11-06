@@ -15,9 +15,54 @@ export const STRIP_LENGTH = 10;
 
 /** The built-in keepers **Add keeper** offers, in menu order. */
 export const KEEPER_PRESETS = [
-  { id: "review", name: "Review", hint: "Bugs, regressions and edge cases in the change." },
-  { id: "slop", name: "Slop", hint: "Code that reads as generated rather than written." },
-  { id: "conventions", name: "Conventions", hint: "The change against the project's rules." },
+  {
+    id: "review",
+    name: "Review",
+    hint: "Bugs, regressions and edge cases in the change.",
+    when: "commit",
+  },
+  {
+    id: "slop",
+    name: "Slop",
+    hint: "Code that reads as generated rather than written.",
+    when: "commit",
+  },
+  {
+    id: "conventions",
+    name: "Conventions",
+    hint: "The change against the project's rules.",
+    when: "commit",
+  },
+  {
+    id: "security",
+    name: "Security",
+    hint: "Vulnerabilities with a plausible exploit path.",
+    when: "ready",
+  },
+  {
+    id: "thermonuclear",
+    name: "Thermonuclear",
+    hint: "Complexity the change could delete rather than move.",
+    when: "ready",
+  },
+  {
+    id: "intent",
+    name: "Intent",
+    hint: "What the brief asked and the change did not.",
+    when: "ready",
+  },
+  {
+    id: "verify",
+    name: "Verify",
+    hint: "The task's claim, checked against the running app.",
+    when: "ready",
+  },
+  {
+    id: "pr-ready",
+    name: "PR-ready",
+    hint: "A pull request description drafted from the change.",
+    when: "ready",
+  },
 ] as const;
 
 export type KeeperPresetId = (typeof KEEPER_PRESETS)[number]["id"];
@@ -32,6 +77,7 @@ export type KeeperStatus =
   | "green"
   | "findings"
   | "inconclusive"
+  | "draft"
   | "idle";
 
 export type StripTone = "green" | "red" | "grey" | "running";
@@ -187,7 +233,17 @@ export function keeperStatus(
   const last = lastCounted(runs);
   if (!last) return "idle";
   if (last.outcome === "green") return "green";
+  if (last.outcome === "draft") return "draft";
   return last.outcome === "findings" ? "findings" : "inconclusive";
+}
+
+/**
+ * @param runs A keeper's runs, oldest first.
+ * @returns The latest counted run's draft text, or null when that run is not a draft.
+ */
+export function latestDraft(runs: readonly KeeperRun[]): string | null {
+  const last = lastCounted(runs);
+  return last?.outcome === "draft" && last.draft?.trim() ? last.draft : null;
 }
 
 /**
@@ -218,6 +274,30 @@ export function keeperOn(
   state: KeeperTaskState | undefined,
 ): boolean {
   return state?.switches.overrides[id] ?? definition?.defaultOn ?? false;
+}
+
+/**
+ * The project's `when: ready` keepers that are on for the task, each with
+ * whether a check of it is in flight.
+ * @param entries The project's keeper files.
+ * @param state The task's keeper state.
+ * @returns One item per ready keeper that is on, in file order.
+ */
+export function readyKeepers(
+  entries: readonly KeeperEntry[],
+  state: KeeperTaskState | undefined,
+): { entry: KeeperEntry; runs: KeeperRun[]; running: boolean }[] {
+  return entries
+    .filter(
+      (entry) =>
+        entry.definition?.when === "ready" &&
+        !entry.error &&
+        keeperOn(entry.id, entry.definition, state),
+    )
+    .map((entry) => {
+      const runs = keeperRuns(state, entry.id);
+      return { entry, running: runs.some(inFlight), runs };
+    });
 }
 
 /**
