@@ -104,11 +104,14 @@ contract, and replacing it would need every teammate to switch.
 **Keepers attach to a task that owns a branch.** A worktree task owns its
 worktree's branch, so its commits and its PR are unambiguously its own. A
 project-folder task shares the project's checkout with every other folder
-session, so it owns a branch by working on it: the checkout's branch when the
-task's last turn ended (or Warpforge committed for it) is the task's, unless
-it is the base branch, the remote's default, `main` or `master`. Claiming it
-releases it from any other folder task of the project, so the session that
-worked on the branch last is the one its keepers report to. A branch no
+session, so it owns a branch by committing on it: when a turn of the task
+ends and the checkout's HEAD moved during that turn (or Warpforge committed
+for it), the checkout's branch is the task's, unless it is the base branch,
+the remote's default, `main` or `master`. Claiming it releases it from any
+other folder task of the project, so the session that committed last is the
+one its keepers report to. A turn that moved no HEAD claims nothing: an
+orchestrator's turns end constantly and would otherwise take the branch from
+the sub-agent whose commit it is. A branch no
 folder task owns goes, at the next poll, to the project's most recently
 updated folder task that owns no branch yet — so switching to a branch and
 adding keepers starts them without waiting for a turn, while a task that
