@@ -67,6 +67,9 @@ impl Daemon {
                 .is_some_and(|r| r.head == head),
         };
         if !current || !self.keeper_candidate(&task) {
+            if trigger == wire::KeeperWhen::Ready {
+                self.keepers_ready_resume();
+            }
             return;
         }
         for definition in keepers {
@@ -76,6 +79,9 @@ impl Daemon {
             };
             if !due {
                 continue;
+            }
+            if let Some(ready) = self.keepers.ready.get_mut(task_id) {
+                ready.queued.retain(|queued| queued.id != definition.id);
             }
             let change = match &change {
                 Ok(change) => change,

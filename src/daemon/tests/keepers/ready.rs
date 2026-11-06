@@ -228,3 +228,27 @@ async fn a_ready_keeper_busy_on_an_older_head_runs_on_the_new_one_after() {
     assert_eq!((next.run_number, next.outcome), (2, Some(Outcome::Green)));
     setup.daemon.shutdown().await;
 }
+
+/// A second request while the first one's change is still being read, on
+/// a HEAD that moved since: the keeper still runs on the new HEAD.
+#[tokio::test]
+async fn a_ready_keeper_gathering_an_older_head_runs_on_the_new_one() {
+    let mut setup = setup(&[("security", SECURITY)], |wt| vec![task("t_a", Some(wt))]).await;
+    std::fs::write(&setup.replies, APPROVE).unwrap();
+    setup.script.lock().unwrap().hold_changes = true;
+    assert_eq!(check_ready(&setup, "t_a").await.unwrap(), vec!["security"]);
+    move_head(&setup, "sha2").await;
+    let queued = check_ready_on(&setup, "t_a", "sha2").await.unwrap();
+    assert_eq!(queued, vec!["security"]);
+    setup.script.lock().unwrap().hold_changes = false;
+
+    let (run, _) = keeper_event(&mut setup, finished).await;
+    assert_eq!(
+        (run.head_sha.as_str(), run.outcome),
+        ("sha2", Some(Outcome::Green))
+    );
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let runs = state(&setup).await.runs;
+    assert_eq!(runs.len(), 1, "one run, on the asked HEAD: {runs:?}");
+    setup.daemon.shutdown().await;
+}

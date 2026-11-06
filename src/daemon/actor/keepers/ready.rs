@@ -143,18 +143,18 @@ impl Daemon {
         Ok((head, started))
     }
 
-    /// Its change is being read, or its checker is on `head`.
+    /// Its checker is on `head`. A change still being read may be of an
+    /// older HEAD, so such a keeper is queued instead; the read that lands
+    /// takes it off the queue or restarts it on the asked HEAD.
     fn keeper_checking(&self, task_id: &str, keeper_id: &str, head: &str) -> bool {
-        let key = (task_id.to_string(), keeper_id.to_string());
-        self.keepers.gathering.contains(&key)
-            || self.keepers.in_flight.iter().any(|(run_id, run)| {
-                run.task_id == task_id
-                    && run.definition.id == keeper_id
-                    && self
-                        .keepers
-                        .run(task_id, run_id)
-                        .is_some_and(|run| run.head_sha == head)
-            })
+        self.keepers.in_flight.iter().any(|(run_id, run)| {
+            run.task_id == task_id
+                && run.definition.id == keeper_id
+                && self
+                    .keepers
+                    .run(task_id, run_id)
+                    .is_some_and(|run| run.head_sha == head)
+        })
     }
 
     /// HEAD moved past a fix planned from a ready check, and no commit

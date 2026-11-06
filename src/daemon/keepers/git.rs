@@ -48,6 +48,8 @@ pub struct Scripted {
     pub dirty: std::collections::HashSet<String>,
     /// Checkouts on a branch other than the base.
     pub branches: std::collections::HashMap<String, String>,
+    /// Holds every change read until cleared.
+    pub hold_changes: bool,
 }
 
 impl GitSource {
@@ -132,6 +134,9 @@ impl GitSource {
         #[cfg(test)]
         {
             let script = self.scripted.as_ref().ok_or("no git in tests")?;
+            while script.lock().unwrap().hold_changes {
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
             let script = script.lock().unwrap();
             Ok(script.changes.get(&query.cwd).cloned().unwrap_or_default())
         }
