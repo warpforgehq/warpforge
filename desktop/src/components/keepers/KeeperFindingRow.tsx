@@ -32,7 +32,7 @@ export function KeeperFindingRow({
   const [asking, setAsking] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  const location = finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ""}` : null;
+  const file = finding.file;
 
   const dismiss = async () => {
     setBusy(true);
@@ -56,13 +56,13 @@ export function KeeperFindingRow({
           {finding.severity}
         </span>
         <div className="min-w-0 flex-1">
-          {location && (
+          {file && (
             <button
               type="button"
               className="block max-w-full truncate font-mono text-xs text-primary hover:underline"
-              onClick={() => onOpenFile(finding.file!, { line: finding.line ?? undefined })}
+              onClick={() => onOpenFile(file, { line: finding.line ?? undefined })}
             >
-              {location}
+              {finding.line ? `${file}:${finding.line}` : file}
             </button>
           )}
           <p className="text-[13px] whitespace-pre-wrap break-words text-foreground">

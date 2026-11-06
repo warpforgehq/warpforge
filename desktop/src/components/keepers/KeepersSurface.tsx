@@ -173,7 +173,7 @@ export function KeepersSurface({
               ? `Checks each commit on ${branch}.`
               : "Checks each commit on this task's branch."}
           </p>
-          {held ? <p className="text-amber-600 dark:text-amber-400">Paused: {held}.</p> : null}
+          {held ? <p className="text-warn">Paused: {held}.</p> : null}
         </div>
         <AddKeeper entries={entries} onAdd={add} />
       </div>

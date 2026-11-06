@@ -257,3 +257,21 @@ export function activeKeepers(
 export function keeperIdLabel(id: string): string {
   return id.charAt(0).toUpperCase() + id.slice(1).replace(/[-_]/g, " ");
 }
+
+/**
+ * What the task's keepers have not cleared, for the push and pull request
+ * dialogs: findings, a check still running, a loop waiting for the owner.
+ * @param state The task's keeper state.
+ * @returns One phrase per keeper that is not green, empty when all are.
+ */
+export function keeperPushWarnings(state: KeeperTaskState | undefined): string[] {
+  return activeKeepers(state).flatMap(({ findings, id, status }) => {
+    const name = keeperIdLabel(id);
+    if (status === "running") return [`${name} is still checking`];
+    if (status === "needs_you") return [`${name} needs you`];
+    const open = status === "findings" || status === "waiting" || status === "fixing";
+    if (open && findings > 0)
+      return [`${name}: ${findings} ${findings === 1 ? "finding" : "findings"}`];
+    return [];
+  });
+}

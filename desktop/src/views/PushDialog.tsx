@@ -18,6 +18,7 @@ import { useUi } from "@/store/ui";
 
 import { daemon } from "../daemon";
 import type { GitOpResult, GitPushCommit, GitPushInfo, TaskInfo } from "../protocol";
+import { KeeperWarning } from "./push/KeeperWarning";
 import { PrFooter } from "./push/PrFooter";
 import { PrForm } from "./push/PrForm";
 import { PushFooter } from "./push/PushFooter";
@@ -327,6 +328,7 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
           </div>
         )}
 
+        <KeeperWarning taskId={task?.id ?? null} />
         {mode === "pr" ? (
           <PrFooter
             creatingPr={creatingPr}
