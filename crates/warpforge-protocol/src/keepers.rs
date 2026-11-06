@@ -115,6 +115,13 @@ pub struct TaskKeepers {
     /// Keeper id → its fix loop on this task.
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub loops: BTreeMap<String, KeeperLoop>,
+    /// The branch a task without a worktree owns: the one its last turn
+    /// ended on, unless that was the base branch.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch: Option<String>,
+    /// Why the task's keepers are not checking it now.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub held: Option<String>,
 }
 
 /// Why a keeper's fix loop stopped and waits for the owner.

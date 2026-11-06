@@ -193,6 +193,9 @@ impl Daemon {
         if task.queued_prompts.iter().any(|q| q.initiator == "user") {
             return Some("a message of yours is queued".into());
         }
+        if let Some(reason) = self.keepers_checkout_busy(task_id) {
+            return Some(reason);
+        }
         let account = self.spawn_account(task_id);
         self.dispatch_refusal(&task.agent, account)
             .map(|reason| format!("{QUOTA_SKIP}: {reason}"))
@@ -200,7 +203,7 @@ impl Daemon {
 
     /// `git status --porcelain` and HEAD, off the loop (invariant 12).
     fn keepers_fix_gate(&self, task_id: &str, head: String) {
-        let Some(cwd) = self.tasks.get(task_id).and_then(|t| t.worktree.clone()) else {
+        let Some(cwd) = self.task_repo_path(task_id) else {
             return;
         };
         let git = self.keepers.git.clone();

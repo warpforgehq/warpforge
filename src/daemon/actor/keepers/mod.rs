@@ -3,6 +3,7 @@
 //! exhaustive match over `KeeperCommand`.
 
 mod checker;
+pub(crate) mod checkout;
 mod finish;
 mod fix_turn;
 mod fixer;
@@ -95,6 +96,10 @@ pub struct Polled {
     pub head: Option<String>,
     /// The task's `when: commit` keepers that are on.
     pub keepers: Vec<wire::KeeperDefinition>,
+    /// The task has no worktree and shares the project's checkout.
+    pub folder: bool,
+    /// For a `folder` task, the checkout's branch unless it is the base.
+    pub branch: Option<String>,
 }
 
 /// A run handed to a checker and not finished yet.

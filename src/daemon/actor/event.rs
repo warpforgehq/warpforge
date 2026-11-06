@@ -156,6 +156,11 @@ pub enum Event {
         task_id: String,
         pull_request: Option<wire::TaskPullRequest>,
     },
+    /// A task's keeper switches changed (ADR 0030).
+    TaskKeeperSwitches {
+        task_id: String,
+        switches: wire::TaskKeepers,
+    },
     /// A keeper's run changed (ADR 0030).
     TaskKeeper {
         task_id: String,

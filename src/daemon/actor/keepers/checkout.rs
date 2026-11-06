@@ -1,0 +1,115 @@
+//! Keepers on a task without a worktree (ADR 0030, *Tasks in the project
+//! folder*): the task owns the branch its last turn ended on, and its keepers
+//! check only while the shared checkout is on that branch.
+
+use std::collections::HashSet;
+
+use crate::daemon::actor::Daemon;
+use crate::daemon::task::TaskStatus;
+
+pub(crate) const NO_BRANCH: &str =
+    "keepers start when this task's turn ends on a branch other than the base";
+pub(crate) const SHARED_CHECKOUT_BUSY: &str = "another session is working in this checkout";
+
+impl Daemon {
+    /// Claim the branch when the task's turn just ended on it, then say
+    /// whether the checkout is on the task's branch.
+    /// @param task_id a task without a worktree
+    /// @param branch the checkout's branch, `None` on the base or detached
+    /// @param mid_turn whether the task's agent is working
+    /// @returns whether the task's keepers may check this HEAD
+    pub(super) fn keepers_checkout(
+        &mut self,
+        task_id: &str,
+        branch: Option<&str>,
+        mid_turn: bool,
+    ) -> bool {
+        let turn_ended = !mid_turn
+            && self
+                .keepers
+                .watches
+                .get(task_id)
+                .is_some_and(|watch| watch.nudged());
+        if let (true, Some(branch)) = (turn_ended, branch) {
+            self.keepers_claim(task_id, branch);
+        }
+        let owned = self
+            .tasks
+            .get(task_id)
+            .and_then(|task| task.keepers.as_ref())
+            .and_then(|keepers| keepers.branch.clone());
+        let held = match (owned, branch) {
+            (Some(owned), Some(branch)) if owned == branch => None,
+            (Some(owned), Some(branch)) => {
+                Some(format!("the checkout is on {branch}, not {owned}"))
+            }
+            (Some(owned), None) => Some(format!("the checkout is not on {owned}")),
+            (None, _) => Some(NO_BRANCH.to_string()),
+        };
+        let checks = held.is_none();
+        self.keepers_edit_task(task_id, |keepers| keepers.held = held);
+        checks
+    }
+
+    /// The branch moves to `task_id`; other tasks of the project's checkout
+    /// that owned it let it go.
+    fn keepers_claim(&mut self, task_id: &str, branch: &str) {
+        let Some(project) = self.tasks.get(task_id).map(|task| task.project.clone()) else {
+            return;
+        };
+        let previous: Vec<String> = self
+            .tasks
+            .values()
+            .filter(|task| task.id != task_id && task.project == project)
+            .filter(|task| task.worktree.is_none())
+            .filter(|task| {
+                task.keepers
+                    .as_ref()
+                    .and_then(|keepers| keepers.branch.as_deref())
+                    == Some(branch)
+            })
+            .map(|task| task.id.clone())
+            .collect();
+        for other in previous {
+            self.keepers_edit_task(&other, |keepers| keepers.branch = None);
+        }
+        self.keepers_edit_task(task_id, |keepers| {
+            keepers.branch = Some(branch.to_string());
+        });
+    }
+
+    /// A task no poll covers any more keeps no stale reason.
+    pub(super) fn keepers_clear_held(&mut self, polled: &HashSet<&str>) {
+        let stale: Vec<String> = self
+            .tasks
+            .values()
+            .filter(|task| !polled.contains(task.id.as_str()))
+            .filter(|task| task.keepers.as_ref().is_some_and(|k| k.held.is_some()))
+            .map(|task| task.id.clone())
+            .collect();
+        for task_id in stale {
+            self.keepers_edit_task(&task_id, |keepers| keepers.held = None);
+        }
+    }
+
+    /// Why a fix may not go into a task's checkout yet: it is held, or
+    /// another session works in the same shared checkout.
+    pub(super) fn keepers_checkout_busy(&self, task_id: &str) -> Option<String> {
+        let task = self.tasks.get(task_id)?;
+        if task.worktree.is_some() {
+            return None;
+        }
+        if let Some(held) = task.keepers.as_ref().and_then(|k| k.held.clone()) {
+            return Some(held);
+        }
+        let shared = self.tasks.values().any(|other| {
+            other.id != task.id
+                && other.project == task.project
+                && other.worktree.is_none()
+                && other.kind.is_task()
+                && other.origin.is_none()
+                && other.status == TaskStatus::Running
+        });
+        shared.then(|| SHARED_CHECKOUT_BUSY.to_string())
+    }
+}

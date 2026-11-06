@@ -147,6 +147,8 @@ fn task_switches_round_trip_and_default_to_none() {
                 ..Default::default()
             },
         )]),
+        branch: Some("feat/x".into()),
+        held: None,
     });
     store.upsert_task(&switched).unwrap();
     store.upsert_task(&task("t_b", "demo")).unwrap();

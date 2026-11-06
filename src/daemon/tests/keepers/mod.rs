@@ -1,6 +1,7 @@
 //! Keepers (ADR 0030): the HEAD trigger and the read-only checker, driven by
 //! a scripted git and a mock checker agent.
 
+mod checkout;
 mod fixer;
 
 use std::path::{Path, PathBuf};
@@ -302,7 +303,7 @@ async fn a_commit_runs_one_read_only_checker_that_is_re_prompted_after_a_resume(
     setup.daemon.shutdown().await;
 }
 
-/// Only worktree tasks with a commit keeper on have their HEAD read, and
+/// Only tasks with a commit keeper on have their HEAD read, and
 /// nothing starts without a keeper file.
 #[tokio::test]
 async fn only_eligible_tasks_are_polled_and_no_keeper_file_spawns_nothing() {
@@ -322,16 +323,7 @@ async fn only_eligible_tasks_are_polled_and_no_keeper_file_spawns_nothing() {
         let mut hidden = task("t_hidden", Some(wt));
         hidden.origin = Some("pr-review".into());
         hidden.keepers = on.keepers.clone();
-        let mut folder = task("t_folder", None);
-        folder.keepers = on.keepers.clone();
-        vec![
-            on,
-            done,
-            factory,
-            hidden,
-            folder,
-            task("t_default_off", Some(wt)),
-        ]
+        vec![on, done, factory, hidden, task("t_default_off", Some(wt))]
     })
     .await;
     setup
