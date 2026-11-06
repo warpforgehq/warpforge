@@ -5,15 +5,15 @@
 use std::collections::HashSet;
 
 use crate::daemon::actor::Daemon;
-use crate::daemon::task::TaskStatus;
+use crate::daemon::task::{Task, TaskStatus};
 
 pub(crate) const NO_BRANCH: &str =
     "keepers start when this task's turn ends on a branch other than the base";
 pub(crate) const SHARED_CHECKOUT_BUSY: &str = "another session is working in this checkout";
 
 impl Daemon {
-    /// Claim the branch when the task's turn just ended on it, then say
-    /// whether the checkout is on the task's branch.
+    /// Claim the branch when the task's turn just ended on it, or when it is
+    /// the branch's heir, then say whether the checkout is on its branch.
     /// @param task_id a task without a worktree
     /// @param branch the checkout's branch, `None` on the base or detached
     /// @param mid_turn whether the task's agent is working
@@ -53,8 +53,8 @@ impl Daemon {
         checks
     }
 
-    /// `task_id` owns no branch yet, no folder task of the project owns
-    /// `branch`, and `task_id` is the one of them that changed last.
+    /// No folder task of the project owns `branch`, and `task_id` is the one
+    /// that changed last among those with a keeper on and no branch yet.
     fn keepers_heir(&self, task_id: &str, branch: &str) -> bool {
         let Some(task) = self.tasks.get(task_id) else {
             return false;
@@ -62,7 +62,7 @@ impl Daemon {
         if task.keepers.as_ref().is_some_and(|k| k.branch.is_some()) {
             return false;
         }
-        let folder: Vec<&crate::daemon::task::Task> = self
+        let folder: Vec<&Task> = self
             .tasks
             .values()
             .filter(|other| other.project == task.project && other.worktree.is_none())
@@ -73,6 +73,13 @@ impl Daemon {
             .any(|other| other.keepers.as_ref().and_then(|k| k.branch.as_deref()) == Some(branch));
         let latest = folder
             .iter()
+            .filter(|other| other.keepers.as_ref().is_none_or(|k| k.branch.is_none()))
+            .filter(|other| {
+                self.keepers
+                    .on
+                    .get(&other.id)
+                    .is_some_and(|on| !on.is_empty())
+            })
             .max_by_key(|other| (other.updated_at, other.id.as_str()))
             .map(|other| other.id.as_str());
         !owned && latest == Some(task_id)
