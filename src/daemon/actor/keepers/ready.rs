@@ -156,6 +156,35 @@ impl Daemon {
             })
     }
 
+    /// HEAD moved past a fix planned from a ready check, and no commit
+    /// keeper will check the new HEAD: drop the request and its fix. The
+    /// findings stay shown; the keepers wait for the owner's next check.
+    /// @param task_id the task whose fix was gated
+    /// @param head the HEAD the fix was planned for
+    /// @returns whether the fix was dropped
+    pub(super) fn keepers_ready_moved(&mut self, task_id: &str, head: &str) -> bool {
+        let polled = self
+            .keepers
+            .on
+            .get(task_id)
+            .is_some_and(|on| !on.is_empty());
+        let asked = self
+            .keepers
+            .ready
+            .get(task_id)
+            .is_some_and(|r| r.head == head);
+        if polled || !asked {
+            return false;
+        }
+        self.keepers.ready.remove(task_id);
+        if let Some(fix) = self.keepers.fixes.remove(task_id) {
+            for keeper_id in &fix.keepers {
+                self.keeper_emit_loop(task_id, keeper_id);
+            }
+        }
+        true
+    }
+
     /// Start ready keepers that found every checker slot taken.
     pub(super) fn keepers_ready_resume(&mut self) {
         let waiting: Vec<(String, String)> = self
