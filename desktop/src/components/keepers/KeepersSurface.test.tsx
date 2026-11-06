@@ -45,14 +45,14 @@ const entry = (id: string, fields: Partial<KeeperEntry["definition"]> = {}): Kee
   id,
 });
 
-function show(entries: KeeperEntry[], state?: Partial<KeeperTaskState>) {
+function show(entries: KeeperEntry[], state?: Partial<KeeperTaskState>, of: TaskInfo = task) {
   client.listKeepers.mockResolvedValue(entries);
   store.taskKeepers = state ? { t1: { ...normalizeKeeperState("t1", null), ...state } } : {};
   const onOpenFile = vi.fn<(path: string, location?: { line?: number }) => void>();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <KeepersSurface task={task} onOpenFile={onOpenFile} />
+      <KeepersSurface task={of} onOpenFile={onOpenFile} />
     </QueryClientProvider>,
   );
   return { onOpenFile, user: userEvent.setup({ pointerEventsCheck: 0 }) };
@@ -115,6 +115,19 @@ describe("KeepersSurface", () => {
       "grey",
     ]);
     expect(cells[8]).toHaveTextContent("4");
+  });
+
+  it("names the branch a folder task owns and why its keepers are paused", async () => {
+    const folder = { ...task, worktree: null } as unknown as TaskInfo;
+    show(
+      [entry("review")],
+      {
+        switches: { branch: "feat/x", held: "the checkout is on main, not feat/x", overrides: {} },
+      },
+      folder,
+    );
+    expect(await screen.findByText("Checks each commit on feat/x.")).toBeInTheDocument();
+    expect(screen.getByText("Paused: the checkout is on main, not feat/x.")).toBeInTheDocument();
   });
 
   it("switches a keeper for this task", async () => {

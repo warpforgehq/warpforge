@@ -39,18 +39,17 @@ export type StripTone = "green" | "red" | "grey" | "running";
 const SEVERITY_RANK: Record<KeeperSeverity, number> = { critical: 0, high: 1, low: 3, medium: 2 };
 
 /**
- * Whether a task can carry keepers: a worktree task of a project that is not a
- * Factory or workflow task, as the daemon's own candidate check.
+ * Whether a task can carry keepers: a task of a project that is not a Factory
+ * or workflow task, as the daemon's own candidate check.
  * @param task The task.
  * @returns True when the Keepers surface applies.
  */
 export function keepersEligible(
-  task: Pick<TaskInfo, "kind" | "project" | "worktree" | "origin" | "workflowRun" | "tags">,
+  task: Pick<TaskInfo, "kind" | "project" | "origin" | "workflowRun" | "tags">,
 ): boolean {
   return (
     task.kind !== "chat" &&
     !!task.project &&
-    !!task.worktree &&
     !task.origin &&
     !task.workflowRun &&
     !task.tags.some(
@@ -87,7 +86,7 @@ export function normalizeKeeperState(taskId: string, raw: Partial<KeeperTaskStat
     loops: raw?.loops ?? {},
     precision: raw?.precision ?? [],
     runs: raw?.runs ?? [],
-    switches: { overrides: raw?.switches?.overrides ?? {}, loops: raw?.switches?.loops },
+    switches: { ...raw?.switches, overrides: raw?.switches?.overrides ?? {} },
     taskId,
   } satisfies KeeperTaskState;
 }

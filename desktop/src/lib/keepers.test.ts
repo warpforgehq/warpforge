@@ -143,9 +143,8 @@ describe("task.keeper", () => {
 describe("eligibility and presets", () => {
   const task = { kind: "task" as const, project: "p", tags: [], worktree: "/wt" };
 
-  it("keeps keepers to worktree tasks outside the Factory", () => {
+  it("keeps keepers to tasks outside the Factory", () => {
     expect(keepersEligible(task)).toBe(true);
-    expect(keepersEligible({ ...task, worktree: null })).toBe(false);
     expect(keepersEligible({ ...task, kind: "chat" })).toBe(false);
     expect(keepersEligible({ ...task, tags: ["runner"] })).toBe(false);
     expect(keepersEligible({ ...task, origin: "pr-review" })).toBe(false);

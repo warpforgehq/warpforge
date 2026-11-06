@@ -11,12 +11,12 @@ A keeper is an agent attached to a task that checks each commit the task makes. 
 You keep reviewing the work, but you stop being the first one to catch the off-by-one, the missing error path or the code that does not match the project's rules. By the time you open the diff, the keepers have already been through it.
 
 <Aside type="note">
-  Keepers check **committed** work in tasks that run in their **own worktree**. A task in your project folder shares one checkout with your other sessions, so nothing says which commit is its own — keepers skip it. Chats and Factory tasks have no keepers either. An agent that never commits gets no checks: the commit is the signal that a piece of work is ready.
+  Keepers check **committed** work on a task's **branch**. A task in its own worktree always has one. A task in your project folder shares the checkout with your other sessions, so it takes the branch it last worked on: when its turn ends on a branch other than `main` (or your base branch), that branch is the task's, and keepers check it only while the checkout is on it. Switch to another branch and the **Keepers** tab says they are paused and why; switch back and they carry on. Work on `main` itself gets no keepers. Chats and Factory tasks have no keepers either. An agent that never commits gets no checks: the commit is the signal that a piece of work is ready.
 </Aside>
 
 ## Add a keeper
 
-Nothing runs until you add one. Open a worktree task, choose the **Keepers** tab at the end of the rail, and pick **Add keeper**:
+Nothing runs until you add one. Open a task, choose the **Keepers** tab at the end of the rail, and pick **Add keeper**:
 
 | Keeper | Looks for |
 | --- | --- |
@@ -26,7 +26,7 @@ Nothing runs until you add one. Open a worktree task, choose the **Keepers** tab
 
 Adding one writes a two-line file into the project, such as `.warpforge/keepers/review.yaml`. Commit it and every teammate who uses Warpforge gets the same keeper. To change its model, its rounds or what it looks for, edit the file — see [Keeper files](/reference/keeper-files/).
 
-A new keeper is on for every worktree task in the project. The switch on each keeper turns it off, or back on, for **this task only**.
+A new keeper is on for every task in the project. The switch on each keeper turns it off, or back on, for **this task only**.
 
 ## What happens on a commit
 
@@ -36,7 +36,7 @@ A new keeper is on for every worktree task in the project. The switch on each ke
 
 2. **The keeper reports.** A clean change turns the keeper green. Otherwise its findings appear in the Keepers tab, each with a severity and a `file:line` link.
 
-3. **The task's agent fixes them.** All open findings, from every keeper, go to the task's agent as **one** message once it is idle and the worktree has no uncommitted changes. In the chat it shows as a compact **Keepers asked for a fix** line; click it to read the full request. Fixing is the agent's next turn in the same conversation, so the fix lands as a normal commit you can review. Findings below a keeper's `min_severity` are shown but never sent.
+3. **The task's agent fixes them.** All open findings, from every keeper, go to the task's agent as **one** message once it is idle and the checkout has no uncommitted changes — and, in the project folder, once no other session there is mid-turn. In the chat it shows as a compact **Keepers asked for a fix** line; click it to read the full request. Fixing is the agent's next turn in the same conversation, so the fix lands as a normal commit you can review. Findings below a keeper's `min_severity` are shown but never sent.
 
 4. **The next commit is checked again.** Findings the fix resolved are marked fixed; anything still there goes round once more.
 
