@@ -30,7 +30,8 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
             checker_task_id TEXT,
             round           INTEGER NOT NULL DEFAULT 0,
             cost            TEXT,
-            error           TEXT
+            error           TEXT,
+            draft           TEXT
         );
         CREATE INDEX IF NOT EXISTS keeper_runs_task_idx
             ON keeper_runs(task_id, keeper_id, run_number);
@@ -49,6 +50,8 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
         CREATE INDEX IF NOT EXISTS keeper_findings_run_idx ON keeper_findings(run_id);
         "#,
     )?;
+    // Migration: a `result: draft` run's text.
+    let _ = conn.execute("ALTER TABLE keeper_runs ADD COLUMN draft TEXT", []);
     Ok(())
 }
 
@@ -70,7 +73,7 @@ fn from_word<T: DeserializeOwned + Default>(word: String) -> T {
 }
 
 const RUN_COLUMNS: &str = "id, task_id, keeper_id, run_number, trigger, head_sha, base_sha, \
-     started_at, finished_at, outcome, count, checker_task_id, round, cost, error";
+     started_at, finished_at, outcome, count, checker_task_id, round, cost, error, draft";
 
 const FINDING_COLUMNS: &str =
     "id, run_id, key, severity, file, line, description, status, dismiss_reason, resolved_at";
@@ -96,6 +99,7 @@ fn run_from_row(row: &Row<'_>) -> rusqlite::Result<wire::KeeperRun> {
             .get::<_, Option<String>>(13)?
             .and_then(|json| serde_json::from_str(&json).ok()),
         error: row.get(14)?,
+        draft: row.get(15)?,
     })
 }
 
@@ -121,7 +125,7 @@ impl Store {
             KeeperWrite::Run(run) => self.conn.execute(
                 &format!(
                     "INSERT OR REPLACE INTO keeper_runs ({RUN_COLUMNS}) \
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)"
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)"
                 ),
                 params![
                     run.id,
@@ -139,6 +143,7 @@ impl Store {
                     run.round,
                     run.cost.as_ref().map(serde_json::to_string).transpose()?,
                     run.error,
+                    run.draft,
                 ],
             )?,
             KeeperWrite::Finding(finding) => self.conn.execute(

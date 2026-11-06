@@ -37,6 +37,7 @@ fn run(id: &str, task_id: &str, keeper_id: &str) -> wire::KeeperRun {
             currency: "USD".into(),
         }),
         error: None,
+        draft: None,
     }
 }
 
@@ -67,6 +68,14 @@ async fn the_mirror_reads_back_after_the_write_behind_queue() {
     let (persist, store) = Persist::spawn(Some(Store::open_at(&dir.path().join("k.db")).unwrap()));
     let tasks = tasks(&["t_a"]);
     let mut keepers = KeepersState::default();
+    let draft = wire::KeeperRun {
+        trigger: wire::KeeperWhen::Ready,
+        outcome: Some(wire::KeeperOutcome::Draft),
+        count: 0,
+        draft: Some("## TL;DR\nAdds the parser.".into()),
+        ..run("r2", "t_a", "pr-ready")
+    };
+    keepers.put_run(&persist, &tasks, draft.clone());
     keepers.put_run(&persist, &tasks, run("r1", "t_a", "review"));
     keepers.put_finding(&persist, &tasks, "t_a", finding("f1", "r1", Status::Open));
     keepers.put_finding(&persist, &tasks, "t_a", finding("f1", "r1", Status::Fixed));
@@ -75,7 +84,7 @@ async fn the_mirror_reads_back_after_the_write_behind_queue() {
     let reloaded = load_state(store.as_ref());
     let state = reloaded.task("t_a").unwrap();
     assert_eq!(Some(state), keepers.task("t_a"));
-    assert_eq!(state.runs, vec![run("r1", "t_a", "review")]);
+    assert_eq!(state.runs, vec![draft, run("r1", "t_a", "review")]);
     assert_eq!(state.findings, vec![finding("f1", "r1", Status::Fixed)]);
 }
 

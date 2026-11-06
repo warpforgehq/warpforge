@@ -85,7 +85,11 @@ impl Daemon {
             flight.definition.min_severity,
         );
         let (reasked, checker) = (flight.reasked, flight.checker_task_id.clone());
-        let text = self.collect_stage_text(task_id).full;
+        let text = self.collect_stage_text(task_id);
+        let text = match kind {
+            wire::KeeperResultKind::Draft => text.closing,
+            _ => text.full,
+        };
         match map_result(&id, kind, min, &text) {
             Ok(mapped) => self.keeper_finish(&run_id, mapped),
             Err(reason) if !reasked => {
@@ -126,6 +130,7 @@ impl Daemon {
                 count: 0,
                 findings: Vec::new(),
                 error: Some(error),
+                draft: None,
             },
         );
     }
@@ -151,6 +156,7 @@ impl Daemon {
         run.count = mapped.count;
         run.outcome = Some(mapped.outcome);
         run.error = mapped.error;
+        run.draft = mapped.draft;
         let status = if flight.superseded {
             run.outcome = Some(wire::KeeperOutcome::Skipped);
             run.error = Some(SUPERSEDED.into());

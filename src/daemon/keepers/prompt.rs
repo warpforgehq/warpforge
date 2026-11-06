@@ -37,6 +37,11 @@ shape:\n\
 `verdict` is `pass`, `fail` (each problem in `findings`) or `blocked` when you could not run \
 the check at all, with the reason in `summary`.";
 
+const DRAFT_PROTOCOL: &str = "Do not edit files, commit or push; read the code and run \
+read-only checks only.\n\n\
+Your closing message is recorded as the draft exactly as you write it: no preface, no \
+remarks after it, and no JSON verdict.";
+
 /// The checker's prompt for one run: the keeper's template rendered, then
 /// the protocol for its `result`.
 /// @param definition the resolved keeper
@@ -63,7 +68,8 @@ pub fn render_prompt(definition: &wire::KeeperDefinition, vars: &PromptVars) -> 
 fn protocol(kind: Kind) -> &'static str {
     match kind {
         Kind::Verdict => VERDICT_PROTOCOL,
-        Kind::Findings | Kind::PassFail | Kind::Draft => FINDINGS_PROTOCOL,
+        Kind::Draft => DRAFT_PROTOCOL,
+        Kind::Findings | Kind::PassFail => FINDINGS_PROTOCOL,
     }
 }
 
@@ -74,7 +80,11 @@ fn protocol(kind: Kind) -> &'static str {
 pub fn reask_prompt(kind: Kind, reason: &str) -> String {
     match kind {
         Kind::Verdict => crate::daemon::workflow::reask_verify_prompt(reason),
-        _ => crate::daemon::workflow::reask_verdict_prompt(reason),
+        Kind::Draft => format!(
+            "Your reply could not be used as the draft ({reason}). Reply again with only \
+             the draft text."
+        ),
+        Kind::Findings | Kind::PassFail => crate::daemon::workflow::reask_verdict_prompt(reason),
     }
 }
 
