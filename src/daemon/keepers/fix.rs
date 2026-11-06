@@ -15,12 +15,13 @@ pub struct FixItem<'a> {
 /// @param guidance (keeper name, the owner's note) pairs from Extend
 /// @returns the text sent as a `Keeper` turn
 pub fn fix_prompt(head: &str, items: &[FixItem<'_>], guidance: &[(&str, &str)]) -> String {
-    let short = &head[..head.len().min(10)];
-    let intro = format!(
-        "Keepers checked commit {short} and found the problems below. For each one, either \
+    let intro = |short: &str| {
+        format!(
+            "Keepers checked commit {short} and found the problems below. For each one, either \
 fix it or, if it is not a real problem, rebut it by explaining why. Change nothing else.\n\n"
-    );
-    prompt(intro, items, guidance)
+        )
+    };
+    prompt(head, intro, items, guidance)
 }
 
 /// The prompt the owner sends by hand with **Send to agent**: the findings
@@ -30,17 +31,24 @@ fix it or, if it is not a real problem, rebut it by explaining why. Change nothi
 /// @param guidance (keeper name, the owner's note) pairs from Extend
 /// @returns the text sent as a `Keeper` turn
 pub fn owner_fix_prompt(head: &str, items: &[FixItem<'_>], guidance: &[(&str, &str)]) -> String {
-    let short = &head[..head.len().min(10)];
-    let intro = format!(
-        "Keepers checked commit {short} and found the problems below; the owner sent them to \
+    let intro = |short: &str| {
+        format!(
+            "Keepers checked commit {short} and found the problems below; the owner sent them to \
 you. HEAD may have moved since {short}, so first check whether each one still holds in the \
 current code. For each that does, either fix it or, if it is not a real problem, rebut it by \
 explaining why; for each that no longer holds, say so. Change nothing else.\n\n"
-    );
-    prompt(intro, items, guidance)
+        )
+    };
+    prompt(head, intro, items, guidance)
 }
 
-fn prompt(mut out: String, items: &[FixItem<'_>], guidance: &[(&str, &str)]) -> String {
+fn prompt(
+    head: &str,
+    intro: impl Fn(&str) -> String,
+    items: &[FixItem<'_>],
+    guidance: &[(&str, &str)],
+) -> String {
+    let mut out = intro(&head[..head.len().min(10)]);
     for (index, item) in items.iter().enumerate() {
         let f = item.finding;
         let place = match (&f.file, f.line) {
