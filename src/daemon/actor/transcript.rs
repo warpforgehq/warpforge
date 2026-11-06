@@ -8,6 +8,7 @@ use crate::daemon::task::TaskStatus;
 pub(crate) fn is_acp_replay_update(update: &wire::SessionUpdate) -> bool {
     match update {
         wire::SessionUpdate::UserMessage { .. }
+        | wire::SessionUpdate::KeeperRequest { .. }
         | wire::SessionUpdate::PermissionResolved { .. }
         | wire::SessionUpdate::PromptCapabilities { .. }
         | wire::SessionUpdate::WorkflowEvent { .. }
@@ -50,7 +51,7 @@ pub(crate) fn stage_text_from_updates(updates: &[wire::SessionUpdate]) -> StageT
     for update in updates {
         match update {
             // A new user message starts a fresh turn.
-            wire::SessionUpdate::UserMessage { .. } => {
+            wire::SessionUpdate::UserMessage { .. } | wire::SessionUpdate::KeeperRequest { .. } => {
                 full.clear();
                 closing.clear();
             }

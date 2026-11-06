@@ -1,6 +1,8 @@
 //! Keepers (ADR 0030): the HEAD trigger and the read-only checker, driven by
 //! a scripted git and a mock checker agent.
 
+mod fixer;
+
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -14,6 +16,11 @@ const CHECKER: &str = concat!(
     "/tests/fixtures/mock-acp-keeper.mjs"
 );
 
+const FIXER: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/mock-acp-fixer.mjs"
+);
+
 const FINDING: &str = "Found one.\n```json\n{\"verdict\": \"request_changes\", \"findings\": [{\"severity\": \"high\", \"file\": \"src/lib.rs\", \"line\": 4, \"description\": \"panics on empty input\"}]}\n```";
 const APPROVE: &str = "```json\n{\"verdict\": \"approve\", \"findings\": []}\n```";
 
@@ -24,6 +31,12 @@ struct Setup {
     worktree: String,
     log: PathBuf,
     replies: PathBuf,
+    /// The task's own session's prompts, for the fixer tests.
+    fix_log: PathBuf,
+    /// Holds a fixer turn whose prompt contains this file's text.
+    hold: PathBuf,
+    db: PathBuf,
+    projects: Vec<crate::registry::ProjectEntry>,
     _dir: tempfile::TempDir,
 }
 
@@ -66,8 +79,11 @@ async fn setup(keepers: &[(&str, &str)], tasks: impl Fn(&str) -> Vec<Task>) -> S
     }
     let log = dir.path().join("checker.log");
     let replies = dir.path().join("replies.txt");
+    let fix_log = dir.path().join("fixer.log");
+    let hold = dir.path().join("hold");
     std::fs::write(&replies, FINDING).unwrap();
-    let store = Store::open_at(Path::new(":memory:")).unwrap();
+    let db = dir.path().join("keepers.db");
+    let store = Store::open_at(&db).unwrap();
     for task in tasks(&worktree) {
         store.upsert_task(&task).unwrap();
     }
@@ -78,20 +94,8 @@ async fn setup(keepers: &[(&str, &str)], tasks: impl Fn(&str) -> Vec<Task>) -> S
         port_range: None,
         port_range_override: None,
     }];
-    let daemon = Daemon::spawn(projects, Some(store));
+    let daemon = Daemon::spawn(projects.clone(), Some(store));
     let events = daemon.subscribe();
-    daemon
-        .send(Command::UpdateAgents {
-            agents: vec![wire::AgentConfig {
-                id: "mockkeep".into(),
-                display_name: "Mock keeper".into(),
-                acp_command: format!("node {CHECKER} {} {}", log.display(), replies.display()),
-                enabled: true,
-                models: vec![read_only_capable()],
-                last_model: None,
-            }],
-        })
-        .await;
     let script = Arc::new(Mutex::new(Scripted::default()));
     {
         let mut s = script.lock().unwrap();
@@ -107,19 +111,57 @@ async fn setup(keepers: &[(&str, &str)], tasks: impl Fn(&str) -> Vec<Task>) -> S
             },
         );
     }
-    let git = GitSource::scripted(script.clone());
-    daemon
-        .send(Command::Keepers(KeeperCommand::Script(git)))
-        .await;
-    Setup {
+    let setup = Setup {
         daemon,
         events,
         script,
         worktree,
         log,
         replies,
+        fix_log,
+        hold,
+        db,
+        projects,
         _dir: dir,
-    }
+    };
+    wire_up(&setup).await;
+    setup
+}
+
+/// The mock agents and the scripted git, on a fresh or a restarted daemon.
+async fn wire_up(setup: &Setup) {
+    let agent = |id: &str, name: &str, command: String| wire::AgentConfig {
+        id: id.into(),
+        display_name: name.into(),
+        acp_command: command,
+        enabled: true,
+        models: vec![read_only_capable()],
+        last_model: None,
+    };
+    let (log, replies) = (setup.log.display(), setup.replies.display());
+    let (fix_log, hold) = (setup.fix_log.display(), setup.hold.display());
+    setup
+        .daemon
+        .send(Command::UpdateAgents {
+            agents: vec![
+                agent(
+                    "mockkeep",
+                    "Mock keeper",
+                    format!("node {CHECKER} {log} {replies}"),
+                ),
+                agent(
+                    "mockfix",
+                    "Mock fixer",
+                    format!("node {FIXER} {fix_log} {hold}"),
+                ),
+            ],
+        })
+        .await;
+    let git = GitSource::scripted(setup.script.clone());
+    setup
+        .daemon
+        .send(Command::Keepers(KeeperCommand::Script(git)))
+        .await;
 }
 
 const REVIEW: &str = "version: 1\npreset: review\nagent: mockkeep\n";
@@ -236,7 +278,7 @@ async fn a_commit_runs_one_read_only_checker_that_is_re_prompted_after_a_resume(
     std::fs::write(&setup.replies, APPROVE).unwrap();
     move_head(&setup, "sha2").await;
     commit(&setup, "t_a").await;
-    let (second, _) = keeper_event(&mut setup, finished).await;
+    let (second, _) = keeper_event(&mut setup, |run| finished(run) && run.head_sha == "sha2").await;
     assert_eq!(second.outcome, Some(wire::KeeperOutcome::Green));
     assert_eq!((second.run_number, second.head_sha.as_str()), (2, "sha2"));
     assert_eq!(
@@ -269,6 +311,7 @@ async fn only_eligible_tasks_are_polled_and_no_keeper_file_spawns_nothing() {
         let mut on = task("t_on", Some(wt));
         on.keepers = Some(wire::TaskKeepers {
             overrides: [("review".to_string(), true)].into(),
+            ..Default::default()
         });
         let mut done = task("t_done", Some(wt));
         done.status = TaskStatus::Done;

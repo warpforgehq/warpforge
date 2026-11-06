@@ -123,8 +123,18 @@ impl Daemon {
         self.keepers
             .watches
             .retain(|task_id, _| eligible.contains(task_id.as_str()));
+        self.keepers
+            .on
+            .retain(|task_id, _| eligible.contains(task_id.as_str()));
+        self.keepers.fixes.retain(|task_id, fix| {
+            eligible.contains(task_id.as_str()) || matches!(fix.phase, super::FixPhase::Sent { .. })
+        });
+        let polled: Vec<String> = results.iter().map(|r| r.task_id.clone()).collect();
         let now = Instant::now();
         for result in results {
+            self.keepers
+                .on
+                .insert(result.task_id.clone(), result.keepers.clone());
             let Some(head) = result.head else {
                 continue;
             };
@@ -152,6 +162,9 @@ impl Daemon {
             if !due.is_empty() {
                 self.keepers_gather(&result.task_id, head, due);
             }
+        }
+        for task_id in polled {
+            self.keepers_fix(&task_id, None);
         }
         if std::mem::take(&mut self.keepers.poll_again) {
             self.keepers_poll();

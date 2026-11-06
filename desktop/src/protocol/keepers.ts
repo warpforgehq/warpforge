@@ -41,7 +41,43 @@ export interface KeeperEntry {
 /** A task's per-keeper switches over each file's `default`. */
 export interface TaskKeepers {
   overrides: Record<string, boolean>;
+  /** Keeper id → its fix loop on this task. */
+  loops?: Record<string, KeeperLoop>;
 }
+
+/** Why a keeper's fix loop stopped and waits for the owner. */
+export type KeeperStop = "max_rounds" | "no_progress";
+
+/** One keeper's fix loop on a task, persisted with the task's switches. */
+export interface KeeperLoop {
+  /** Fix rounds handed to the task's session since the keeper's last green. */
+  rounds: number;
+  /** Rounds the owner added with Extend. */
+  extraRounds: number;
+  roundHead?: string | null;
+  pendingHead?: string | null;
+  stop?: KeeperStop | null;
+  extendedRun?: string | null;
+  /** The HEAD the owner accepted as it is. */
+  acceptedHead?: string | null;
+  guidance?: string | null;
+}
+
+export type KeeperLoopStatus = "idle" | "waiting" | "fixing" | "needs_you" | "accepted";
+
+/** What a keeper's fix loop is doing, as clients show it. */
+export interface KeeperLoopState {
+  status: KeeperLoopStatus;
+  /** Why it waits, for `waiting`. */
+  reason?: string | null;
+  stop?: KeeperStop | null;
+  rounds: number;
+  /** `maxRounds` plus the rounds the owner added. */
+  maxRounds: number;
+}
+
+/** The owner's answer to a stopped loop (`keepers.decide`). */
+export type KeeperDecision = "extend" | "accept" | "off";
 
 export interface KeeperRun {
   id: string;
@@ -91,4 +127,6 @@ export interface KeeperTaskState {
   runs: KeeperRun[];
   findings: KeeperFinding[];
   precision: KeeperPrecision[];
+  /** Keeper id → its fix loop, for every keeper with a run on the task. */
+  loops: Record<string, KeeperLoopState>;
 }

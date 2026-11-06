@@ -44,6 +44,8 @@ pub struct Scripted {
     pub changes: std::collections::HashMap<String, Change>,
     /// Every worktree whose HEAD was read, in order.
     pub head_reads: Vec<String>,
+    /// Worktrees with uncommitted changes.
+    pub dirty: std::collections::HashSet<String>,
 }
 
 impl GitSource {
@@ -66,6 +68,24 @@ impl GitSource {
         #[cfg(not(test))]
         {
             git(cwd, &["rev-parse", "HEAD"]).await.ok()
+        }
+    }
+
+    /// @param cwd a worktree
+    /// @returns its HEAD and whether `git status --porcelain` is empty
+    pub async fn quiet(&self, cwd: &str) -> Result<(String, bool), String> {
+        #[cfg(test)]
+        {
+            let script = self.scripted.as_ref().ok_or("no git in tests")?;
+            let script = script.lock().unwrap();
+            let head = script.heads.get(cwd).cloned().ok_or("no HEAD")?;
+            Ok((head, !script.dirty.contains(cwd)))
+        }
+        #[cfg(not(test))]
+        {
+            let status = git(cwd, &["status", "--porcelain"]).await?;
+            let head = git(cwd, &["rev-parse", "HEAD"]).await?;
+            Ok((head, status.is_empty()))
         }
     }
 

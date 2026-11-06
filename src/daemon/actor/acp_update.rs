@@ -1,6 +1,6 @@
 use warpforge_protocol as wire;
 
-use crate::daemon::acp::AcpUpdate;
+use crate::daemon::acp::{AcpUpdate, TurnInitiator};
 use crate::daemon::actor::transcript::StageText;
 use crate::daemon::actor::{Daemon, Event};
 use crate::daemon::task::TaskStatus;
@@ -191,16 +191,19 @@ impl Daemon {
                 self.smith_report_turn_started(&task_id);
                 self.smith_note_turn(&task_id);
                 if let Some(echo) = echo {
-                    // A reconnect retry can submit the same text again after
-                    // the first attempt was already recorded; drop only that
-                    // exact consecutive duplicate.
-                    self.emit_session_unless_last_duplicate(
-                        &task_id,
-                        wire::SessionUpdate::UserMessage {
+                    let update = match initiator {
+                        TurnInitiator::Keeper => {
+                            wire::SessionUpdate::KeeperRequest { text: echo.text }
+                        }
+                        _ => wire::SessionUpdate::UserMessage {
                             text: echo.text,
                             attachments: echo.attachments,
                         },
-                    );
+                    };
+                    // A reconnect retry can submit the same text again after
+                    // the first attempt was already recorded; drop only that
+                    // exact consecutive duplicate.
+                    self.emit_session_unless_last_duplicate(&task_id, update);
                 }
             }
             AcpUpdate::QueueChanged { run_id, queued } => {
@@ -266,7 +269,7 @@ impl Daemon {
                 if !interrupted {
                     self.advisor_turn_ended(&task_id, success);
                 }
-                self.keepers_turn_ended(&task_id, success, interrupted);
+                self.keepers_turn_ended(&task_id, success, interrupted, initiator);
                 if stage_finished {
                     // A workflow stage finished — advance the pipeline. Parse
                     // only the latest turn's text from the in-memory turn buffer

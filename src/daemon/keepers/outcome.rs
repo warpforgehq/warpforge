@@ -86,7 +86,14 @@ fn rank(severity: KeeperSeverity) -> u8 {
 }
 
 fn counts(found: Severity, min: KeeperSeverity) -> bool {
-    rank(severity(found)) >= rank(min)
+    meets(severity(found), min)
+}
+
+/// @param found a finding's severity
+/// @param min the keeper's `min_severity`
+/// @returns whether the finding counts and may be sent to fix
+pub fn meets(found: KeeperSeverity, min: KeeperSeverity) -> bool {
+    rank(found) >= rank(min)
 }
 
 /// The key ignores the line, which moves with every edit above it.

@@ -162,6 +162,7 @@ pub enum Event {
         keeper_id: String,
         run: Box<wire::KeeperRun>,
         findings: Vec<wire::KeeperFinding>,
+        state: wire::KeeperLoopState,
     },
     /// An automation was created or changed — including the scheduler moving
     /// `next_run_at`, which is what keeps the desktop's "Next run" column live.

@@ -51,13 +51,7 @@ impl Queued {
         wire::QueuedPrompt {
             id: self.id.clone(),
             text: self.prompt.text.clone(),
-            initiator: match self.initiator {
-                TurnInitiator::Automation => "automation",
-                TurnInitiator::User | TurnInitiator::Initial => "user",
-                TurnInitiator::System => "system",
-                TurnInitiator::Peer => "peer",
-            }
-            .into(),
+            initiator: self.initiator.wire_name().into(),
             peer_message_id: self.prompt.peer.direct,
             attachments: self.prompt.summaries.clone(),
         }

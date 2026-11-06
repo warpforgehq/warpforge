@@ -6,9 +6,10 @@
 
 use crate::{
     AccountInfo, AgentAccountLimits, AgentBrokenInstall, AgentConfig, Automation, AutomationRun,
-    Channel, DetectedAgent, ItemRun, KeeperFinding, KeeperRun, PeerMessage, PortForwardInfo,
-    PortForwardStatus, PortRangeSource, PortWarning, ProjectConfigState, RunnerStatus, ServiceInfo,
-    ServiceStatus, SessionUpdate, Smith, TaskInfo, TaskPullRequest, TerminalInfo, TerminalScreen,
+    Channel, DetectedAgent, ItemRun, KeeperFinding, KeeperLoopState, KeeperRun, PeerMessage,
+    PortForwardInfo, PortForwardStatus, PortRangeSource, PortWarning, ProjectConfigState,
+    RunnerStatus, ServiceInfo, ServiceStatus, SessionUpdate, Smith, TaskInfo, TaskPullRequest,
+    TerminalInfo, TerminalScreen,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -107,6 +108,9 @@ pub enum Event {
         keeper_id: String,
         run: KeeperRun,
         findings: Vec<KeeperFinding>,
+        /// The keeper's fix loop on the task.
+        #[serde(default)]
+        state: KeeperLoopState,
     },
 
     /// An automation was created or changed — including the scheduler moving

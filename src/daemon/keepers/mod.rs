@@ -3,6 +3,7 @@
 //! mirrors. The actor glue lives in `actor/keepers/`.
 
 mod debounce;
+mod fix;
 mod git;
 mod outcome;
 mod parse;
@@ -15,10 +16,11 @@ mod state;
 mod tests;
 
 pub use debounce::HeadWatch;
+pub use fix::{fix_prompt, stop_rule, FixItem};
 #[cfg(test)]
 pub use git::Scripted;
 pub use git::{Change, ChangeQuery, GitSource};
-pub use outcome::{map_result, Mapped};
+pub use outcome::{map_result, meets, Mapped};
 pub use parse::parse_keeper;
 pub use paths::touches;
 pub use prompt::{commits_since, dismissed_list, reask_prompt, render_prompt, PromptVars};

@@ -4,7 +4,11 @@
 
 mod checker;
 mod finish;
+mod fix_turn;
+mod fixer;
+mod loops;
 mod mirror;
+mod owner;
 #[cfg(test)]
 mod tests;
 mod trigger;
@@ -49,6 +53,37 @@ pub enum KeeperCommand {
     Undelivered { run_id: String, error: String },
     /// A run's `time_limit` elapsed.
     Deadline { run_id: String },
+    /// The task's worktree was read for the fix gate: its HEAD and whether
+    /// it is clean.
+    Gated {
+        task_id: String,
+        head: String,
+        quiet: Result<(String, bool), String>,
+    },
+    /// The fix prompt did not reach the task's session.
+    FixUndelivered { task_id: String, error: String },
+    /// The owner rejects a finding.
+    Dismiss {
+        task_id: String,
+        finding_id: String,
+        reason: Option<String>,
+        reply: Reply<()>,
+    },
+    /// The owner's answer to a stopped fix loop.
+    Decide {
+        task_id: String,
+        keeper_id: String,
+        decision: wire::KeeperDecision,
+        rounds: Option<u32>,
+        note: Option<String>,
+        reply: Reply<()>,
+    },
+    SetSwitch {
+        task_id: String,
+        keeper_id: String,
+        on: bool,
+        reply: Reply<()>,
+    },
     #[cfg(test)]
     Script(GitSource),
 }
@@ -89,6 +124,29 @@ pub(crate) struct KeepersState {
     polling: bool,
     poll_again: bool,
     git: GitSource,
+    /// Each eligible task's `when: commit` keepers that are on, as last polled.
+    on: HashMap<String, Vec<wire::KeeperDefinition>>,
+    /// A task's fix prompt from "findings ready" to the end of its turn.
+    fixes: HashMap<String, Fix>,
+}
+
+struct Fix {
+    head: String,
+    keepers: Vec<String>,
+    phase: FixPhase,
+}
+
+enum FixPhase {
+    Waiting(String),
+    /// The worktree is being read off the loop.
+    Gating,
+    /// Handed to the task's session.
+    Sent {
+        findings: Vec<String>,
+        /// Each keeper's loop before the hand-over, restored when the turn
+        /// is cut short.
+        prior: Vec<(String, wire::KeeperLoop)>,
+    },
 }
 
 /// Read every task's keeper rows once at startup.
@@ -127,6 +185,41 @@ impl Daemon {
                 self.keeper_run_failed(&run_id, wire::KeeperOutcome::Error, error);
             }
             KeeperCommand::Deadline { run_id } => self.keeper_deadline(&run_id),
+            KeeperCommand::Gated {
+                task_id,
+                head,
+                quiet,
+            } => self.keepers_fix_gated(&task_id, &head, quiet),
+            KeeperCommand::FixUndelivered { task_id, error } => {
+                self.keepers_fix_revert(&task_id, Some(error));
+            }
+            KeeperCommand::Dismiss {
+                task_id,
+                finding_id,
+                reason,
+                reply,
+            } => {
+                let _ = reply.send(self.keepers_dismiss(&task_id, &finding_id, reason));
+            }
+            KeeperCommand::Decide {
+                task_id,
+                keeper_id,
+                decision,
+                rounds,
+                note,
+                reply,
+            } => {
+                let outcome = self.keepers_decide(&task_id, &keeper_id, decision, rounds, note);
+                let _ = reply.send(outcome);
+            }
+            KeeperCommand::SetSwitch {
+                task_id,
+                keeper_id,
+                on,
+                reply,
+            } => {
+                let _ = reply.send(self.keepers_set_switch(&task_id, &keeper_id, on));
+            }
             #[cfg(test)]
             KeeperCommand::Script(git) => self.keepers.git = git,
         }
@@ -143,9 +236,21 @@ impl Daemon {
             .values()
             .filter(|other| other.project == task.project)
             .filter_map(|other| self.keepers.task(&other.id));
+        let loops = state
+            .runs
+            .iter()
+            .map(|run| run.keeper_id.clone())
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .map(|keeper_id| {
+                let fix = self.keeper_loop_state(task_id, &keeper_id);
+                (keeper_id, fix)
+            })
+            .collect();
         Ok(wire::KeeperTaskState {
             task_id: task_id.to_string(),
             switches: task.keepers.clone().unwrap_or_default(),
+            loops,
             runs: state.runs,
             findings: state.findings,
             precision: precision(project_states),
@@ -157,6 +262,8 @@ impl Daemon {
     pub(crate) fn keepers_task_deleted(&mut self, task_id: &str) {
         self.keepers.forget_task(task_id);
         self.keepers.watches.remove(task_id);
+        self.keepers.on.remove(task_id);
+        self.keepers.fixes.remove(task_id);
         self.keepers.gathering.retain(|(task, _)| task != task_id);
         self.keepers
             .in_flight

@@ -8,7 +8,7 @@ import type {
 import type { Automation, AutomationRun } from "./automations";
 import type { ClientRequestBody } from "./browser";
 import type { Channel } from "./channels";
-import type { KeeperFinding, KeeperRun } from "./keepers";
+import type { KeeperFinding, KeeperLoopState, KeeperRun } from "./keepers";
 import type { PeerMessage } from "./peers";
 import type { TaskPullRequest } from "./pulls";
 import type { ItemRun, RunnerStatus } from "./runner";
@@ -82,6 +82,7 @@ export type DaemonEvent =
         keeper_id: string;
         run: KeeperRun;
         findings: KeeperFinding[];
+        state: KeeperLoopState;
       };
     }
   | { event: "session.update"; data: { task_id: string; update: SessionUpdate } }
