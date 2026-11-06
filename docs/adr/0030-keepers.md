@@ -101,13 +101,23 @@ as Entire's Trails do. Entire is the forge, so a team moves to it together.
 Warpforge is one developer's tool inside a team; the PR is the team's
 contract, and replacing it would need every teammate to switch.
 
-**Keepers attach to worktree tasks.** A worktree gives the task its own
-branch, so its commits and its PR are unambiguously its own. Project-folder
-tasks share one tree, where several sessions commit side by side and nothing
-says which commit belongs to which task; they wait until commits can be
-attributed. *Rejected:* modelling a change as "commits that reached main",
-with the PR optional. That fits this repository, which goes straight to main
-only because it has one maintainer, and no team.
+**Keepers attach to a task that owns a branch.** A worktree task owns its
+worktree's branch, so its commits and its PR are unambiguously its own. A
+project-folder task shares the project's checkout with every other folder
+session, so it owns a branch by working on it: the checkout's branch when the
+task's last turn ended (or Warpforge committed for it) is the task's, unless
+it is the base branch, the remote's default, `main` or `master`. Claiming it
+releases it from any other folder task of the project, so the session that
+worked on the branch last is the one its keepers report to. Its keepers check
+only while the checkout is on that branch; on another branch or the base they
+are paused with the reason, and they resume when the checkout returns. A fix
+also waits while any other folder session of the project is mid-turn, since
+both write the same tree. *Rejected:* attributing commits by a per-session
+trailer or author — it needs every harness to cooperate, and a keeper checks
+the branch's whole change anyway, not single commits. *Rejected:* modelling a
+change as "commits that reached main", with the PR optional. That fits this
+repository, which goes straight to main only because it has one maintainer,
+and no team.
 
 **A keeper stops at merge.** What outlives the change is a committed test
 (Verify asks for one) and the task's read-only record. *Rejected:* keeping a
@@ -211,9 +221,10 @@ recomputed when a finding's status is corrected.
 ### Trigger
 
 **The daemon polls each eligible task's HEAD, off the actor loop, and checks
-at once when a turn ends.** Eligible: a task with a worktree, not done or
-archived, with at least one `when: commit` keeper on. Every 20 s one spawned
-task runs `git rev-parse HEAD` per eligible worktree (bounded concurrency,
+at once when a turn ends.** Eligible: a task, not done or archived, with at
+least one `when: commit` keeper on. Every 20 s one spawned task runs
+`git rev-parse HEAD` per eligible task's checkout, then, for a folder task,
+reads the checkout's branch (bounded concurrency,
 results sent to the actor as one command). A `TurnEnded` of the task's own
 session and a `git.commit` RPC request an immediate check.
 *Rejected:* a `post-commit` hook — it must be written into the repository's
@@ -537,6 +548,10 @@ The meta lane keeps its width.
     tasks, the advisor and ADR 0020's manual **Send** keep their current
     paths; sandboxing and the daemon watermark apply only to tasks with a
     keeper on.
+20. **A folder task's keepers check only its own branch.** HEAD is read before
+    the branch, so a switch between the two reads pauses the task instead of
+    checking another branch's HEAD under its name; a fix into the shared
+    checkout waits while another folder session of the project is mid-turn.
 
 ## Consequences
 
@@ -546,9 +561,9 @@ The meta lane keeps its width.
   sees whether a keeper earns that.
 - Keepers react only to committed work. An agent that never commits gets no
   keeper, which is by design: the commit is the "ready" signal.
-- Worktree tasks only (*Product shape*): project-folder tasks and solo
-  direct-to-main work get no keepers until commits can be attributed to
-  tasks.
+- Work on the base branch gets no keepers (*Product shape*). Two folder
+  sessions taking turns on one branch hand it back and forth: the keepers
+  follow whichever turn ended last.
 - Verify is `inconclusive` in a worktree until per-worktree services exist
   (#93, ADR 0024).
 - With post-PR keepers, the owner's GitHub account pushes and replies while

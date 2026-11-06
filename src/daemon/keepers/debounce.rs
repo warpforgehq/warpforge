@@ -34,6 +34,11 @@ impl HeadWatch {
         !mid_turn && (nudged || now.duration_since(since) >= SETTLE)
     }
 
+    /// A turn ended or Warpforge committed since the last settled observation.
+    pub fn nudged(&self) -> bool {
+        self.nudged
+    }
+
     /// The HEAD the poll last saw.
     pub fn head(&self) -> Option<&str> {
         self.seen.as_ref().map(|(sha, _)| sha.as_str())

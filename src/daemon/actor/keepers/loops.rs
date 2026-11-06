@@ -38,10 +38,14 @@ impl Daemon {
         if task.keepers.clone().unwrap_or_default() == keepers {
             return;
         }
-        task.keepers = Some(keepers);
+        task.keepers = Some(keepers.clone());
         let updated = task.clone();
         self.persist(&updated);
         self.emit(Event::TaskUpdated(updated));
+        self.emit(Event::TaskKeeperSwitches {
+            task_id: task_id.to_string(),
+            switches: keepers,
+        });
     }
 
     pub(super) fn keeper_set_loop(

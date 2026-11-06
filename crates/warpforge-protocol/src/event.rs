@@ -8,8 +8,8 @@ use crate::{
     AccountInfo, AgentAccountLimits, AgentBrokenInstall, AgentConfig, Automation, AutomationRun,
     Channel, DetectedAgent, ItemRun, KeeperFinding, KeeperLoopState, KeeperRun, PeerMessage,
     PortForwardInfo, PortForwardStatus, PortRangeSource, PortWarning, ProjectConfigState,
-    RunnerStatus, ServiceInfo, ServiceStatus, SessionUpdate, Smith, TaskInfo, TaskPullRequest,
-    TerminalInfo, TerminalScreen,
+    RunnerStatus, ServiceInfo, ServiceStatus, SessionUpdate, Smith, TaskInfo, TaskKeepers,
+    TaskPullRequest, TerminalInfo, TerminalScreen,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -98,6 +98,13 @@ pub enum Event {
     TaskPullRequest {
         task_id: String,
         pull_request: Option<TaskPullRequest>,
+    },
+
+    /// A task's keeper switches, loops, owned branch or hold reason changed.
+    #[serde(rename = "task.keeperSwitches")]
+    TaskKeeperSwitches {
+        task_id: String,
+        switches: TaskKeepers,
     },
 
     /// A keeper's run on a task started, changed or finished; `findings` are

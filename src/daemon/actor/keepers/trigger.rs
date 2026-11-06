@@ -20,7 +20,11 @@ const HEAD_READS_AT_ONCE: usize = 8;
 struct Candidate {
     task_id: String,
     project_path: String,
-    worktree: String,
+    /// The task's worktree, or the project's checkout.
+    cwd: String,
+    /// The task has no worktree and shares the project's checkout.
+    folder: bool,
+    base_branch: Option<String>,
     overrides: BTreeMap<String, bool>,
 }
 
@@ -48,11 +52,10 @@ pub(crate) fn spawn_poll(cmd_tx: mpsc::Sender<Command>) {
 }
 
 impl Daemon {
-    /// Worktree tasks that are not finished, hidden, chats or Factory work
-    /// (Factory tasks are out of v1).
+    /// Tasks that are not finished, hidden, chats or Factory work (Factory
+    /// tasks are out of v1).
     pub(super) fn keeper_candidate(&self, task: &Task) -> bool {
         task.kind.is_task()
-            && task.worktree.is_some()
             && task.status != TaskStatus::Done
             && task.origin.is_none()
             && task.workflow_run.is_none()
@@ -93,7 +96,9 @@ impl Daemon {
                 Some(Candidate {
                     task_id: task.id.clone(),
                     project_path: self.project_path(&task.project)?,
-                    worktree: task.worktree.clone()?,
+                    cwd: self.task_repo_path(&task.id)?,
+                    folder: task.worktree.is_none(),
+                    base_branch: task.base_branch.clone(),
                     overrides: task
                         .keepers
                         .as_ref()
@@ -120,6 +125,7 @@ impl Daemon {
         self.keepers.polling = false;
         self.keepers_sweep_orphans();
         let eligible: HashSet<&str> = results.iter().map(|r| r.task_id.as_str()).collect();
+        self.keepers_clear_held(&eligible);
         self.keepers
             .watches
             .retain(|task_id, _| eligible.contains(task_id.as_str()));
@@ -146,6 +152,14 @@ impl Daemon {
             }
             let mid_turn = task.status == TaskStatus::Running;
             self.keepers_supersede(&result.task_id, &head);
+            if result.folder
+                && !self.keepers_checkout(&result.task_id, result.branch.as_deref(), mid_turn)
+            {
+                if let Some(watch) = self.keepers.watches.get_mut(&result.task_id) {
+                    watch.observe(&head, now, mid_turn);
+                }
+                continue;
+            }
             let watch = self
                 .keepers
                 .watches
@@ -201,7 +215,7 @@ impl Daemon {
         let Some(task) = self.tasks.get(task_id) else {
             return;
         };
-        let Some(cwd) = task.worktree.clone() else {
+        let Some(cwd) = self.task_repo_path(task_id) else {
             return;
         };
         for keeper in &keepers {
@@ -327,10 +341,22 @@ async fn poll(git: GitSource, candidates: Vec<Candidate>) -> Vec<Polled> {
         .map(|(candidate, keepers)| {
             let git = git.clone();
             async move {
+                // HEAD before the branch: a switch between the reads then holds
+                // the task rather than checking another branch's HEAD.
+                let head = git.head(&candidate.cwd).await;
+                let branch = match candidate.folder {
+                    true => {
+                        let base = candidate.base_branch.as_deref();
+                        git.feature_branch(&candidate.cwd, base).await
+                    }
+                    false => None,
+                };
                 Polled {
-                    head: git.head(&candidate.worktree).await,
+                    head,
                     task_id: candidate.task_id,
                     keepers,
+                    folder: candidate.folder,
+                    branch,
                 }
             }
         })

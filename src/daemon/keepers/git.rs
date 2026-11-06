@@ -46,6 +46,8 @@ pub struct Scripted {
     pub head_reads: Vec<String>,
     /// Worktrees with uncommitted changes.
     pub dirty: std::collections::HashSet<String>,
+    /// Checkouts on a branch other than the base.
+    pub branches: std::collections::HashMap<String, String>,
 }
 
 impl GitSource {
@@ -68,6 +70,41 @@ impl GitSource {
         #[cfg(not(test))]
         {
             git(cwd, &["rev-parse", "HEAD"]).await.ok()
+        }
+    }
+
+    /// @param cwd a checkout
+    /// @param base the task's base branch, when it records one
+    /// @returns the checked-out branch, or `None` when HEAD is detached or on
+    /// the base, the remote's default, `main` or `master`
+    pub async fn feature_branch(&self, cwd: &str, base: Option<&str>) -> Option<String> {
+        #[cfg(test)]
+        {
+            let _ = base;
+            let script = self.scripted.as_ref()?.lock().unwrap();
+            script.branches.get(cwd).cloned()
+        }
+        #[cfg(not(test))]
+        {
+            let branch = git(cwd, &["symbolic-ref", "--quiet", "--short", "HEAD"])
+                .await
+                .ok()?;
+            let remote_default = git(
+                cwd,
+                &[
+                    "symbolic-ref",
+                    "--quiet",
+                    "--short",
+                    "refs/remotes/origin/HEAD",
+                ],
+            )
+            .await
+            .ok();
+            let remote_default = remote_default
+                .as_deref()
+                .and_then(|name| name.strip_prefix("origin/"));
+            let bases = [base, remote_default, Some("main"), Some("master")];
+            (!bases.contains(&Some(branch.as_str()))).then_some(branch)
         }
     }
 
@@ -109,7 +146,7 @@ async fn real_change(query: &ChangeQuery) -> Result<Change, String> {
     let cwd = query.cwd.as_str();
     let refs: Vec<String> = match &query.base_branch {
         Some(base) => vec![base.clone(), format!("origin/{base}")],
-        None => vec!["origin/HEAD".to_string()],
+        None => ["origin/HEAD", "main", "master"].map(String::from).to_vec(),
     };
     let mut base = None;
     for candidate in &refs {

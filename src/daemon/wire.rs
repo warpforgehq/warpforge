@@ -288,6 +288,10 @@ pub fn to_wire(ev: &Event) -> Option<wire::Event> {
             task_id: task_id.clone(),
             pull_request: pull_request.clone(),
         }),
+        Event::TaskKeeperSwitches { task_id, switches } => Some(wire::Event::TaskKeeperSwitches {
+            task_id: task_id.clone(),
+            switches: switches.clone(),
+        }),
         Event::TaskKeeper {
             task_id,
             keeper_id,

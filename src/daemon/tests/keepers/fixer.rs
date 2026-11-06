@@ -6,7 +6,7 @@ use wire::{KeeperDecision, KeeperFindingStatus as Status, KeeperLoopStatus, Keep
 
 const HOLD_FIX: &str = "Keepers checked";
 
-fn fix_task(id: &str, worktree: &str) -> Task {
+pub(super) fn fix_task(id: &str, worktree: &str) -> Task {
     let mut task = task(id, Some(worktree));
     task.agent = "mockfix".into();
     task.session_id = Some("fixer-session-1".into());
@@ -74,7 +74,7 @@ async fn state(setup: &Setup) -> wire::KeeperTaskState {
 }
 
 /// The next `task.keeper` event whose loop state satisfies `done`.
-async fn loop_event(
+pub(super) async fn loop_event(
     setup: &mut Setup,
     done: impl Fn(&wire::KeeperLoopState) -> bool,
 ) -> wire::KeeperLoopState {
