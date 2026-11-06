@@ -80,6 +80,14 @@ pub(super) async fn keepers(
             })
             .await
         }
+        wire::Method::KeepersSendFindings { task_id, keeper_id } => {
+            ask(handle, |reply| KeeperCommand::SendFindings {
+                task_id,
+                keeper_id,
+                reply,
+            })
+            .await
+        }
         wire::Method::KeepersCheckReady { task_id } => {
             let (tx, rx) = oneshot::channel();
             handle

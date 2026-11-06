@@ -16,7 +16,7 @@ mod state;
 mod tests;
 
 pub use debounce::HeadWatch;
-pub use fix::{fix_prompt, stop_rule, FixItem};
+pub use fix::{fix_prompt, owner_fix_prompt, stop_rule, FixItem};
 #[cfg(test)]
 pub use git::Scripted;
 pub use git::{Change, ChangeQuery, GitSource};

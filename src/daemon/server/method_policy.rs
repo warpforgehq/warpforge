@@ -177,6 +177,7 @@ pub(super) fn method_is_user_only(method: &wire::Method) -> bool {
             | KeepersDecide { .. }
             | KeepersSetSwitch { .. }
             | KeepersCheckReady { .. }
+            | KeepersSendFindings { .. }
     )
 }
 
@@ -234,6 +235,10 @@ mod tests {
                 on: false,
             },
             wire::Method::KeepersCheckReady { task_id: id() },
+            wire::Method::KeepersSendFindings {
+                task_id: id(),
+                keeper_id: id(),
+            },
         ] {
             assert!(method_is_user_only(&method), "{method:?}");
             assert!(method_is_mutation(&method), "{method:?}");
