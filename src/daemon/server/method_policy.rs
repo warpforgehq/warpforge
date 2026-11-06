@@ -173,6 +173,9 @@ pub(super) fn method_is_user_only(method: &wire::Method) -> bool {
             | ChannelsDelete { .. }
             | ChannelsAddMember { .. }
             | ChannelsRemoveMember { .. }
+            | KeepersDismiss { .. }
+            | KeepersDecide { .. }
+            | KeepersSetSwitch { .. }
     )
 }
 
@@ -181,7 +184,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_smith_and_channel_edit_is_user_only_and_reads_are_not() {
+    fn every_smith_channel_and_keeper_edit_is_user_only_and_reads_are_not() {
         let id = || "sm_1".to_string();
         for method in [
             wire::Method::SmithsUpdate {
@@ -212,6 +215,23 @@ mod tests {
                 id: id(),
                 smith_id: id(),
             },
+            wire::Method::KeepersDismiss {
+                task_id: id(),
+                finding_id: id(),
+                reason: None,
+            },
+            wire::Method::KeepersDecide {
+                task_id: id(),
+                keeper_id: id(),
+                decision: wire::KeeperDecision::Accept,
+                rounds: None,
+                note: None,
+            },
+            wire::Method::KeepersSetSwitch {
+                task_id: id(),
+                keeper_id: id(),
+                on: false,
+            },
         ] {
             assert!(method_is_user_only(&method), "{method:?}");
             assert!(method_is_mutation(&method), "{method:?}");
@@ -223,6 +243,7 @@ mod tests {
                 project: None,
                 task_id: None,
             },
+            wire::Method::KeepersState { task_id: id() },
         ] {
             assert!(!method_is_user_only(&method), "{method:?}");
             assert!(method_runs_concurrently(&method), "{method:?}");

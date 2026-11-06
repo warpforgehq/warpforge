@@ -99,6 +99,7 @@ impl Daemon {
             }
             self.keeper_start(&task, definition, agent, head, change);
         }
+        self.keepers_fix(task_id, None);
     }
 
     fn keeper_new_run(
@@ -121,6 +122,7 @@ impl Daemon {
             head_sha: head.to_string(),
             base_sha: change.and_then(|c| c.base_sha.clone()),
             started_at: now_secs(),
+            round: self.keeper_loop(task_id, keeper_id).rounds,
             ..Default::default()
         }
     }

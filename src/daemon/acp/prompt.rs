@@ -64,14 +64,15 @@ pub(super) fn send_prompt(
     );
     if started.is_some() {
         // The chat holds what the agent heard and nothing it has not; turns
-        // nobody typed into the chat are not echoed at all.
-        let echo =
-            matches!(initiator, TurnInitiator::User | TurnInitiator::Automation).then(|| {
-                PromptEcho {
-                    text: prompt.text.clone(),
-                    attachments: prompt.summaries.clone(),
-                }
-            });
+        // nobody asked for in the chat are not echoed at all.
+        let echoed = matches!(
+            initiator,
+            TurnInitiator::User | TurnInitiator::Automation | TurnInitiator::Keeper
+        );
+        let echo = echoed.then(|| PromptEcho {
+            text: prompt.text.clone(),
+            attachments: prompt.summaries.clone(),
+        });
         let _ = updates.send((
             task_id.clone(),
             AcpUpdate::TurnStarted {

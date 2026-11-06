@@ -10,6 +10,7 @@ import { daemon } from "../../daemon";
 
 const LABEL: Record<QueuedPrompt["initiator"], string> = {
   automation: "Scheduled run",
+  keeper: "Keepers",
   peer: "Peer message",
   system: "Warpforge",
   user: "You",

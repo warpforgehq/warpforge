@@ -102,7 +102,7 @@ export interface QueuedPrompt {
   text: string;
   /** Who submitted it. Only `user` messages are folded together by
    *  `session.interrupt`. */
-  initiator: "user" | "automation" | "system" | "peer";
+  initiator: "user" | "automation" | "system" | "peer" | "keeper";
   /** The feed record a `peer` message delivers. */
   peerMessageId?: number;
   /** Attachment metadata, shown read-only while the message waits. Editing
@@ -150,6 +150,8 @@ export interface SessionUsageCost {
 
 export type SessionUpdate =
   | { kind: "user_message"; text: string; attachments?: PromptAttachmentSummary[] }
+  /** A fix prompt the task's keepers sent into its session (ADR 0030). */
+  | { kind: "keeper_request"; text: string }
   | { kind: "prompt_capabilities"; image: boolean; embedded_context: boolean }
   | { kind: "agent_text"; text: string }
   | {

@@ -112,6 +112,77 @@ pub struct KeeperEntry {
 pub struct TaskKeepers {
     /// Keeper id → on.
     pub overrides: BTreeMap<String, bool>,
+    /// Keeper id → its fix loop on this task.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub loops: BTreeMap<String, KeeperLoop>,
+}
+
+/// Why a keeper's fix loop stopped and waits for the owner.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum KeeperStop {
+    MaxRounds,
+    NoProgress,
+}
+
+/// One keeper's fix loop on a task, persisted with the task's switches.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, rename_all = "camelCase")]
+pub struct KeeperLoop {
+    /// Fix rounds handed to the task's session since the keeper's last green.
+    pub rounds: u32,
+    /// Rounds the owner added with Extend.
+    pub extra_rounds: u32,
+    /// The HEAD the latest round was handed over for; a round counts once.
+    pub round_head: Option<String>,
+    /// The HEAD of a round handed over whose turn has not ended yet.
+    pub pending_head: Option<String>,
+    pub stop: Option<KeeperStop>,
+    /// The run the owner extended past; the no-progress rule skips it.
+    pub extended_run: Option<String>,
+    /// The HEAD the owner accepted as it is; nothing is sent until HEAD moves.
+    pub accepted_head: Option<String>,
+    /// The owner's guidance for the next fix prompt, from Extend.
+    pub guidance: Option<String>,
+}
+
+/// What a keeper's fix loop is doing, as clients show it.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum KeeperLoopStatus {
+    #[default]
+    Idle,
+    /// Findings are ready but the task is busy, dirty or out of quota.
+    Waiting,
+    /// The fix prompt is with the task's session.
+    Fixing,
+    /// Stopped; Extend, Accept or Off decides.
+    NeedsYou,
+    Accepted,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, rename_all = "camelCase")]
+pub struct KeeperLoopState {
+    pub status: KeeperLoopStatus,
+    /// Why it waits, for `waiting`.
+    pub reason: Option<String>,
+    pub stop: Option<KeeperStop>,
+    pub rounds: u32,
+    /// `max_rounds` plus the rounds the owner added.
+    pub max_rounds: u32,
+}
+
+/// The owner's answer to a stopped loop.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum KeeperDecision {
+    /// More rounds, with optional guidance.
+    Extend,
+    /// Record as it is; quiet until the next commit.
+    Accept,
+    /// Off for this task.
+    Off,
 }
 
 /// One check of one keeper on one HEAD.
@@ -182,6 +253,9 @@ pub struct KeeperTaskState {
     pub runs: Vec<KeeperRun>,
     pub findings: Vec<KeeperFinding>,
     pub precision: Vec<KeeperPrecision>,
+    /// Keeper id → its fix loop, for every keeper with a run on the task.
+    #[serde(default)]
+    pub loops: BTreeMap<String, KeeperLoopState>,
 }
 
 #[cfg(test)]
@@ -196,5 +270,8 @@ mod tests {
         assert_eq!(finding.status, KeeperFindingStatus::Open);
         let switches: TaskKeepers = serde_json::from_str("{}").unwrap();
         assert!(switches.overrides.is_empty());
+        assert!(switches.loops.is_empty());
+        let fix: KeeperLoop = serde_json::from_str("{}").unwrap();
+        assert_eq!(fix, KeeperLoop::default());
     }
 }

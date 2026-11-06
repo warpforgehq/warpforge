@@ -145,7 +145,7 @@ pub struct QueuedPrompt {
     /// it. Session-scoped; it means nothing after the session ends.
     pub id: String,
     pub text: String,
-    /// `user`, `automation`, `system` or `peer` — who submitted it. Only
+    /// `user`, `automation`, `system`, `peer` or `keeper` — who submitted it. Only
     /// `user` messages are folded together by `session.interrupt`.
     pub initiator: String,
     /// The feed record a `peer` message delivers.
@@ -204,6 +204,10 @@ pub enum SessionUpdate {
         text: String,
         #[serde(default)]
         attachments: Vec<PromptAttachmentSummary>,
+    },
+    /// A fix prompt the task's keepers sent into its session (ADR 0030).
+    KeeperRequest {
+        text: String,
     },
     PromptCapabilities {
         image: bool,

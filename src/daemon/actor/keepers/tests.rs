@@ -138,6 +138,15 @@ fn task_switches_round_trip_and_default_to_none() {
     let mut switched = task("t_a", "demo");
     switched.keepers = Some(wire::TaskKeepers {
         overrides: BTreeMap::from([("review".to_string(), false)]),
+        loops: BTreeMap::from([(
+            "slop".to_string(),
+            wire::KeeperLoop {
+                rounds: 2,
+                round_head: Some("abc".into()),
+                stop: Some(wire::KeeperStop::NoProgress),
+                ..Default::default()
+            },
+        )]),
     });
     store.upsert_task(&switched).unwrap();
     store.upsert_task(&task("t_b", "demo")).unwrap();
@@ -184,6 +193,7 @@ async fn keepers_state_serves_the_mirror_loaded_at_spawn_until_the_task_is_delet
     let mut a = task("t_a", "demo");
     a.keepers = Some(wire::TaskKeepers {
         overrides: BTreeMap::from([("slop".to_string(), true)]),
+        ..Default::default()
     });
     store.upsert_task(&a).unwrap();
     store.upsert_task(&task("t_b", "demo")).unwrap();

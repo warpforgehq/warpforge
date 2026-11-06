@@ -61,6 +61,9 @@ pub enum TurnInitiator {
     Automation,
     /// A direct message from a peer session (ADR 0026).
     Peer,
+    /// A keeper's fix prompt into the task's own session (ADR 0030). Like
+    /// `System`, never folded into a force-sent batch.
+    Keeper,
 }
 
 impl TurnInitiator {
@@ -70,6 +73,17 @@ impl TurnInitiator {
     /// @returns whether this turn's end may finish an automation run
     pub fn feeds_automation(self) -> bool {
         matches!(self, Self::Automation | Self::Initial)
+    }
+
+    /// @returns how a queued prompt names who asked for it
+    pub fn wire_name(self) -> &'static str {
+        match self {
+            Self::Automation => "automation",
+            Self::User | Self::Initial => "user",
+            Self::System => "system",
+            Self::Peer => "peer",
+            Self::Keeper => "keeper",
+        }
     }
 }
 

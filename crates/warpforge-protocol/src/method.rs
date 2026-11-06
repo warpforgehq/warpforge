@@ -1788,4 +1788,32 @@ pub enum Method {
     /// Returns [`crate::KeeperTaskState`].
     #[serde(rename = "keepers.state")]
     KeepersState { task_id: String },
+    /// The owner rejects a finding: it is never sent to fix, and the
+    /// keeper's next check is told not to raise it again.
+    #[serde(rename = "keepers.dismiss")]
+    KeepersDismiss {
+        task_id: String,
+        finding_id: String,
+        #[serde(default)]
+        reason: Option<String>,
+    },
+    /// The owner's answer to a stopped fix loop. `rounds` and `note` apply
+    /// to `extend`; the note is guidance for the fixer.
+    #[serde(rename = "keepers.decide")]
+    KeepersDecide {
+        task_id: String,
+        keeper_id: String,
+        decision: crate::KeeperDecision,
+        #[serde(default)]
+        rounds: Option<u32>,
+        #[serde(default)]
+        note: Option<String>,
+    },
+    /// Turn one keeper on or off for one task.
+    #[serde(rename = "keepers.setSwitch")]
+    KeepersSetSwitch {
+        task_id: String,
+        keeper_id: String,
+        on: bool,
+    },
 }

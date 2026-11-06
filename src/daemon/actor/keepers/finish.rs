@@ -3,7 +3,8 @@
 
 use warpforge_protocol as wire;
 
-use crate::daemon::actor::{Daemon, Event};
+use crate::daemon::acp::TurnInitiator;
+use crate::daemon::actor::Daemon;
 use crate::daemon::keepers::{map_result, reask_prompt, Mapped, SUPERSEDED};
 use crate::daemon::task::now_secs;
 
@@ -14,30 +15,13 @@ impl Daemon {
         run: wire::KeeperRun,
         findings: Vec<wire::KeeperFinding>,
     ) {
-        let (task_id, keeper_id, run_id) =
-            (run.task_id.clone(), run.keeper_id.clone(), run.id.clone());
+        let (task_id, run_id) = (run.task_id.clone(), run.id.clone());
         self.keepers.put_run(&self.persist, &self.tasks, run);
         for finding in findings {
             self.keepers
                 .put_finding(&self.persist, &self.tasks, &task_id, finding);
         }
-        let Some(run) = self.keepers.run(&task_id, &run_id).cloned() else {
-            return;
-        };
-        let findings = self
-            .keepers
-            .task(&task_id)
-            .map(|state| {
-                let of_run = state.findings.iter().filter(|f| f.run_id == run_id);
-                of_run.cloned().collect()
-            })
-            .unwrap_or_default();
-        self.emit(Event::TaskKeeper {
-            task_id,
-            keeper_id,
-            run: Box::new(run),
-            findings,
-        });
+        self.keeper_emit_run(&task_id, &run_id);
     }
 
     fn keeper_flight_of(&self, checker: &str) -> Option<String> {
@@ -67,12 +51,22 @@ impl Daemon {
     }
 
     /// A checker's turn is its run's result; the task's own turn asks for a
-    /// check.
-    pub(crate) fn keepers_turn_ended(&mut self, task_id: &str, success: bool, interrupted: bool) {
+    /// check and lets a waiting fix try again.
+    pub(crate) fn keepers_turn_ended(
+        &mut self,
+        task_id: &str,
+        success: bool,
+        interrupted: bool,
+        initiator: TurnInitiator,
+    ) {
         if self.keeper_parent_of(task_id).is_none() {
+            if initiator == TurnInitiator::Keeper {
+                self.keepers_fix_ended(task_id, success && !interrupted);
+            }
             if !interrupted {
                 self.keepers_nudge(task_id);
             }
+            self.keepers_fix(task_id, None);
             return;
         }
         if interrupted {
@@ -116,8 +110,10 @@ impl Daemon {
         }
     }
 
-    /// The checker's session died.
+    /// The checker's session died, or the task's own during a fix turn.
     pub(crate) fn keepers_session_failed(&mut self, task_id: &str, reason: &str) {
+        let error = format!("the task's agent failed: {reason}");
+        self.keepers_fix_revert(task_id, Some(error));
         if let Some(run_id) = self.keeper_flight_of(task_id) {
             let error = format!("the checker failed: {reason}");
             self.keeper_run_failed(&run_id, wire::KeeperOutcome::Error, error);
@@ -180,6 +176,10 @@ impl Daemon {
             })
             .collect();
         self.keeper_record(run, findings);
+        if !flight.superseded {
+            self.keeper_settle_run(&flight.task_id, run_id);
+        }
+        self.keepers_fix(&flight.task_id, None);
         self.keepers_poll();
     }
 }
