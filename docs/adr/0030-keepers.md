@@ -192,7 +192,7 @@ id, round, cost, error) and `keeper_findings` (run id, key, severity, file,
 line, description, status `open | sent | fixed | dismissed | superseded`,
 dismiss reason). The mirror is a per-task `KeeperState` map loaded at spawn;
 every mutation writes the mirror first, then `Persist`. Clients get
-`task.keepers` on request and `task.keeper { task_id, keeper_id, … }` pushed
+`keepers.state` on request and `task.keeper { task_id, keeper_id, … }` pushed
 on change, stamped like `task.pullRequest` (ADR 0020 invariant 3). Rows are
 deleted with the task and kept while it is archived: a merged task's keeper
 history is part of its read-only record.
@@ -345,7 +345,7 @@ cells: green, red with the count, grey for inconclusive or skipped.
 
 **The watermark moves into the daemon.** `keeper_reactions` (task id, key,
 action, at) with ADR 0020's keys. The desktop reads handled keys from
-`task.keepers` and stops writing `wf-pr-feedback` for tasks with a post-PR
+`keepers.state` and stops writing `wf-pr-feedback` for tasks with a post-PR
 keeper on; manual **Send** and **Dismiss** become daemon RPCs that write the
 same table. ADR 0020 rejected this because only the clicking surface produced
 the fact; now the daemon produces it too, and two stores would send the same

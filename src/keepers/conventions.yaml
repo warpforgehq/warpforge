@@ -1,0 +1,12 @@
+version: 1
+name: Conventions
+description: The change checked against the project's written rules.
+when: commit
+result: findings
+prompt: |
+  Check the change against the project's written rules: file size cap, module
+  layout, comment policy, required changeset and docs. Cite the rule for every
+  finding.
+
+  The project's rules:
+  {{rules}}

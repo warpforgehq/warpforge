@@ -1778,4 +1778,14 @@ pub enum Method {
     /// Returns [`crate::Channel`].
     #[serde(rename = "channels.removeMember")]
     ChannelsRemoveMember { id: String, smith_id: String },
+
+    // ── Keepers (ADR 0030) ──────────────────────────────────────────────────
+    /// The project's keeper files, resolved, with parse errors and warnings.
+    /// Returns `{ keepers: KeeperEntry[] }`.
+    #[serde(rename = "keepers.list")]
+    KeepersList { project: String },
+    /// A task's keeper switches, runs, findings and per-keeper precision.
+    /// Returns [`crate::KeeperTaskState`].
+    #[serde(rename = "keepers.state")]
+    KeepersState { task_id: String },
 }

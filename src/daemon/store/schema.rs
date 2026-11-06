@@ -210,7 +210,10 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
         "ALTER TABLE tasks ADD COLUMN kind TEXT NOT NULL DEFAULT 'task'",
         [],
     );
+    // Migration: a task's keeper switches, as JSON (ADR 0030).
+    let _ = conn.execute("ALTER TABLE tasks ADD COLUMN keepers TEXT", []);
     super::runner::init(conn)?;
     super::peers::init(conn)?;
+    super::keepers::init(conn)?;
     super::smiths::init(conn)
 }

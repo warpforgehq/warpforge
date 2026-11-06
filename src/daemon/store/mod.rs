@@ -12,6 +12,7 @@ use std::path::PathBuf;
 mod agents;
 mod automations;
 mod backlog;
+mod keepers;
 mod peers;
 mod runner;
 mod schema;
@@ -23,6 +24,7 @@ mod tasks;
 mod tests;
 mod tracker;
 
+pub use keepers::KeeperWrite;
 #[cfg(test)]
 pub use peers::RESTART_REASON;
 pub use peers::{PeerControl, StoredChannel, GENERAL_CHANNEL};

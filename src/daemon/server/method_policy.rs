@@ -78,6 +78,8 @@ pub(super) fn method_runs_concurrently(method: &wire::Method) -> bool {
             | ChannelsList { .. }
             | SmithsList {}
             | SmithsGet { .. }
+            | KeepersList { .. }
+            | KeepersState { .. }
             | TrackerPullsList { .. }
             | TrackerPullDetails { .. }
             | TrackerPullDiff { .. }
@@ -142,6 +144,8 @@ pub(super) fn method_is_mutation(method: &wire::Method) -> bool {
             | ChannelsList { .. }
             | SmithsList {}
             | SmithsGet { .. }
+            | KeepersList { .. }
+            | KeepersState { .. }
             | TrackerPullsList { .. }
             | TrackerPullDetails { .. }
             | TrackerPullDiff { .. }

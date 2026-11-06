@@ -230,6 +230,7 @@ impl Daemon {
         runner.set_watch(runner_watch_tx);
         let peers = crate::daemon::actor::peers::load_state(store.as_ref());
         let smiths = crate::daemon::actor::smiths::load_state(store.as_ref(), smiths_root);
+        let keepers = crate::daemon::actor::keepers::load_state(store.as_ref());
         let daemon = Daemon {
             agent_limits,
             projects,
@@ -286,6 +287,7 @@ impl Daemon {
             runner,
             peers,
             smiths,
+            keepers,
         };
 
         let handle = DaemonHandle {

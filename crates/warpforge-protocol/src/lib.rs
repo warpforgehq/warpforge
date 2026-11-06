@@ -47,6 +47,9 @@ pub use git::*;
 
 pub mod html_render;
 
+pub mod keepers;
+pub use keepers::*;
+
 pub mod method;
 pub use method::*;
 

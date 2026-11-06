@@ -117,6 +117,8 @@ pub struct Task {
     /// The write paths of the Smith session it was spawned under, copied at
     /// creation (ADR 0027 invariant 16): no persona, only the limit.
     pub write_limit: Option<TaskWriteLimit>,
+    /// Per-keeper switches over each keeper file's `default` (ADR 0030).
+    pub keepers: Option<warpforge_protocol::TaskKeepers>,
 }
 
 /// A Smith's write paths carried by a task that does not run as the Smith.
@@ -214,6 +216,7 @@ impl Task {
             status_note: None,
             write_limit: None,
             smith: None,
+            keepers: None,
         }
     }
 

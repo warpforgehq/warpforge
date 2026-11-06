@@ -22,6 +22,11 @@ impl Store {
             .as_ref()
             .map(serde_json::to_string)
             .transpose()?;
+        let keepers = task
+            .keepers
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()?;
         self.conn.execute(
             r#"
             INSERT INTO tasks
@@ -29,8 +34,8 @@ impl Store {
                  created_at, updated_at, files_changed, blocked_reason, config_options, worktree,
                  base_branch, parent_task_id, settled_override, settled_at, snoozed_until,
                  snoozed_at, account_id, backlog_item_id, blocked_kind, model, origin, advisor, smith,
-                 write_limit, kind)
-            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28,?29)
+                 write_limit, kind, keepers)
+            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28,?29,?30)
             ON CONFLICT(id) DO UPDATE SET
                 session_id=excluded.session_id,
                 agent=excluded.agent,
@@ -53,7 +58,8 @@ impl Store {
                 model=excluded.model,
                 advisor=excluded.advisor,
                 smith=excluded.smith,
-                write_limit=excluded.write_limit
+                write_limit=excluded.write_limit,
+                keepers=excluded.keepers
             "#,
             rusqlite::params![
                 task.id,
@@ -85,6 +91,7 @@ impl Store {
                 smith,
                 write_limit,
                 kind_str(task.kind),
+                keepers,
             ],
         )?;
         Ok(())
@@ -100,7 +107,7 @@ impl Store {
              created_at, updated_at, files_changed, blocked_reason, config_options, worktree, \
              parent_task_id, title, settled_override, settled_at, snoozed_until, snoozed_at, \
              account_id, backlog_item_id, blocked_kind, model, origin, base_branch, advisor, \
-             smith, write_limit, kind FROM tasks",
+             smith, write_limit, kind, keepers FROM tasks",
         )?;
         let rows = stmt.query_map([], |row| {
             let tags_json: String = row.get(6)?;
@@ -109,6 +116,7 @@ impl Store {
             let advisor_json: Option<String> = row.get(25)?;
             let smith_json: Option<String> = row.get(26)?;
             let write_limit_json: Option<String> = row.get(27)?;
+            let keepers_json: Option<String> = row.get(29)?;
             let mut status = parse_status(&status_str);
             if matches!(status, TaskStatus::Running | TaskStatus::Queued) {
                 status = TaskStatus::Interrupted;
@@ -147,6 +155,7 @@ impl Store {
                 status_note: None,
                 smith: smith_json.and_then(|json| serde_json::from_str(&json).ok()),
                 write_limit: write_limit_json.and_then(|json| serde_json::from_str(&json).ok()),
+                keepers: keepers_json.and_then(|json| serde_json::from_str(&json).ok()),
             })
         })?;
         Ok(rows.filter_map(|r| r.ok()).collect())
@@ -173,6 +182,7 @@ impl Store {
             "DELETE FROM workflow_runs WHERE task_id = ?1",
             rusqlite::params![id],
         )?;
+        self.delete_keeper_rows(id)?;
         // Break backlog/tracker links so the UI shows "Start task" instead of
         // a dead "Open task" button after the task is gone.
         self.conn.execute(

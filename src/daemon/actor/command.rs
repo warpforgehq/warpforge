@@ -1123,4 +1123,6 @@ pub enum Command {
     Peers(crate::daemon::actor::peers::PeerCommand),
     /// Smiths' commands, matched exhaustively in `actor/smiths/`.
     Smiths(crate::daemon::actor::smiths::SmithCommand),
+    /// Keepers' commands, matched exhaustively in `actor/keepers/`.
+    Keepers(crate::daemon::actor::keepers::KeeperCommand),
 }

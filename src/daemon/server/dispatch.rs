@@ -20,6 +20,7 @@ mod files;
 mod git;
 mod history;
 mod html_render;
+mod keepers;
 mod lsp;
 mod memory;
 mod orchestration;
@@ -54,6 +55,7 @@ pub(super) async fn dispatch(
         RunnerStatus { .. } | RunnerEnqueue { .. } | RunnerDequeue { .. } | RunnerReorder { .. } | RunnerStartNow { .. } | RunnerRetry { .. } | RunnerRetryCheckout { .. } | RunnerBrief { .. } | RunnerUpdateSettings { .. } | RunnerStop { .. } | RunnerRuns { .. } => runner::runner(handle, method).await,
         PeersList { .. } | PeersFeed { .. } | PeersControls {} | PeersAlerts {} | PeersSetMuted { .. } | PeersSetPaused { .. } | PeersSetStatusNote { .. } | SessionMessage { .. } | PeersUserPost { .. } | PeersUserMessage { .. } | PeersUserStarted { .. } | ChannelsList { .. } | ChannelsCreate { .. } | ChannelsRename { .. } | ChannelsDelete { .. } | ChannelsAddMember { .. } | ChannelsRemoveMember { .. } => peers::peers(handle, method).await,
         SmithsList {} | SmithsDefaults { .. } | SmithsGet { .. } | SmithsCreate(..) | SmithsUpdate { .. } | SmithsSetPaused { .. } | SmithsDelete { .. } | SmithsAcceptIdentity { .. } | SmithsRevertIdentity { .. } | SmithsStartWork { .. } | SmithsStartWorkFrom { .. } => smiths::smiths(handle, method).await,
+        KeepersList { .. } | KeepersState { .. } => keepers::keepers(handle, method).await,
         RuntimeStopAll {} => runtime::runtime_stop_all(handle).await,
         LspStart { task_id, language, project, } => lsp::lsp_start(handle, task_id, language, project).await,
         LspSend { server_id, payload } => lsp::lsp_send(handle, server_id, payload).await,
