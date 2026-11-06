@@ -45,10 +45,14 @@ function AddKeeper({
           Add keeper
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
+      <DropdownMenuContent align="end" className="w-64 text-left">
         {presets.map((preset) => (
-          <DropdownMenuItem key={preset.id} onSelect={() => onAdd(preset.id)}>
-            <span className="flex flex-col">
+          <DropdownMenuItem
+            key={preset.id}
+            className="items-start py-1.5"
+            onSelect={() => onAdd(preset.id)}
+          >
+            <span className="flex flex-col gap-0.5">
               <span className="text-[13px] font-medium">{preset.name}</span>
               <span className="text-xs text-muted-foreground">{preset.hint}</span>
             </span>
@@ -153,7 +157,7 @@ export function KeepersSurface({
       <EmptyState
         icon={ShieldCheck}
         title="No keepers yet"
-        hint="A keeper is an agent that checks every commit on this task's branch and asks the task's agent to fix what it finds."
+        hint="A keeper is an agent that checks every commit and asks the task's agent to fix what it finds. Keepers belong to the project: one you add here checks every task, and its switch turns it off for one task only."
         action={<AddKeeper entries={entries} onAdd={add} />}
       />
     );
