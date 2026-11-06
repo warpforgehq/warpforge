@@ -6,7 +6,7 @@ sidebar:
   label: Keeper files
 ---
 
-A [keeper](/guides/keepers/) is a YAML file in `.warpforge/keepers/`. Warpforge ships three built-ins — **Review**, **Slop** and **Conventions** — but none of them runs until a file in the project names it. **Add keeper** in a task's Keepers tab writes that file for you:
+A [keeper](/guides/keepers/) is a YAML file in `.warpforge/keepers/`. Warpforge ships eight built-ins (see [Presets](#presets)), but none of them runs until a file in the project names it. **Add keeper** in a task's Keepers tab writes that file for you:
 
 ```yaml title=".warpforge/keepers/review.yaml"
 version: 1
@@ -52,8 +52,8 @@ instructions: |
 | `version` | number | `1` | File format version. Only `1` is understood; anything else makes the file invalid. |
 | `name` | string | the preset's | **Required** without a preset. What the Keepers tab shows; one or two words. |
 | `description` | string | the preset's | One line under the name. |
-| `preset` | string | — | `review`, `slop` or `conventions`: inherit that built-in's prompt and defaults. An unknown preset makes the file invalid. |
-| `when` | string | `commit` | When the keeper runs. `commit` checks each new commit on the task's branch. `ready`, `ci` and `comments` are accepted but do not run yet. |
+| `preset` | string | — | One of the [presets](#presets): inherit that built-in's prompt and defaults. An unknown preset makes the file invalid. |
+| `when` | string | `commit` | When the keeper runs. `commit` checks each new commit on the task's branch. `ready` checks the task's latest commit only when you ask for a check before opening the pull request, never on its own. `ci` and `comments` are accepted but do not run yet. |
 | `result` | string | `findings` | How the reply is read — see [Results](#results). |
 | `agent` | string | the task's agent | The harness that checks, such as `claude` or `codex`. |
 | `model` | string | the agent's default | |
@@ -70,16 +70,31 @@ An unknown key is a **warning**, not an error — the keeper still loads, and th
 
 A keeper needs something to say: a file with no `preset`, `prompt` or `instructions` is invalid.
 
+## Presets
+
+| Preset | `when` | `result` | Checks |
+| --- | --- | --- | --- |
+| `review` | `commit` | `findings` | Bugs, regressions and unhandled edge cases in the change |
+| `slop` | `commit` | `findings` | Code that reads as generated rather than written for its file; `min_severity: low` |
+| `conventions` | `commit` | `findings` | The change against the project's written rules |
+| `security` | `ready` | `pass_fail` | Vulnerabilities with a plausible exploit path through the changed code |
+| `thermonuclear` | `ready` | `findings` | Complexity the change could delete rather than move; at most five findings |
+| `intent` | `ready` | `pass_fail` | What the task asked for and was not done, and what was done and not asked |
+| `verify` | `ready` | `verdict` | The task's claim turned into a check and run against the change |
+| `pr-ready` | `ready` | `draft` | A pull request description written from the change |
+
 ## Results
 
-Every run ends **green**, with **findings**, **inconclusive** (a timeout, or a reply that could not be read), **error** (the check could not start) or **skipped** (out of quota, `paths` did not match, or a newer commit replaced it). Green is a green cell in the strip; findings a red cell with the count; the rest are grey.
+Every run ends **green**, with **findings**, **inconclusive** (a timeout, or a reply that could not be read), **error** (the check could not start), **skipped** (out of quota, `paths` did not match, or a newer commit replaced it) or, for a `draft` keeper, with its **draft**. Green is a green cell in the strip; findings a red cell with the count; the rest are grey.
+
+Findings from a `ready` keeper go to the task's agent to fix exactly as a `commit` keeper's do.
 
 | `result` | The keeper replies with | Green when |
 | --- | --- | --- |
 | `findings` | a list of findings with severity and `file:line` | no finding at or above `min_severity` |
 | `pass_fail` | approve or request changes, with findings | it approves |
 | `verdict` | pass, fail or blocked, with findings | pass; blocked is inconclusive |
-| `draft` | text for you | never — a draft is neither green nor red |
+| `draft` | text for you, kept with the run | never — a draft is neither green nor red, and is never sent to fix |
 
 The reply format is added to the prompt for you; a custom `prompt` only says what to look for.
 
