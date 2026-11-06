@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { daemon } from "@/daemon";
-import type { DaemonEvent, TaskInfo, TaskPullRequest } from "@/protocol";
+import { normalizeKeeperState } from "@/lib/keepers";
+import type { DaemonEvent, KeeperTaskState, TaskInfo, TaskPullRequest } from "@/protocol";
+import { run } from "@/test/keepers";
 
 import { TaskPullRequestChip } from "./TaskPullRequestChip";
 import { TaskPullRequestGlyph } from "./TaskPullRequestGlyph";
@@ -34,7 +36,10 @@ const pr = (patch: Partial<TaskPullRequest> = {}): TaskPullRequest => ({
 
 type Internals = {
   applyEvent: (event: DaemonEvent) => void;
-  setState: (patch: { taskPullRequests: Record<string, TaskPullRequest> }) => void;
+  setState: (patch: {
+    taskPullRequests?: Record<string, TaskPullRequest>;
+    taskKeepers?: Record<string, KeeperTaskState>;
+  }) => void;
 };
 const internals = daemon as unknown as Internals;
 
@@ -49,7 +54,7 @@ function push(pullRequest: TaskPullRequest | null, taskId = "t1") {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  act(() => internals.setState({ taskPullRequests: {} }));
+  act(() => internals.setState({ taskKeepers: {}, taskPullRequests: {} }));
 });
 
 describe("task pull request", () => {
@@ -70,6 +75,37 @@ describe("task pull request", () => {
 
     push(null);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("overlays the keepers' worst state on the glyph and the chip", () => {
+    const keepers = (runs: Parameters<typeof run>[0][]) =>
+      act(() =>
+        internals.setState({
+          taskKeepers: { t1: { ...normalizeKeeperState("t1", null), runs: runs.map(run) } },
+        }),
+      );
+    vi.spyOn(daemon, "request").mockResolvedValue({ pullRequests: {} });
+    const { container } = render(
+      <>
+        <TaskPullRequestGlyph taskId="t1" receded={false} />
+        <TaskPullRequestChip task={task} />
+      </>,
+    );
+    push(pr());
+    keepers([{ id: "r1", outcome: null }]);
+    expect(container.querySelectorAll("[data-task-keepers='running']")).toHaveLength(2);
+    expect(screen.getByTitle("PR #12 · Open · Keepers checking")).toBeInTheDocument();
+
+    keepers([{ count: 1, id: "r1", outcome: "findings" }]);
+    expect(container.querySelectorAll("[data-task-keepers='failing']")).toHaveLength(2);
+    expect(
+      screen.getByRole("button", {
+        name: "PR #12 · Open · Keepers need attention: open on GitHub",
+      }),
+    ).toBeInTheDocument();
+
+    keepers([{ id: "r1" }]);
+    expect(container.querySelector("[data-task-keepers]")).toBeNull();
   });
 
   it("offers archiving a merged task, and removes the worktree only once confirmed", async () => {
