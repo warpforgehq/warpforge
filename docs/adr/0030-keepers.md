@@ -313,10 +313,13 @@ into a force-send (ADR 0011).
 
 **A fix prompt waits for a quiet task.** It is dispatched only when the
 task's session is not mid-turn, has no queued `User` prompt, and the worktree
-is clean (`git status --porcelain --untracked-files=no` empty: an untracked file is nobody's edit in progress, and the keeper files **Add keeper** writes start untracked). A session that is not live but can be resumed counts as quiet: the fix prompt resumes it, as a user prompt would. Otherwise the keeper shows
-"waiting" with the reason and retries on the next `TurnEnded` or poll. A
-dirty tree means someone is editing; mixing a fix into it would commit their
-half-done work.
+is clean (`git status --porcelain --untracked-files=no` empty: an untracked
+file is nobody's edit in progress, and the keeper files **Add keeper** writes
+start untracked). A session that is not live but can be resumed counts as
+quiet: the fix prompt resumes it, as a user prompt would. Otherwise the
+keeper shows "waiting" with the reason and retries on the next `TurnEnded` or
+poll. A dirty tree means someone is editing; mixing a fix into it would
+commit their half-done work.
 
 **The user always wins a race.** A message sent during a keeper's fix turn
 queues behind it as today; force-send interrupts it. An interrupted keeper
