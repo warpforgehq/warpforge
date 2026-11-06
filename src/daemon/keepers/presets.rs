@@ -7,6 +7,14 @@ pub(super) const PRESETS: &[(&str, &str)] = &[
         "conventions",
         include_str!("../../keepers/conventions.yaml"),
     ),
+    ("security", include_str!("../../keepers/security.yaml")),
+    (
+        "thermonuclear",
+        include_str!("../../keepers/thermonuclear.yaml"),
+    ),
+    ("intent", include_str!("../../keepers/intent.yaml")),
+    ("verify", include_str!("../../keepers/verify.yaml")),
+    ("pr-ready", include_str!("../../keepers/pr-ready.yaml")),
 ];
 
 /// Prepended to every keeper's prompt, a custom `prompt:` included.

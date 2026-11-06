@@ -1,0 +1,9 @@
+version: 1
+name: Intent
+description: The change compared with what the task asked for.
+when: ready
+result: pass_fail
+prompt: |
+  Compare the change with the task brief. List what was asked and not done,
+  and what was done and not asked. Quote the brief for each. Do not judge
+  code quality.
