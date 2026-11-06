@@ -158,10 +158,19 @@ export function KeepersSurface({
       />
     );
   }
+  const branch = state?.switches.branch;
+  const held = state?.switches.held;
   return (
     <ScrollArea className="h-full">
       <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <p className="text-xs text-muted-foreground">Checks each commit on this task's branch.</p>
+        <div className="min-w-0 text-xs">
+          <p className="text-muted-foreground">
+            {branch && !task.worktree
+              ? `Checks each commit on ${branch}.`
+              : "Checks each commit on this task's branch."}
+          </p>
+          {held ? <p className="text-amber-600 dark:text-amber-400">Paused: {held}.</p> : null}
+        </div>
         <AddKeeper entries={entries} onAdd={add} />
       </div>
       <FileProblems entries={entries} />

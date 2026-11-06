@@ -43,6 +43,10 @@ export interface TaskKeepers {
   overrides: Record<string, boolean>;
   /** Keeper id → its fix loop on this task. */
   loops?: Record<string, KeeperLoop>;
+  /** The branch a task without a worktree owns: the one its last turn ended on. */
+  branch?: string | null;
+  /** Why the task's keepers are not checking it now. */
+  held?: string | null;
 }
 
 /** Why a keeper's fix loop stopped and waits for the owner. */

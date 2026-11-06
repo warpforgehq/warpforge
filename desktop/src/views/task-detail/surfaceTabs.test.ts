@@ -41,12 +41,11 @@ describe("task surfaces", () => {
     expect(visibleSurface("diff", worktreeTask)).toBe("diff");
   });
 
-  it("offers Keepers only on a worktree task outside the Factory", () => {
+  it("offers Keepers on any task outside the Factory", () => {
     const ids = (keepers: boolean) => taskSurfaceTabs({ chat: false, keepers }).map((t) => t.id);
     expect(ids(true)).toEqual(["files", "diff", "runtime", "terminal", "browser", "keepers"]);
     expect(ids(false)).not.toContain("keepers");
     expect(visibleSurface("keepers", worktreeTask)).toBe("keepers");
-    expect(visibleSurface("keepers", { ...worktreeTask, worktree: null })).toBe("diff");
     expect(visibleSurface("keepers", { ...worktreeTask, tags: ["workflow:fix"] })).toBe("diff");
     expect(visibleSurface("keepers", chat)).toBe("files");
   });

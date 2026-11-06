@@ -1,4 +1,4 @@
-import { applyKeeperEvent } from "../lib/keepers";
+import { applyKeeperEvent, normalizeKeeperState } from "../lib/keepers";
 import { forgetTask } from "../lib/sessionStore";
 import { appendCoalescedUpdate, coalesceUpdates } from "../lib/sessionStream";
 import { stampSessionHistoryStartTimes } from "../lib/sessionTiming";
@@ -256,6 +256,18 @@ export class DaemonEvents extends DaemonStore {
           taskPullRequests: ev.data.pull_request
             ? { ...rest, [ev.data.task_id]: ev.data.pull_request }
             : rest,
+        });
+        break;
+      }
+      case "task.keeperSwitches": {
+        this.keeperEventAt.set(ev.data.task_id, ++this.keeperEventSeq);
+        const current =
+          this.state.taskKeepers?.[ev.data.task_id] ?? normalizeKeeperState(ev.data.task_id, null);
+        this.setState({
+          taskKeepers: {
+            ...this.state.taskKeepers,
+            [ev.data.task_id]: { ...current, switches: ev.data.switches },
+          },
         });
         break;
       }

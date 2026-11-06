@@ -8,7 +8,7 @@ import type {
 import type { Automation, AutomationRun } from "./automations";
 import type { ClientRequestBody } from "./browser";
 import type { Channel } from "./channels";
-import type { KeeperFinding, KeeperLoopState, KeeperRun } from "./keepers";
+import type { KeeperFinding, KeeperLoopState, KeeperRun, TaskKeepers } from "./keepers";
 import type { PeerMessage } from "./peers";
 import type { TaskPullRequest } from "./pulls";
 import type { ItemRun, RunnerStatus } from "./runner";
@@ -75,6 +75,7 @@ export type DaemonEvent =
       event: "task.pullRequest";
       data: { task_id: string; pull_request: TaskPullRequest | null };
     }
+  | { event: "task.keeperSwitches"; data: { task_id: string; switches: TaskKeepers } }
   | {
       event: "task.keeper";
       data: {
