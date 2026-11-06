@@ -3,9 +3,13 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DaemonRpcError } from "@/daemon/rpcError";
 import { normalizeKeeperState } from "@/lib/keepers";
 import type { KeeperEntry, KeeperTaskState, TaskInfo } from "@/protocol";
 import { finding, run } from "@/test/keepers";
+
+const { toastError } = vi.hoisted(() => ({ toastError: vi.fn<(...args: unknown[]) => void>() }));
+vi.mock("sonner", () => ({ toast: { error: toastError } }));
 
 const { client, store } = vi.hoisted(() => {
   const state: { taskKeepers: Record<string, unknown> } = { taskKeepers: {} };
@@ -20,6 +24,7 @@ const { client, store } = vi.hoisted(() => {
       getState: () => state,
       listKeepers: vi.fn<() => Promise<unknown[]>>(),
       refreshTaskKeepers: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
+      sendKeeperFindings: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       setKeeperSwitch: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       subscribe: () => () => {},
     },
@@ -155,6 +160,38 @@ describe("KeepersSurface", () => {
     await user.type(within(review).getByLabelText("Why dismiss (optional)"), "intended");
     await user.click(within(review).getByRole("button", { name: "Dismiss" }));
     expect(client.dismissKeeperFinding).toHaveBeenCalledWith("t1", "f1", "intended");
+  });
+
+  it("sends open findings to the agent and toasts the daemon's refusal", async () => {
+    client.sendKeeperFindings.mockRejectedValueOnce(
+      new DaemonRpcError("invalid_request", "the task's agent is working"),
+    );
+    const { user } = show([entry("review")], {
+      findings: [finding({ id: "f1", runId: "r1" })],
+      runs: [run({ count: 1, id: "r1", outcome: "findings" })],
+    });
+    await user.click(within(await card("Review")).getByRole("button", { name: "Send to agent" }));
+    expect(client.sendKeeperFindings).toHaveBeenCalledWith("t1", "review");
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("Could not send the findings", {
+        description: "the task's agent is working",
+      }),
+    );
+  });
+
+  it("offers Send to agent only for open findings while the keeper is not fixing", async () => {
+    const runs = [run({ count: 1, id: "r1", outcome: "findings" })];
+    show([entry("review")], { findings: [finding({ id: "f1", status: "sent" })], runs });
+    expect(within(await card("Review")).getByText("Off by one")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Send to agent" })).not.toBeInTheDocument();
+    cleanup();
+    show([entry("review")], {
+      findings: [finding({ id: "f1" })],
+      loops: { review: { maxRounds: 3, rounds: 1, status: "fixing" } },
+      runs,
+    });
+    expect(within(await card("Review")).getByText("Off by one")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Send to agent" })).not.toBeInTheDocument();
   });
 
   it("asks the owner when the loop stopped: extend, accept or off", async () => {

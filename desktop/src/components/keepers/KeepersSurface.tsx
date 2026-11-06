@@ -107,6 +107,8 @@ export function KeepersSurface({
         .dismissKeeperFinding(task.id, findingId, reason)
         .catch(failed("Could not dismiss the finding")),
     onOpenFile,
+    onSend: (keeperId) =>
+      daemon.sendKeeperFindings(task.id, keeperId).catch(failed("Could not send the findings")),
     onSwitch: (keeperId, on) =>
       daemon.setKeeperSwitch(task.id, keeperId, on).catch(failed("Could not switch the keeper")),
   };

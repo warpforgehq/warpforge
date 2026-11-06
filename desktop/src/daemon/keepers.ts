@@ -60,6 +60,16 @@ export function KeeperMethods<TBase extends Constructor<CoreClient>>(Base: TBase
     }
 
     /**
+     * Send a keeper's open findings to the task's agent as one fix turn.
+     * @param taskId The task.
+     * @param keeperId The keeper whose findings are sent.
+     */
+    async sendKeeperFindings(taskId: string, keeperId: string) {
+      await this.request("keepers.sendFindings", { keeper_id: keeperId, task_id: taskId });
+      await this.refreshTaskKeepers(taskId);
+    }
+
+    /**
      * Run every ready keeper that is on for the task, on its HEAD now.
      * @param taskId The task.
      * @returns `head`, the HEAD the keepers check (null when the reply has none), and
