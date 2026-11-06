@@ -8,6 +8,7 @@ use std::time::Duration;
 use tokio::sync::oneshot;
 use warpforge_protocol as wire;
 
+use crate::daemon::actor::keepers::KEEPER_ORIGIN;
 use crate::daemon::actor::{Command, Daemon};
 use crate::mcp::identity::BridgeMode;
 use crate::policies::PolicyResult;
@@ -132,7 +133,9 @@ impl Daemon {
             } else {
                 BridgeMode::Orchestrator
             }
-        } else if task.origin.as_deref() == Some(ADVISOR_ORIGIN) {
+        } else if task.origin.as_deref() == Some(ADVISOR_ORIGIN)
+            || task.origin.as_deref() == Some(KEEPER_ORIGIN)
+        {
             BridgeMode::Advisor
         } else if task.origin.as_deref() == Some(crate::daemon::actor::smiths::SMITH_ORIGIN) {
             BridgeMode::Thread
@@ -147,8 +150,12 @@ impl Daemon {
 
     /// An advisor works in its executor's checkout, without owning it: the
     /// advisor task records no worktree, so removing it never removes one.
+    /// A keeper's checker works in its task's checkout the same way.
     pub(crate) fn advisor_cwd(&self, task_id: &str) -> Option<String> {
-        self.task_repo_path(&self.advisor_executor_of(task_id)?)
+        let owner = self
+            .advisor_executor_of(task_id)
+            .or_else(|| self.keeper_parent_of(task_id))?;
+        self.task_repo_path(&owner)
     }
 
     /// Add the harness's read-only session mode to an advisor's start, and a
@@ -256,14 +263,20 @@ impl Daemon {
                 "a Smith's thread is read-only; changes happen in a work session",
             ));
         }
+        if self.keeper_parent_of(task_id).is_some() {
+            return Some(PolicyResult::deny("a keeper is read-only"));
+        }
         self.advisor_executor_of(task_id)
             .map(|_| PolicyResult::deny("the advisor is read-only"))
     }
 
     /// The sessions held read-only in all four places of ADR 0022: an
-    /// advisor's, and a Smith's thread (ADR 0027 invariant 6).
+    /// advisor's, a Smith's thread (ADR 0027 invariant 6) and a keeper's
+    /// checker (ADR 0030 invariant 1).
     pub(crate) fn is_read_only_session(&self, task_id: &str) -> bool {
-        self.advisor_executor_of(task_id).is_some() || self.is_thread_task(task_id)
+        self.advisor_executor_of(task_id).is_some()
+            || self.is_thread_task(task_id)
+            || self.keeper_parent_of(task_id).is_some()
     }
 
     fn is_thread_task(&self, task_id: &str) -> bool {

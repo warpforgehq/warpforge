@@ -2,18 +2,43 @@
 //! and validation, the built-in presets, and the per-task state the actor
 //! mirrors. The actor glue lives in `actor/keepers/`.
 
+mod debounce;
+mod git;
+mod outcome;
 mod parse;
+mod paths;
 mod presets;
+mod prompt;
 mod registry;
 mod state;
 #[cfg(test)]
 mod tests;
 
+pub use debounce::HeadWatch;
+#[cfg(test)]
+pub use git::Scripted;
+pub use git::{Change, ChangeQuery, GitSource};
+pub use outcome::{map_result, Mapped};
 pub use parse::parse_keeper;
+pub use paths::touches;
+pub use prompt::{commits_since, dismissed_list, reask_prompt, render_prompt, PromptVars};
 pub use registry::list_keepers;
 pub use state::{precision, KeeperState};
 
 use std::path::{Path, PathBuf};
+use std::time::Duration;
+
+/// How often eligible tasks' HEADs are read.
+pub const POLL_INTERVAL: Duration = Duration::from_secs(20);
+/// How long a new HEAD must stay put before it is checked, unless a turn
+/// ended or a commit was made through Warpforge.
+pub const SETTLE: Duration = Duration::from_secs(60);
+/// Checker sessions running at once, across the daemon.
+pub const MAX_CHECKERS: usize = 4;
+/// `KeeperRun::error` of a run skipped because the quota gate refused it;
+/// such a run does not count as a check of its HEAD.
+pub const QUOTA_SKIP: &str = "quota";
+pub const SUPERSEDED: &str = "superseded";
 
 /// @param project_path the project's root
 /// @returns where its keeper files live

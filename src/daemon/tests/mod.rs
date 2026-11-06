@@ -92,6 +92,7 @@ mod advisor;
 mod agent_health;
 mod browser;
 mod html_render;
+mod keepers;
 mod lifecycle;
 mod quota_gate;
 mod runner;

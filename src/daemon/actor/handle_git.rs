@@ -35,8 +35,15 @@ impl DaemonHandle {
             reply: tx,
         })
         .await;
-        rx.await
-            .unwrap_or_else(|_| Err("daemon dropped the commit request".into()))
+        let result = rx
+            .await
+            .unwrap_or_else(|_| Err("daemon dropped the commit request".into()));
+        if result.is_ok() {
+            let task_id = task_id.to_string();
+            let committed = crate::daemon::actor::KeeperCommand::Committed { task_id };
+            self.send(Command::Keepers(committed)).await;
+        }
+        result
     }
 
     pub async fn git_update(&self, task_id: &str) -> wire::GitOpResult {

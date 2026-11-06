@@ -156,6 +156,13 @@ pub enum Event {
         task_id: String,
         pull_request: Option<wire::TaskPullRequest>,
     },
+    /// A keeper's run changed (ADR 0030).
+    TaskKeeper {
+        task_id: String,
+        keeper_id: String,
+        run: Box<wire::KeeperRun>,
+        findings: Vec<wire::KeeperFinding>,
+    },
     /// An automation was created or changed — including the scheduler moving
     /// `next_run_at`, which is what keeps the desktop's "Next run" column live.
     AutomationUpdated(Box<wire::Automation>),
