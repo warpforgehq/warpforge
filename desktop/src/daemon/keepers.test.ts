@@ -15,6 +15,7 @@ describe("keeper RPCs", () => {
     await daemon.decideKeeper("t1", "review", "extend", { note: "keep API", rounds: 2 });
     await daemon.decideKeeper("t1", "review", "accept", { note: "ignored", rounds: 9 });
     await daemon.setKeeperSwitch("t1", "review", false);
+    await daemon.sendKeeperFindings("t1", "review");
     await daemon.addKeeper("demo", "review");
     const calls = request.mock.calls.filter(([method]) => method !== "keepers.state");
     expect(calls).toEqual([
@@ -28,6 +29,7 @@ describe("keeper RPCs", () => {
         { decision: "accept", keeper_id: "review", note: null, rounds: null, task_id: "t1" },
       ],
       ["keepers.setSwitch", { keeper_id: "review", on: false, task_id: "t1" }],
+      ["keepers.sendFindings", { keeper_id: "review", task_id: "t1" }],
       [
         "file.save",
         {

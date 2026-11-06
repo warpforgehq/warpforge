@@ -1,3 +1,6 @@
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import {
   currentFindings,
   KEEPER_STATUS_META,
@@ -19,6 +22,7 @@ import { KeeperStrip } from "./KeeperStrip";
 export interface KeeperActions {
   onSwitch: (keeperId: string, on: boolean) => Promise<void>;
   onDismiss: (findingId: string, reason: string) => Promise<void>;
+  onSend: (keeperId: string) => Promise<void>;
   onDecide: (
     keeperId: string,
     decision: Decision,
@@ -46,6 +50,12 @@ export function KeeperCard({
   const loop = state?.loops[entry.id];
   const status = keeperStatus(on, runs, loop);
   const findings = on ? currentFindings(state, runs) : [];
+  const [sending, setSending] = useState(false);
+  const canSend = status !== "fixing" && findings.some((finding) => finding.status === "open");
+  const send = () => {
+    setSending(true);
+    void actions.onSend(entry.id).finally(() => setSending(false));
+  };
   const precision = keeperPrecision(state, entry.id);
   const draft = on ? latestDraft(runs) : null;
   const name = definition?.name || entry.id;
@@ -91,6 +101,17 @@ export function KeeperCard({
           loop={loop}
           onDecide={(decision, options) => actions.onDecide(entry.id, decision, options)}
         />
+      )}
+      {canSend && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="self-start"
+          disabled={sending}
+          onClick={send}
+        >
+          Send to agent
+        </Button>
       )}
       {findings.length > 0 && (
         <ul aria-label={`${name} findings`} className="flex flex-col">

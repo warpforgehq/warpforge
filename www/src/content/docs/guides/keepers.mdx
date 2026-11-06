@@ -75,6 +75,10 @@ Not every finding is right. **Dismiss** removes it from the next fix request, an
 
 Click a finding's `file:line` to open it in the Explorer at that line before you decide.
 
+## Send findings to the agent yourself
+
+Keepers hand findings back on their own only while they still match the latest commit, so findings can be left behind — a **Check before PR** keeper's after you commit again, or a keeper's you accepted. **Send to agent** on the keeper's card sends its open findings to the task's agent as one fix request. The agent is told which commit they were found on and checks that each one still holds before fixing it. The button waits for a quiet moment: it is refused, with the reason, while the agent is working, a message of yours is queued or the worktree has uncommitted changes. A send counts as one of the keeper's fix rounds.
+
 ## When a keeper stops
 
 A keeper does not loop forever. It stops and asks you when:
