@@ -1,10 +1,10 @@
 import {
   currentFindings,
+  KEEPER_STATUS_META,
   keeperOn,
   keeperPrecision,
   keeperRuns,
   keeperStatus,
-  type KeeperStatus,
   latestDraft,
 } from "@/lib/keepers";
 import { cn } from "@/lib/utils";
@@ -15,20 +15,6 @@ import { KeeperDecision } from "./KeeperDecision";
 import { KeeperDraft } from "./KeeperDraft";
 import { KeeperFindingRow } from "./KeeperFindingRow";
 import { KeeperStrip } from "./KeeperStrip";
-
-const STATUS: Record<KeeperStatus, { label: string; tone: string }> = {
-  accepted: { label: "Accepted", tone: "text-ok" },
-  draft: { label: "Draft ready", tone: "text-muted-foreground" },
-  findings: { label: "Findings", tone: "text-destructive" },
-  fixing: { label: "Fixing", tone: "text-ok" },
-  green: { label: "Green", tone: "text-ok" },
-  idle: { label: "No runs yet", tone: "text-muted-foreground" },
-  inconclusive: { label: "Inconclusive", tone: "text-muted-foreground" },
-  needs_you: { label: "Needs you", tone: "text-destructive" },
-  off: { label: "Off", tone: "text-muted-foreground" },
-  running: { label: "Running", tone: "text-ok" },
-  waiting: { label: "Waiting", tone: "text-warn" },
-};
 
 export interface KeeperActions {
   onSwitch: (keeperId: string, on: boolean) => Promise<void>;
@@ -80,8 +66,8 @@ export function KeeperCard({
             </span>
           )}
         </label>
-        <span className={cn("shrink-0 text-xs font-medium", STATUS[status].tone)}>
-          {STATUS[status].label}
+        <span className={cn("shrink-0 text-xs font-medium", KEEPER_STATUS_META[status].tone)}>
+          {KEEPER_STATUS_META[status].label}
           {status === "findings" && findings.length > 0 ? ` · ${findings.length}` : ""}
         </span>
         <Toggle id={switchId} checked={on} onChange={(next) => actions.onSwitch(entry.id, next)} />

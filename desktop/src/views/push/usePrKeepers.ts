@@ -60,7 +60,7 @@ export function usePrKeepers({
       .catch((cause: unknown) => {
         setError(cause instanceof DaemonRpcError ? cause.detail : String(cause));
       });
-  }, [due, ready, task]);
+  }, [due, task]);
 
   const prReady = ready.find(({ entry }) => isPrReady(entry));
   const draft =

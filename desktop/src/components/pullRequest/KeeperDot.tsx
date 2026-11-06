@@ -8,6 +8,17 @@ export const KEEPER_WORST_META: Record<KeeperWorst, { label: string; dotClass: s
 };
 
 /**
+ * A pull request's summary with the keepers' state after it, for a title or
+ * an accessible name.
+ * @param summary The pull request's own summary.
+ * @param worst The keepers' worst state.
+ * @returns The joined phrase.
+ */
+export function withKeeperLabel(summary: string, worst: KeeperWorst | null): string {
+  return worst ? `${summary} · ${KEEPER_WORST_META[worst].label}` : summary;
+}
+
+/**
  * @param taskId The task.
  * @returns The worst state of the task's keepers, or null when there is nothing to show.
  */
