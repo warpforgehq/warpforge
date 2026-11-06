@@ -104,6 +104,7 @@ export function buildAttentionQueue(
   sessionUpdates: Record<string, SessionUpdate[]>,
   prFeedback?: ReadonlyMap<string, string>,
   peerAlerts?: ReadonlyMap<string, string>,
+  keeperAlerts?: ReadonlyMap<string, string>,
 ): AttentionItem[] {
   const items: AttentionItem[] = [];
   prunePermissionCache(new Set(tasks.map((task) => task.id)));
@@ -136,6 +137,10 @@ export function buildAttentionQueue(
       // The task's pull request came back with failing checks or new review
       // comments; the notice in the task sends them to its agent.
       items.push({ priority: 3.5, reason: prFeedback.get(task.id) ?? "", task });
+    } else if (keeperAlerts?.has(task.id)) {
+      // A keeper's fix loop stopped and waits for Extend, Accept or Off;
+      // findings it is still fixing are not the owner's job (ADR 0030).
+      items.push({ priority: 3.5, reason: keeperAlerts.get(task.id) ?? "", task });
     } else if (peerAlerts?.has(task.id)) {
       // Peers hit the message limit: both sessions still work, only their
       // conversation is held, so it ranks with PR feedback (ADR 0026).

@@ -8,6 +8,7 @@ import {
   keeperPushWarnings,
   applyKeeperEvent,
   currentFindings,
+  keeperAttentionReasons,
   keeperOn,
   keeperRuns,
   keepersEligible,
@@ -16,6 +17,7 @@ import {
   normalizeKeeperState,
   presetFile,
   stripTone,
+  keeperWorst,
 } from "./keepers";
 
 const state = (fields: Partial<KeeperTaskState>): KeeperTaskState => ({
@@ -175,5 +177,35 @@ describe("eligibility and presets", () => {
     });
     const entries = [{ id: "review" }, { definition: { preset: "slop" } as never, id: "my-slop" }];
     expect(missingPresets(entries).map((p) => p.id)).toEqual(["conventions"]);
+  });
+});
+
+describe("keeper dot and attention", () => {
+  const loop = { maxRounds: 3, rounds: 3 };
+  const findings = run({ count: 2, id: "f", keeperId: "slop", outcome: "findings" });
+  const checking = run({ id: "c", keeperId: "review", outcome: null });
+
+  it("lets findings or a stopped loop beat a running check, and stays quiet when green", () => {
+    expect(keeperWorst(undefined)).toBeNull();
+    expect(keeperWorst(state({ runs: [run({ id: "g" })] }))).toBeNull();
+    expect(keeperWorst(state({ runs: [checking] }))).toBe("running");
+    expect(keeperWorst(state({ runs: [checking, findings] }))).toBe("failing");
+    const stopped = state({ loops: { review: { ...loop, status: "needs_you" } } });
+    expect(keeperWorst(stopped)).toBe("failing");
+    const offed = state({ runs: [findings], switches: { overrides: { slop: false } } });
+    expect(keeperWorst(offed)).toBeNull();
+  });
+
+  it("asks the owner only for keepers whose loop stopped, not for findings being fixed", () => {
+    const fixing = state({ loops: { slop: { ...loop, status: "fixing" } }, runs: [findings] });
+    const one = state({ loops: { review: { ...loop, status: "needs_you" } } });
+    const two = state({
+      loops: { review: { ...loop, status: "needs_you" }, slop: { ...loop, status: "needs_you" } },
+    });
+    expect([...keeperAttentionReasons({ fixing, one, two })]).toEqual([
+      ["one", "Review keeper needs your decision"],
+      ["two", "Review, Slop keepers need your decision"],
+    ]);
+    expect(keeperAttentionReasons(undefined).size).toBe(0);
   });
 });

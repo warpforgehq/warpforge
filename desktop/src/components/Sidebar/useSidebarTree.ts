@@ -7,6 +7,7 @@ import { useInboxUnseenCount } from "@/hooks/useInboxUnseen";
 import { usePeerAlertReasons, useTeamUnread } from "@/hooks/usePeerFeed";
 import { usePrFeedbackReasons } from "@/hooks/usePrFeedbackReasons";
 import { buildAttentionQueue } from "@/lib/attentionRail";
+import { keeperAttentionReasons } from "@/lib/keepers";
 import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
 import { boardTasks } from "@/lib/taskOrigin";
 import { useUi } from "@/store/ui";
@@ -53,9 +54,13 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
 
   const prFeedback = usePrFeedbackReasons(state.taskPullRequests);
   const peerAlerts = usePeerAlertReasons(tasks);
+  const keeperAlerts = useMemo(
+    () => keeperAttentionReasons(state.taskKeepers),
+    [state.taskKeepers],
+  );
   const queue = useMemo(
-    () => buildAttentionQueue(tasks, state.sessionUpdates, prFeedback, peerAlerts),
-    [peerAlerts, prFeedback, state.sessionUpdates, tasks],
+    () => buildAttentionQueue(tasks, state.sessionUpdates, prFeedback, peerAlerts, keeperAlerts),
+    [keeperAlerts, peerAlerts, prFeedback, state.sessionUpdates, tasks],
   );
   const taskGroupIndex = useMemo(() => buildTaskGroupIndex(tasks), [tasks]);
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
