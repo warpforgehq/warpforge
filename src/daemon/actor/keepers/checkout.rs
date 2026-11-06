@@ -57,14 +57,13 @@ impl Daemon {
     }
 
     /// The turn that just ended moved the checkout's HEAD, or Warpforge
-    /// committed for the task outside a turn. A turn that only talked, like
-    /// an orchestrator's, does not take the branch from the session that
-    /// committed.
+    /// committed for the task outside a turn.
     fn keepers_turn_committed(&mut self, task_id: &str, head: &str) -> bool {
-        match self.keepers.turn_heads.remove(task_id) {
-            Some(Some(start)) => start != head,
-            Some(None) | None => true,
-        }
+        self.keepers
+            .turn_heads
+            .remove(task_id)
+            .flatten()
+            .is_none_or(|start| start != head)
     }
 
     /// No folder task of the project owns `branch`, and `task_id` is the one

@@ -66,9 +66,10 @@ impl Daemon {
             .await
             .unwrap_or_default();
             let head = git.head(&cwd).await;
-            let branch = match folder {
-                true => git.feature_branch(&cwd, base.as_deref()).await,
-                false => None,
+            let branch = if folder {
+                git.feature_branch(&cwd, base.as_deref()).await
+            } else {
+                None
             };
             let read = ReadyRead {
                 head,
@@ -109,8 +110,8 @@ impl Daemon {
                 let held = self
                     .tasks
                     .get(task_id)
-                    .and_then(|task| task.keepers.as_ref());
-                let held = held.and_then(|keepers| keepers.held.clone());
+                    .and_then(|task| task.keepers.as_ref())
+                    .and_then(|keepers| keepers.held.clone());
                 return Err(held.unwrap_or_else(|| NO_BRANCH.to_string()));
             }
         }
