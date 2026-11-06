@@ -1,0 +1,185 @@
+//! Ending a run: the checker's turn read as a verdict, one re-ask on
+//! garbage, and the result written to the mirror and pushed to clients.
+
+use warpforge_protocol as wire;
+
+use crate::daemon::actor::{Daemon, Event};
+use crate::daemon::keepers::{map_result, reask_prompt, Mapped, SUPERSEDED};
+use crate::daemon::task::now_secs;
+
+impl Daemon {
+    /// Mirror, write-behind, then `task.keeper` with the run's findings.
+    pub(super) fn keeper_record(
+        &mut self,
+        run: wire::KeeperRun,
+        findings: Vec<wire::KeeperFinding>,
+    ) {
+        let (task_id, keeper_id, run_id) =
+            (run.task_id.clone(), run.keeper_id.clone(), run.id.clone());
+        self.keepers.put_run(&self.persist, &self.tasks, run);
+        for finding in findings {
+            self.keepers
+                .put_finding(&self.persist, &self.tasks, &task_id, finding);
+        }
+        let Some(run) = self.keepers.run(&task_id, &run_id).cloned() else {
+            return;
+        };
+        let findings = self
+            .keepers
+            .task(&task_id)
+            .map(|state| {
+                let of_run = state.findings.iter().filter(|f| f.run_id == run_id);
+                of_run.cloned().collect()
+            })
+            .unwrap_or_default();
+        self.emit(Event::TaskKeeper {
+            task_id,
+            keeper_id,
+            run: Box::new(run),
+            findings,
+        });
+    }
+
+    fn keeper_flight_of(&self, checker: &str) -> Option<String> {
+        self.keepers
+            .in_flight
+            .iter()
+            .find(|(_, run)| run.checker_task_id == checker)
+            .map(|(id, _)| id.clone())
+    }
+
+    pub(crate) fn keepers_turn_started(&mut self, task_id: &str) {
+        let Some(run_id) = self.keeper_flight_of(task_id) else {
+            return;
+        };
+        if let Some(run) = self.keepers.in_flight.get_mut(&run_id) {
+            run.started |= run.dispatched;
+        }
+    }
+
+    pub(crate) fn keepers_usage(&mut self, task_id: &str, cost: Option<&wire::SessionUsageCost>) {
+        let Some(cost) = cost.filter(|cost| cost.currency == "USD") else {
+            return;
+        };
+        if self.keeper_parent_of(task_id).is_some() {
+            self.keepers.costs.insert(task_id.to_string(), cost.amount);
+        }
+    }
+
+    /// A checker's turn is its run's result; the task's own turn asks for a
+    /// check.
+    pub(crate) fn keepers_turn_ended(&mut self, task_id: &str, success: bool, interrupted: bool) {
+        if self.keeper_parent_of(task_id).is_none() {
+            if !interrupted {
+                self.keepers_nudge(task_id);
+            }
+            return;
+        }
+        if interrupted {
+            return;
+        }
+        let Some(run_id) = self.keeper_flight_of(task_id) else {
+            return;
+        };
+        let Some(flight) = self.keepers.in_flight.get(&run_id) else {
+            return;
+        };
+        if !flight.started {
+            return;
+        }
+        if !success {
+            let error = "the checker's agent stopped before answering".to_string();
+            self.keeper_run_failed(&run_id, wire::KeeperOutcome::Inconclusive, error);
+            return;
+        }
+        let (id, kind, min) = (
+            flight.definition.id.clone(),
+            flight.definition.result,
+            flight.definition.min_severity,
+        );
+        let (reasked, checker) = (flight.reasked, flight.checker_task_id.clone());
+        let text = self.collect_stage_text(task_id).full;
+        match map_result(&id, kind, min, &text) {
+            Ok(mapped) => self.keeper_finish(&run_id, mapped),
+            Err(reason) if !reasked => {
+                let prompt = reask_prompt(kind, &reason);
+                if let Some(flight) = self.keepers.in_flight.get_mut(&run_id) {
+                    flight.reasked = true;
+                    flight.started = false;
+                }
+                self.keeper_prompt(&run_id, checker, prompt);
+            }
+            Err(reason) => {
+                let error = format!("no readable verdict: {reason}");
+                self.keeper_run_failed(&run_id, wire::KeeperOutcome::Inconclusive, error);
+            }
+        }
+    }
+
+    /// The checker's session died.
+    pub(crate) fn keepers_session_failed(&mut self, task_id: &str, reason: &str) {
+        if let Some(run_id) = self.keeper_flight_of(task_id) {
+            let error = format!("the checker failed: {reason}");
+            self.keeper_run_failed(&run_id, wire::KeeperOutcome::Error, error);
+        }
+    }
+
+    pub(super) fn keeper_run_failed(
+        &mut self,
+        run_id: &str,
+        outcome: wire::KeeperOutcome,
+        error: String,
+    ) {
+        self.keeper_finish(
+            run_id,
+            Mapped {
+                outcome,
+                count: 0,
+                findings: Vec::new(),
+                error: Some(error),
+            },
+        );
+    }
+
+    fn keeper_finish(&mut self, run_id: &str, mapped: Mapped) {
+        let Some(flight) = self.keepers.in_flight.remove(run_id) else {
+            return;
+        };
+        let Some(mut run) = self.keepers.run(&flight.task_id, run_id).cloned() else {
+            return;
+        };
+        let now = self.keepers.costs.get(&flight.checker_task_id).copied();
+        run.cost = match (flight.baseline_cost, now) {
+            (_, None) => None,
+            (Some(before), Some(now)) if now >= before => Some(now - before),
+            (_, now) => now,
+        }
+        .map(|amount| wire::SessionUsageCost {
+            amount,
+            currency: "USD".into(),
+        });
+        run.finished_at = Some(now_secs());
+        run.count = mapped.count;
+        run.outcome = Some(mapped.outcome);
+        run.error = mapped.error;
+        let status = if flight.superseded {
+            run.outcome = Some(wire::KeeperOutcome::Skipped);
+            run.error = Some(SUPERSEDED.into());
+            wire::KeeperFindingStatus::Superseded
+        } else {
+            wire::KeeperFindingStatus::Open
+        };
+        let findings = mapped
+            .findings
+            .into_iter()
+            .map(|finding| wire::KeeperFinding {
+                id: format!("kf_{}", &uuid::Uuid::new_v4().simple().to_string()[..12]),
+                run_id: run_id.to_string(),
+                status,
+                ..finding
+            })
+            .collect();
+        self.keeper_record(run, findings);
+        self.keepers_poll();
+    }
+}

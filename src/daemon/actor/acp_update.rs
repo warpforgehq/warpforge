@@ -100,6 +100,7 @@ impl Daemon {
             }
             AcpUpdate::Usage { used, size, cost } => {
                 self.advisor_usage(&task_id, cost.as_ref());
+                self.keepers_usage(&task_id, cost.as_ref());
                 self.smith_note_cost(&task_id, cost.as_ref());
                 self.emit_session_unless_last_duplicate(
                     &task_id,
@@ -183,6 +184,7 @@ impl Daemon {
                 self.turn_updates.remove(&task_id);
                 self.mark_task_running(&task_id);
                 self.advisor_turn_started(&task_id);
+                self.keepers_turn_started(&task_id);
                 self.peers_turn_started(&task_id, initiator, peer);
                 self.conversation_turn_started(&task_id);
                 self.smith_turn_started(&task_id, smith);
@@ -264,6 +266,7 @@ impl Daemon {
                 if !interrupted {
                     self.advisor_turn_ended(&task_id, success);
                 }
+                self.keepers_turn_ended(&task_id, success, interrupted);
                 if stage_finished {
                     // A workflow stage finished — advance the pipeline. Parse
                     // only the latest turn's text from the in-memory turn buffer
@@ -348,6 +351,7 @@ impl Daemon {
                 }
                 self.notify_orch_finished(&task_id, false, reason.clone());
                 self.advisor_session_failed(&task_id, &reason);
+                self.keepers_session_failed(&task_id, &reason);
                 if self.workflow_child_of(&task_id).is_some() {
                     self.workflow_stage_finished(
                         &task_id,

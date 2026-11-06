@@ -334,6 +334,7 @@ impl Daemon {
         daemon.restore_workflow_runs();
         daemon.runner_restore();
         crate::daemon::actor::runner::spawn_pull_bridge(&handle, runner_watch_rx);
+        crate::daemon::actor::keepers::spawn_poll(handle.cmd_tx.clone());
 
         // Dreaming idle/cron scheduler (config-driven, enabled false by default)
         let dream_cfg = daemon.memory.config().dreaming.clone();
