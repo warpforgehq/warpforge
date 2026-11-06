@@ -1,13 +1,15 @@
 import { Archive } from "lucide-react";
 import { useState } from "react";
 
+import { useTaskKeepers } from "@/hooks/useTaskKeepers";
 import { useOpenTaskPullRequestRefresh, useTaskPullRequest } from "@/hooks/useTaskPullRequest";
 import { openExternalLink } from "@/lib/externalLinks";
+import { keeperWorst } from "@/lib/keepers";
 import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 
 import { ArchiveMergedTaskDialog } from "./ArchiveMergedTaskDialog";
-import { KeeperDot, useKeeperWorst, withKeeperLabel } from "./KeeperDot";
+import { KeeperDot, withKeeperLabel } from "./KeeperDot";
 import { liveChecks, PULL_CHECKS_META, PULL_STATE_META, pullRequestSummary } from "./meta";
 
 const CHIP =
@@ -21,7 +23,7 @@ const CHIP =
 export function TaskPullRequestChip({ task }: { task: TaskInfo }) {
   useOpenTaskPullRequestRefresh(task.id, Boolean(task.worktree));
   const pr = useTaskPullRequest(task.id);
-  const keepers = useKeeperWorst(task.id);
+  const keepers = keeperWorst(useTaskKeepers(task.id));
   const [confirming, setConfirming] = useState(false);
   if (!pr) return null;
   const state = PULL_STATE_META[pr.state];

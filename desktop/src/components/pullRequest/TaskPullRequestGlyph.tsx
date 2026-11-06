@@ -1,18 +1,19 @@
+import { useTaskKeepers } from "@/hooks/useTaskKeepers";
 import { useTaskPullRequest } from "@/hooks/useTaskPullRequest";
+import { keeperWorst } from "@/lib/keepers";
 import { cn } from "@/lib/utils";
 
-import { KeeperDot, useKeeperWorst, withKeeperLabel } from "./KeeperDot";
+import { KeeperDot, withKeeperLabel } from "./KeeperDot";
 import { liveChecks, PULL_CHECKS_META, PULL_STATE_META, pullRequestSummary } from "./meta";
 
 /**
  * The sidebar row's pull-request mark: the state glyph in its colour, with a
  * dot for checks that failed or are still running. Passing checks draw no dot;
- * a row full of green dots would say nothing. A second dot, top right, is
- * the task's keepers.
+ * a row full of green dots would say nothing.
  */
 export function TaskPullRequestGlyph({ taskId, receded }: { taskId: string; receded: boolean }) {
   const pr = useTaskPullRequest(taskId);
-  const keepers = useKeeperWorst(taskId);
+  const keepers = keeperWorst(useTaskKeepers(taskId));
   if (!pr) return null;
   const meta = PULL_STATE_META[pr.state];
   const checks = liveChecks(pr);
