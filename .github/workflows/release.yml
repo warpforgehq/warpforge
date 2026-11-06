@@ -300,7 +300,8 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.version || github.ref_name }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_ID: ${{ needs.prepare-release.outputs.release_id }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
         run: |
@@ -347,7 +348,18 @@ jobs:
           codesign --verify --strict --verbose=2 "$dmg_path"
           verify_developer_id_authority "$dmg_path"
           spctl --assess --type open --context context:primary-signature --verbose=4 "$dmg_path"
-          gh release upload "$RELEASE_TAG" "$dmg_path" --clobber
+          # Upload by release id: on the macos-26 runner, gh resolving the
+          # draft by its tag fails with "release not found".
+          dmg_name="$(basename "$dmg_path")"
+          gh api --paginate "repos/$GH_REPO/releases/$RELEASE_ID/assets" \
+            --jq ".[] | select(.name == \"$dmg_name\") | .id" |
+            while IFS= read -r asset_id; do
+              gh api --method DELETE "repos/$GH_REPO/releases/assets/$asset_id"
+            done
+          gh api --method POST \
+            "https://uploads.github.com/repos/$GH_REPO/releases/$RELEASE_ID/assets?name=$dmg_name" \
+            -H "Content-Type: application/x-apple-diskimage" \
+            --input "$dmg_path" --jq .browser_download_url
       - name: Clean up App Store Connect private key
         if: always() && runner.os == 'macOS'
         shell: bash
