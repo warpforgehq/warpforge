@@ -150,6 +150,10 @@ pub(crate) struct KeepersState {
     fixes: HashMap<String, Fix>,
     /// Each task's latest `CheckReady`.
     ready: HashMap<String, Ready>,
+    /// Each project's shared checkout HEAD, as the last poll read it.
+    folder_heads: HashMap<String, String>,
+    /// A folder task's checkout HEAD when its current turn started.
+    turn_heads: HashMap<String, Option<String>>,
 }
 
 /// The ready keepers asked for on one HEAD; the fixer waits for all of them.

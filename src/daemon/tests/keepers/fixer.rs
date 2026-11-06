@@ -41,7 +41,7 @@ async fn wake(setup: &Setup, text: &str) {
         .unwrap();
 }
 
-fn prompts(log: &Path) -> Vec<String> {
+pub(super) fn prompts(log: &Path) -> Vec<String> {
     logged(log)
         .iter()
         .filter_map(|entry| entry["prompt"].as_str().map(str::to_string))

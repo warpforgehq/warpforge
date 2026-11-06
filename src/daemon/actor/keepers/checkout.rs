@@ -16,12 +16,14 @@ impl Daemon {
     /// the branch's heir, then say whether the checkout is on its branch.
     /// @param task_id a task without a worktree
     /// @param branch the checkout's branch, `None` on the base or detached
+    /// @param head the checkout's HEAD
     /// @param mid_turn whether the task's agent is working
     /// @returns whether the task's keepers may check this HEAD
     pub(super) fn keepers_checkout(
         &mut self,
         task_id: &str,
         branch: Option<&str>,
+        head: &str,
         mid_turn: bool,
     ) -> bool {
         let turn_ended = !mid_turn
@@ -30,8 +32,9 @@ impl Daemon {
                 .watches
                 .get(task_id)
                 .is_some_and(|watch| watch.nudged());
+        let committed = turn_ended && self.keepers_turn_committed(task_id, head);
         if let Some(branch) = branch {
-            if turn_ended || self.keepers_heir(task_id, branch) {
+            if committed || self.keepers_heir(task_id, branch) {
                 self.keepers_claim(task_id, branch);
             }
         }
@@ -51,6 +54,17 @@ impl Daemon {
         let checks = held.is_none();
         self.keepers_edit_task(task_id, |keepers| keepers.held = held);
         checks
+    }
+
+    /// The turn that just ended moved the checkout's HEAD, or Warpforge
+    /// committed for the task outside a turn. A turn that only talked, like
+    /// an orchestrator's, does not take the branch from the session that
+    /// committed.
+    fn keepers_turn_committed(&mut self, task_id: &str, head: &str) -> bool {
+        match self.keepers.turn_heads.remove(task_id) {
+            Some(Some(start)) => start != head,
+            Some(None) | None => true,
+        }
     }
 
     /// No folder task of the project owns `branch`, and `task_id` is the one

@@ -11,7 +11,9 @@ use warpforge_protocol as wire;
 
 use super::{KeeperCommand, Polled};
 use crate::daemon::actor::{Command, Daemon};
-use crate::daemon::keepers::{list_keepers, ChangeQuery, GitSource, POLL_INTERVAL, QUOTA_SKIP};
+use crate::daemon::keepers::{
+    list_keepers, ChangeQuery, GitSource, POLL_INTERVAL, QUOTA_SKIP, RESTARTED,
+};
 use crate::daemon::task::{Task, TaskStatus};
 
 const HEAD_READS_AT_ONCE: usize = 8;
@@ -156,9 +158,18 @@ impl Daemon {
                 continue;
             }
             let mid_turn = task.status == TaskStatus::Running;
+            if result.folder {
+                let project = task.project.clone();
+                self.keepers.folder_heads.insert(project, head.clone());
+            }
             self.keepers_supersede(&result.task_id, &head);
             if result.folder
-                && !self.keepers_checkout(&result.task_id, result.branch.as_deref(), mid_turn)
+                && !self.keepers_checkout(
+                    &result.task_id,
+                    result.branch.as_deref(),
+                    &head,
+                    mid_turn,
+                )
             {
                 if let Some(watch) = self.keepers.watches.get_mut(&result.task_id) {
                     watch.observe(&head, now, mid_turn);
@@ -191,14 +202,18 @@ impl Daemon {
     }
 
     /// Not being read or checked already, and its last check was of another
-    /// HEAD or was refused by the quota gate.
+    /// HEAD, was refused by the quota gate or was cut short by a restart.
     pub(super) fn keeper_due(&self, task_id: &str, keeper_id: &str, head: &str) -> bool {
         if self.keeper_busy(task_id, keeper_id) {
             return false;
         }
         match self.keepers.latest_run(task_id, keeper_id) {
             None => true,
-            Some(run) => run.head_sha != head || is_quota_skip(run),
+            Some(run) => {
+                run.head_sha != head
+                    || is_quota_skip(run)
+                    || run.error.as_deref() == Some(RESTARTED)
+            }
         }
     }
 
@@ -292,7 +307,7 @@ impl Daemon {
         for mut run in orphans {
             run.outcome = Some(wire::KeeperOutcome::Inconclusive);
             run.finished_at = Some(crate::daemon::task::now_secs());
-            run.error = Some("the daemon restarted during the check".into());
+            run.error = Some(RESTARTED.into());
             self.keeper_record(run, Vec::new());
         }
     }
