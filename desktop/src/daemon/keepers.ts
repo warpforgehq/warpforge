@@ -59,6 +59,17 @@ export function KeeperMethods<TBase extends Constructor<CoreClient>>(Base: TBase
       await this.refreshTaskKeepers(taskId);
     }
 
+    /**
+     * Run every ready keeper that is on for the task, on its HEAD now.
+     * @param taskId The task.
+     * @returns The ids of the keepers started; one already checking is not restarted.
+     */
+    async checkReadyKeepers(taskId: string): Promise<string[]> {
+      const result = await this.request("keepers.checkReady", { task_id: taskId });
+      const started = (result as { started?: string[] } | null)?.started;
+      return Array.isArray(started) ? started : [];
+    }
+
     /** Write a built-in keeper's two-line file into the project's checkout. */
     async addKeeper(project: string, preset: KeeperPresetId) {
       await this.request("file.save", { ...presetFile(preset), project, task_id: "" });

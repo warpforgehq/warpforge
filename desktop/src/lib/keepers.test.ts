@@ -13,9 +13,11 @@ import {
   keeperRuns,
   keepersEligible,
   keeperStatus,
+  latestDraft,
   missingPresets,
   normalizeKeeperState,
   presetFile,
+  readyKeepers,
   stripTone,
   keeperWorst,
 } from "./keepers";
@@ -23,6 +25,30 @@ import {
 const state = (fields: Partial<KeeperTaskState>): KeeperTaskState => ({
   ...normalizeKeeperState("t1", null),
   ...fields,
+});
+
+describe("ready keepers", () => {
+  it("reads a draft as neither green nor red and keeps its text", () => {
+    const draft = run({ draft: "TL;DR", id: "d1", outcome: "draft" });
+    expect(keeperStatus(true, [draft], undefined)).toBe("draft");
+    expect(stripTone(draft)).toBe("grey");
+    expect(latestDraft([draft])).toBe("TL;DR");
+    expect(latestDraft([draft, run({ id: "g1" })])).toBeNull();
+  });
+
+  it("lists the ready keepers that are on, with whether one is running", () => {
+    const def = (id: string, when: "commit" | "ready") =>
+      ({ definition: { defaultOn: true, id, when } as never, id }) as const;
+    const entries = [def("review", "commit"), def("intent", "ready"), def("verify", "ready")];
+    const ready = readyKeepers(
+      entries,
+      state({
+        runs: [run({ id: "i1", keeperId: "intent", outcome: null })],
+        switches: { overrides: { verify: false } },
+      }),
+    );
+    expect(ready.map(({ entry, running }) => [entry.id, running])).toEqual([["intent", true]]);
+  });
 });
 
 describe("keeper status", () => {
@@ -176,7 +202,14 @@ describe("eligibility and presets", () => {
       path: ".warpforge/keepers/slop.yaml",
     });
     const entries = [{ id: "review" }, { definition: { preset: "slop" } as never, id: "my-slop" }];
-    expect(missingPresets(entries).map((p) => p.id)).toEqual(["conventions"]);
+    expect(missingPresets(entries).map((p) => p.id)).toEqual([
+      "conventions",
+      "security",
+      "thermonuclear",
+      "intent",
+      "verify",
+      "pr-ready",
+    ]);
   });
 });
 

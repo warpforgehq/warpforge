@@ -5,17 +5,20 @@ import {
   keeperRuns,
   keeperStatus,
   type KeeperStatus,
+  latestDraft,
 } from "@/lib/keepers";
 import { cn } from "@/lib/utils";
 import type { KeeperDecision as Decision, KeeperEntry, KeeperTaskState } from "@/protocol";
 import { Toggle } from "@/views/settings/primitives";
 
 import { KeeperDecision } from "./KeeperDecision";
+import { KeeperDraft } from "./KeeperDraft";
 import { KeeperFindingRow } from "./KeeperFindingRow";
 import { KeeperStrip } from "./KeeperStrip";
 
 const STATUS: Record<KeeperStatus, { label: string; tone: string }> = {
   accepted: { label: "Accepted", tone: "text-ok" },
+  draft: { label: "Draft ready", tone: "text-muted-foreground" },
   findings: { label: "Findings", tone: "text-destructive" },
   fixing: { label: "Fixing", tone: "text-ok" },
   green: { label: "Green", tone: "text-ok" },
@@ -58,6 +61,7 @@ export function KeeperCard({
   const status = keeperStatus(on, runs, loop);
   const findings = on ? currentFindings(state, runs) : [];
   const precision = keeperPrecision(state, entry.id);
+  const draft = on ? latestDraft(runs) : null;
   const name = definition?.name || entry.id;
   const switchId = `keeper-switch-${entry.id}`;
 
@@ -86,13 +90,16 @@ export function KeeperCard({
         <p className="text-xs text-warn">Waiting: {loop.reason}</p>
       )}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <KeeperStrip runs={runs} />
-        <span className="text-xs text-muted-foreground">
-          {precision
-            ? `Precision ${Math.round(precision.ratio * 100)}% of ${precision.sample} resolved`
-            : "Precision: nothing resolved yet"}
-        </span>
+        <KeeperStrip runs={runs} when={definition?.when} />
+        {definition?.result !== "draft" && (
+          <span className="text-xs text-muted-foreground">
+            {precision
+              ? `Precision ${Math.round(precision.ratio * 100)}% of ${precision.sample} resolved`
+              : "Precision: nothing resolved yet"}
+          </span>
+        )}
       </div>
+      {draft && <KeeperDraft name={name} text={draft} />}
       {status === "needs_you" && loop && (
         <KeeperDecision
           loop={loop}

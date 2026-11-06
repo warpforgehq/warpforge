@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,6 +12,7 @@ const { client, store } = vi.hoisted(() => {
   return {
     client: {
       addKeeper: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
+      checkReadyKeepers: vi.fn<(taskId: string) => Promise<string[]>>(() => Promise.resolve([])),
       decideKeeper: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       dismissKeeperFinding: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       getState: () => state,
@@ -186,5 +187,54 @@ describe("KeepersSurface", () => {
     expect(problems).toHaveTextContent("unknown result `score`");
     expect(problems).toHaveTextContent("unknown key `colour`");
     expect(screen.queryByRole("article", { name: "broken keeper" })).toBeNull();
+  });
+
+  it("groups the presets by when they run", async () => {
+    const { user } = show([]);
+    await user.click(await screen.findByRole("button", { name: /Add keeper/ }));
+    const menu = await screen.findByRole("menu");
+    expect(menu.textContent).toMatch(
+      /On every commit.*Review.*Slop.*Conventions.*Before the pull request.*Security.*Thermonuclear.*Intent.*Verify.*PR-ready/,
+    );
+    await user.click(within(menu).getByRole("menuitem", { name: /PR-ready/ }));
+    await waitFor(() => expect(client.addKeeper).toHaveBeenCalledWith("demo", "pr-ready"));
+  });
+
+  it("says a ready keeper waits for Check before PR, then shows its draft without a verdict", async () => {
+    const ready = entry("pr-ready", { name: "PR-ready", result: "draft", when: "ready" });
+    show([ready]);
+    const before = await card("PR-ready");
+    expect(within(before).getByText(/runs when you check before the pull request/)).toBeVisible();
+    cleanup();
+
+    show([ready], {
+      runs: [run({ draft: "## TL;DR\nAdds X.", id: "d1", keeperId: "pr-ready", outcome: "draft" })],
+    });
+    const after = await card("PR-ready");
+    expect(after).toHaveAttribute("data-status", "draft");
+    expect(within(after).getByText("Draft ready")).toBeInTheDocument();
+    expect(within(after).getByText("Checks before PR")).toBeInTheDocument();
+    expect(within(after).getByRole("region", { name: "PR-ready draft" })).toHaveTextContent(
+      "Adds X.",
+    );
+    expect(within(after).getByRole("button", { name: "Copy draft" })).toBeInTheDocument();
+    expect(within(after).getAllByRole("listitem")[0]?.dataset.tone).toBe("grey");
+  });
+
+  it("checks the ready keepers before the PR and waits while one runs", async () => {
+    const ready = entry("intent", { when: "ready" });
+    const { user } = show([entry("review"), ready]);
+    await user.click(await screen.findByRole("button", { name: "Check before PR" }));
+    expect(client.checkReadyKeepers).toHaveBeenCalledWith("t1");
+    cleanup();
+
+    show([ready], { runs: [run({ id: "i1", keeperId: "intent", outcome: null })] });
+    expect(await screen.findByRole("button", { name: "Check before PR" })).toBeDisabled();
+  });
+
+  it("offers no Check before PR without a ready keeper", async () => {
+    show([entry("review")]);
+    await card("Review");
+    expect(screen.queryByRole("button", { name: "Check before PR" })).toBeNull();
   });
 });
