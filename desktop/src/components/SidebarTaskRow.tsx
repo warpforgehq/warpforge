@@ -1,6 +1,7 @@
 import { ChevronRight, Users, Workflow } from "lucide-react";
 import { memo, useEffect, useState } from "react";
 
+import { TaskLiveGlyph } from "@/components/liveActivity/LiveActivityGlyph";
 import { TaskPullRequestGlyph } from "@/components/pullRequest/TaskPullRequestGlyph";
 import { TaskAgentMark } from "@/components/TaskSmith";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -149,6 +150,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
             >
               {label}
             </span>
+            <TaskLiveGlyph project={task.project} taskId={task.id} receded={receded} />
             {factory && <FactoryStageChip task={task} receded={receded} />}
             {task.worktree && !factory && (
               <TaskPullRequestGlyph taskId={task.id} receded={receded} />

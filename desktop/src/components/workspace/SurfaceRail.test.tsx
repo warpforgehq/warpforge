@@ -123,6 +123,31 @@ describe("SurfaceRail", () => {
     expect(diff.querySelector("svg")).not.toHaveClass("-translate-y-[4px]");
   });
 
+  it("dots a surface with live items, failed over running, and says so in the label", () => {
+    const tabs: SurfaceTab[] = DEFAULT_SURFACE_TABS.map((tab) => {
+      if (tab.id === "runtime") return { ...tab, activity: { failed: 1, running: 1 }, count: 3 };
+      if (tab.id === "terminal") return { ...tab, activity: { failed: 0, running: 2 }, count: 2 };
+      return tab;
+    });
+    const { view } = renderRail({ tabs });
+
+    const runtime = screen.getByRole("button", { name: /^Runtime/ });
+    expect(runtime).toHaveAccessibleName(
+      "Runtime, 3 services and port-forwards · 1 running, 1 failed · ⌘4",
+    );
+    expect(runtime.querySelector("[data-rail-activity]")).toHaveAttribute(
+      "data-rail-activity",
+      "failed",
+    );
+    const terminal = screen.getByRole("button", { name: /^Terminal/ });
+    expect(terminal).toHaveAccessibleName("Terminal, 2 sessions · all running · ⌘5");
+    expect(terminal.querySelector("[data-rail-activity]")).toHaveAttribute(
+      "data-rail-activity",
+      "running",
+    );
+    expect(view.container.querySelectorAll("[data-rail-activity]")).toHaveLength(2);
+  });
+
   it("keeps one tab stop and moves focus with the arrow keys", async () => {
     renderRail();
 

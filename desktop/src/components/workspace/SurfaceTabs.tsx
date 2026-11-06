@@ -10,6 +10,7 @@ import {
 import * as React from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { LiveTally } from "@/lib/liveActivity";
 import { cn } from "@/lib/utils";
 
 export type WorkspaceSurface = "files" | "diff" | "runtime" | "terminal" | "browser" | "pipeline";
@@ -24,6 +25,8 @@ export interface SurfaceTab<T extends string = WorkspaceSurface> {
   label: string;
   icon: LucideIcon;
   count?: React.ReactNode;
+  /** Running and failed items this surface shows; drives the rail's dot. */
+  activity?: LiveTally;
   disabled?: boolean;
 }
 
