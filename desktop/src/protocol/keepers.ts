@@ -4,7 +4,7 @@ import type { SessionUsageCost } from "./tasks";
 export type KeeperWhen = "commit" | "ready" | "ci" | "comments";
 export type KeeperResultKind = "findings" | "pass_fail" | "verdict" | "draft";
 export type KeeperSeverity = "critical" | "high" | "medium" | "low";
-export type KeeperOutcome = "green" | "findings" | "inconclusive" | "error" | "skipped";
+export type KeeperOutcome = "green" | "findings" | "inconclusive" | "error" | "skipped" | "draft";
 export type KeeperFindingStatus = "open" | "sent" | "fixed" | "dismissed" | "superseded";
 
 /** A keeper file after its preset is applied and its values are validated. */
@@ -101,6 +101,8 @@ export interface KeeperRun {
   round: number;
   cost?: SessionUsageCost | null;
   error?: string | null;
+  /** A `draft` run's text: the checker's closing message. */
+  draft?: string | null;
 }
 
 export interface KeeperFinding {

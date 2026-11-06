@@ -49,6 +49,8 @@ pub enum KeeperOutcome {
     Inconclusive,
     Error,
     Skipped,
+    /// A `result: draft` run: text for the owner, never green or red.
+    Draft,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -215,6 +217,9 @@ pub struct KeeperRun {
     pub cost: Option<SessionUsageCost>,
     /// Why a run was inconclusive, failed or skipped.
     pub error: Option<String>,
+    /// A `draft` run's text: the checker's closing message.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub draft: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]

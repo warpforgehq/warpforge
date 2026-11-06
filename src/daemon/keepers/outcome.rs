@@ -14,10 +14,13 @@ pub struct Mapped {
     pub findings: Vec<wire::KeeperFinding>,
     /// Why the run was inconclusive.
     pub error: Option<String>,
+    /// A `draft` keeper's text.
+    pub draft: Option<String>,
 }
 
 /// Map a checker's reply onto one of the five outcomes (ADR 0030, *Result
-/// model*). `Err` is the parse failure, for the one re-ask.
+/// model*). `Err` is the parse failure, for the one re-ask. A draft is the
+/// whole text, so the caller passes the checker's closing message for it.
 /// @param keeper_id the keeper, part of each finding's key
 /// @param kind the keeper's `result`
 /// @param min_severity findings below it are kept but not counted
@@ -53,7 +56,19 @@ pub fn map_result(
                 }
             }
         }
-        Kind::Draft => return Err("a draft has no verdict".into()),
+        Kind::Draft => {
+            let draft = text.trim();
+            if draft.is_empty() {
+                return Err("the reply was empty".into());
+            }
+            return Ok(Mapped {
+                outcome: Outcome::Draft,
+                count: 0,
+                findings: Vec::new(),
+                error: None,
+                draft: Some(draft.to_string()),
+            });
+        }
     };
     let count = findings
         .iter()
@@ -64,6 +79,7 @@ pub fn map_result(
         count,
         findings: findings.iter().map(|f| finding(keeper_id, f)).collect(),
         error,
+        draft: None,
     })
 }
 
@@ -208,6 +224,17 @@ mod tests {
             "looks fine to me",
         );
         assert!(err.unwrap_err().contains("verdict"));
+    }
+
+    #[test]
+    fn a_draft_is_the_text_and_never_green_or_red() {
+        let text = format!("## TL;DR\nAdds the parser.\n{}", fence(ONE_HIGH));
+        let mapped = map_result("pr-ready", Kind::Draft, KeeperSeverity::Medium, &text).unwrap();
+        assert_eq!((mapped.outcome, mapped.count), (Outcome::Draft, 0));
+        assert!(mapped.findings.is_empty(), "a fence in a draft is text");
+        assert_eq!(mapped.draft.as_deref(), Some(text.trim()));
+        let empty = map_result("pr-ready", Kind::Draft, KeeperSeverity::Medium, "  \n");
+        assert!(empty.unwrap_err().contains("empty"));
     }
 
     #[test]
