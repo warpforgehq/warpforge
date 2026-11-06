@@ -99,6 +99,42 @@ async fn a_folder_task_owns_the_branch_its_last_turn_ended_on() {
     setup.daemon.shutdown().await;
 }
 
+/// A branch nobody owns goes to the folder task that changed last, without
+/// waiting for its turn to end; a task that owns a branch keeps it.
+#[tokio::test]
+async fn an_unowned_branch_goes_to_the_latest_folder_task() {
+    let setup = setup(&[("review", REVIEW)], |_| {
+        let mut older = task("t_a", None);
+        older.updated_at = 1;
+        let mut latest = task("t_b", None);
+        latest.updated_at = 2;
+        vec![older, latest]
+    })
+    .await;
+    on_branch(&setup, Some("feat/x"));
+    until_held(&setup, "t_b", None).await;
+    assert_eq!(
+        switches(&setup.daemon, "t_b").await.branch.as_deref(),
+        Some("feat/x")
+    );
+    until_held(&setup, "t_a", Some(NO_BRANCH)).await;
+
+    let root = setup.projects[0].path.clone();
+    setup
+        .script
+        .lock()
+        .unwrap()
+        .branches
+        .insert(root, "review/theirs".into());
+    until_held(
+        &setup,
+        "t_b",
+        Some("the checkout is on review/theirs, not feat/x"),
+    )
+    .await;
+    setup.daemon.shutdown().await;
+}
+
 #[tokio::test]
 async fn no_fix_while_another_session_works_in_the_checkout() {
     let mut setup = setup(&[("review", REVIEW)], |wt| {

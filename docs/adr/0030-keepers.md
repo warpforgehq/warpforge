@@ -108,7 +108,12 @@ session, so it owns a branch by working on it: the checkout's branch when the
 task's last turn ended (or Warpforge committed for it) is the task's, unless
 it is the base branch, the remote's default, `main` or `master`. Claiming it
 releases it from any other folder task of the project, so the session that
-worked on the branch last is the one its keepers report to. Its keepers check
+worked on the branch last is the one its keepers report to. A branch no
+folder task owns goes, at the next poll, to the project's most recently
+updated folder task that owns no branch yet — so switching to a branch and
+adding keepers starts them without waiting for a turn, while a task that
+already owns a branch pauses rather than following the checkout to someone
+else's branch. Its keepers check
 only while the checkout is on that branch; on another branch or the base they
 are paused with the reason, and they resume when the checkout returns. A fix
 also waits while any other folder session of the project is mid-turn, since

@@ -30,8 +30,10 @@ impl Daemon {
                 .watches
                 .get(task_id)
                 .is_some_and(|watch| watch.nudged());
-        if let (true, Some(branch)) = (turn_ended, branch) {
-            self.keepers_claim(task_id, branch);
+        if let Some(branch) = branch {
+            if turn_ended || self.keepers_heir(task_id, branch) {
+                self.keepers_claim(task_id, branch);
+            }
         }
         let owned = self
             .tasks
@@ -49,6 +51,31 @@ impl Daemon {
         let checks = held.is_none();
         self.keepers_edit_task(task_id, |keepers| keepers.held = held);
         checks
+    }
+
+    /// `task_id` owns no branch yet, no folder task of the project owns
+    /// `branch`, and `task_id` is the one of them that changed last.
+    fn keepers_heir(&self, task_id: &str, branch: &str) -> bool {
+        let Some(task) = self.tasks.get(task_id) else {
+            return false;
+        };
+        if task.keepers.as_ref().is_some_and(|k| k.branch.is_some()) {
+            return false;
+        }
+        let folder: Vec<&crate::daemon::task::Task> = self
+            .tasks
+            .values()
+            .filter(|other| other.project == task.project && other.worktree.is_none())
+            .filter(|other| self.keeper_candidate(other))
+            .collect();
+        let owned = folder
+            .iter()
+            .any(|other| other.keepers.as_ref().and_then(|k| k.branch.as_deref()) == Some(branch));
+        let latest = folder
+            .iter()
+            .max_by_key(|other| (other.updated_at, other.id.as_str()))
+            .map(|other| other.id.as_str());
+        !owned && latest == Some(task_id)
     }
 
     /// The branch moves to `task_id`; other tasks of the project's checkout
