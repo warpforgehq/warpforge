@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { forwardRef } from "react";
 
-import { LIVE_SURFACE, type LiveState } from "@/lib/liveActivity";
+import type { LiveState } from "@/lib/liveActivity";
 import { cn } from "@/lib/utils";
 
 export interface SurfaceRailButtonProps {
@@ -13,6 +13,8 @@ export interface SurfaceRailButtonProps {
   shortcut: string;
   /** Something on this surface is running or failed; failed wins. */
   activity?: LiveState | null;
+  /** The activity dot's colour classes. */
+  activityClass?: string | null;
   /** The travelling chip parks here: this is the pane that owns the split. */
   active: boolean;
   /** Selected, but its pane is folded away: a brighter icon, no fill of its
@@ -37,6 +39,7 @@ export const SurfaceRailButton = forwardRef<HTMLButtonElement, SurfaceRailButton
       summary,
       shortcut,
       activity,
+      activityClass,
       active,
       ghost,
       onSelect,
@@ -81,11 +84,7 @@ export const SurfaceRailButton = forwardRef<HTMLButtonElement, SurfaceRailButton
             data-rail-activity={activity}
             className={cn(
               "absolute right-0.5 top-0.5 size-1.5 rounded-full ring-1 ring-background",
-              activity === "failed"
-                ? "bg-destructive"
-                : railKey === `surface:${LIVE_SURFACE.keeper}`
-                  ? "bg-muted-foreground motion-safe:animate-pulse"
-                  : "bg-ok",
+              activityClass,
             )}
           />
         )}

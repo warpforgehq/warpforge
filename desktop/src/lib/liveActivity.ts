@@ -153,6 +153,8 @@ export function liveItemLabel(item: LiveItem): string {
   return `${KIND_LABEL[item.kind]} ${item.name} · ${item.detail ?? item.state}`;
 }
 
+const CHECKING_PULSE = "motion-safe:animate-pulse";
+
 /**
  * Tone for a live mark: red when something failed; a keeper still checking
  * pulses grey, since green would read as "passed"; anything else running is green.
@@ -162,5 +164,16 @@ export function liveItemLabel(item: LiveItem): string {
  */
 export function liveToneClass(state: LiveState, checking: boolean): string {
   if (state === "failed") return "text-destructive";
-  return checking ? "text-muted-foreground motion-safe:animate-pulse" : "text-ok/80";
+  return checking ? `text-muted-foreground ${CHECKING_PULSE}` : "text-ok/80";
+}
+
+/**
+ * The same tone for a dot, such as a rail button's.
+ * @param state The mark's state.
+ * @param surface The surface the dot marks; the Keepers surface runs checks.
+ * @returns The dot's colour classes.
+ */
+export function liveDotClass(state: LiveState, surface: WorkspaceSurface | null): string {
+  if (state === "failed") return "bg-destructive";
+  return surface === LIVE_SURFACE.keeper ? `bg-muted-foreground ${CHECKING_PULSE}` : "bg-ok";
 }

@@ -10,7 +10,7 @@ import {
 } from "react";
 
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { liveState, type LiveState } from "@/lib/liveActivity";
+import { liveDotClass, liveState, type LiveState } from "@/lib/liveActivity";
 
 import { SurfaceRailButton } from "./SurfaceRailButton";
 import { surfaceSummary } from "./surfaceRailMeta";
@@ -25,6 +25,8 @@ interface RailItem {
   summary: string;
   shortcut: string;
   activity: LiveState | null;
+  /** The activity dot's colour classes. */
+  activityClass: string | null;
   surface: WorkspaceSurface | null;
 }
 
@@ -69,19 +71,24 @@ export function SurfaceRail({
         key: CONVERSATION_KEY,
         label: "Conversation",
         activity: null,
+        activityClass: null,
         shortcut: "⌘1",
         summary: chatVisible ? "Open" : "Hidden",
         surface: null,
       },
-      ...tabs.map((tab, index) => ({
-        activity: tab.activity ? liveState(tab.activity) : null,
-        icon: tab.icon,
-        key: `surface:${tab.id}`,
-        label: tab.label,
-        shortcut: `⌘${index + 2}`,
-        summary: surfaceSummary(tab),
-        surface: tab.id,
-      })),
+      ...tabs.map((tab, index) => {
+        const activity = tab.activity ? liveState(tab.activity) : null;
+        return {
+          activity,
+          activityClass: activity ? liveDotClass(activity, tab.id) : null,
+          icon: tab.icon,
+          key: `surface:${tab.id}`,
+          label: tab.label,
+          shortcut: `⌘${index + 2}`,
+          summary: surfaceSummary(tab),
+          surface: tab.id,
+        };
+      }),
     ],
     [chatVisible, tabs],
   );
@@ -206,6 +213,7 @@ export function SurfaceRail({
           summary={item.summary}
           shortcut={item.shortcut}
           activity={item.activity}
+          activityClass={item.activityClass}
           active={item.key === pillKey}
           ghost={item.key === ghostKey}
           onSelect={(fromKeyboard) => activate(item, fromKeyboard)}

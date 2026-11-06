@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 
 import { ArchiveMergedTaskDialog } from "./ArchiveMergedTaskDialog";
-import { KEEPER_WORST_META, KeeperDot, useKeeperWorst } from "./KeeperDot";
+import { KeeperDot, useKeeperWorst, withKeeperLabel } from "./KeeperDot";
 import { liveChecks, PULL_CHECKS_META, PULL_STATE_META, pullRequestSummary } from "./meta";
 
 const CHIP =
@@ -28,9 +28,7 @@ export function TaskPullRequestChip({ task }: { task: TaskInfo }) {
   const checks = liveChecks(pr);
   const StateIcon = state.icon;
   const ChecksIcon = checks ? PULL_CHECKS_META[checks].icon : null;
-  const summary = [pullRequestSummary(pr), keepers && KEEPER_WORST_META[keepers].label]
-    .filter(Boolean)
-    .join(" · ");
+  const summary = withKeeperLabel(pullRequestSummary(pr), keepers);
 
   return (
     <>

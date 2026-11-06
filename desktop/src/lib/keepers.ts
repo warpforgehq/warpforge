@@ -349,11 +349,14 @@ export function keeperPushWarnings(state: KeeperTaskState | undefined): string[]
     const name = keeperIdLabel(id);
     if (status === "running") return [`${name} is still checking`];
     if (status === "needs_you") return [`${name} needs you`];
-    const open = status === "findings" || status === "waiting" || status === "fixing";
-    if (open && findings > 0)
+    if (hasOpenFindings({ findings, status }))
       return [`${name}: ${findings} ${findings === 1 ? "finding" : "findings"}`];
     return [];
   });
+}
+
+function hasOpenFindings({ findings, status }: { findings: number; status: KeeperStatus }) {
+  return findings > 0 && (status === "findings" || status === "waiting" || status === "fixing");
 }
 
 export type KeeperWorst = "failing" | "running";
@@ -367,9 +370,7 @@ export type KeeperWorst = "failing" | "running";
 export function keeperWorst(state: KeeperTaskState | undefined): KeeperWorst | null {
   const keepers = activeKeepers(state);
   const failing = keepers.some(
-    ({ findings, status }) =>
-      status === "needs_you" ||
-      (findings > 0 && (status === "findings" || status === "waiting" || status === "fixing")),
+    (keeper) => keeper.status === "needs_you" || hasOpenFindings(keeper),
   );
   if (failing) return "failing";
   return keepers.some(({ status }) => status === "running") ? "running" : null;
@@ -395,3 +396,18 @@ export function keeperAttentionReasons(
   }
   return reasons;
 }
+
+/** How each keeper status reads on its card; other surfaces override entries. */
+export const KEEPER_STATUS_META: Record<KeeperStatus, { label: string; tone: string }> = {
+  accepted: { label: "Accepted", tone: "text-ok" },
+  draft: { label: "Draft ready", tone: "text-muted-foreground" },
+  findings: { label: "Findings", tone: "text-destructive" },
+  fixing: { label: "Fixing", tone: "text-ok" },
+  green: { label: "Green", tone: "text-ok" },
+  idle: { label: "No runs yet", tone: "text-muted-foreground" },
+  inconclusive: { label: "Inconclusive", tone: "text-muted-foreground" },
+  needs_you: { label: "Needs you", tone: "text-destructive" },
+  off: { label: "Off", tone: "text-muted-foreground" },
+  running: { label: "Running", tone: "text-ok" },
+  waiting: { label: "Waiting", tone: "text-warn" },
+};

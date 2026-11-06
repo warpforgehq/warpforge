@@ -1,21 +1,19 @@
 import { Loader2 } from "lucide-react";
 
-import { currentFindings, keeperStatus, type KeeperStatus } from "@/lib/keepers";
+import {
+  currentFindings,
+  KEEPER_STATUS_META,
+  keeperStatus,
+  type KeeperStatus,
+} from "@/lib/keepers";
 import { cn } from "@/lib/utils";
 import type { KeeperEntry, KeeperRun, KeeperTaskState } from "@/protocol";
 
-const LABEL: Record<KeeperStatus, { text: string; tone: string }> = {
-  accepted: { text: "Accepted", tone: "text-ok" },
-  draft: { text: "Draft ready", tone: "text-muted-foreground" },
-  findings: { text: "Findings", tone: "text-destructive" },
-  fixing: { text: "Fixing", tone: "text-muted-foreground" },
-  green: { text: "Green", tone: "text-ok" },
-  idle: { text: "Not checked yet", tone: "text-muted-foreground" },
-  inconclusive: { text: "Inconclusive", tone: "text-muted-foreground" },
-  needs_you: { text: "Needs you", tone: "text-destructive" },
-  off: { text: "Off", tone: "text-muted-foreground" },
-  running: { text: "Checking", tone: "text-muted-foreground" },
-  waiting: { text: "Waiting", tone: "text-warn" },
+const LABEL: Record<KeeperStatus, { label: string; tone: string }> = {
+  ...KEEPER_STATUS_META,
+  fixing: { label: "Fixing", tone: "text-muted-foreground" },
+  idle: { label: "Not checked yet", tone: "text-muted-foreground" },
+  running: { label: "Checking", tone: "text-muted-foreground" },
 };
 
 /**
@@ -55,7 +53,7 @@ export function ReadyKeepers({
                 {status === "running" && <Loader2 aria-hidden className="size-3 animate-spin" />}
                 {status === "findings" && count > 0
                   ? `${count} ${count === 1 ? "finding" : "findings"}`
-                  : label.text}
+                  : label.label}
               </span>
             </li>
           );

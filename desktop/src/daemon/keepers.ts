@@ -62,7 +62,8 @@ export function KeeperMethods<TBase extends Constructor<CoreClient>>(Base: TBase
     /**
      * Run every ready keeper that is on for the task, on its HEAD now.
      * @param taskId The task.
-     * @returns The ids of the keepers started; one already checking is not restarted.
+     * @returns `head`, the HEAD the keepers check (null when the reply has none), and
+     *   `started`, the ids of the keepers started; one already checking is not restarted.
      */
     async checkReadyKeepers(taskId: string): Promise<{ head: string | null; started: string[] }> {
       const result = await this.request("keepers.checkReady", { task_id: taskId });

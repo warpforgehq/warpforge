@@ -1,7 +1,7 @@
 import { useTaskPullRequest } from "@/hooks/useTaskPullRequest";
 import { cn } from "@/lib/utils";
 
-import { KEEPER_WORST_META, KeeperDot, useKeeperWorst } from "./KeeperDot";
+import { KeeperDot, useKeeperWorst, withKeeperLabel } from "./KeeperDot";
 import { liveChecks, PULL_CHECKS_META, PULL_STATE_META, pullRequestSummary } from "./meta";
 
 /**
@@ -17,9 +17,7 @@ export function TaskPullRequestGlyph({ taskId, receded }: { taskId: string; rece
   const meta = PULL_STATE_META[pr.state];
   const checks = liveChecks(pr);
   const Icon = meta.icon;
-  const summary = [pullRequestSummary(pr), keepers && KEEPER_WORST_META[keepers].label]
-    .filter(Boolean)
-    .join(" · ");
+  const summary = withKeeperLabel(pullRequestSummary(pr), keepers);
   return (
     <span
       data-task-pr={pr.state}
