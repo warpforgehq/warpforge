@@ -1,3 +1,5 @@
+import type { LiveTally } from "@/lib/liveActivity";
+
 import type { SurfaceTab, WorkspaceSurface } from "./SurfaceTabs";
 
 const NOUNS: Record<WorkspaceSurface, readonly [string, string]> = {
@@ -30,5 +32,14 @@ export function surfaceSummary(tab: SurfaceTab): string {
   const count = typeof tab.count === "number" ? tab.count : 0;
   if (count <= 0) return RESTING[tab.id];
   const [one, many] = NOUNS[tab.id];
-  return `${count} ${count === 1 ? one : many}`;
+  const base = `${count} ${count === 1 ? one : many}`;
+  const live = tab.activity ? activityPhrase(tab.activity, count) : "";
+  return live ? `${base} · ${live}` : base;
+}
+
+function activityPhrase({ failed, running }: LiveTally, count: number): string {
+  const parts: string[] = [];
+  if (running > 0) parts.push(running === count ? "all running" : `${running} running`);
+  if (failed > 0) parts.push(`${failed} failed`);
+  return parts.join(", ");
 }

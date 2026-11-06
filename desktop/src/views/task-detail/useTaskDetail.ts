@@ -30,7 +30,7 @@ import { hunkKey } from "./diffAnchors";
 import { type DiffWorkspaceHandle } from "./DiffWorkspace";
 import { useVanishedPaths } from "./explorer/useVanishedPaths";
 import { formatFileDiffAsMessage } from "./FileDiffView";
-import { taskSurfaceTabs, visibleSurface } from "./surfaceTabs";
+import { useTaskSurfaceTabs, visibleSurface } from "./surfaceTabs";
 import { useSessionFilePath } from "./useSessionFilePath";
 import { useSplitResize } from "./useSplitResize";
 import { useTaskQueries, type ActiveTab } from "./useTaskQueries";
@@ -415,16 +415,12 @@ export function useTaskDetail(task: TaskInfo, snapshot: Snapshot) {
   );
   const pipelineCount = task.orchestrationGraph?.nodes.length || childTrees.length || undefined;
 
-  const surfaceTabs = useMemo(
-    () =>
-      taskSurfaceTabs({
-        chat,
-        diffCount: diff && diff.files.length > 0 ? diff.files.length : undefined,
-        pipelineCount,
-        runtimeCount: services.length + portforwards.length || undefined,
-        terminalCount: terminals.length || undefined,
-      }),
-    [chat, diff, pipelineCount, portforwards.length, services.length, terminals.length],
+  const surfaceTabs = useTaskSurfaceTabs(
+    task,
+    snapshot,
+    chat,
+    diff && diff.files.length > 0 ? diff.files.length : undefined,
+    pipelineCount,
   );
 
   return {

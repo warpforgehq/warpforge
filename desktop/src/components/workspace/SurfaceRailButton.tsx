@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { forwardRef } from "react";
 
+import type { LiveState } from "@/lib/liveActivity";
 import { cn } from "@/lib/utils";
 
 export interface SurfaceRailButtonProps {
@@ -10,6 +11,8 @@ export interface SurfaceRailButtonProps {
   /** Live phrase from `surfaceSummary`, spoken after the label. */
   summary: string;
   shortcut: string;
+  /** Something on this surface is running or failed; failed wins. */
+  activity?: LiveState | null;
   /** The travelling chip parks here: this is the pane that owns the split. */
   active: boolean;
   /** Selected, but its pane is folded away: a brighter icon, no fill of its
@@ -27,7 +30,19 @@ export interface SurfaceRailButtonProps {
  */
 export const SurfaceRailButton = forwardRef<HTMLButtonElement, SurfaceRailButtonProps>(
   function SurfaceRailButton(
-    { railKey, icon: Icon, label, summary, shortcut, active, ghost, onSelect, onFocus, tabIndex },
+    {
+      railKey,
+      icon: Icon,
+      label,
+      summary,
+      shortcut,
+      activity,
+      active,
+      ghost,
+      onSelect,
+      onFocus,
+      tabIndex,
+    },
     ref,
   ) {
     return (
@@ -60,6 +75,16 @@ export const SurfaceRailButton = forwardRef<HTMLButtonElement, SurfaceRailButton
         )}
       >
         <Icon aria-hidden className="size-4" />
+        {activity && (
+          <span
+            aria-hidden
+            data-rail-activity={activity}
+            className={cn(
+              "absolute right-0.5 top-0.5 size-1.5 rounded-full ring-1 ring-background",
+              activity === "failed" ? "bg-destructive" : "bg-ok",
+            )}
+          />
+        )}
         <span
           aria-hidden
           data-surface-peek=""

@@ -1,5 +1,6 @@
 import { ArrowUpRight, CheckCheck, ChevronRight, Inbox, Trash2 } from "lucide-react";
 
+import { ProjectLiveGlyph } from "@/components/liveActivity/LiveActivityGlyph";
 import { cn } from "@/lib/utils";
 
 import {
@@ -147,6 +148,9 @@ export function ProjectRow({
         >
           {row.name}
         </strong>
+        <span className="inline-flex shrink-0 transition-opacity group-hover/proj:opacity-0">
+          <ProjectLiveGlyph project={row.name} />
+        </span>
         {row.attentionCount > 0 && (
           <span
             aria-hidden

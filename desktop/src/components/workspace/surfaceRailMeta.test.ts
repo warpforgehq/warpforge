@@ -25,4 +25,16 @@ describe("surfaceSummary", () => {
     expect(surfaceSummary(tab("runtime"))).toBe("Nothing running");
     expect(surfaceSummary(tab("files"))).toBe("Project tree and editor");
   });
+
+  it("adds what is live without repeating the count", () => {
+    expect(surfaceSummary({ ...tab("runtime", 4), activity: { failed: 0, running: 2 } })).toBe(
+      "4 services and port-forwards · 2 running",
+    );
+    expect(surfaceSummary({ ...tab("runtime", 2), activity: { failed: 2, running: 0 } })).toBe(
+      "2 services and port-forwards · 2 failed",
+    );
+    expect(surfaceSummary({ ...tab("terminal", 1), activity: { failed: 0, running: 1 } })).toBe(
+      "1 session · all running",
+    );
+  });
 });

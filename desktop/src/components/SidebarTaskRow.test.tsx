@@ -6,7 +6,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { daemon } from "@/daemon";
 import { normalizeRunnerStatus } from "@/daemon/runner";
 import { openExternalLink } from "@/lib/externalLinks";
-import type { DaemonEvent, TaskInfo, TaskPullRequest } from "@/protocol";
+import {
+  EMPTY_SNAPSHOT,
+  type DaemonEvent,
+  type Snapshot,
+  type TaskInfo,
+  type TaskPullRequest,
+  type TerminalInfo,
+} from "@/protocol";
 import { useSmithsStore } from "@/store/smiths";
 import { smithFixture } from "@/test/smiths";
 
@@ -195,5 +202,55 @@ describe("SidebarTaskRow for a Smith's task", () => {
   it("keeps the agent logo for a task no Smith runs", () => {
     const { container } = renderRow({ ...base, smithId: null });
     expect(container.querySelector('[data-lane="meta"] [title^="Ada"]')).toBeNull();
+  });
+});
+
+describe("SidebarTaskRow live activity", () => {
+  const setSnapshot = (patch: Partial<Snapshot>) =>
+    act(() =>
+      (daemon as unknown as { setState: (patch: { snapshot: Snapshot }) => void }).setState({
+        snapshot: { ...EMPTY_SNAPSHOT, ...patch },
+      }),
+    );
+
+  afterEach(() => setSnapshot({}));
+
+  const terminal = (taskId: string | null): TerminalInfo => ({
+    cols: 80,
+    command: "/bin/zsh",
+    id: `term-${taskId}`,
+    project: "demo",
+    rows: 24,
+    startedAt: 1,
+    taskId,
+  });
+
+  it("marks a row whose task has an open terminal and lists it in the title", () => {
+    setSnapshot({ terminals: [terminal("t1")] });
+    const { container } = renderRow(base);
+
+    const glyph = container.querySelector("[data-live-activity]");
+    expect(glyph).toHaveAttribute("data-live-activity", "running");
+    expect(glyph).toHaveAttribute("title", "Terminal zsh · running");
+  });
+
+  it("leaves project services and other tasks' terminals to their own rows", () => {
+    setSnapshot({
+      services: [
+        {
+          allocatedPort: 4000,
+          command: "bun dev",
+          logSeq: 0,
+          name: "web",
+          originalPort: 3000,
+          project: "demo",
+          status: "failed",
+        },
+      ],
+      terminals: [terminal("t2"), terminal(null)],
+    });
+    const { container } = renderRow(base);
+
+    expect(container.querySelector("[data-live-activity]")).toBeNull();
   });
 });
