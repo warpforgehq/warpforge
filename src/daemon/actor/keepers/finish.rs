@@ -3,7 +3,6 @@
 
 use warpforge_protocol as wire;
 
-use crate::daemon::acp::TurnInitiator;
 use crate::daemon::actor::Daemon;
 use crate::daemon::keepers::{map_result, reask_prompt, Mapped, SUPERSEDED};
 use crate::daemon::task::now_secs;
@@ -52,17 +51,11 @@ impl Daemon {
 
     /// A checker's turn is its run's result; the task's own turn asks for a
     /// check and lets a waiting fix try again.
-    pub(crate) fn keepers_turn_ended(
-        &mut self,
-        task_id: &str,
-        success: bool,
-        interrupted: bool,
-        initiator: TurnInitiator,
-    ) {
+    pub(crate) fn keepers_turn_ended(&mut self, task_id: &str, success: bool, interrupted: bool) {
         if self.keeper_parent_of(task_id).is_none() {
-            if initiator == TurnInitiator::Keeper {
-                self.keepers_fix_ended(task_id, success && !interrupted);
-            }
+            // A fix is sent only into an idle session, so the first turn to end
+            // after it is the fix turn, whatever initiator the harness reported.
+            self.keepers_fix_ended(task_id, success && !interrupted);
             if !interrupted {
                 self.keepers_nudge(task_id);
             }

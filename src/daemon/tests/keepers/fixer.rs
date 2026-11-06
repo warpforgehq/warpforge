@@ -48,12 +48,12 @@ fn prompts(log: &Path) -> Vec<String> {
         .collect()
 }
 
-fn fix_prompts(setup: &Setup) -> Vec<String> {
+pub(super) fn fix_prompts(setup: &Setup) -> Vec<String> {
     let all = prompts(&setup.fix_log);
     all.into_iter().filter(|p| p.contains(HOLD_FIX)).collect()
 }
 
-async fn until(what: &str, check: impl Fn() -> bool) {
+pub(super) async fn until(what: &str, check: impl Fn() -> bool) {
     timeout(Duration::from_secs(20), async {
         while !check() {
             tokio::time::sleep(Duration::from_millis(30)).await;
@@ -63,7 +63,7 @@ async fn until(what: &str, check: impl Fn() -> bool) {
     .unwrap_or_else(|_| panic!("timed out waiting for {what}"));
 }
 
-async fn state(setup: &Setup) -> wire::KeeperTaskState {
+pub(super) async fn state(setup: &Setup) -> wire::KeeperTaskState {
     let (tx, rx) = tokio::sync::oneshot::channel();
     let ask = KeeperCommand::State {
         task_id: "t_a".into(),
