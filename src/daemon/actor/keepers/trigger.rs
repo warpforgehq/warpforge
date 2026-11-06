@@ -140,10 +140,12 @@ impl Daemon {
         });
         let polled: Vec<String> = results.iter().map(|r| r.task_id.clone()).collect();
         let now = Instant::now();
-        for result in results {
+        for result in &results {
             self.keepers
                 .on
                 .insert(result.task_id.clone(), result.keepers.clone());
+        }
+        for result in results {
             let Some(head) = result.head else {
                 continue;
             };
