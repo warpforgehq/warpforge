@@ -274,28 +274,15 @@ impl Daemon {
         }
     }
 
-    /// Hand the prompt over: its findings become `sent` and each keeper's
-    /// round counts, once per HEAD (invariant 5).
     fn keepers_fix_dispatch(&mut self, task_id: &str, plan: Plan) {
-        let mut prior = Vec::new();
-        let mut guidance = Vec::new();
-        let mut sent = Vec::new();
-        for (definition, findings) in &plan.items {
-            let fix = self.keeper_loop(task_id, &definition.id);
-            if let Some(note) = &fix.guidance {
-                guidance.push((definition.name.clone(), note.clone()));
-            }
-            prior.push((definition.id.clone(), fix.clone()));
-            let mut next = fix;
-            if next.round_head.as_deref() != Some(plan.head.as_str()) {
-                next.rounds += 1;
-                next.round_head = Some(plan.head.clone());
-            }
-            next.pending_head = Some(plan.head.clone());
-            next.guidance = None;
-            self.keeper_set_loop(task_id, &definition.id, next);
-            sent.extend(findings.iter().map(|f| f.id.clone()));
-        }
+        let guidance: Vec<(String, String)> = plan
+            .items
+            .iter()
+            .filter_map(|(definition, _)| {
+                let note = self.keeper_loop(task_id, &definition.id).guidance?;
+                Some((definition.name.clone(), note))
+            })
+            .collect();
         let items: Vec<FixItem<'_>> = plan
             .items
             .iter()
@@ -311,35 +298,78 @@ impl Daemon {
             .map(|(name, note)| (name.as_str(), note.as_str()))
             .collect();
         let text = fix_prompt(&plan.head, &items, &notes);
-        let keepers: Vec<String> = plan.items.iter().map(|(d, _)| d.id.clone()).collect();
-        self.keepers.fixes.insert(
-            task_id.to_string(),
-            Fix {
-                head: plan.head.clone(),
-                keepers: keepers.clone(),
-                phase: FixPhase::Sent {
-                    findings: sent,
-                    prior,
-                },
+        let sent = plan
+            .items
+            .into_iter()
+            .map(|(definition, findings)| (definition.id, findings))
+            .collect();
+        self.keepers_fix_hand_over(task_id, plan.head, sent, text);
+    }
+
+    /// Hand the prompt over: its findings become `sent` and each keeper's
+    /// round counts, once per HEAD (invariant 5); a cut-short turn restores
+    /// each keeper's loop as it was.
+    /// @param task_id the task whose session gets the prompt
+    /// @param head the HEAD the findings were computed on
+    /// @param items each keeper's id and the findings the prompt carries
+    /// @param text the fix prompt
+    pub(super) fn keepers_fix_hand_over(
+        &mut self,
+        task_id: &str,
+        head: String,
+        items: Vec<(String, Vec<wire::KeeperFinding>)>,
+        text: String,
+    ) {
+        let mut prior = Vec::new();
+        let mut sent = Vec::new();
+        for (keeper_id, findings) in &items {
+            let fix = self.keeper_loop(task_id, keeper_id);
+            prior.push((keeper_id.clone(), fix.clone()));
+            let mut next = wire::KeeperLoop {
+                stop: None,
+                pending_head: Some(head.clone()),
+                guidance: None,
+                ..fix
+            };
+            if next.round_head.as_deref() != Some(head.as_str()) {
+                next.rounds += 1;
+                next.round_head = Some(head.clone());
+            }
+            self.keeper_set_loop(task_id, keeper_id, next);
+            sent.extend(findings.iter().map(|f| f.id.clone()));
+        }
+        let keepers: Vec<String> = items.iter().map(|(id, _)| id.clone()).collect();
+        let fix = Fix {
+            head,
+            keepers: keepers.clone(),
+            phase: FixPhase::Sent {
+                findings: sent,
+                prior,
             },
-        );
-        for (_, findings) in plan.items {
-            for finding in findings {
-                let finding = wire::KeeperFinding {
-                    status: Status::Sent,
-                    ..finding
-                };
-                self.keepers
-                    .put_finding(&self.persist, &self.tasks, task_id, finding);
+        };
+        let mut told = keepers;
+        if let Some(old) = self.keepers.fixes.insert(task_id.to_string(), fix) {
+            for id in old.keepers {
+                if !told.contains(&id) {
+                    told.push(id);
+                }
             }
         }
-        for keeper_id in &keepers {
+        for finding in items.into_iter().flat_map(|(_, findings)| findings) {
+            let finding = wire::KeeperFinding {
+                status: Status::Sent,
+                ..finding
+            };
+            self.keepers
+                .put_finding(&self.persist, &self.tasks, task_id, finding);
+        }
+        for keeper_id in &told {
             self.keeper_emit_loop(task_id, keeper_id);
         }
         self.keepers_fix_send(task_id, text);
     }
 
-    pub(super) fn keepers_fix_send(&self, task_id: &str, text: String) {
+    fn keepers_fix_send(&self, task_id: &str, text: String) {
         let cmd_tx = self.cmd_tx.clone();
         let task_id = task_id.to_string();
         tokio::spawn(async move {

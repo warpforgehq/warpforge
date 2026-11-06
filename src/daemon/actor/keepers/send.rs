@@ -6,7 +6,7 @@ use std::path::Path;
 use warpforge_protocol as wire;
 use wire::{KeeperFindingStatus as Status, KeeperOutcome as Outcome};
 
-use super::{Fix, FixPhase, KeeperCommand, Reply};
+use super::{FixPhase, KeeperCommand, Reply};
 use crate::daemon::actor::{Command, Daemon};
 use crate::daemon::keepers::{list_keepers, owner_fix_prompt, FixItem, SUPERSEDED};
 
@@ -78,10 +78,12 @@ impl Daemon {
         if sent {
             return Err("the task's agent is already fixing keeper findings".into());
         }
-        let (head, findings) = self.keepers_open_findings(task_id, keeper_id);
-        if findings.is_empty() {
+        let Some((head, findings)) = self
+            .keepers_open_findings(task_id, keeper_id)
+            .filter(|(_, findings)| !findings.is_empty())
+        else {
             return Err("this keeper has no open findings to send".into());
-        }
+        };
         if let Some(reason) = self
             .keepers_session_busy(task_id)
             .or_else(|| self.keepers_shared_checkout_busy(task_id))
@@ -109,44 +111,8 @@ impl Daemon {
             })
             .collect();
         let text = owner_fix_prompt(&head, &items, &guidance);
-
-        let mut next = wire::KeeperLoop {
-            stop: None,
-            pending_head: Some(head.clone()),
-            guidance: None,
-            ..fix.clone()
-        };
-        if next.round_head.as_deref() != Some(head.as_str()) {
-            next.rounds += 1;
-            next.round_head = Some(head.clone());
-        }
-        self.keeper_set_loop(task_id, keeper_id, next);
-        let replaced = self.keepers.fixes.insert(
-            task_id.to_string(),
-            Fix {
-                head,
-                keepers: vec![keeper_id.to_string()],
-                phase: FixPhase::Sent {
-                    findings: findings.iter().map(|f| f.id.clone()).collect(),
-                    prior: vec![(keeper_id.to_string(), fix)],
-                },
-            },
-        );
-        for finding in findings {
-            let finding = wire::KeeperFinding {
-                status: Status::Sent,
-                ..finding
-            };
-            self.keepers
-                .put_finding(&self.persist, &self.tasks, task_id, finding);
-        }
-        let mut told = replaced.map(|old| old.keepers).unwrap_or_default();
-        told.retain(|id| id != keeper_id);
-        told.push(keeper_id.to_string());
-        for id in &told {
-            self.keeper_emit_loop(task_id, id);
-        }
-        self.keepers_fix_send(task_id, text);
+        let sent = vec![(keeper_id.to_string(), findings)];
+        self.keepers_fix_hand_over(task_id, head, sent, text);
         Ok(())
     }
 
@@ -156,26 +122,22 @@ impl Daemon {
         &self,
         task_id: &str,
         keeper_id: &str,
-    ) -> (String, Vec<wire::KeeperFinding>) {
-        let Some(state) = self.keepers.task(task_id) else {
-            return (String::new(), Vec::new());
-        };
-        let last = state
+    ) -> Option<(String, Vec<wire::KeeperFinding>)> {
+        let state = self.keepers.task(task_id)?;
+        let run = state
             .runs
             .iter()
             .filter(|run| run.keeper_id == keeper_id)
             .filter(|run| run.outcome.is_some_and(|o| o != Outcome::Skipped))
             .filter(|run| run.error.as_deref() != Some(SUPERSEDED))
-            .max_by_key(|run| run.run_number);
-        let Some(run) = last.filter(|run| run.outcome == Some(Outcome::Findings)) else {
-            return (String::new(), Vec::new());
-        };
+            .max_by_key(|run| run.run_number)
+            .filter(|run| run.outcome == Some(Outcome::Findings))?;
         let open = state
             .findings
             .iter()
             .filter(|f| f.run_id == run.id && f.status == Status::Open)
             .cloned()
             .collect();
-        (run.head_sha.clone(), open)
+        Some((run.head_sha.clone(), open))
     }
 }
