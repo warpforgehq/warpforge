@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { keeperLiveItems } from "@/lib/liveActivity";
 import type { KeeperTaskState } from "@/protocol";
 import { finding, run } from "@/test/keepers";
 
@@ -8,6 +9,7 @@ import {
   applyKeeperEvent,
   currentFindings,
   keeperAttentionReasons,
+  keeperMark,
   keeperOn,
   keeperPushWarnings,
   keeperRuns,
@@ -227,6 +229,16 @@ describe("keeper dot and attention", () => {
     expect(keeperWorst(stopped)).toBe("failing");
     const offed = state({ runs: [findings], switches: { overrides: { slop: false } } });
     expect(keeperWorst(offed)).toBeNull();
+  });
+
+  it("marks a fix in progress as checking and waiting findings as failing, on every surface", () => {
+    expect(keeperMark({ findings: 2, status: "fixing" })).toBe("checking");
+    expect(keeperMark({ findings: 2, status: "waiting" })).toBe("failing");
+    expect(keeperMark({ findings: 0, status: "waiting" })).toBeNull();
+    expect(keeperMark({ findings: 0, status: "green" })).toBeNull();
+    const fixing = state({ loops: { slop: { ...loop, status: "fixing" } }, runs: [findings] });
+    expect(keeperWorst(fixing)).toBe("running");
+    expect(keeperLiveItems(fixing).map((item) => item.state)).toEqual(["running"]);
   });
 
   it("asks the owner only for keepers whose loop stopped, not for findings being fixed", () => {
