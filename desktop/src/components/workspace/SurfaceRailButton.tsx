@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { forwardRef } from "react";
 
-import type { LiveState } from "@/lib/liveActivity";
+import { LIVE_SURFACE, type LiveState } from "@/lib/liveActivity";
 import { cn } from "@/lib/utils";
 
 export interface SurfaceRailButtonProps {
@@ -81,7 +81,11 @@ export const SurfaceRailButton = forwardRef<HTMLButtonElement, SurfaceRailButton
             data-rail-activity={activity}
             className={cn(
               "absolute right-0.5 top-0.5 size-1.5 rounded-full ring-1 ring-background",
-              activity === "failed" ? "bg-destructive" : "bg-ok",
+              activity === "failed"
+                ? "bg-destructive"
+                : railKey === `surface:${LIVE_SURFACE.keeper}`
+                  ? "bg-muted-foreground motion-safe:animate-pulse"
+                  : "bg-ok",
             )}
           />
         )}

@@ -13,6 +13,7 @@ import {
   type LiveKind,
   liveItemLabel,
   liveState,
+  liveToneClass,
   liveTally,
 } from "@/lib/liveActivity";
 import { cn } from "@/lib/utils";
@@ -48,7 +49,13 @@ export function LiveActivityGlyph({
     >
       <Icon
         aria-hidden
-        className={cn("size-3", state === "failed" ? "text-destructive" : "text-ok/80")}
+        className={cn(
+          "size-3",
+          liveToneClass(
+            state,
+            items.every((item) => item.kind === "keeper"),
+          ),
+        )}
       />
       <span className="sr-only">{summary}</span>
     </span>

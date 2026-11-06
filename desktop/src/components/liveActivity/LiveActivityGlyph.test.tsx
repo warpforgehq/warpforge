@@ -36,6 +36,19 @@ describe("LiveActivityGlyph", () => {
     expect(glyph).toHaveAttribute("title", "Service web · running\nPort-forward db · failed");
     expect(glyph?.querySelector("svg")).toHaveClass("text-destructive");
   });
+
+  it("draws a keeper's check grey, not green, so it never reads as passed", () => {
+    const keeper = { kind: "keeper", name: "Review", scope: "task", state: "running" } as const;
+    const checking = render(<LiveActivityGlyph items={[keeper]} />);
+    const icon = checking.container.querySelector("svg");
+    expect(icon).toHaveClass("text-muted-foreground");
+    expect(icon).not.toHaveClass("text-ok/80");
+    checking.unmount();
+
+    const terminal = { kind: "terminal", name: "zsh", scope: "task", state: "running" } as const;
+    const { container } = render(<LiveActivityGlyph items={[terminal]} />);
+    expect(container.querySelector("svg")).toHaveClass("text-ok/80");
+  });
 });
 
 describe("ProjectLiveGlyph", () => {
