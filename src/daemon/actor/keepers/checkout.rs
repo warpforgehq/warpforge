@@ -85,6 +85,25 @@ impl Daemon {
         !owned && latest == Some(task_id)
     }
 
+    /// An explicit check claims a branch no folder task of the project owns,
+    /// for a task that owns none yet.
+    pub(super) fn keepers_adopt(&mut self, task_id: &str, branch: &str) {
+        let Some(task) = self.tasks.get(task_id) else {
+            return;
+        };
+        if task.keepers.as_ref().is_some_and(|k| k.branch.is_some()) {
+            return;
+        }
+        let owned = self.tasks.values().any(|other| {
+            other.project == task.project
+                && other.worktree.is_none()
+                && other.keepers.as_ref().and_then(|k| k.branch.as_deref()) == Some(branch)
+        });
+        if !owned {
+            self.keepers_claim(task_id, branch);
+        }
+    }
+
     /// The branch moves to `task_id`; other tasks of the project's checkout
     /// that owned it let it go.
     fn keepers_claim(&mut self, task_id: &str, branch: &str) {

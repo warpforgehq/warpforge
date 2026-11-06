@@ -7,7 +7,7 @@ use crate::daemon::actor::keepers::checkout::{NO_BRANCH, SHARED_CHECKOUT_BUSY};
 use wire::KeeperLoopStatus;
 
 /// Point the scripted git at the project's checkout, on `branch`.
-fn on_branch(setup: &Setup, branch: Option<&str>) -> String {
+pub(super) fn on_branch(setup: &Setup, branch: Option<&str>) -> String {
     let root = setup.projects[0].path.clone();
     let mut s = setup.script.lock().unwrap();
     let change = s.changes[&setup.worktree].clone();

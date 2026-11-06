@@ -134,6 +134,12 @@ impl Daemon {
         if let Some(keepers) = self.keepers.on.get_mut(task_id) {
             keepers.retain(|definition| definition.id != keeper_id);
         }
+        if let Some(ready) = self.keepers.ready.get_mut(task_id) {
+            ready
+                .keepers
+                .retain(|definition| definition.id != keeper_id);
+            ready.queued.retain(|definition| definition.id != keeper_id);
+        }
         self.keeper_emit_loop(task_id, keeper_id);
         self.keepers_fix(task_id, None);
         Ok(())

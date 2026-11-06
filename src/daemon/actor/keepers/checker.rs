@@ -44,6 +44,7 @@ impl Daemon {
         &mut self,
         task_id: &str,
         head: &str,
+        trigger: wire::KeeperWhen,
         keepers: Vec<wire::KeeperDefinition>,
         change: Result<Change, String>,
     ) {
@@ -55,24 +56,37 @@ impl Daemon {
         let Some(task) = self.tasks.get(task_id).cloned() else {
             return;
         };
-        let watched = self.keepers.watches.get(task_id).and_then(|w| w.head());
-        if watched != Some(head) || !self.keeper_candidate(&task) {
+        let current = match trigger {
+            wire::KeeperWhen::Commit => {
+                self.keepers.watches.get(task_id).and_then(|w| w.head()) == Some(head)
+            }
+            _ => self
+                .keepers
+                .ready
+                .get(task_id)
+                .is_some_and(|r| r.head == head),
+        };
+        if !current || !self.keeper_candidate(&task) {
             return;
         }
         for definition in keepers {
-            if !self.keeper_due(task_id, &definition.id, head) {
+            let due = match trigger {
+                wire::KeeperWhen::Commit => self.keeper_due(task_id, &definition.id, head),
+                _ => !self.keeper_busy(task_id, &definition.id),
+            };
+            if !due {
                 continue;
             }
             let change = match &change {
                 Ok(change) => change,
                 Err(error) => {
-                    let run = self.keeper_new_run(task_id, &definition.id, head, None);
+                    let run = self.keeper_new_run(task_id, &definition.id, trigger, head, None);
                     self.keeper_close(run, wire::KeeperOutcome::Error, error.clone());
                     continue;
                 }
             };
             if !touches(&definition.paths, &change.files) {
-                let run = self.keeper_new_run(task_id, &definition.id, head, Some(change));
+                let run = self.keeper_new_run(task_id, &definition.id, trigger, head, Some(change));
                 let reason = "the change touches none of the keeper's paths".to_string();
                 self.keeper_close(run, wire::KeeperOutcome::Skipped, reason);
                 continue;
@@ -85,19 +99,26 @@ impl Daemon {
             if let Some(reason) = self.dispatch_refusal(&agent, account) {
                 let latest = self.keepers.latest_run(task_id, &definition.id);
                 if !latest.is_some_and(|run| run.head_sha == head && is_quota_skip(run)) {
-                    let run = self.keeper_new_run(task_id, &definition.id, head, Some(change));
+                    let run =
+                        self.keeper_new_run(task_id, &definition.id, trigger, head, Some(change));
                     let reason = format!("{QUOTA_SKIP}: {reason}");
                     self.keeper_close(run, wire::KeeperOutcome::Skipped, reason);
                 }
                 continue;
             }
             if self.keepers.in_flight.len() >= MAX_CHECKERS {
-                if let Some(watch) = self.keepers.watches.get_mut(task_id) {
-                    watch.nudge();
+                match (trigger, self.keepers.ready.get_mut(task_id)) {
+                    (wire::KeeperWhen::Commit, _) => {
+                        if let Some(watch) = self.keepers.watches.get_mut(task_id) {
+                            watch.nudge();
+                        }
+                    }
+                    (_, Some(ready)) => ready.queued.push(definition),
+                    (_, None) => {}
                 }
                 continue;
             }
-            self.keeper_start(&task, definition, agent, head, change);
+            self.keeper_start(&task, definition, agent, trigger, head, change);
         }
         self.keepers_fix(task_id, None);
     }
@@ -106,6 +127,7 @@ impl Daemon {
         &self,
         task_id: &str,
         keeper_id: &str,
+        trigger: wire::KeeperWhen,
         head: &str,
         change: Option<&Change>,
     ) -> wire::KeeperRun {
@@ -118,7 +140,7 @@ impl Daemon {
             task_id: task_id.to_string(),
             keeper_id: keeper_id.to_string(),
             run_number,
-            trigger: wire::KeeperWhen::Commit,
+            trigger,
             head_sha: head.to_string(),
             base_sha: change.and_then(|c| c.base_sha.clone()),
             started_at: now_secs(),
@@ -144,6 +166,7 @@ impl Daemon {
         task: &Task,
         definition: wire::KeeperDefinition,
         agent: String,
+        trigger: wire::KeeperWhen,
         head: &str,
         change: &Change,
     ) {
@@ -160,7 +183,7 @@ impl Daemon {
             rules: change.rules.clone(),
         };
         let prompt = render_prompt(&definition, &vars);
-        let mut run = self.keeper_new_run(&task.id, &definition.id, head, Some(change));
+        let mut run = self.keeper_new_run(&task.id, &definition.id, trigger, head, Some(change));
         let existing = self.keeper_checker(&task.id, &definition.id);
         let checker = match existing.clone() {
             Some(checker) => checker,

@@ -132,8 +132,11 @@ impl Daemon {
         self.keepers
             .on
             .retain(|task_id, _| eligible.contains(task_id.as_str()));
+        let ready = &self.keepers.ready;
         self.keepers.fixes.retain(|task_id, fix| {
-            eligible.contains(task_id.as_str()) || matches!(fix.phase, super::FixPhase::Sent { .. })
+            eligible.contains(task_id.as_str())
+                || ready.contains_key(task_id)
+                || matches!(fix.phase, super::FixPhase::Sent { .. })
         });
         let polled: Vec<String> = results.iter().map(|r| r.task_id.clone()).collect();
         let now = Instant::now();
@@ -174,7 +177,7 @@ impl Daemon {
                 .filter(|keeper| self.keeper_due(&result.task_id, &keeper.id, &head))
                 .collect();
             if !due.is_empty() {
-                self.keepers_gather(&result.task_id, head, due);
+                self.keepers_gather(&result.task_id, head, due, wire::KeeperWhen::Commit);
             }
         }
         for task_id in polled {
@@ -188,16 +191,7 @@ impl Daemon {
     /// Not being read or checked already, and its last check was of another
     /// HEAD or was refused by the quota gate.
     pub(super) fn keeper_due(&self, task_id: &str, keeper_id: &str, head: &str) -> bool {
-        let key = (task_id.to_string(), keeper_id.to_string());
-        if self.keepers.gathering.contains(&key) {
-            return false;
-        }
-        let busy = self
-            .keepers
-            .in_flight
-            .values()
-            .any(|run| run.task_id == task_id && run.definition.id == keeper_id);
-        if busy {
+        if self.keeper_busy(task_id, keeper_id) {
             return false;
         }
         match self.keepers.latest_run(task_id, keeper_id) {
@@ -206,11 +200,23 @@ impl Daemon {
         }
     }
 
-    fn keepers_gather(
+    /// Its change is being read, or a checker is on it.
+    pub(super) fn keeper_busy(&self, task_id: &str, keeper_id: &str) -> bool {
+        let key = (task_id.to_string(), keeper_id.to_string());
+        self.keepers.gathering.contains(&key)
+            || self
+                .keepers
+                .in_flight
+                .values()
+                .any(|run| run.task_id == task_id && run.definition.id == keeper_id)
+    }
+
+    pub(super) fn keepers_gather(
         &mut self,
         task_id: &str,
         head: String,
         keepers: Vec<wire::KeeperDefinition>,
+        trigger: wire::KeeperWhen,
     ) {
         let Some(task) = self.tasks.get(task_id) else {
             return;
@@ -238,6 +244,7 @@ impl Daemon {
                 .send(Command::Keepers(KeeperCommand::Gathered {
                     task_id,
                     head,
+                    trigger,
                     keepers,
                     change,
                 }))

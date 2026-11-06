@@ -64,10 +64,13 @@ impl Daemon {
         task_id: &str,
         keeper_id: &str,
     ) -> Option<&wire::KeeperDefinition> {
+        let ready = self.keepers.ready.get(task_id).map(|ready| &ready.keepers);
         self.keepers
             .on
-            .get(task_id)?
-            .iter()
+            .get(task_id)
+            .into_iter()
+            .chain(ready)
+            .flatten()
             .find(|definition| definition.id == keeper_id)
     }
 
