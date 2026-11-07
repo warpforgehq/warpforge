@@ -160,6 +160,9 @@ export function liveItemLabel(item: LiveItem): string {
 
 const CHECKING_PULSE = "motion-safe:animate-pulse";
 
+/** A dot for a keeper still checking: a grey pulse, since green reads as passed. */
+export const CHECKING_DOT = `bg-muted-foreground ${CHECKING_PULSE}`;
+
 /**
  * Tone for a live mark: red when something failed; a keeper still checking
  * pulses grey, since green would read as "passed"; anything else running is green.
@@ -180,5 +183,5 @@ export function liveToneClass(state: LiveState, checking: boolean): string {
  */
 export function liveDotClass(state: LiveState, surface: WorkspaceSurface): string {
   if (state === "failed") return "bg-destructive";
-  return surface === LIVE_SURFACE.keeper ? `bg-muted-foreground ${CHECKING_PULSE}` : "bg-ok";
+  return surface === LIVE_SURFACE.keeper ? CHECKING_DOT : "bg-ok";
 }

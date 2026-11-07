@@ -1,9 +1,10 @@
 import type { KeeperWorst } from "@/lib/keepers";
+import { CHECKING_DOT } from "@/lib/liveActivity";
 import { cn } from "@/lib/utils";
 
 export const KEEPER_WORST_META: Record<KeeperWorst, { label: string; dotClass: string }> = {
   failing: { dotClass: "bg-destructive", label: "Keepers need attention" },
-  running: { dotClass: "bg-muted-foreground motion-safe:animate-pulse", label: "Keepers checking" },
+  running: { dotClass: CHECKING_DOT, label: "Keepers checking" },
 };
 
 /**
