@@ -331,8 +331,10 @@ into a force-send (ADR 0011).
 
 **Send to agent is the owner's manual fix.** The automatic loop sends findings
 only while they are on the HEAD it is fixing, so a ready keeper's findings are
-lost to it once anyone commits again, and a task that lost its branch, or a
-keeper the owner accepted, has no way back. The Keepers tab's **Send to
+lost to it once anyone commits again, and a keeper the owner accepted has no
+way back. A task that lost its branch is not one of these cases: its findings
+are superseded, and the branch's new owner's next check reports what still
+holds. The Keepers tab's **Send to
 agent** (`keepers.sendFindings`) sends one keeper's open findings of its
 latest counted run as one `Keeper` fix turn, whatever HEAD they were found on:
 the owner has read them and decides they still matter. The prompt names the
