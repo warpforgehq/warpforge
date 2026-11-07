@@ -1,6 +1,7 @@
 //! Keepers (ADR 0030): the HEAD trigger and the read-only checker, driven by
 //! a scripted git and a mock checker agent.
 
+mod attribution;
 mod checkout;
 mod fix_turn;
 mod fixer;

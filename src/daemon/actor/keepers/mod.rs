@@ -67,6 +67,11 @@ pub enum KeeperCommand {
     },
     /// The fix prompt did not reach the task's session.
     FixUndelivered { task_id: String, error: String },
+    /// The checkout's HEAD, read when a folder task's turn started.
+    TurnHead {
+        task_id: String,
+        head: Option<String>,
+    },
     /// The owner rejects a finding.
     Dismiss {
         task_id: String,
@@ -124,6 +129,9 @@ pub enum KeeperCommand {
     },
     #[cfg(test)]
     Script(GitSource),
+    /// A test's stand-in for a session's `TurnStarted`.
+    #[cfg(test)]
+    TurnBegan { task_id: String },
 }
 
 /// One eligible task as a poll saw it.
@@ -251,6 +259,7 @@ impl Daemon {
                 head,
                 quiet,
             } => self.keepers_fix_gated(&task_id, &head, quiet),
+            KeeperCommand::TurnHead { task_id, head } => self.keepers_turn_head(&task_id, head),
             KeeperCommand::FixUndelivered { task_id, error } => {
                 self.keepers_fix_revert(&task_id, Some(error));
             }
@@ -315,6 +324,8 @@ impl Daemon {
             }
             #[cfg(test)]
             KeeperCommand::Script(git) => self.keepers.git = git,
+            #[cfg(test)]
+            KeeperCommand::TurnBegan { task_id } => self.keepers_turn_started(&task_id),
         }
     }
 

@@ -35,6 +35,7 @@ impl Daemon {
         if let Some(task) = self.tasks.get(task_id).filter(|t| t.worktree.is_none()) {
             let head = self.keepers.folder_heads.get(&task.project).cloned();
             self.keepers.turn_heads.insert(task_id.to_string(), head);
+            self.keepers_read_turn_head(task_id);
         }
         let Some(run_id) = self.keeper_flight_of(task_id) else {
             return;

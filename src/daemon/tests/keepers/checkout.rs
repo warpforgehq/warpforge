@@ -20,7 +20,7 @@ pub(super) fn on_branch(setup: &Setup, branch: Option<&str>) -> String {
     root
 }
 
-async fn switches(daemon: &DaemonHandle, task_id: &str) -> wire::TaskKeepers {
+pub(super) async fn switches(daemon: &DaemonHandle, task_id: &str) -> wire::TaskKeepers {
     let task = daemon.tasks().await.into_iter().find(|t| t.id == task_id);
     task.and_then(|t| t.keepers).unwrap_or_default()
 }
@@ -196,7 +196,7 @@ async fn a_turn_that_moved_no_head_does_not_take_the_branch() {
     setup.daemon.shutdown().await;
 }
 
-async fn until_branch(setup: &Setup, task_id: &str, branch: Option<&str>) {
+pub(super) async fn until_branch(setup: &Setup, task_id: &str, branch: Option<&str>) {
     timeout(Duration::from_secs(10), async {
         loop {
             setup
@@ -214,7 +214,7 @@ async fn until_branch(setup: &Setup, task_id: &str, branch: Option<&str>) {
 }
 
 /// Move the shared checkout's HEAD, as a folder task's commit would.
-async fn move_checkout_head(setup: &Setup, sha: &str) {
+pub(super) async fn move_checkout_head(setup: &Setup, sha: &str) {
     let root = setup.projects[0].path.clone();
     let mut s = setup.script.lock().unwrap();
     s.heads.insert(root.clone(), sha.into());
@@ -251,6 +251,7 @@ async fn a_mid_turn_commit_is_attributed_to_the_running_task() {
         .daemon
         .set_task_status("t_b", TaskStatus::Running)
         .await;
+    turn_began(&setup, "t_b").await;
     move_checkout_head(&setup, "sha2").await;
     setup
         .daemon
@@ -292,10 +293,12 @@ async fn two_mid_turn_sessions_hold_the_check_until_one_ends() {
         .daemon
         .set_task_status("t_b", TaskStatus::Running)
         .await;
+    turn_began(&setup, "t_b").await;
     setup
         .daemon
         .set_task_status("t_c", TaskStatus::Running)
         .await;
+    turn_began(&setup, "t_c").await;
     move_checkout_head(&setup, "sha2").await;
     commit(&setup, "t_a").await;
 
@@ -442,6 +445,7 @@ async fn a_hand_commit_with_nobody_running_stays_with_the_owner() {
         .daemon
         .set_task_status("t_b", TaskStatus::Running)
         .await;
+    turn_began(&setup, "t_b").await;
     setup
         .daemon
         .send(Command::Keepers(KeeperCommand::Poll))
@@ -461,4 +465,15 @@ async fn a_hand_commit_with_nobody_running_stays_with_the_owner() {
     let (run, _) = keeper_event(&mut setup, |r| finished(r) && r.head_sha == "sha2").await;
     assert_eq!(run.task_id, "t_a");
     setup.daemon.shutdown().await;
+}
+
+/// Running, as a session whose turn just started: the daemon notes the HEAD
+/// it began on.
+async fn turn_began(setup: &Setup, task_id: &str) {
+    let began = KeeperCommand::TurnBegan {
+        task_id: task_id.into(),
+    };
+    setup.daemon.send(Command::Keepers(began)).await;
+    // The HEAD is read off the loop; let that read land before HEAD moves.
+    tokio::time::sleep(Duration::from_millis(100)).await;
 }

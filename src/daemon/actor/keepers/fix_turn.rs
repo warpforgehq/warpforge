@@ -39,9 +39,11 @@ impl Daemon {
     /// Note the fixer's reply on each finding it did not fix; the status
     /// stays, as only the owner resolves a finding.
     fn keepers_record_replies(&mut self, task_id: &str, sent: &[String]) {
-        let closing = self.collect_stage_text(task_id).closing;
+        // The whole turn, not only the text after its last tool call: the
+        // fixer may commit or run checks after writing its answer.
+        let text = self.collect_stage_text(task_id).full;
         let mut runs = BTreeSet::new();
-        for (index, reply) in parse_replies(&closing, sent.len()) {
+        for (index, reply) in parse_replies(&text, sent.len()) {
             let Some(finding) = self
                 .keepers
                 .task(task_id)
