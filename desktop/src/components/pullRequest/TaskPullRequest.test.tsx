@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { daemon } from "@/daemon";
 import { normalizeKeeperState } from "@/lib/keepers";
 import type { DaemonEvent, KeeperTaskState, TaskInfo, TaskPullRequest } from "@/protocol";
-import { run } from "@/test/keepers";
+import { finding, run } from "@/test/keepers";
 
 import { TaskPullRequestChip } from "./TaskPullRequestChip";
 import { TaskPullRequestGlyph } from "./TaskPullRequestGlyph";
@@ -78,10 +78,19 @@ describe("task pull request", () => {
   });
 
   it("overlays the keepers' worst state on the glyph and the chip", () => {
-    const keepers = (runs: Parameters<typeof run>[0][]) =>
+    const keepers = (
+      runs: Parameters<typeof run>[0][],
+      findings: Parameters<typeof finding>[0][] = [],
+    ) =>
       act(() =>
         internals.setState({
-          taskKeepers: { t1: { ...normalizeKeeperState("t1", null), runs: runs.map(run) } },
+          taskKeepers: {
+            t1: {
+              ...normalizeKeeperState("t1", null),
+              findings: findings.map(finding),
+              runs: runs.map(run),
+            },
+          },
         }),
       );
     vi.spyOn(daemon, "request").mockResolvedValue({ pullRequests: {} });
@@ -96,7 +105,7 @@ describe("task pull request", () => {
     expect(container.querySelectorAll("[data-task-keepers='running']")).toHaveLength(2);
     expect(screen.getByTitle("PR #12 · Open · Keepers checking")).toBeInTheDocument();
 
-    keepers([{ count: 1, id: "r1", outcome: "findings" }]);
+    keepers([{ count: 1, id: "r1", outcome: "findings" }], [{ id: "f1", runId: "r1" }]);
     expect(container.querySelectorAll("[data-task-keepers='failing']")).toHaveLength(2);
     expect(
       screen.getByRole("button", {

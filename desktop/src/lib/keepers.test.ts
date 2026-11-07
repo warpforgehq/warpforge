@@ -32,7 +32,7 @@ const state = (fields: Partial<KeeperTaskState>): KeeperTaskState => ({
 describe("ready keepers", () => {
   it("reads a draft as neither green nor red and keeps its text", () => {
     const draft = run({ draft: "TL;DR", id: "d1", outcome: "draft" });
-    expect(keeperStatus(true, [draft], undefined)).toBe("draft");
+    expect(keeperStatus(true, [draft], undefined, 0)).toBe("draft");
     expect(stripTone(draft)).toBe("grey");
     expect(latestDraft([draft])).toBe("TL;DR");
     expect(latestDraft([draft, run({ id: "g1" })])).toBeNull();
@@ -56,20 +56,20 @@ describe("ready keepers", () => {
 describe("keeper status", () => {
   it("reads off, running, fixing, waiting and needs-you before the last outcome", () => {
     const green = [run({ id: "r1" })];
-    expect(keeperStatus(false, green, undefined)).toBe("off");
-    expect(keeperStatus(true, [...green, run({ id: "r2", outcome: null })], undefined)).toBe(
+    expect(keeperStatus(false, green, undefined, 0)).toBe("off");
+    expect(keeperStatus(true, [...green, run({ id: "r2", outcome: null })], undefined, 0)).toBe(
       "running",
     );
     const loop = { maxRounds: 3, rounds: 1 };
-    expect(keeperStatus(true, green, { ...loop, status: "fixing" })).toBe("fixing");
-    expect(keeperStatus(true, green, { ...loop, status: "waiting", reason: "dirty" })).toBe(
+    expect(keeperStatus(true, green, { ...loop, status: "fixing" }, 0)).toBe("fixing");
+    expect(keeperStatus(true, green, { ...loop, status: "waiting", reason: "dirty" }, 0)).toBe(
       "waiting",
     );
-    expect(keeperStatus(true, green, { ...loop, status: "needs_you", stop: "max_rounds" })).toBe(
+    expect(keeperStatus(true, green, { ...loop, status: "needs_you", stop: "max_rounds" }, 0)).toBe(
       "needs_you",
     );
-    expect(keeperStatus(true, green, { ...loop, status: "idle" })).toBe("green");
-    expect(keeperStatus(true, [], undefined)).toBe("idle");
+    expect(keeperStatus(true, green, { ...loop, status: "idle" }, 0)).toBe("green");
+    expect(keeperStatus(true, [], undefined, 0)).toBe("idle");
   });
 
   it("ignores superseded and skipped runs when reading the last outcome", () => {
@@ -78,10 +78,16 @@ describe("keeper status", () => {
       run({ error: "superseded", id: "r2", outcome: "skipped" }),
       run({ error: "superseded", id: "r3", outcome: null }),
     ];
-    expect(keeperStatus(true, runs, undefined)).toBe("findings");
-    expect(keeperStatus(true, [run({ id: "r4", outcome: "inconclusive" })], undefined)).toBe(
+    expect(keeperStatus(true, runs, undefined, 2)).toBe("findings");
+    expect(keeperStatus(true, [run({ id: "r4", outcome: "inconclusive" })], undefined, 0)).toBe(
       "inconclusive",
     );
+  });
+
+  it("reads a findings run with no open findings as quiet, not failing", () => {
+    const superseded = [run({ count: 1, id: "r1", outcome: "findings" })];
+    expect(keeperStatus(true, superseded, undefined, 0)).toBe("green");
+    expect(keeperStatus(true, superseded, undefined, 1)).toBe("findings");
   });
 
   it("follows the task's switch over the file's default", () => {
@@ -154,6 +160,7 @@ describe("task.keeper", () => {
 
   it("marks running keepers and those that need the owner, leaving off ones out", () => {
     const s = state({
+      findings: [finding({ id: "f2", runId: "r2" })],
       loops: { slop: { maxRounds: 3, rounds: 3, status: "needs_you", stop: "max_rounds" } },
       runs: [
         run({ id: "r1", outcome: null }),
@@ -172,6 +179,7 @@ describe("task.keeper", () => {
 
   it("warns a push about every keeper that is not green, and not about the green ones", () => {
     const s = state({
+      findings: [finding({ id: "f2", runId: "r2" })],
       loops: { slop: { maxRounds: 3, rounds: 3, status: "needs_you", stop: "max_rounds" } },
       runs: [
         run({ id: "r1", outcome: null }),
@@ -224,11 +232,29 @@ describe("keeper dot and attention", () => {
     expect(keeperWorst(undefined)).toBeNull();
     expect(keeperWorst(state({ runs: [run({ id: "g" })] }))).toBeNull();
     expect(keeperWorst(state({ runs: [checking] }))).toBe("running");
-    expect(keeperWorst(state({ runs: [checking, findings] }))).toBe("failing");
+    const withFindings = state({
+      findings: [finding({ id: "f2", runId: "f" })],
+      runs: [checking, findings],
+    });
+    expect(keeperWorst(withFindings)).toBe("failing");
     const stopped = state({ loops: { review: { ...loop, status: "needs_you" } } });
     expect(keeperWorst(stopped)).toBe("failing");
     const offed = state({ runs: [findings], switches: { overrides: { slop: false } } });
     expect(keeperWorst(offed)).toBeNull();
+  });
+
+  it("does not read a run whose findings are all superseded as failing", () => {
+    const s = state({
+      findings: [finding({ id: "f1", runId: "f", status: "superseded" })],
+      runs: [findings],
+    });
+    expect(activeKeepers(s).find((k) => k.id === "slop")).toEqual({
+      findings: 0,
+      id: "slop",
+      status: "green",
+    });
+    expect(keeperWorst(s)).toBeNull();
+    expect(keeperPushWarnings(s)).toEqual([]);
   });
 
   it("marks a fix in progress as checking and waiting findings as failing, on every surface", () => {

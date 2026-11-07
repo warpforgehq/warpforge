@@ -48,8 +48,8 @@ export function KeeperCard({
   const on = keeperOn(entry.id, definition, state);
   const runs = keeperRuns(state, entry.id);
   const loop = state?.loops[entry.id];
-  const status = keeperStatus(on, runs, loop);
   const findings = on ? currentFindings(state, runs) : [];
+  const status = keeperStatus(on, runs, loop, findings.length);
   const [sending, setSending] = useState(false);
   const canSend = status !== "fixing" && findings.some((finding) => finding.status === "open");
   const send = async () => {

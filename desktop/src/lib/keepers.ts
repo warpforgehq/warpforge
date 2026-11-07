@@ -217,12 +217,15 @@ export function runLabel(run: KeeperRun): string {
  * @param on Whether the keeper is switched on for the task.
  * @param runs The keeper's runs, oldest first.
  * @param loop Its fix loop, if it has one.
+ * @param openFindings How many of the latest counted run's findings are still
+ * open or sent, so a run whose findings are all resolved reads quiet.
  * @returns What the keeper is doing on the task.
  */
 export function keeperStatus(
   on: boolean,
   runs: readonly KeeperRun[],
   loop: KeeperLoopState | undefined,
+  openFindings: number,
 ): KeeperStatus {
   if (!on) return "off";
   if (loop?.status === "needs_you") return "needs_you";
@@ -234,7 +237,8 @@ export function keeperStatus(
   if (!last) return "idle";
   if (last.outcome === "green") return "green";
   if (last.outcome === "draft") return "draft";
-  return last.outcome === "findings" ? "findings" : "inconclusive";
+  if (last.outcome === "findings") return openFindings > 0 ? "findings" : "green";
+  return "inconclusive";
 }
 
 /**
@@ -325,8 +329,9 @@ export function activeKeepers(
   return [...ids].sort().map((id) => {
     const runs = keeperRuns(state, id);
     const on = state.switches.overrides[id] !== false;
-    const status = keeperStatus(on, runs, state.loops[id]);
-    return { findings: lastCounted(runs)?.count ?? 0, id, status };
+    const findings = currentFindings(state, runs).length;
+    const status = keeperStatus(on, runs, state.loops[id], findings);
+    return { findings, id, status };
   });
 }
 
