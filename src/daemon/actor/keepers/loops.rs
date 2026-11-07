@@ -188,6 +188,7 @@ impl Daemon {
         for touched_run in touched {
             self.keeper_emit_run(task_id, &touched_run);
         }
+        self.keeper_carry_replies(task_id, &run);
         let mut fix = self.keeper_loop(task_id, &run.keeper_id);
         if fix
             .accepted_head
@@ -204,5 +205,33 @@ impl Daemon {
             };
         }
         self.keeper_set_loop(task_id, &run.keeper_id, fix);
+    }
+
+    /// A finding the run raises again keeps the fixer's pending reply to
+    /// its sent predecessor, so the owner still sees it on the latest run.
+    fn keeper_carry_replies(&mut self, task_id: &str, run: &wire::KeeperRun) {
+        let history = self.keepers.keeper_findings(task_id, &run.keeper_id);
+        let carried: Vec<wire::KeeperFinding> = history
+            .iter()
+            .filter(|f| f.run_id == run.id && f.status == Status::Open && f.reply.is_none())
+            .filter_map(|f| {
+                let answered = history.iter().find(|old| {
+                    old.key == f.key && old.run_id != run.id && old.status == Status::Sent
+                });
+                let reply = answered?.reply.clone()?;
+                Some(wire::KeeperFinding {
+                    reply: Some(reply),
+                    ..(*f).clone()
+                })
+            })
+            .collect();
+        if carried.is_empty() {
+            return;
+        }
+        for finding in carried {
+            self.keepers
+                .put_finding(&self.persist, &self.tasks, task_id, finding);
+        }
+        self.keeper_emit_run(task_id, &run.id);
     }
 }

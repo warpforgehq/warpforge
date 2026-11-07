@@ -138,7 +138,7 @@ impl Daemon {
             let history = self.keepers.keeper_findings(task_id, &definition.id);
             let findings: Vec<wire::KeeperFinding> = history
                 .iter()
-                .filter(|f| f.run_id == run.id && f.status == Status::Open)
+                .filter(|f| f.run_id == run.id && f.status == Status::Open && f.reply.is_none())
                 .filter(|f| meets(f.severity, definition.min_severity))
                 .map(|f| (*f).clone())
                 .collect();

@@ -1,7 +1,9 @@
 //! The fixer's replies: a fix turn's closing block notes a verdict on the
 //! findings it did not fix, and only the owner's Accept resolves them.
 
-use super::fixer::{fix_prompts, fix_task, loop_event, replies, reply, state, until, wake};
+use super::fixer::{
+    fix_prompts, fix_task, loop_event, next_commit, replies, reply, state, until, wake,
+};
 use super::*;
 use wire::{KeeperFindingStatus as Status, KeeperLoopStatus, KeeperReplyVerdict as Verdict};
 
@@ -13,7 +15,10 @@ const ANSWER: &str = "Fixed the second one.\n```json\n{\"keepers\": [{\"n\": 1, 
 /// fix turn has closed when this returns.
 async fn answered(answer: &str) -> Setup {
     let mut setup = setup(&[("review", REVIEW)], |wt| vec![fix_task("t_a", wt)]).await;
-    replies(&setup, &[reply(&["first", "second", "third"])]);
+    replies(
+        &setup,
+        &[reply(&["first", "second", "third"]), reply(&["first"])],
+    );
     std::fs::write(format!("{}.reply", setup.fix_log.display()), answer).unwrap();
     wake(&setup, "hello").await;
     until("the fix prompt", || fix_prompts(&setup).len() == 1).await;
@@ -46,11 +51,11 @@ async fn accept(setup: &Setup, finding_id: &str) -> Result<(), String> {
 #[tokio::test]
 async fn the_closing_block_notes_replies_and_accept_resolves_them() {
     let setup = answered(ANSWER).await;
-    let state = state(&setup).await;
+    let before = state(&setup).await;
     let (first, second, third) = (
-        finding(&state, "first"),
-        finding(&state, "second"),
-        finding(&state, "third"),
+        finding(&before, "first"),
+        finding(&before, "second"),
+        finding(&before, "third"),
     );
     assert!([&first, &second, &third]
         .iter()
@@ -68,7 +73,7 @@ async fn the_closing_block_notes_replies_and_accept_resolves_them() {
     assert_eq!(error, "the agent did not answer that finding");
     accept(&setup, &first.id).await.unwrap();
     accept(&setup, &third.id).await.unwrap();
-    let state = super::fixer::state(&setup).await;
+    let state = state(&setup).await;
     let first = finding(&state, "first");
     assert_eq!(first.status, Status::Dismissed);
     assert_eq!(
@@ -120,5 +125,33 @@ async fn a_malformed_block_notes_nothing_and_the_turn_still_closes() {
     assert_eq!((fix.rounds, fix.pending_head.as_deref()), (1, None));
     let error = accept(&setup, &state.findings[0].id).await.unwrap_err();
     assert_eq!(error, "the agent did not answer that finding");
+    setup.daemon.shutdown().await;
+}
+
+#[tokio::test]
+async fn a_rebutted_finding_raised_again_after_a_commit_keeps_its_reply_and_is_not_resent() {
+    let mut setup = answered(ANSWER).await;
+    wait_idle(&setup.daemon, "t_a").await;
+    next_commit(&mut setup, "sha2").await;
+    let now = state(&setup).await;
+    let latest = now.runs.iter().max_by_key(|run| run.run_number).unwrap();
+    let again = now
+        .findings
+        .iter()
+        .find(|f| f.run_id == latest.id && f.description == "first")
+        .expect("first, raised again");
+    assert_eq!(again.status, Status::Open);
+    let carried = again.reply.as_ref().expect("the reply carried over");
+    assert_eq!(carried.reason, "the caller validates it");
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert_eq!(
+        fix_prompts(&setup).len(),
+        1,
+        "an answered finding waits for the owner"
+    );
+    accept(&setup, &again.id).await.unwrap();
+    let after = state(&setup).await;
+    let dismissed = after.findings.iter().find(|f| f.id == again.id).unwrap();
+    assert_eq!(dismissed.status, Status::Dismissed);
     setup.daemon.shutdown().await;
 }

@@ -406,7 +406,10 @@ the ones it did not fix: `rebutted` (not a real problem) or `stale` (no longer
 holds), each with a reason. When the fix turn ends, the daemon reads the last
 fence of its closing message, maps each number back to the finding the prompt
 carried, and records the answer as the finding's `reply`; a malformed fence
-records nothing and never fails the turn. The status stays `sent`. **Accept**
+records nothing and never fails the turn. The status stays `sent`. When the
+turn also commits and the next run raises an answered finding again, the new
+finding inherits the reply, and the automatic fix skips answered findings:
+they wait for the owner instead of looping toward `no_progress`. **Accept**
 (`keepers.acceptReply`) is the owner's verdict: a rebuttal becomes a Dismiss
 with the agent's reason, so it counts against precision and the checker is
 told not to raise it again, and a stale finding becomes `fixed`. To reject a
