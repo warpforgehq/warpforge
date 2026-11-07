@@ -41,8 +41,8 @@ export function ReadyKeepers({
     >
       <ul className="flex flex-wrap items-center gap-x-4 gap-y-1">
         {ready.map(({ entry, runs }) => {
-          const status = keeperStatus(true, runs, state?.loops[entry.id]);
           const count = currentFindings(state, runs).length;
+          const status = keeperStatus(true, runs, state?.loops[entry.id], count);
           const label = LABEL[status];
           return (
             <li key={entry.id} data-status={status} className="flex items-center gap-1.5">

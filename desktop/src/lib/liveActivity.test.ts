@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { normalizeKeeperState } from "@/lib/keepers";
 import type { PortForwardInfo, ServiceInfo, TerminalInfo } from "@/protocol";
-import { run } from "@/test/keepers";
+import { run, finding } from "@/test/keepers";
 
 import { liveItemLabel, liveItems, liveState, liveTally, surfaceTally } from "./liveActivity";
 
@@ -113,6 +113,7 @@ describe("tallies", () => {
 describe("keepers", () => {
   const keepers = {
     ...normalizeKeeperState("task-1", null),
+    findings: [finding({ id: "f2", runId: "r2" }), finding({ id: "f2b", runId: "r2" })],
     loops: {
       slop: { maxRounds: 3, rounds: 3, status: "needs_you" as const, stop: "no_progress" as const },
     },
