@@ -69,7 +69,7 @@ fn prompt(
             _ => String::new(),
         };
         out.push_str(&format!(
-            "{}. [{}, {}]{place} {}\n",
+            "[{}] [{}, {}]{place} {}\n",
             index + 1,
             item.keeper,
             severity(f.severity),
@@ -86,8 +86,16 @@ fn prompt(
         "\nThen run the project's checks and make them pass, and commit your fixes. Never use \
 --no-verify. Do not push. If you rebut every finding, change nothing and do not commit.",
     );
+    out.push_str(REPLY_FORMAT);
     out
 }
+
+const REPLY_FORMAT: &str = "\n\nEnd your reply with one fenced json block that lists, by \
+number, only the findings you did not fix, for example:\n```json\n{\"keepers\": [{\"n\": 2, \
+\"verdict\": \"rebutted\", \"reason\": \"the input is validated by the caller\"}, {\"n\": 4, \
+\"verdict\": \"stale\", \"reason\": \"fixed in an earlier commit\"}]}\n```\nUse \"rebutted\" \
+when a finding is not a real problem and \"stale\" when it no longer holds in the current code. \
+Leave out the ones you fixed; if you fixed them all, the list is empty.";
 
 fn severity(severity: KeeperSeverity) -> &'static str {
     match severity {
@@ -159,10 +167,11 @@ mod tests {
         ];
         let prompt = fix_prompt("abcdef0123456789", &items, &[("Review", "keep the API")]);
         assert!(prompt.contains("commit abcdef0123 "), "{prompt}");
-        assert!(prompt.contains("1. [Review, high] src/lib.rs:4 — panics on empty input"));
-        assert!(prompt.contains("2. [Slop, low] comment restates the line"));
+        assert!(prompt.contains("[1] [Review, high] src/lib.rs:4 — panics on empty input"));
+        assert!(prompt.contains("[2] [Slop, low] comment restates the line"));
         assert!(prompt.contains("- Review: keep the API"));
         assert!(prompt.contains("Never use --no-verify. Do not push."));
+        assert!(prompt.ends_with("if you fixed them all, the list is empty."));
     }
 
     #[test]
@@ -185,8 +194,9 @@ mod tests {
             prompt.contains("HEAD may have moved since abcdef0123"),
             "{prompt}"
         );
-        assert!(prompt.contains("1. [Security, high] panics on empty input"));
+        assert!(prompt.contains("[1] [Security, high] panics on empty input"));
         assert!(prompt.contains("Never use --no-verify. Do not push."));
+        assert!(prompt.contains("{\"keepers\": [{\"n\": 2, \"verdict\": \"rebutted\""));
     }
 
     #[test]

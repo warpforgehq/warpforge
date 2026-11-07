@@ -58,6 +58,7 @@ pub(super) async fn dispatch(
         KeepersList { .. }
         | KeepersState { .. }
         | KeepersDismiss { .. }
+        | KeepersAcceptReply { .. }
         | KeepersDecide { .. }
         | KeepersSetSwitch { .. }
         | KeepersCheckReady { .. }

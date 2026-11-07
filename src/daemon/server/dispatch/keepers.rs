@@ -50,6 +50,17 @@ pub(super) async fn keepers(
             })
             .await
         }
+        wire::Method::KeepersAcceptReply {
+            task_id,
+            finding_id,
+        } => {
+            ask(handle, |reply| KeeperCommand::AcceptReply {
+                task_id,
+                finding_id,
+                reply,
+            })
+            .await
+        }
         wire::Method::KeepersDecide {
             task_id,
             keeper_id,

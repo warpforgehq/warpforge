@@ -130,7 +130,8 @@ them with it",
     }
 
     /// The HEAD of the keeper's latest counted run and its open findings,
-    /// as the Keepers tab lists them.
+    /// as the Keepers tab lists them, with the sent ones the agent answered:
+    /// sending those again is how the owner rejects the answer.
     fn keepers_open_findings(
         &self,
         task_id: &str,
@@ -148,7 +149,8 @@ them with it",
         let open = state
             .findings
             .iter()
-            .filter(|f| f.run_id == run.id && f.status == Status::Open)
+            .filter(|f| f.run_id == run.id)
+            .filter(|f| f.status == Status::Open || (f.status == Status::Sent && f.reply.is_some()))
             .cloned()
             .collect();
         Some((run.head_sha.clone(), open))

@@ -11,6 +11,7 @@ mod paths;
 mod presets;
 mod prompt;
 mod registry;
+mod reply;
 mod state;
 #[cfg(test)]
 mod tests;
@@ -25,6 +26,7 @@ pub use parse::parse_keeper;
 pub use paths::touches;
 pub use prompt::{commits_since, dismissed_list, reask_prompt, render_prompt, PromptVars};
 pub use registry::list_keepers;
+pub use reply::parse_replies;
 pub use state::{precision, KeeperState};
 
 use std::path::{Path, PathBuf};

@@ -400,6 +400,21 @@ checker's next prompt as "the owner rejected these; do not raise them again".
 It counts against precision. A finding the next run no longer reports after a
 fix becomes `fixed`.
 
+**The agent's reply is advice; only the owner resolves.** Both fix prompts
+number the findings and ask the agent to end with one json fence that lists
+the ones it did not fix: `rebutted` (not a real problem) or `stale` (no longer
+holds), each with a reason. When the fix turn ends, the daemon reads the last
+fence of its closing message, maps each number back to the finding the prompt
+carried, and records the answer as the finding's `reply`; a malformed fence
+records nothing and never fails the turn. The status stays `sent`. **Accept**
+(`keepers.acceptReply`) is the owner's verdict: a rebuttal becomes a Dismiss
+with the agent's reason, so it counts against precision and the checker is
+told not to raise it again, and a stale finding becomes `fixed`. To reject a
+reply the owner sends the findings again: Send to agent takes the answered
+ones with the open ones, and a new hand-over clears their replies.
+*Rejected:* applying the agent's verdict directly — the fixer would grade the
+keeper that checks it, and precision would measure the agent's opinion.
+
 **The strip is per run.** The keepers section shows, per keeper, its state
 (off / running / green / findings / waiting for you) and the last ten runs as
 cells: green, red with the count, grey for inconclusive or skipped.
