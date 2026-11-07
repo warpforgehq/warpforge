@@ -22,6 +22,7 @@ import { KeeperStrip } from "./KeeperStrip";
 export interface KeeperActions {
   onSwitch: (keeperId: string, on: boolean) => Promise<void>;
   onDismiss: (findingId: string, reason: string) => Promise<void>;
+  onAccept: (findingId: string) => Promise<void>;
   onSend: (keeperId: string) => Promise<void>;
   onDecide: (
     keeperId: string,
@@ -51,7 +52,18 @@ export function KeeperCard({
   const findings = on ? currentFindings(state, runs) : [];
   const status = keeperStatus(on, runs, loop, findings.length);
   const [sending, setSending] = useState(false);
-  const canSend = status !== "fixing" && findings.some((finding) => finding.status === "open");
+  const canSend =
+    status !== "fixing" && findings.some((finding) => finding.status === "open" || finding.reply);
+  const answered = findings.filter((finding) => finding.reply);
+  const [accepting, setAccepting] = useState(false);
+  const acceptAll = async () => {
+    setAccepting(true);
+    try {
+      for (const finding of answered) await actions.onAccept(finding.id);
+    } finally {
+      setAccepting(false);
+    }
+  };
   const send = async () => {
     setSending(true);
     try {
@@ -106,16 +118,19 @@ export function KeeperCard({
           onDecide={(decision, options) => actions.onDecide(entry.id, decision, options)}
         />
       )}
-      {canSend && (
-        <Button
-          size="sm"
-          variant="outline"
-          className="self-start"
-          disabled={sending}
-          onClick={send}
-        >
-          Send to agent
-        </Button>
+      {(canSend || answered.length > 1) && (
+        <div className="flex flex-wrap gap-2">
+          {canSend && (
+            <Button size="sm" variant="outline" disabled={sending} onClick={send}>
+              Send to agent
+            </Button>
+          )}
+          {answered.length > 1 && (
+            <Button size="sm" variant="outline" disabled={accepting} onClick={acceptAll}>
+              Accept all
+            </Button>
+          )}
+        </div>
       )}
       {findings.length > 0 && (
         <ul aria-label={`${name} findings`} className="flex flex-col">
@@ -125,6 +140,7 @@ export function KeeperCard({
               finding={finding}
               onOpenFile={actions.onOpenFile}
               onDismiss={(reason) => actions.onDismiss(finding.id, reason)}
+              onAccept={() => actions.onAccept(finding.id)}
             />
           ))}
         </ul>

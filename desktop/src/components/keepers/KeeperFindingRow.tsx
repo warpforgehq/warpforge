@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { KeeperFinding, KeeperSeverity } from "@/protocol";
+import type { KeeperFinding, KeeperReplyVerdict, KeeperSeverity } from "@/protocol";
 
 const SEVERITY_TONE: Record<KeeperSeverity, string> = {
   critical: "border-destructive/50 bg-destructive/15 text-destructive",
@@ -12,20 +12,29 @@ const SEVERITY_TONE: Record<KeeperSeverity, string> = {
   medium: "border-warn/30 bg-warn/10 text-warn",
 };
 
+const REPLY_LABEL: Record<KeeperReplyVerdict, string> = {
+  rebutted: "rebutted",
+  stale: "no longer holds",
+};
+
 /**
- * One finding: severity, a `file:line` link into the Explorer, and Dismiss
- * with an optional reason.
+ * One finding: severity, a `file:line` link into the Explorer, the agent's
+ * answer with Accept when it left the finding unfixed, and Dismiss with an
+ * optional reason.
  * @param finding The finding.
  * @param onOpenFile Opens a path at a line in the Explorer.
  * @param onDismiss Dismisses the finding with the reason typed, if any.
+ * @param onAccept Accepts the agent's answer.
  * @returns The row.
  */
 export function KeeperFindingRow({
   finding,
+  onAccept,
   onDismiss,
   onOpenFile,
 }: {
   finding: KeeperFinding;
+  onAccept: () => Promise<void>;
   onDismiss: (reason: string) => Promise<void>;
   onOpenFile: (path: string, location?: { line?: number }) => void;
 }) {
@@ -33,6 +42,16 @@ export function KeeperFindingRow({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const file = finding.file;
+  const reply = finding.reply;
+
+  const accept = async () => {
+    setBusy(true);
+    try {
+      await onAccept();
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const dismiss = async () => {
     setBusy(true);
@@ -68,7 +87,23 @@ export function KeeperFindingRow({
           <p className="text-[13px] whitespace-pre-wrap break-words text-foreground">
             {finding.description}
           </p>
+          {reply && (
+            <p className="text-xs whitespace-pre-wrap break-words text-muted-foreground">
+              Agent: {REPLY_LABEL[reply.verdict]} — {reply.reason}
+            </p>
+          )}
         </div>
+        {reply && !asking && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="shrink-0"
+            disabled={busy}
+            onClick={() => void accept()}
+          >
+            Accept
+          </Button>
+        )}
         {!asking && (
           <Button size="sm" variant="ghost" className="shrink-0" onClick={() => setAsking(true)}>
             Dismiss

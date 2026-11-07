@@ -37,6 +37,17 @@ export function KeeperMethods<TBase extends Constructor<CoreClient>>(Base: TBase
       await this.refreshTaskKeepers(taskId);
     }
 
+    /**
+     * Accept the fixer's reply to a finding: a rebuttal dismisses it with the agent's
+     * reason, a stale finding is fixed.
+     * @param taskId The task.
+     * @param findingId The finding the agent answered.
+     */
+    async acceptKeeperReply(taskId: string, findingId: string) {
+      await this.request("keepers.acceptReply", { finding_id: findingId, task_id: taskId });
+      await this.refreshTaskKeepers(taskId);
+    }
+
     /** `rounds` and `note` apply to `extend` only. */
     async decideKeeper(
       taskId: string,

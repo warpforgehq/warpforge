@@ -100,6 +100,10 @@ export function KeepersSurface({
   };
 
   const actions: KeeperActions = {
+    onAccept: (findingId) =>
+      daemon
+        .acceptKeeperReply(task.id, findingId)
+        .catch(failed("Could not accept the agent's answer")),
     onDecide: (keeperId, decision, options) =>
       daemon.decideKeeper(task.id, keeperId, decision, options).catch(failed("Could not answer")),
     onDismiss: (findingId, reason) =>
