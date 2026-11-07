@@ -6,6 +6,7 @@ use wire::KeeperFindingStatus as Status;
 
 use super::{Fix, FixPhase};
 use crate::daemon::actor::Daemon;
+use crate::daemon::keepers::parse_replies;
 
 impl Daemon {
     /// @param completed the turn ended on its own, not interrupted or failed
@@ -27,6 +28,39 @@ impl Daemon {
             done.pending_head = None;
             self.keeper_set_loop(task_id, keeper_id, done);
             self.keeper_emit_loop(task_id, keeper_id);
+        }
+        if let FixPhase::Sent { findings, .. } = fix.phase {
+            self.keepers_record_replies(task_id, &findings);
+        }
+    }
+
+    /// Note the fixer's reply on each finding it did not fix; the status
+    /// stays, as only the owner resolves a finding.
+    fn keepers_record_replies(&mut self, task_id: &str, sent: &[String]) {
+        let closing = self.collect_stage_text(task_id).closing;
+        let mut runs: Vec<String> = Vec::new();
+        for (index, reply) in parse_replies(&closing, sent.len()) {
+            let Some(finding) = self
+                .keepers
+                .task(task_id)
+                .and_then(|state| state.findings.iter().find(|f| f.id == sent[index]))
+                .filter(|f| f.status == Status::Sent)
+                .cloned()
+            else {
+                continue;
+            };
+            if !runs.contains(&finding.run_id) {
+                runs.push(finding.run_id.clone());
+            }
+            let answered = wire::KeeperFinding {
+                reply: Some(reply),
+                ..finding
+            };
+            self.keepers
+                .put_finding(&self.persist, &self.tasks, task_id, answered);
+        }
+        for run_id in runs {
+            self.keeper_emit_run(task_id, &run_id);
         }
     }
 

@@ -1825,4 +1825,8 @@ pub enum Method {
     /// is busy or nothing is open.
     #[serde(rename = "keepers.sendFindings")]
     KeepersSendFindings { task_id: String, keeper_id: String },
+    /// The owner accepts the fixer's reply to a finding: a rebuttal
+    /// dismisses it with the agent's reason, a stale one is fixed.
+    #[serde(rename = "keepers.acceptReply")]
+    KeepersAcceptReply { task_id: String, finding_id: String },
 }

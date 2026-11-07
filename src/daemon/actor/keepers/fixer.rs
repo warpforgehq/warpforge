@@ -358,6 +358,7 @@ impl Daemon {
         for finding in items.into_iter().flat_map(|(_, findings)| findings) {
             let finding = wire::KeeperFinding {
                 status: Status::Sent,
+                reply: None,
                 ..finding
             };
             self.keepers

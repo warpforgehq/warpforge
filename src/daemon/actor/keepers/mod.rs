@@ -74,6 +74,12 @@ pub enum KeeperCommand {
         reason: Option<String>,
         reply: Reply<()>,
     },
+    /// The owner accepts the fixer's reply to a finding.
+    AcceptReply {
+        task_id: String,
+        finding_id: String,
+        reply: Reply<()>,
+    },
     /// The owner's answer to a stopped fix loop.
     Decide {
         task_id: String,
@@ -195,6 +201,7 @@ enum FixPhase {
     Gating,
     /// Handed to the task's session.
     Sent {
+        /// In the prompt's order: its `[n]` is `findings[n - 1]`.
         findings: Vec<String>,
         /// Each keeper's loop before the hand-over, restored when the turn
         /// is cut short.
@@ -254,6 +261,13 @@ impl Daemon {
                 reply,
             } => {
                 let _ = reply.send(self.keepers_dismiss(&task_id, &finding_id, reason));
+            }
+            KeeperCommand::AcceptReply {
+                task_id,
+                finding_id,
+                reply,
+            } => {
+                let _ = reply.send(self.keepers_accept_reply(&task_id, &finding_id));
             }
             KeeperCommand::Decide {
                 task_id,

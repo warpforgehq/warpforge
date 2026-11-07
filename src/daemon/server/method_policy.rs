@@ -174,6 +174,7 @@ pub(super) fn method_is_user_only(method: &wire::Method) -> bool {
             | ChannelsAddMember { .. }
             | ChannelsRemoveMember { .. }
             | KeepersDismiss { .. }
+            | KeepersAcceptReply { .. }
             | KeepersDecide { .. }
             | KeepersSetSwitch { .. }
             | KeepersCheckReady { .. }
@@ -221,6 +222,10 @@ mod tests {
                 task_id: id(),
                 finding_id: id(),
                 reason: None,
+            },
+            wire::Method::KeepersAcceptReply {
+                task_id: id(),
+                finding_id: id(),
             },
             wire::Method::KeepersDecide {
                 task_id: id(),

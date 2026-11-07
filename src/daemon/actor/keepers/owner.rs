@@ -3,7 +3,7 @@
 //! escalation*).
 
 use warpforge_protocol as wire;
-use wire::{KeeperDecision, KeeperFindingStatus as Status};
+use wire::{KeeperDecision, KeeperFindingStatus as Status, KeeperReplyVerdict};
 
 use crate::daemon::actor::Daemon;
 use crate::daemon::keepers::MAX_ROUNDS_CAP;
@@ -38,6 +38,41 @@ impl Daemon {
         };
         self.keepers
             .put_finding(&self.persist, &self.tasks, task_id, dismissed);
+        self.keeper_emit_run(task_id, &run_id);
+        self.keepers_fix(task_id, None);
+        Ok(())
+    }
+
+    /// The owner takes the fixer's reply: a rebuttal is a Dismiss with the
+    /// agent's reason, a stale finding is fixed.
+    pub(super) fn keepers_accept_reply(
+        &mut self,
+        task_id: &str,
+        finding_id: &str,
+    ) -> Result<(), String> {
+        let finding = self
+            .keepers
+            .task(task_id)
+            .and_then(|state| state.findings.iter().find(|f| f.id == finding_id))
+            .cloned()
+            .ok_or_else(|| format!("no finding {finding_id} on task {task_id}"))?;
+        if matches!(finding.status, Status::Fixed | Status::Dismissed) {
+            return Err("that finding is already resolved".into());
+        }
+        let Some(reply) = finding.reply.clone() else {
+            return Err("the agent did not answer that finding".into());
+        };
+        if reply.verdict == KeeperReplyVerdict::Rebutted {
+            return self.keepers_dismiss(task_id, finding_id, Some(reply.reason));
+        }
+        let run_id = finding.run_id.clone();
+        let fixed = wire::KeeperFinding {
+            status: Status::Fixed,
+            resolved_at: Some(now_secs()),
+            ..finding
+        };
+        self.keepers
+            .put_finding(&self.persist, &self.tasks, task_id, fixed);
         self.keeper_emit_run(task_id, &run_id);
         self.keepers_fix(task_id, None);
         Ok(())

@@ -2,7 +2,8 @@
 // It supports session/load, logs every prompt and cancel to argv[2] as JSON
 // lines, and answers each prompt at once — unless the file argv[3] exists and
 // the prompt contains its text: that turn holds until `<argv[3]>.go` exists
-// or the turn is cancelled.
+// or the turn is cancelled. Its message is `Done.`, or the text of
+// `<argv[2]>.reply` when that file exists.
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 
 const log = process.argv[2];
@@ -37,7 +38,8 @@ function finish(id) {
     setTimeout(() => finish(id), 30);
     return;
   }
-  update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Done." } });
+  const text = existsSync(`${log}.reply`) ? readFileSync(`${log}.reply`, "utf8") : "Done.";
+  update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text } });
   send({ jsonrpc: "2.0", id, result: { stopReason: "end_turn" } });
   pending = null;
 }

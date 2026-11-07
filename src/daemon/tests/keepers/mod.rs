@@ -5,6 +5,7 @@ mod checkout;
 mod fix_turn;
 mod fixer;
 mod ready;
+mod replies;
 mod send;
 mod stop;
 
