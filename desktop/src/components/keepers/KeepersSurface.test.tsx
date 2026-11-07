@@ -15,6 +15,7 @@ const { client, store } = vi.hoisted(() => {
   const state: { taskKeepers: Record<string, unknown> } = { taskKeepers: {} };
   return {
     client: {
+      acceptKeeperReply: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       addKeeper: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       checkReadyKeepers: vi.fn<
         (taskId: string) => Promise<{ head: string | null; started: string[] }>
@@ -192,6 +193,55 @@ describe("KeepersSurface", () => {
     });
     expect(within(await card("Review")).getByText("Off by one")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Send to agent" })).not.toBeInTheDocument();
+  });
+
+  it("shows the agent's answer with Accept only on a finding it answered", async () => {
+    client.acceptKeeperReply.mockRejectedValueOnce(
+      new DaemonRpcError("invalid_request", "that finding is already resolved"),
+    );
+    const { user } = show([entry("review")], {
+      findings: [
+        finding({
+          id: "f1",
+          reply: { reason: "the caller validates it", verdict: "rebutted" },
+          status: "sent",
+        }),
+        finding({ id: "f2", status: "sent" }),
+      ],
+      runs: [run({ count: 2, id: "r1", outcome: "findings" })],
+    });
+    const review = await card("Review");
+    expect(
+      within(review).getByText("Agent: rebutted — the caller validates it"),
+    ).toBeInTheDocument();
+    expect(within(review).getAllByRole("button", { name: "Accept" })).toHaveLength(1);
+    expect(within(review).getAllByRole("button", { name: "Dismiss" })).toHaveLength(2);
+    expect(within(review).queryByRole("button", { name: "Accept all" })).not.toBeInTheDocument();
+    await user.click(within(review).getByRole("button", { name: "Accept" }));
+    expect(client.acceptKeeperReply).toHaveBeenCalledWith("t1", "f1");
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("Could not accept the agent's answer", {
+        description: "that finding is already resolved",
+      }),
+    );
+  });
+
+  it("accepts every answer at once and lets Send to agent re-send them", async () => {
+    const { user } = show([entry("review")], {
+      findings: [
+        finding({ id: "f1", reply: { reason: "intended", verdict: "rebutted" }, status: "sent" }),
+        finding({ id: "f2", reply: { reason: "fixed in abc", verdict: "stale" }, status: "sent" }),
+      ],
+      runs: [run({ count: 2, id: "r1", outcome: "findings" })],
+    });
+    const review = await card("Review");
+    expect(within(review).getByText("Agent: no longer holds — fixed in abc")).toBeInTheDocument();
+    expect(within(review).getByRole("button", { name: "Send to agent" })).toBeInTheDocument();
+    await user.click(within(review).getByRole("button", { name: "Accept all" }));
+    expect(client.acceptKeeperReply.mock.calls).toEqual([
+      ["t1", "f1"],
+      ["t1", "f2"],
+    ]);
   });
 
   it("asks the owner when the loop stopped: extend, accept or off", async () => {

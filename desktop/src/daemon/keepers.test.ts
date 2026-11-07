@@ -12,6 +12,7 @@ describe("keeper RPCs", () => {
   it("calls the keepers methods with snake_case params and refreshes the task", async () => {
     const request = vi.spyOn(daemon, "request").mockResolvedValue({ runs: [] });
     await daemon.dismissKeeperFinding("t1", "f1", "  ");
+    await daemon.acceptKeeperReply("t1", "f2");
     await daemon.decideKeeper("t1", "review", "extend", { note: "keep API", rounds: 2 });
     await daemon.decideKeeper("t1", "review", "accept", { note: "ignored", rounds: 9 });
     await daemon.setKeeperSwitch("t1", "review", false);
@@ -20,6 +21,7 @@ describe("keeper RPCs", () => {
     const calls = request.mock.calls.filter(([method]) => method !== "keepers.state");
     expect(calls).toEqual([
       ["keepers.dismiss", { finding_id: "f1", reason: null, task_id: "t1" }],
+      ["keepers.acceptReply", { finding_id: "f2", task_id: "t1" }],
       [
         "keepers.decide",
         { decision: "extend", keeper_id: "review", note: "keep API", rounds: 2, task_id: "t1" },
