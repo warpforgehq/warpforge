@@ -6,7 +6,8 @@ use std::collections::{HashMap, HashSet};
 
 use warpforge_protocol as wire;
 
-use super::FixPhase;
+use super::{FixPhase, KeeperCommand};
+use crate::daemon::actor::Command;
 use crate::daemon::actor::Daemon;
 use crate::daemon::task::{Task, TaskStatus};
 
@@ -115,7 +116,12 @@ impl Daemon {
                     ambiguous.insert(project.clone());
                     continue;
                 }
-                [sole] => self.keepers_claim(sole, branch),
+                [sole] if self.keepers_running_since_before(sole, head) => {
+                    self.keepers_claim(sole, branch);
+                }
+                // Its turn began after the commit: the committer's turn has
+                // ended, and its end claims the branch.
+                [_] => {}
                 // A hand commit with nobody running stays with the owner.
                 [] => {}
             }
@@ -134,6 +140,44 @@ impl Daemon {
             .remove(task_id)
             .flatten()
             .is_none_or(|start| start != head)
+    }
+
+    /// The last poll's HEAD can be 20 s old; read the checkout's HEAD now so
+    /// a turn that starts right after another session's commit is not taken
+    /// for its author.
+    pub(super) fn keepers_read_turn_head(&self, task_id: &str) {
+        let Some(cwd) = self.task_repo_path(task_id) else {
+            return;
+        };
+        let git = self.keepers.git.clone();
+        let cmd_tx = self.cmd_tx.clone();
+        let task_id = task_id.to_string();
+        tokio::spawn(async move {
+            let head = git.head(&cwd).await;
+            let read = KeeperCommand::TurnHead { task_id, head };
+            let _ = cmd_tx.send(Command::Keepers(read)).await;
+        });
+    }
+
+    /// Keep the HEAD read at the start of a turn that is still running.
+    /// @param task_id the task whose turn started
+    /// @param head the checkout's HEAD then, `None` when it could not be read
+    pub(super) fn keepers_turn_head(&mut self, task_id: &str, head: Option<String>) {
+        let running = self
+            .tasks
+            .get(task_id)
+            .is_some_and(|task| task.status == TaskStatus::Running);
+        if let (true, Some(head), Some(start)) =
+            (running, head, self.keepers.turn_heads.get_mut(task_id))
+        {
+            *start = Some(head);
+        }
+    }
+
+    /// The task's current turn began on another HEAD than `head`, so the
+    /// commit can be its own.
+    fn keepers_running_since_before(&self, task_id: &str, head: &str) -> bool {
+        matches!(self.keepers.turn_heads.get(task_id), Some(Some(start)) if start != head)
     }
 
     /// No folder task of the project owns `branch`, and `task_id` is the one

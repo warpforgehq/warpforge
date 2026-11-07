@@ -113,9 +113,13 @@ one its keepers report to. A turn that moved no HEAD claims nothing: an
 orchestrator's turns end constantly and would otherwise take the branch from
 the sub-agent whose commit it is. Attribution also happens at the poll, not
 only at a turn end: when the checkout's HEAD moved and exactly one folder
-task of the project is mid-turn, that task is the committer and claims the
-branch at once, and its own turn holds the check until it ends, so the
-findings and the fix go to the session that wrote the commit. Several
+task of the project is mid-turn, and its turn began on another HEAD, that
+task is the committer and claims the branch at once, and its own turn holds
+the check until it ends, so the findings and the fix go to the session that
+wrote the commit. A turn's starting HEAD is read from the checkout when the
+turn starts, not taken from the last poll, which can be 20 s old: an
+orchestrator woken by a sub-agent's report would otherwise look like the
+author of the sub-agent's commit. Several
 mid-turn tasks leave the author ambiguous, so the new HEAD is not checked
 until at most one is running; nobody running means a hand commit in a
 terminal, and the current owner keeps the branch. A task that loses its
