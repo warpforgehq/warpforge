@@ -11,7 +11,7 @@ use crate::daemon::actor::{Command, Daemon};
 use crate::daemon::keepers::{list_keepers, owner_fix_prompt, FixItem, SUPERSEDED};
 
 impl Daemon {
-    /// Read the keeper's name and whether the worktree is clean off the
+    /// Read the keeper's name and the worktree's changed files off the
     /// loop; the reply waits for [`KeeperCommand::SendRead`].
     /// @param task_id the task whose agent gets the findings
     /// @param keeper_id the keeper whose findings are sent
@@ -41,11 +41,11 @@ impl Daemon {
             .await
             .ok()
             .flatten();
-            let clean = git.quiet(&cwd).await.map(|(_, clean)| clean);
+            let changed = git.changed_files(&cwd).await;
             let read = KeeperCommand::SendRead {
                 task_id,
                 name: name.unwrap_or_else(|| keeper_id.clone()),
-                clean,
+                changed,
                 keeper_id,
                 reply,
             };
@@ -58,15 +58,14 @@ impl Daemon {
     /// @param task_id the task whose agent gets the findings
     /// @param keeper_id the keeper whose findings are sent
     /// @param name the keeper's name, as the prompt shows it
-    /// @param clean whether the worktree had no tracked changes, or why it could not be read;
-    /// the owner asked, so uncommitted changes only add a warning to the prompt
+    /// @param changed the worktree's files with uncommitted changes, or why it could not be read
     /// @returns the refusal, if any
     pub(super) fn keepers_send_findings(
         &mut self,
         task_id: &str,
         keeper_id: &str,
         name: &str,
-        clean: Result<bool, String>,
+        changed: Result<Vec<String>, String>,
     ) -> Result<(), String> {
         if !self.tasks.contains_key(task_id) {
             return Err(format!("unknown task {task_id}"));
@@ -92,10 +91,24 @@ impl Daemon {
         {
             return Err(reason);
         }
-        let dirty = match clean {
-            Ok(clean) => !clean,
-            Err(error) => return Err(format!("the worktree could not be read: {error}")),
-        };
+        let changed =
+            changed.map_err(|error| format!("the worktree could not be read: {error}"))?;
+        let mut touched: Vec<&str> = findings
+            .iter()
+            .filter_map(|f| f.file.as_deref())
+            .map(|file| file.trim_start_matches("./"))
+            .filter(|file| changed.iter().any(|c| c == file))
+            .collect();
+        touched.sort_unstable();
+        touched.dedup();
+        if !touched.is_empty() {
+            return Err(format!(
+                "{} has uncommitted changes; commit or stash them first so the fix does not take \
+them with it",
+                touched.join(", ")
+            ));
+        }
+        let dirty = !changed.is_empty();
         let fix = self.keeper_loop(task_id, keeper_id);
         let guidance: Vec<(&str, &str)> = fix
             .guidance
