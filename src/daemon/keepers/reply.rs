@@ -20,7 +20,7 @@ pub fn parse_replies(text: &str, count: usize) -> Vec<(usize, KeeperReply)> {
     let Some(entries) = value.get("keepers").and_then(Value::as_array) else {
         return Vec::new();
     };
-    let mut out: Vec<(usize, KeeperReply)> = Vec::new();
+    let mut out = Vec::new();
     for entry in entries {
         let Some(n) = entry.get("n").and_then(Value::as_u64) else {
             continue;

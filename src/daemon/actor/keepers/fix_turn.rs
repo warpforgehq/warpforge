@@ -1,6 +1,8 @@
 //! A fix turn's end: a finished turn closes its round; a cut-short turn, an
 //! undelivered prompt or a restart gives its findings back (invariant 5).
 
+use std::collections::BTreeSet;
+
 use warpforge_protocol as wire;
 use wire::KeeperFindingStatus as Status;
 
@@ -38,7 +40,7 @@ impl Daemon {
     /// stays, as only the owner resolves a finding.
     fn keepers_record_replies(&mut self, task_id: &str, sent: &[String]) {
         let closing = self.collect_stage_text(task_id).closing;
-        let mut runs: Vec<String> = Vec::new();
+        let mut runs = BTreeSet::new();
         for (index, reply) in parse_replies(&closing, sent.len()) {
             let Some(finding) = self
                 .keepers
@@ -49,9 +51,7 @@ impl Daemon {
             else {
                 continue;
             };
-            if !runs.contains(&finding.run_id) {
-                runs.push(finding.run_id.clone());
-            }
+            runs.insert(finding.run_id.clone());
             let answered = wire::KeeperFinding {
                 reply: Some(reply),
                 ..finding
