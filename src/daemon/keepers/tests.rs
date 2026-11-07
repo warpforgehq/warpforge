@@ -89,6 +89,17 @@ fn unknown_keys_warn_without_failing() {
 }
 
 #[test]
+fn a_post_pr_trigger_loads_with_a_warning_that_it_does_not_run() {
+    for when in ["ci", "comments"] {
+        let (definition, warnings) = parse(&format!("name: Mine\nprompt: x\nwhen: {when}"));
+        assert!(definition.is_ok());
+        assert_eq!(warnings.len(), 1, "{when}: {warnings:?}");
+        assert!(warnings[0].contains("not run yet"), "{warnings:?}");
+    }
+    assert!(parse("name: Mine\nprompt: x\nwhen: ready").1.is_empty());
+}
+
+#[test]
 fn limits_over_the_cap_are_clamped_with_a_warning() {
     let (definition, warnings) = parse("name: Mine\nprompt: x\ntime_limit: 2h\nmax_rounds: 9");
     let definition = definition.unwrap();

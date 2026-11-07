@@ -58,7 +58,8 @@ impl Daemon {
     /// @param task_id the task whose agent gets the findings
     /// @param keeper_id the keeper whose findings are sent
     /// @param name the keeper's name, as the prompt shows it
-    /// @param clean whether the worktree had no tracked changes, or why it could not be read
+    /// @param clean whether the worktree had no tracked changes, or why it could not be read;
+    /// the owner asked, so uncommitted changes only add a warning to the prompt
     /// @returns the refusal, if any
     pub(super) fn keepers_send_findings(
         &mut self,
@@ -91,11 +92,10 @@ impl Daemon {
         {
             return Err(reason);
         }
-        match clean {
-            Ok(true) => {}
-            Ok(false) => return Err("the worktree has uncommitted changes".into()),
+        let dirty = match clean {
+            Ok(clean) => !clean,
             Err(error) => return Err(format!("the worktree could not be read: {error}")),
-        }
+        };
         let fix = self.keeper_loop(task_id, keeper_id);
         let guidance: Vec<(&str, &str)> = fix
             .guidance
@@ -110,7 +110,7 @@ impl Daemon {
                 finding,
             })
             .collect();
-        let text = owner_fix_prompt(&head, &items, &guidance);
+        let text = owner_fix_prompt(&head, &items, &guidance, dirty);
         let sent = vec![(keeper_id.to_string(), findings)];
         self.keepers_fix_hand_over(task_id, head, sent, text);
         Ok(())

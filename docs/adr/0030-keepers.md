@@ -329,21 +329,25 @@ without a severity floor instead.
 say "Keepers asked", and `Keeper` turns, like `System`, are never batched
 into a force-send (ADR 0011).
 
-**Send to agent is the owner's manual fix.** The automatic loop sends
-findings only while they are on the HEAD it is fixing, so a ready keeper's
-findings are lost to it once anyone commits again, and a task that lost its
-branch, or a keeper the owner accepted, has no way back. The Keepers tab's
-**Send to agent** (`keepers.sendFindings`) sends one keeper's open findings of
-its latest counted run as one `Keeper` fix turn, whatever HEAD they were
-found on: the owner has read them and decides they still matter. The prompt
-names the commit they were found on and asks the agent to check each one
-still holds before fixing it. It skips the HEAD match and the folder task's
-branch claim, but not invariant 20, and it never waits and never interrupts: it is refused, with the
-reason, while the agent is mid-turn, a `User` prompt is queued, the worktree has
-tracked changes (invariant 3), a fix is already sent, the task has no session
-to resume, the account is refused, or nothing is open. It is a round like an automatic fix (invariant 5): counted
-once per HEAD, reverted when the turn is cut short or the prompt is not
-delivered, and it clears a stop, since sending is the owner's answer to it.
+**Send to agent is the owner's manual fix.** The automatic loop sends findings
+only while they are on the HEAD it is fixing, so a ready keeper's findings are
+lost to it once anyone commits again, and a task that lost its branch, or a
+keeper the owner accepted, has no way back. The Keepers tab's **Send to
+agent** (`keepers.sendFindings`) sends one keeper's open findings of its
+latest counted run as one `Keeper` fix turn, whatever HEAD they were found on:
+the owner has read them and decides they still matter. The prompt names the
+commit they were found on and asks the agent to check each one still holds
+before fixing it. It skips the HEAD match and the folder task's branch claim,
+but not invariant 20, and it never waits and never interrupts: it is refused,
+with the reason, while the agent is mid-turn, a `User` prompt is queued, a fix
+is already sent, the task has no session to resume, the account is refused, or
+nothing is open. Tracked changes in the worktree do not refuse it, the one
+exception to invariant 3: in a shared checkout the tree is rarely clean, and
+the owner asked, so the prompt instead tells the agent the changes are not its
+own and to commit only the files it changes, staged by path. It is a round
+like an automatic fix (invariant 5): counted once per HEAD, reverted when the
+turn is cut short or the prompt is not delivered, and it clears a stop, since
+sending is the owner's answer to it.
 
 ### Concurrency with the user's own work
 
@@ -552,7 +556,9 @@ The meta lane keeps its width.
 2. **One writer per worktree.** Only the task's own session applies keeper
    findings. No path spawns a writing session for a keeper.
 3. **No fix prompt into a busy or dirty task.** Mid-turn, a queued `User`
-   prompt, or a tracked change in `git status --porcelain` defers it.
+   prompt, or a tracked change in `git status --porcelain` defers it. The
+   owner's Send to agent alone goes into a dirty tree, and its prompt says
+   the changes are not the agent's.
 4. **A result belongs to the HEAD it was computed on.** A run whose HEAD moved
    is `superseded` and its findings are never sent to a fixer. Only the
    owner's **Send to agent** sends findings from an older HEAD, and its prompt

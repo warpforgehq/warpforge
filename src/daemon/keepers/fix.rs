@@ -29,14 +29,26 @@ fix it or, if it is not a real problem, rebut it by explaining why. Change nothi
 /// @param head the HEAD the findings were computed on
 /// @param items the findings to fix or rebut
 /// @param guidance (keeper name, the owner's note) pairs from Extend
+/// @param dirty the shared checkout has uncommitted changes the agent must leave alone
 /// @returns the text sent as a `Keeper` turn
-pub fn owner_fix_prompt(head: &str, items: &[FixItem<'_>], guidance: &[(&str, &str)]) -> String {
+pub fn owner_fix_prompt(
+    head: &str,
+    items: &[FixItem<'_>],
+    guidance: &[(&str, &str)],
+    dirty: bool,
+) -> String {
     let intro = |short: &str| {
+        let others = if dirty {
+            "The working tree has uncommitted changes that are not yours: leave them alone, and \
+commit only the files you change for these findings, staged by path.\n\n"
+        } else {
+            ""
+        };
         format!(
             "Keepers checked commit {short} and found the problems below; the owner sent them to \
 you. HEAD may have moved since {short}, so first check whether each one still holds in the \
 current code. For each that does, either fix it or, if it is not a real problem, rebut it by \
-explaining why; for each that no longer holds, say so. Change nothing else.\n\n"
+explaining why; for each that no longer holds, say so. Change nothing else.\n\n{others}"
         )
     };
     prompt(head, intro, items, guidance)
@@ -164,7 +176,7 @@ mod tests {
             keeper: "Security",
             finding: &a,
         }];
-        let prompt = owner_fix_prompt("abcdef0123456789", &items, &[]);
+        let prompt = owner_fix_prompt("abcdef0123456789", &items, &[], false);
         assert!(
             prompt.starts_with("Keepers checked commit abcdef0123 "),
             "{prompt}"
