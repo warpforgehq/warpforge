@@ -147,6 +147,7 @@ impl Daemon {
                 .on
                 .insert(result.task_id.clone(), result.keepers.clone());
         }
+        let ambiguous_projects = self.keepers_attribute_poll(&results);
         for result in results {
             let Some(head) = result.head else {
                 continue;
@@ -158,8 +159,9 @@ impl Daemon {
                 continue;
             }
             let mid_turn = task.status == TaskStatus::Running;
+            let project = task.project.clone();
+            let ambiguous = ambiguous_projects.contains(&project);
             if result.folder {
-                let project = task.project.clone();
                 self.keepers.folder_heads.insert(project, head.clone());
             }
             self.keepers_supersede(&result.task_id, &head);
@@ -169,6 +171,7 @@ impl Daemon {
                     result.branch.as_deref(),
                     &head,
                     mid_turn,
+                    ambiguous,
                 )
             {
                 if let Some(watch) = self.keepers.watches.get_mut(&result.task_id) {

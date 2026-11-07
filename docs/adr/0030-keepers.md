@@ -111,7 +111,16 @@ the remote's default, `main` or `master`. Claiming it releases it from any
 other folder task of the project, so the session that committed last is the
 one its keepers report to. A turn that moved no HEAD claims nothing: an
 orchestrator's turns end constantly and would otherwise take the branch from
-the sub-agent whose commit it is. A branch no
+the sub-agent whose commit it is. Attribution also happens at the poll, not
+only at a turn end: when the checkout's HEAD moved and exactly one folder
+task of the project is mid-turn, that task is the committer and claims the
+branch at once, and its own turn holds the check until it ends, so the
+findings and the fix go to the session that wrote the commit. Several
+mid-turn tasks leave the author ambiguous, so the new HEAD is not checked
+until at most one is running; nobody running means a hand commit in a
+terminal, and the current owner keeps the branch. A task that loses its
+branch has its open findings superseded — the new owner's next check reads
+the whole branch diff and reports anything still true. A branch no
 folder task owns goes, at the next poll, to the project's most recently
 updated folder task that owns no branch yet — so switching to a branch and
 adding keepers starts them without waiting for a turn, while a task that
@@ -585,10 +594,15 @@ The meta lane keeps its width.
     tasks, the advisor and ADR 0020's manual **Send** keep their current
     paths; sandboxing and the daemon watermark apply only to tasks with a
     keeper on.
-20. **A folder task's keepers check only its own branch.** HEAD is read before
-    the branch, so a switch between the two reads pauses the task instead of
-    checking another branch's HEAD under its name; a fix into the shared
-    checkout waits while another folder session of the project is mid-turn.
+20. **A folder task's keepers check only its own branch, and a commit is
+    attributed to the session that made it.** HEAD is read before the branch,
+    so a switch between the two reads pauses the task instead of checking
+    another branch's HEAD under its name. At the poll a new HEAD with exactly
+    one folder task mid-turn is claimed by that task, the committer, and its
+    turn holds the check until it ends; several mid-turn tasks leave the
+    author ambiguous, so nothing checks until at most one is running. A fix
+    into the shared checkout waits while another folder session of the
+    project is mid-turn.
 
 ## Consequences
 

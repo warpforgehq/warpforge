@@ -1,7 +1,7 @@
 //! Keepers on tasks without a worktree: the branch a turn ended on, the
 //! shared checkout's guards.
 
-use super::fixer::{fix_task, loop_event, prompts, until};
+use super::fixer::{fix_prompts, fix_task, loop_event, prompts, until};
 use super::*;
 use crate::daemon::actor::keepers::checkout::{NO_BRANCH, SHARED_CHECKOUT_BUSY};
 use wire::KeeperLoopStatus;
@@ -211,4 +211,254 @@ async fn until_branch(setup: &Setup, task_id: &str, branch: Option<&str>) {
     })
     .await
     .unwrap_or_else(|_| panic!("{task_id} owns {branch:?}"));
+}
+
+/// Move the shared checkout's HEAD, as a folder task's commit would.
+async fn move_checkout_head(setup: &Setup, sha: &str) {
+    let root = setup.projects[0].path.clone();
+    let mut s = setup.script.lock().unwrap();
+    s.heads.insert(root.clone(), sha.into());
+    let change = s.changes.get_mut(&root).unwrap();
+    change.log.insert(0, format!("{sha} follow-up"));
+}
+
+/// `keepers.state` for an arbitrary task.
+async fn task_state(setup: &Setup, task_id: &str) -> wire::KeeperTaskState {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    let ask = KeeperCommand::State {
+        task_id: task_id.into(),
+        reply: tx,
+    };
+    setup.daemon.send(Command::Keepers(ask)).await;
+    rx.await.unwrap().unwrap()
+}
+
+/// A sub-agent commits mid-turn while another task owns the branch: the poll
+/// attributes the new HEAD to the running task, whose mid-turn holds the check
+/// until its turn ends, so the findings land on it, not the owner.
+#[tokio::test]
+async fn a_mid_turn_commit_is_attributed_to_the_running_task() {
+    let mut setup = setup(&[("review", REVIEW)], |_| {
+        vec![task("t_a", None), task("t_b", None)]
+    })
+    .await;
+    on_branch(&setup, Some("feat/x"));
+    commit(&setup, "t_a").await;
+    keeper_event(&mut setup, |r| finished(r) && r.task_id == "t_a").await;
+    until_branch(&setup, "t_a", Some("feat/x")).await;
+
+    setup
+        .daemon
+        .set_task_status("t_b", TaskStatus::Running)
+        .await;
+    move_checkout_head(&setup, "sha2").await;
+    setup
+        .daemon
+        .send(Command::Keepers(KeeperCommand::Poll))
+        .await;
+
+    until_branch(&setup, "t_b", Some("feat/x")).await;
+    until_branch(&setup, "t_a", None).await;
+    let held_back = task_state(&setup, "t_b").await.runs;
+    assert!(
+        held_back.iter().all(|r| r.head_sha != "sha2"),
+        "the running task checks only once its turn ends: {held_back:?}"
+    );
+
+    setup
+        .daemon
+        .set_task_status("t_b", TaskStatus::Waiting)
+        .await;
+    commit(&setup, "t_b").await;
+    let (run, _) = keeper_event(&mut setup, |r| finished(r) && r.head_sha == "sha2").await;
+    assert_eq!(run.task_id, "t_b", "the committer's findings go to it");
+    setup.daemon.shutdown().await;
+}
+
+/// Two folder sessions mid-turn leave the author ambiguous: nobody checks the
+/// new HEAD until one of them ends and the poll attributes the other.
+#[tokio::test]
+async fn two_mid_turn_sessions_hold_the_check_until_one_ends() {
+    let mut setup = setup(&[("review", REVIEW)], |_| {
+        vec![task("t_a", None), task("t_b", None), task("t_c", None)]
+    })
+    .await;
+    on_branch(&setup, Some("feat/x"));
+    commit(&setup, "t_a").await;
+    keeper_event(&mut setup, |r| finished(r) && r.task_id == "t_a").await;
+    until_branch(&setup, "t_a", Some("feat/x")).await;
+
+    setup
+        .daemon
+        .set_task_status("t_b", TaskStatus::Running)
+        .await;
+    setup
+        .daemon
+        .set_task_status("t_c", TaskStatus::Running)
+        .await;
+    move_checkout_head(&setup, "sha2").await;
+    commit(&setup, "t_a").await;
+
+    until_held(&setup, "t_a", Some(SHARED_CHECKOUT_BUSY)).await;
+    assert_eq!(
+        switches(&setup.daemon, "t_a").await.branch.as_deref(),
+        Some("feat/x"),
+        "an ambiguous commit does not move the branch"
+    );
+    let runs = task_state(&setup, "t_a").await.runs;
+    assert!(
+        runs.iter().all(|r| r.head_sha != "sha2"),
+        "no check while the author is ambiguous: {runs:?}"
+    );
+
+    setup
+        .daemon
+        .set_task_status("t_c", TaskStatus::Waiting)
+        .await;
+    until_branch(&setup, "t_b", Some("feat/x")).await;
+
+    setup
+        .daemon
+        .set_task_status("t_b", TaskStatus::Waiting)
+        .await;
+    commit(&setup, "t_b").await;
+    let (run, _) = keeper_event(&mut setup, |r| finished(r) && r.head_sha == "sha2").await;
+    assert_eq!(run.task_id, "t_b");
+    setup.daemon.shutdown().await;
+}
+
+/// A folder task that loses its branch has its open findings superseded: the
+/// new owner's next check reads the whole diff and reports anything still true.
+#[tokio::test]
+async fn losing_the_branch_supersedes_open_findings() {
+    let mut setup = setup(&[("review", REVIEW)], |_| {
+        vec![task("t_a", None), task("t_b", None)]
+    })
+    .await;
+    on_branch(&setup, Some("feat/x"));
+    commit(&setup, "t_a").await;
+    let (_, findings) = keeper_event(&mut setup, |r| finished(r) && r.task_id == "t_a").await;
+    assert!(
+        findings
+            .iter()
+            .any(|f| f.status == wire::KeeperFindingStatus::Open),
+        "{findings:?}"
+    );
+
+    commit(&setup, "t_b").await;
+    until_branch(&setup, "t_b", Some("feat/x")).await;
+    until_branch(&setup, "t_a", None).await;
+
+    let state = task_state(&setup, "t_a").await;
+    assert!(!state.findings.is_empty());
+    assert!(
+        state
+            .findings
+            .iter()
+            .all(|f| f.status == wire::KeeperFindingStatus::Superseded),
+        "{:?}",
+        state.findings
+    );
+    setup.daemon.shutdown().await;
+}
+
+/// A folder task that loses its branch mid-fix has that fix dropped: nothing
+/// is sent from the old HEAD (invariant 4), and the keeper returns to idle.
+#[tokio::test]
+async fn losing_the_branch_drops_a_pending_fix() {
+    let mut setup = setup(&[("review", REVIEW)], |wt| {
+        let mut owner = fix_task("t_a", wt);
+        owner.worktree = None;
+        let mut other = fix_task("t_b", wt);
+        other.worktree = None;
+        vec![owner, other]
+    })
+    .await;
+    on_branch(&setup, Some("feat/x"));
+    let root = setup.projects[0].path.clone();
+    setup.script.lock().unwrap().dirty.insert(root.clone());
+    commit(&setup, "t_a").await;
+    keeper_event(&mut setup, |r| finished(r) && r.task_id == "t_a").await;
+    until_branch(&setup, "t_a", Some("feat/x")).await;
+    loop_event(&mut setup, |s| {
+        s.status == KeeperLoopStatus::Waiting && s.reason.is_some()
+    })
+    .await;
+
+    setup.script.lock().unwrap().dirty.clear();
+    commit(&setup, "t_b").await;
+    until_branch(&setup, "t_b", Some("feat/x")).await;
+    until_branch(&setup, "t_a", None).await;
+
+    let state = task_state(&setup, "t_a").await;
+    assert!(
+        state
+            .findings
+            .iter()
+            .all(|f| f.status == wire::KeeperFindingStatus::Superseded),
+        "{:?}",
+        state.findings
+    );
+    assert_eq!(
+        state.loops["review"].status,
+        KeeperLoopStatus::Idle,
+        "the pending fix is dropped"
+    );
+    assert!(fix_prompts(&setup).is_empty(), "no fix from the old HEAD");
+    setup.daemon.shutdown().await;
+}
+
+/// A hand commit with nobody mid-turn stays with the current owner: no heir or
+/// runner steals the branch, and the owner checks it.
+#[tokio::test]
+async fn a_hand_commit_with_nobody_running_stays_with_the_owner() {
+    let mut setup = setup(&[("review", REVIEW)], |_| {
+        let mut latest = task("t_b", None);
+        latest.updated_at = 2;
+        vec![task("t_a", None), latest]
+    })
+    .await;
+    on_branch(&setup, Some("feat/x"));
+    commit(&setup, "t_a").await;
+    keeper_event(&mut setup, |r| finished(r) && r.task_id == "t_a").await;
+    until_branch(&setup, "t_a", Some("feat/x")).await;
+
+    move_checkout_head(&setup, "sha2").await;
+    setup
+        .daemon
+        .send(Command::Keepers(KeeperCommand::Poll))
+        .await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert_eq!(
+        switches(&setup.daemon, "t_a").await.branch.as_deref(),
+        Some("feat/x"),
+        "the hand commit stays with the owner"
+    );
+    assert_eq!(switches(&setup.daemon, "t_b").await.branch, None);
+
+    // A task that only turns Running later did not make the hand commit, so
+    // it must not take the branch from the owner.
+    setup
+        .daemon
+        .set_task_status("t_b", TaskStatus::Running)
+        .await;
+    setup
+        .daemon
+        .send(Command::Keepers(KeeperCommand::Poll))
+        .await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert_eq!(
+        switches(&setup.daemon, "t_a").await.branch.as_deref(),
+        Some("feat/x"),
+        "a later-running task does not take the hand commit"
+    );
+    setup
+        .daemon
+        .set_task_status("t_b", TaskStatus::Waiting)
+        .await;
+
+    commit(&setup, "t_a").await;
+    let (run, _) = keeper_event(&mut setup, |r| finished(r) && r.head_sha == "sha2").await;
+    assert_eq!(run.task_id, "t_a");
+    setup.daemon.shutdown().await;
 }
