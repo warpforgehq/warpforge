@@ -77,7 +77,7 @@ Click a finding's `file:line` to open it in the Explorer at that line before you
 
 ## Send findings to the agent yourself
 
-Keepers hand findings back on their own only while they still match the latest commit, so findings can be left behind — a **Check before PR** keeper's after you commit again, or a keeper's you accepted. **Send to agent** on the keeper's card sends its open findings to the task's agent as one fix request. The agent is told which commit they were found on and checks that each one still holds before fixing it. The button waits for a quiet moment: it is refused, with the reason, while the agent is working or a message of yours is queued. Uncommitted changes in the folder don't stop it: the agent is told they aren't its own and commits only the files it changes. A send counts as one of the keeper's fix rounds.
+Keepers hand findings back on their own only while they still match the latest commit, so findings can be left behind — a **Check before PR** keeper's after you commit again, or a keeper's you accepted. **Send to agent** on the keeper's card sends its open findings to the task's agent as one fix request. The agent is told which commit they were found on and checks that each one still holds before fixing it. The button waits for a quiet moment: it is refused, with the reason, while the agent is working or a message of yours is queued. Uncommitted changes in the folder don't stop it: the agent is told they aren't its own and commits only the files it changes. A file a finding points at must be committed or stashed first, so the fix can't take your unfinished edits with it. A send counts as one of the keeper's fix rounds.
 
 ## When a keeper stops
 

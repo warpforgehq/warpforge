@@ -46,6 +46,8 @@ pub struct Scripted {
     pub head_reads: Vec<String>,
     /// Worktrees with uncommitted changes.
     pub dirty: std::collections::HashSet<String>,
+    /// Each worktree's files with uncommitted changes.
+    pub changed_files: std::collections::HashMap<String, Vec<String>>,
     /// Checkouts on a branch other than the base.
     pub branches: std::collections::HashMap<String, String>,
     /// Holds every change read until cleared.
@@ -107,6 +109,22 @@ impl GitSource {
                 .and_then(|name| name.strip_prefix("origin/"));
             let bases = [base, remote_default, Some("main"), Some("master")];
             (!bases.contains(&Some(branch.as_str()))).then_some(branch)
+        }
+    }
+
+    /// @param cwd a worktree
+    /// @returns its tracked files with uncommitted changes, relative to its root
+    pub async fn changed_files(&self, cwd: &str) -> Result<Vec<String>, String> {
+        #[cfg(test)]
+        {
+            let script = self.scripted.as_ref().ok_or("no git in tests")?;
+            let script = script.lock().unwrap();
+            Ok(script.changed_files.get(cwd).cloned().unwrap_or_default())
+        }
+        #[cfg(not(test))]
+        {
+            let names = git(cwd, &["diff", "--name-only", "HEAD"]).await?;
+            Ok(names.lines().map(str::to_string).collect())
         }
     }
 

@@ -73,10 +73,30 @@ async fn findings_on_an_older_head_are_sent_naming_their_commit() {
 }
 
 #[tokio::test]
-async fn sending_into_a_dirty_tree_warns_the_agent() {
+async fn sending_into_a_dirty_tree_warns_the_agent_and_spares_a_changed_finding_file() {
     let setup = findings_left_behind().await;
-    let dirty = setup.worktree.clone();
-    setup.script.lock().unwrap().dirty.insert(dirty);
+    let tree = setup.worktree.clone();
+    let changed = vec!["README.md".to_string(), "src/lib.rs".to_string()];
+    setup
+        .script
+        .lock()
+        .unwrap()
+        .changed_files
+        .insert(tree.clone(), changed);
+    let error = send_findings(&setup, "security").await.unwrap_err();
+    assert!(
+        error.starts_with("src/lib.rs has uncommitted changes"),
+        "{error}"
+    );
+    assert!(fix_prompts(&setup).is_empty());
+
+    let changed = vec!["README.md".to_string()];
+    setup
+        .script
+        .lock()
+        .unwrap()
+        .changed_files
+        .insert(tree, changed);
     send_findings(&setup, "security").await.unwrap();
     until("the fix prompt", || fix_prompts(&setup).len() == 1).await;
     let prompt = &fix_prompts(&setup)[0];

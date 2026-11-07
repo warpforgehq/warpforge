@@ -346,7 +346,9 @@ is already sent, the task has no session to resume, the account is refused, or
 nothing is open. Tracked changes in the worktree do not refuse it, the one
 exception to invariant 3: in a shared checkout the tree is rarely clean, and
 the owner asked, so the prompt instead tells the agent the changes are not its
-own and to commit only the files it changes, staged by path. It is a round
+own and to commit only the files it changes, staged by path. Staging by path
+cannot separate two people's edits in one file, so a send is refused while a
+file one of its findings names has uncommitted changes. It is a round
 like an automatic fix (invariant 5): counted once per HEAD, reverted when the
 turn is cut short or the prompt is not delivered, and it clears a stop, since
 sending is the owner's answer to it.
@@ -560,7 +562,7 @@ The meta lane keeps its width.
 3. **No fix prompt into a busy or dirty task.** Mid-turn, a queued `User`
    prompt, or a tracked change in `git status --porcelain` defers it. The
    owner's Send to agent alone goes into a dirty tree, and its prompt says
-   the changes are not the agent's.
+   the changes are not the agent's; never when a finding's file is dirty.
 4. **A result belongs to the HEAD it was computed on.** A run whose HEAD moved
    is `superseded` and its findings are never sent to a fixer. Only the
    owner's **Send to agent** sends findings from an older HEAD, and its prompt

@@ -95,13 +95,13 @@ pub enum KeeperCommand {
         keeper_id: String,
         reply: Reply<()>,
     },
-    /// What `SendFindings` read off the loop: the keeper's name and whether
-    /// the worktree is clean.
+    /// What `SendFindings` read off the loop: the keeper's name and the
+    /// worktree's files with uncommitted changes.
     SendRead {
         task_id: String,
         keeper_id: String,
         name: String,
-        clean: Result<bool, String>,
+        changed: Result<Vec<String>, String>,
         reply: Reply<()>,
     },
     /// Run the task's `when: ready` keepers on its HEAD now; replies with
@@ -283,10 +283,10 @@ impl Daemon {
                 task_id,
                 keeper_id,
                 name,
-                clean,
+                changed,
                 reply,
             } => {
-                let sent = self.keepers_send_findings(&task_id, &keeper_id, &name, clean);
+                let sent = self.keepers_send_findings(&task_id, &keeper_id, &name, changed);
                 let _ = reply.send(sent);
             }
             KeeperCommand::CheckReady { task_id, reply } => {
