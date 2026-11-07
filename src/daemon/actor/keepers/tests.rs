@@ -53,6 +53,7 @@ fn finding(id: &str, run_id: &str, status: Status) -> wire::KeeperFinding {
         status,
         dismiss_reason: (status == Status::Dismissed).then(|| "intended".to_string()),
         resolved_at: matches!(status, Status::Fixed | Status::Dismissed).then_some(200),
+        reply: None,
     }
 }
 
@@ -79,13 +80,24 @@ async fn the_mirror_reads_back_after_the_write_behind_queue() {
     keepers.put_run(&persist, &tasks, run("r1", "t_a", "review"));
     keepers.put_finding(&persist, &tasks, "t_a", finding("f1", "r1", Status::Open));
     keepers.put_finding(&persist, &tasks, "t_a", finding("f1", "r1", Status::Fixed));
+    let answered = wire::KeeperFinding {
+        reply: Some(wire::KeeperReply {
+            verdict: wire::KeeperReplyVerdict::Stale,
+            reason: "fixed in abc".into(),
+        }),
+        ..finding("f2", "r1", Status::Sent)
+    };
+    keepers.put_finding(&persist, &tasks, "t_a", answered.clone());
     persist.flush().await;
 
     let reloaded = load_state(store.as_ref());
     let state = reloaded.task("t_a").unwrap();
     assert_eq!(Some(state), keepers.task("t_a"));
     assert_eq!(state.runs, vec![draft, run("r1", "t_a", "review")]);
-    assert_eq!(state.findings, vec![finding("f1", "r1", Status::Fixed)]);
+    assert_eq!(
+        state.findings,
+        vec![finding("f1", "r1", Status::Fixed), answered]
+    );
 }
 
 #[tokio::test]
