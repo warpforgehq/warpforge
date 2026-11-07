@@ -99,6 +99,16 @@ export interface KeeperFinding {
   status: KeeperFindingStatus;
   dismissReason?: string | null;
   resolvedAt?: number | null;
+  /** The fixer's answer when it did not fix the finding; advice until the owner accepts it. */
+  reply?: KeeperReply | null;
+}
+
+/** `rebutted`: not a real problem. `stale`: no longer holds in the current code. */
+export type KeeperReplyVerdict = "rebutted" | "stale";
+
+export interface KeeperReply {
+  verdict: KeeperReplyVerdict;
+  reason: string;
 }
 
 /** Resolved findings of one keeper across the project; precision is

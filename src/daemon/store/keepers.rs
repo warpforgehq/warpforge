@@ -45,13 +45,16 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
             description    TEXT NOT NULL,
             status         TEXT NOT NULL DEFAULT 'open',
             dismiss_reason TEXT,
-            resolved_at    INTEGER
+            resolved_at    INTEGER,
+            reply          TEXT
         );
         CREATE INDEX IF NOT EXISTS keeper_findings_run_idx ON keeper_findings(run_id);
         "#,
     )?;
     // Migration: a `result: draft` run's text.
     let _ = conn.execute("ALTER TABLE keeper_runs ADD COLUMN draft TEXT", []);
+    // Migration: the fixer's reply to a finding, as JSON.
+    let _ = conn.execute("ALTER TABLE keeper_findings ADD COLUMN reply TEXT", []);
     Ok(())
 }
 
@@ -75,8 +78,8 @@ fn from_word<T: DeserializeOwned + Default>(word: String) -> T {
 const RUN_COLUMNS: &str = "id, task_id, keeper_id, run_number, trigger, head_sha, base_sha, \
      started_at, finished_at, outcome, count, checker_task_id, round, cost, error, draft";
 
-const FINDING_COLUMNS: &str =
-    "id, run_id, key, severity, file, line, description, status, dismiss_reason, resolved_at";
+const FINDING_COLUMNS: &str = "id, run_id, key, severity, file, line, description, status, \
+     dismiss_reason, resolved_at, reply";
 
 fn run_from_row(row: &Row<'_>) -> rusqlite::Result<wire::KeeperRun> {
     Ok(wire::KeeperRun {
@@ -115,6 +118,9 @@ fn finding_from_row(row: &Row<'_>) -> rusqlite::Result<wire::KeeperFinding> {
         status: from_word(row.get(7)?),
         dismiss_reason: row.get(8)?,
         resolved_at: row.get::<_, Option<i64>>(9)?.map(|at| at as u64),
+        reply: row
+            .get::<_, Option<String>>(10)?
+            .and_then(|json| serde_json::from_str(&json).ok()),
     })
 }
 
@@ -149,7 +155,7 @@ impl Store {
             KeeperWrite::Finding(finding) => self.conn.execute(
                 &format!(
                     "INSERT OR REPLACE INTO keeper_findings ({FINDING_COLUMNS}) \
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
                 ),
                 params![
                     finding.id,
@@ -162,6 +168,11 @@ impl Store {
                     word(&finding.status),
                     finding.dismiss_reason,
                     finding.resolved_at.map(|at| at as i64),
+                    finding
+                        .reply
+                        .as_ref()
+                        .map(serde_json::to_string)
+                        .transpose()?,
                 ],
             )?,
         };

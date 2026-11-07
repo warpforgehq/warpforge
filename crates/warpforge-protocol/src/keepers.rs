@@ -249,6 +249,27 @@ pub struct KeeperFinding {
     pub dismiss_reason: Option<String>,
     /// When it became `fixed` or `dismissed`; orders the precision window.
     pub resolved_at: Option<u64>,
+    /// The fixer's answer when it did not fix the finding; advice until the
+    /// owner accepts it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reply: Option<KeeperReply>,
+}
+
+/// Why the fixer left a finding unfixed.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum KeeperReplyVerdict {
+    /// Not a real problem.
+    Rebutted,
+    /// No longer holds in the current code.
+    Stale,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct KeeperReply {
+    pub verdict: KeeperReplyVerdict,
+    pub reason: String,
 }
 
 /// Resolved findings of one keeper across a project's tasks.
