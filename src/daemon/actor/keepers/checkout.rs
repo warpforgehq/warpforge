@@ -111,22 +111,17 @@ impl Daemon {
             }
             let runners = running.get(project).map(Vec::as_slice).unwrap_or(&[]);
             match runners {
-                [sole] => {
-                    self.keepers_claim(sole, branch);
-                    self.keepers
-                        .attributed_heads
-                        .insert(project.clone(), head.clone());
-                }
-                [] => {
-                    // A hand commit with nobody running stays with the owner.
-                    self.keepers
-                        .attributed_heads
-                        .insert(project.clone(), head.clone());
-                }
-                _ => {
+                [_, _, ..] => {
                     ambiguous.insert(project.clone());
+                    continue;
                 }
+                [sole] => self.keepers_claim(sole, branch),
+                // A hand commit with nobody running stays with the owner.
+                [] => {}
             }
+            self.keepers
+                .attributed_heads
+                .insert(project.clone(), head.clone());
         }
         ambiguous
     }
@@ -253,13 +248,14 @@ impl Daemon {
         for run_id in touched {
             self.keeper_emit_run(task_id, &run_id);
         }
-        if let Some(fix) = self.keepers.fixes.remove(task_id) {
-            if matches!(fix.phase, FixPhase::Waiting(_) | FixPhase::Gating) {
-                for keeper_id in &fix.keepers {
-                    self.keeper_emit_loop(task_id, keeper_id);
-                }
-            } else {
-                self.keepers.fixes.insert(task_id.to_string(), fix);
+        let unsent = self
+            .keepers
+            .fixes
+            .get(task_id)
+            .is_some_and(|fix| matches!(fix.phase, FixPhase::Waiting(_) | FixPhase::Gating));
+        if let Some(fix) = unsent.then(|| self.keepers.fixes.remove(task_id)).flatten() {
+            for keeper_id in &fix.keepers {
+                self.keeper_emit_loop(task_id, keeper_id);
             }
         }
     }
