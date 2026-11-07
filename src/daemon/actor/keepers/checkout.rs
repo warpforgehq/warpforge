@@ -2,8 +2,11 @@
 //! folder*): the task owns the branch its last turn ended on, and its keepers
 //! check only while the shared checkout is on that branch.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
+use warpforge_protocol as wire;
+
+use super::FixPhase;
 use crate::daemon::actor::Daemon;
 use crate::daemon::task::{Task, TaskStatus};
 
@@ -18,6 +21,8 @@ impl Daemon {
     /// @param branch the checkout's branch, `None` on the base or detached
     /// @param head the checkout's HEAD
     /// @param mid_turn whether the task's agent is working
+    /// @param ambiguous whether this poll's new HEAD has several possible
+    /// committers, so nobody may check it yet
     /// @returns whether the task's keepers may check this HEAD
     pub(super) fn keepers_checkout(
         &mut self,
@@ -25,6 +30,7 @@ impl Daemon {
         branch: Option<&str>,
         head: &str,
         mid_turn: bool,
+        ambiguous: bool,
     ) -> bool {
         let turn_ended = !mid_turn
             && self
@@ -33,9 +39,11 @@ impl Daemon {
                 .get(task_id)
                 .is_some_and(|watch| watch.nudged());
         let committed = turn_ended && self.keepers_turn_committed(task_id, head);
-        if let Some(branch) = branch {
-            if committed || self.keepers_heir(task_id, branch) {
-                self.keepers_claim(task_id, branch);
+        if !ambiguous {
+            if let Some(branch) = branch {
+                if committed || self.keepers_heir(task_id, branch) {
+                    self.keepers_claim(task_id, branch);
+                }
             }
         }
         let owned = self
@@ -44,7 +52,9 @@ impl Daemon {
             .and_then(|task| task.keepers.as_ref())
             .and_then(|keepers| keepers.branch.clone());
         let held = match (owned, branch) {
-            (Some(owned), Some(branch)) if owned == branch => None,
+            (Some(owned), Some(branch)) if owned == branch => {
+                ambiguous.then(|| SHARED_CHECKOUT_BUSY.to_string())
+            }
             (Some(owned), Some(branch)) => {
                 Some(format!("the checkout is on {branch}, not {owned}"))
             }
@@ -54,6 +64,71 @@ impl Daemon {
         let checks = held.is_none();
         self.keepers_edit_task(task_id, |keepers| keepers.held = held);
         checks
+    }
+
+    /// Attribute this poll's new HEADs (ADR 0030, *Product shape*): when a
+    /// checkout's HEAD moved and exactly one folder task of the project is
+    /// mid-turn, that task is the committer and claims the branch at once.
+    /// Several mid-turn tasks leave the author ambiguous, so nobody claims and
+    /// the owner is held until a later poll resolves it.
+    /// @param results one entry per eligible task, as the poll read them
+    /// @returns the projects whose new HEAD's author is still ambiguous
+    pub(super) fn keepers_attribute_poll(&mut self, results: &[super::Polled]) -> HashSet<String> {
+        let mut running: HashMap<String, Vec<String>> = HashMap::new();
+        let mut checkout: HashMap<String, (String, String)> = HashMap::new();
+        for result in results {
+            if !result.folder {
+                continue;
+            }
+            let Some(task) = self.tasks.get(&result.task_id) else {
+                continue;
+            };
+            if task.status == TaskStatus::Running {
+                running
+                    .entry(task.project.clone())
+                    .or_default()
+                    .push(result.task_id.clone());
+            }
+            if let (Some(branch), Some(head)) = (&result.branch, &result.head) {
+                checkout
+                    .entry(task.project.clone())
+                    .or_insert_with(|| (branch.clone(), head.clone()));
+            }
+        }
+        let mut ambiguous = HashSet::new();
+        for (project, (branch, head)) in &checkout {
+            match self.keepers.attributed_heads.get(project) {
+                Some(seen) if seen == head => continue,
+                // The first HEAD this daemon sees (a start) has no committer
+                // to find; only a move after it is attributed.
+                None => {
+                    self.keepers
+                        .attributed_heads
+                        .insert(project.clone(), head.clone());
+                    continue;
+                }
+                Some(_) => {}
+            }
+            let runners = running.get(project).map(Vec::as_slice).unwrap_or(&[]);
+            match runners {
+                [sole] => {
+                    self.keepers_claim(sole, branch);
+                    self.keepers
+                        .attributed_heads
+                        .insert(project.clone(), head.clone());
+                }
+                [] => {
+                    // A hand commit with nobody running stays with the owner.
+                    self.keepers
+                        .attributed_heads
+                        .insert(project.clone(), head.clone());
+                }
+                _ => {
+                    ambiguous.insert(project.clone());
+                }
+            }
+        }
+        ambiguous
     }
 
     /// The turn that just ended moved the checkout's HEAD, or Warpforge
@@ -120,7 +195,7 @@ impl Daemon {
     }
 
     /// The branch moves to `task_id`; other tasks of the project's checkout
-    /// that owned it let it go.
+    /// that owned it let it go and their open findings are superseded.
     fn keepers_claim(&mut self, task_id: &str, branch: &str) {
         let Some(project) = self.tasks.get(task_id).map(|task| task.project.clone()) else {
             return;
@@ -140,10 +215,53 @@ impl Daemon {
             .collect();
         for other in previous {
             self.keepers_edit_task(&other, |keepers| keepers.branch = None);
+            self.keepers_lost_branch(&other);
         }
         self.keepers_edit_task(task_id, |keepers| {
             keepers.branch = Some(branch.to_string());
         });
+    }
+
+    /// The task no longer owns its branch: its open findings become
+    /// superseded (the new owner's next check reads the whole branch diff and
+    /// reports anything still true) and a fix that was not handed over yet is
+    /// dropped.
+    /// @param task_id the task that lost the branch
+    fn keepers_lost_branch(&mut self, task_id: &str) {
+        let open: Vec<wire::KeeperFinding> = self
+            .keepers
+            .task(task_id)
+            .map(|state| {
+                state
+                    .findings
+                    .iter()
+                    .filter(|finding| finding.status == wire::KeeperFindingStatus::Open)
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default();
+        let mut touched: HashSet<String> = HashSet::new();
+        for finding in open {
+            touched.insert(finding.run_id.clone());
+            let superseded = wire::KeeperFinding {
+                status: wire::KeeperFindingStatus::Superseded,
+                ..finding
+            };
+            self.keepers
+                .put_finding(&self.persist, &self.tasks, task_id, superseded);
+        }
+        for run_id in touched {
+            self.keeper_emit_run(task_id, &run_id);
+        }
+        if let Some(fix) = self.keepers.fixes.remove(task_id) {
+            if matches!(fix.phase, FixPhase::Waiting(_) | FixPhase::Gating) {
+                for keeper_id in &fix.keepers {
+                    self.keeper_emit_loop(task_id, keeper_id);
+                }
+            } else {
+                self.keepers.fixes.insert(task_id.to_string(), fix);
+            }
+        }
     }
 
     /// A task no poll covers any more keeps no stale reason.

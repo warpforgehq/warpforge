@@ -168,6 +168,9 @@ pub(crate) struct KeepersState {
     ready: HashMap<String, Ready>,
     /// Each project's shared checkout HEAD, as the last poll read it.
     folder_heads: HashMap<String, String>,
+    /// Each project's checkout HEAD last attributed to a folder task, or
+    /// settled as a hand commit: a poll only attributes a genuinely new HEAD.
+    attributed_heads: HashMap<String, String>,
     /// A folder task's checkout HEAD when its current turn started.
     turn_heads: HashMap<String, Option<String>>,
 }
