@@ -139,21 +139,29 @@ fn build(
         ));
     }
 
+    let when = choice(
+        raw.when,
+        "when",
+        &[
+            ("commit", wire::KeeperWhen::Commit),
+            ("ready", wire::KeeperWhen::Ready),
+            ("ci", wire::KeeperWhen::Ci),
+            ("comments", wire::KeeperWhen::Comments),
+        ],
+    )?;
+    if matches!(when, wire::KeeperWhen::Ci | wire::KeeperWhen::Comments) {
+        warnings.push(
+            "`when: ci` and `when: comments` are not run yet; this keeper stays idle until \
+post-PR keepers ship"
+                .to_string(),
+        );
+    }
     Ok(wire::KeeperDefinition {
         id: id.to_string(),
         name,
         description: text(raw.description),
         preset: preset_id,
-        when: choice(
-            raw.when,
-            "when",
-            &[
-                ("commit", wire::KeeperWhen::Commit),
-                ("ready", wire::KeeperWhen::Ready),
-                ("ci", wire::KeeperWhen::Ci),
-                ("comments", wire::KeeperWhen::Comments),
-            ],
-        )?,
+        when,
         result: choice(
             raw.result,
             "result",

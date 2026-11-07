@@ -73,14 +73,23 @@ async fn findings_on_an_older_head_are_sent_naming_their_commit() {
 }
 
 #[tokio::test]
-async fn sending_is_refused_into_a_dirty_tree_or_mid_turn() {
+async fn sending_into_a_dirty_tree_warns_the_agent() {
     let setup = findings_left_behind().await;
     let dirty = setup.worktree.clone();
-    setup.script.lock().unwrap().dirty.insert(dirty.clone());
-    let error = send_findings(&setup, "security").await.unwrap_err();
-    assert_eq!(error, "the worktree has uncommitted changes");
-    setup.script.lock().unwrap().dirty.remove(&dirty);
+    setup.script.lock().unwrap().dirty.insert(dirty);
+    send_findings(&setup, "security").await.unwrap();
+    until("the fix prompt", || fix_prompts(&setup).len() == 1).await;
+    let prompt = &fix_prompts(&setup)[0];
+    assert!(
+        prompt.contains("uncommitted changes that are not yours"),
+        "{prompt}"
+    );
+    setup.daemon.shutdown().await;
+}
 
+#[tokio::test]
+async fn sending_is_refused_mid_turn() {
+    let setup = findings_left_behind().await;
     std::fs::write(&setup.hold, "busy turn").unwrap();
     setup
         .daemon
