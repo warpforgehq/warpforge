@@ -30,6 +30,8 @@ Adding one writes a two-line file into the project, such as `.warpforge/keepers/
 
 A new keeper is on for every task in the project. The switch on each keeper turns it off, or back on, for **this task only**.
 
+Each keeper can run on its own harness and model, so a mechanical check such as Slop can use a cheap, fast model while Review keeps a strong one. The muted text next to the keeper's name shows what it runs on — **Task's agent** until you pick one. Click it to choose the harness, its model and, when the harness offers one, the reasoning effort; **Save** writes them into the keeper's file and leaves the rest of the file as it was. You can set the same `agent`, `model` and `effort` keys in the file by hand.
+
 ## What happens on a commit
 
 <Steps>

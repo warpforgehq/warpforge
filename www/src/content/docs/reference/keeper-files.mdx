@@ -55,9 +55,9 @@ instructions: |
 | `preset` | string | — | One of the [presets](#presets): inherit that built-in's prompt and defaults. An unknown preset makes the file invalid. |
 | `when` | string | `commit` | When the keeper runs. `commit` checks each new commit on the task's branch. `ready` checks the task's latest commit only when you ask for a check before opening the pull request, never on its own. `ci` and `comments` are accepted but do not run yet. |
 | `result` | string | `findings` | How the reply is read — see [Results](#results). |
-| `agent` | string | the task's agent | The harness that checks, such as `claude` or `codex`. |
-| `model` | string | the agent's default | |
-| `effort` | string | the agent's default | Reasoning effort passed to the agent. |
+| `agent` | string | the task's agent | The harness that checks, such as `claude`, `codex` or `opencode`. Without it, `model` and `effort` apply to the task's agent. |
+| `model` | string | the agent's default | A model id from that harness's model list, such as `opencode-go/deepseek-v4.1-flash`. |
+| `effort` | string | the agent's default | Reasoning effort, one of the harness's effort values such as `high`. Ignored by a harness without an effort setting. |
 | `time_limit` | duration | `15m` | How long one check may take, such as `10m` or `90s`. A check that runs out is **inconclusive**. Values above `60m` are clamped with a warning. |
 | `max_rounds` | number | `3` | Fix rounds since the keeper's last green before it stops and asks you. Must be ≥ 1; values above **5** are clamped with a warning. |
 | `min_severity` | string | `medium` | `critical`, `high`, `medium` or `low`. Findings below it are shown but never sent to the agent to fix, and do not turn the keeper red. |

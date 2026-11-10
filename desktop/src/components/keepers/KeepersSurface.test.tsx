@@ -5,14 +5,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DaemonRpcError } from "@/daemon/rpcError";
 import { normalizeKeeperState } from "@/lib/keepers";
-import type { KeeperEntry, KeeperTaskState, TaskInfo } from "@/protocol";
+import type { AgentConfig, KeeperEntry, KeeperTaskState, TaskInfo } from "@/protocol";
 import { finding, run } from "@/test/keepers";
 
 const { toastError } = vi.hoisted(() => ({ toastError: vi.fn<(...args: unknown[]) => void>() }));
 vi.mock("sonner", () => ({ toast: { error: toastError } }));
 
 const { client, store } = vi.hoisted(() => {
-  const state: { taskKeepers: Record<string, unknown> } = { taskKeepers: {} };
+  const state: { snapshot: { agents: unknown[] }; taskKeepers: Record<string, unknown> } = {
+    snapshot: { agents: [] },
+    taskKeepers: {},
+  };
   return {
     client: {
       acceptKeeperReply: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
@@ -25,6 +28,7 @@ const { client, store } = vi.hoisted(() => {
       getState: () => state,
       listKeepers: vi.fn<() => Promise<unknown[]>>(),
       refreshTaskKeepers: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
+      saveKeeperRunsOn: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       sendKeeperFindings: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       setKeeperSwitch: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       subscribe: () => () => {},
@@ -67,10 +71,39 @@ function show(entries: KeeperEntry[], state?: Partial<KeeperTaskState>, of: Task
   return { onOpenFile, user: userEvent.setup({ pointerEventsCheck: 0 }) };
 }
 
+const agent = (id: string, models: AgentConfig["models"]): AgentConfig => ({
+  acpCommand: id,
+  displayName: id,
+  enabled: true,
+  id,
+  models,
+});
+
+const agents = [
+  agent("claude", [
+    { currentValue: "", id: "model", name: "Model", options: [{ name: "Opus", value: "opus" }] },
+    {
+      currentValue: "",
+      id: "effort",
+      name: "Effort",
+      options: [{ name: "High", value: "high" }],
+    },
+  ]),
+  agent("opencode", [
+    {
+      currentValue: "",
+      id: "model",
+      name: "Model",
+      options: [{ name: "Flash", value: "opencode-go/deepseek-v4.1-flash" }],
+    },
+  ]),
+];
+
 const card = (name: string) => screen.findByRole("article", { name: `${name} keeper` });
 
 beforeEach(() => {
   vi.clearAllMocks();
+  store.snapshot.agents = [];
 });
 
 describe("KeepersSurface", () => {
@@ -325,5 +358,47 @@ describe("KeepersSurface", () => {
     show([entry("review")]);
     await card("Review");
     expect(screen.queryByRole("button", { name: "Check before PR" })).toBeNull();
+  });
+
+  it("shows the task's agent when a keeper names no harness", async () => {
+    show([entry("review")]);
+    const review = await card("Review");
+    expect(within(review).getByRole("button", { name: "Runs on Task's agent" })).toBeVisible();
+  });
+
+  it("sets a keeper's harness, model and effort from its card", async () => {
+    store.snapshot.agents = agents;
+    const { user } = show([
+      entry("slop", { agent: "opencode", model: "opencode-go/deepseek-v4.1-flash" }),
+    ]);
+    const slop = await card("Slop");
+    await user.click(within(slop).getByRole("button", { name: "Runs on opencode · Flash" }));
+    expect(screen.queryByRole("combobox", { name: "Effort" })).toBeNull();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Harness" }), "claude");
+    expect(screen.getByRole("combobox", { name: "Model" })).toHaveValue("");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Model" }), "opus");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Effort" }), "high");
+    const listed = client.listKeepers.mock.calls.length;
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(client.saveKeeperRunsOn).toHaveBeenCalledWith("demo", "slop", {
+      agent: "claude",
+      effort: "high",
+      model: "opus",
+    });
+    await waitFor(() => expect(client.listKeepers.mock.calls.length).toBeGreaterThan(listed));
+    expect(screen.queryByRole("combobox", { name: "Harness" })).toBeNull();
+  });
+
+  it("unsets everything when the harness goes back to the task's agent", async () => {
+    store.snapshot.agents = agents;
+    const { user } = show([entry("review", { agent: "claude", effort: "high", model: "opus" })]);
+    await user.click(
+      within(await card("Review")).getByRole("button", { name: "Runs on claude · Opus" }),
+    );
+    expect(screen.getByRole("combobox", { name: "Effort" })).toHaveValue("high");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Harness" }), "");
+    expect(screen.queryByRole("combobox", { name: "Model" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(client.saveKeeperRunsOn).toHaveBeenCalledWith("demo", "review", { agent: undefined });
   });
 });

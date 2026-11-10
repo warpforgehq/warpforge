@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import type { KeeperRunsOn } from "@/lib/keeperRunsOn";
 import {
   currentFindings,
   KEEPER_STATUS_META,
@@ -11,13 +12,19 @@ import {
   latestDraft,
 } from "@/lib/keepers";
 import { cn } from "@/lib/utils";
-import type { KeeperDecision as Decision, KeeperEntry, KeeperTaskState } from "@/protocol";
+import type {
+  AgentConfig,
+  KeeperDecision as Decision,
+  KeeperEntry,
+  KeeperTaskState,
+} from "@/protocol";
 import { Toggle } from "@/views/settings/primitives";
 
 import { KeeperDecision } from "./KeeperDecision";
 import { KeeperDraft } from "./KeeperDraft";
 import { KeeperFindingRow } from "./KeeperFindingRow";
 import { KeeperStrip } from "./KeeperStrip";
+import { RunsOnPicker } from "./RunsOnPicker";
 
 export interface KeeperActions {
   onSwitch: (keeperId: string, on: boolean) => Promise<void>;
@@ -30,6 +37,7 @@ export interface KeeperActions {
     options?: { rounds?: number; note?: string },
   ) => Promise<void>;
   onOpenFile: (path: string, location?: { line?: number }) => void;
+  onRunsOn: (keeperId: string, runsOn: KeeperRunsOn) => Promise<void>;
 }
 
 /**
@@ -37,14 +45,20 @@ export interface KeeperActions {
  * findings and, when its loop stopped, the owner's choice.
  * @param entry The keeper file, valid.
  * @param state The task's keeper state, if fetched.
+ * @param agents The configured agents, for **Runs on**.
  * @param actions What the controls call.
  * @returns The card.
  */
 export function KeeperCard({
   entry,
   state,
+  agents,
   ...actions
-}: { entry: KeeperEntry; state: KeeperTaskState | undefined } & KeeperActions) {
+}: {
+  entry: KeeperEntry;
+  state: KeeperTaskState | undefined;
+  agents: readonly AgentConfig[];
+} & KeeperActions) {
   const definition = entry.definition;
   const on = keeperOn(entry.id, definition, state);
   const runs = keeperRuns(state, entry.id);
@@ -92,6 +106,13 @@ export function KeeperCard({
             </span>
           )}
         </label>
+        {definition && (
+          <RunsOnPicker
+            definition={definition}
+            agents={agents}
+            onSave={(runsOn) => actions.onRunsOn(entry.id, runsOn)}
+          />
+        )}
         <span className={cn("shrink-0 text-xs font-medium", KEEPER_STATUS_META[status].tone)}>
           {KEEPER_STATUS_META[status].label}
           {status === "findings" && findings.length > 0 ? ` · ${findings.length}` : ""}
