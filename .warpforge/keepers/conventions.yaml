@@ -1,2 +1,4 @@
 version: 1
 preset: conventions
+agent: opencode
+model: opencode-go/deepseek-v4.1-flash
