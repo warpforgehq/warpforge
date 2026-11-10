@@ -68,4 +68,35 @@ describe("keeper RPCs", () => {
     expect(calls).toBe(2);
     expect(daemon.getState().taskKeepers?.t2.runs.map((r) => r.id)).toEqual(["new"]);
   });
+
+  it("rewrites a keeper's harness keys in the file it reads, a .yml one included", async () => {
+    const files: Record<string, string> = {
+      ".warpforge/keepers/docs.yml": "version: 1\nname: Docs\nmodel: old\n",
+      ".warpforge/keepers/slop.yaml": "version: 1\npreset: slop\n",
+    };
+    const request = vi
+      .spyOn(daemon, "request")
+      .mockImplementation(async (method, params) =>
+        method === "file.contents"
+          ? { newText: files[(params as { path: string }).path] ?? "" }
+          : null,
+      );
+    await daemon.saveKeeperRunsOn("demo", "slop", { agent: "opencode", model: "flash" });
+    await daemon.saveKeeperRunsOn("demo", "docs", { agent: "claude" });
+    const saves = request.mock.calls.filter(([method]) => method === "file.save");
+    expect(saves.map(([, params]) => params)).toEqual([
+      {
+        content: "version: 1\npreset: slop\nagent: opencode\nmodel: flash\n",
+        path: ".warpforge/keepers/slop.yaml",
+        project: "demo",
+        task_id: "",
+      },
+      {
+        content: "version: 1\nagent: claude\nname: Docs\n",
+        path: ".warpforge/keepers/docs.yml",
+        project: "demo",
+        task_id: "",
+      },
+    ]);
+  });
 });
