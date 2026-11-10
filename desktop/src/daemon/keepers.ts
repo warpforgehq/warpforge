@@ -1,5 +1,6 @@
+import { type KeeperRunsOn, setKeeperRunsOn } from "../lib/keeperRunsOn";
 import { type KeeperPresetId, normalizeKeeperState, presetFile } from "../lib/keepers";
-import type { KeeperDecision, KeeperEntry, KeeperTaskState } from "../protocol";
+import type { FileDoc, KeeperDecision, KeeperEntry, KeeperTaskState } from "../protocol";
 import type { CoreClient } from "./client";
 import type { Constructor } from "./types";
 
@@ -98,6 +99,28 @@ export function KeeperMethods<TBase extends Constructor<CoreClient>>(Base: TBase
     /** Write a built-in keeper's two-line file into the project's checkout. */
     async addKeeper(project: string, preset: KeeperPresetId) {
       await this.request("file.save", { ...presetFile(preset), project, task_id: "" });
+    }
+
+    /**
+     * Rewrite a keeper file's `agent`, `model` and `effort`, keeping its other lines.
+     * @param project The project whose checkout holds the file.
+     * @param keeperId The keeper's file stem.
+     * @param runsOn The values to write; an unset one removes its key.
+     */
+    async saveKeeperRunsOn(project: string, keeperId: string, runsOn: KeeperRunsOn) {
+      const read = async (path: string) => {
+        const doc = (await this.request("file.contents", {
+          path,
+          project,
+          task_id: "",
+        })) as FileDoc;
+        return { path, text: doc.newText };
+      };
+      const yaml = await read(`.warpforge/keepers/${keeperId}.yaml`);
+      const file = yaml.text ? yaml : await read(`.warpforge/keepers/${keeperId}.yml`);
+      if (!file.text) throw new Error(`.warpforge/keepers/${keeperId}.yaml is empty or missing`);
+      const content = setKeeperRunsOn(file.text, runsOn);
+      await this.request("file.save", { content, path: file.path, project, task_id: "" });
     }
   };
 }
