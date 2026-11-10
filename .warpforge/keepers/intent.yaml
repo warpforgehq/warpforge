@@ -1,0 +1,3 @@
+version: 1
+preset: intent
+agent: claude

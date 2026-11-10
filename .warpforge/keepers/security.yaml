@@ -1,0 +1,3 @@
+version: 1
+preset: security
+agent: claude
