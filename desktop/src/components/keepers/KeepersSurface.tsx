@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,7 @@ export function KeepersSurface({
 }) {
   const queryClient = useQueryClient();
   const state = useTaskKeepers(task.id);
+  const agents = useSyncExternalStore(daemon.subscribe, () => daemon.getState().snapshot.agents);
   const list = useQuery({
     queryFn: () => daemon.listKeepers(task.project),
     queryKey: ["keepers", task.project],
@@ -111,6 +112,11 @@ export function KeepersSurface({
         .dismissKeeperFinding(task.id, findingId, reason)
         .catch(failed("Could not dismiss the finding")),
     onOpenFile,
+    onRunsOn: (keeperId, runsOn) =>
+      daemon
+        .saveKeeperRunsOn(task.project, keeperId, runsOn)
+        .then(() => queryClient.invalidateQueries({ queryKey: ["keepers", task.project] }))
+        .catch(failed("Could not save what the keeper runs on")),
     onSend: (keeperId) =>
       daemon.sendKeeperFindings(task.id, keeperId).catch(failed("Could not send the findings")),
     onSwitch: (keeperId, on) =>
@@ -167,7 +173,7 @@ export function KeepersSurface({
       </div>
       <FileProblems entries={entries} />
       {valid.map((entry) => (
-        <KeeperCard key={entry.id} entry={entry} state={state} {...actions} />
+        <KeeperCard key={entry.id} entry={entry} state={state} agents={agents ?? []} {...actions} />
       ))}
     </ScrollArea>
   );
