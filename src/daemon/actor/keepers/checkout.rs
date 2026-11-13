@@ -207,7 +207,16 @@ impl Daemon {
                     .get(&other.id)
                     .is_some_and(|on| !on.is_empty())
             })
-            .max_by_key(|other| (other.updated_at, other.id.as_str()))
+            // `updated_at` is in seconds, so a turn that just ended and one
+            // that started in the same second tie. Prefer the task that is
+            // not mid-turn: its last turn ended, which is the later change.
+            .max_by_key(|other| {
+                (
+                    other.updated_at,
+                    other.status != TaskStatus::Running,
+                    other.id.as_str(),
+                )
+            })
             .map(|other| other.id.as_str());
         !owned && latest == Some(task_id)
     }

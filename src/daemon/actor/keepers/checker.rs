@@ -40,6 +40,39 @@ impl Daemon {
             .map(|task| task.id.clone())
     }
 
+    /// The keeper's checker when its session still fits the keeper; a
+    /// checker on another agent or model, or a blocked one, is deleted, so
+    /// the run starts a fresh one instead of loading a session it cannot.
+    fn keeper_reusable_checker(
+        &mut self,
+        task_id: &str,
+        definition: &wire::KeeperDefinition,
+        agent: &str,
+    ) -> Option<String> {
+        let id = self.keeper_checker(task_id, &definition.id)?;
+        let checker = self.tasks.get(&id)?;
+        let fits = self.agent_id_of(&checker.agent) == self.agent_id_of(agent)
+            && checker.model == definition.model
+            && checker.status != TaskStatus::Blocked;
+        if fits {
+            return Some(id);
+        }
+        // The delete is queued; dropping the tag now keeps `keeper_checker`
+        // from handing the retired checker to this run meanwhile.
+        if let Some(checker) = self.tasks.get_mut(&id) {
+            checker.tags.clear();
+        }
+        let cmd_tx = self.cmd_tx.clone();
+        let retired = id.clone();
+        tokio::spawn(async move {
+            let (reply, _) = oneshot::channel();
+            let _ = cmd_tx
+                .send(Command::DeleteTask { id: retired, reply })
+                .await;
+        });
+        None
+    }
+
     pub(super) fn keepers_gathered(
         &mut self,
         task_id: &str,
@@ -98,7 +131,7 @@ impl Daemon {
                 continue;
             }
             let agent = definition.agent.clone().unwrap_or(task.agent.clone());
-            let account = match self.keeper_checker(task_id, &definition.id) {
+            let account = match self.keeper_reusable_checker(task_id, &definition, &agent) {
                 Some(checker) => self.spawn_account(&checker),
                 None => SpawnAccount::Active,
             };

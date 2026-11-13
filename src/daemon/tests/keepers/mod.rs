@@ -5,6 +5,7 @@ mod attribution;
 mod checkout;
 mod fix_turn;
 mod fixer;
+mod harness;
 mod ready;
 mod replies;
 mod send;
@@ -154,6 +155,11 @@ async fn wire_up(setup: &Setup) {
                 agent(
                     "mockkeep",
                     "Mock keeper",
+                    format!("node {CHECKER} {log} {replies}"),
+                ),
+                agent(
+                    "mockalt",
+                    "Mock keeper on another harness",
                     format!("node {CHECKER} {log} {replies}"),
                 ),
                 agent(
