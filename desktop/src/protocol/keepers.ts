@@ -45,6 +45,8 @@ export interface TaskKeepers {
   branch?: string | null;
   /** Why the task's keepers are not checking it now. */
   held?: string | null;
+  /** The task's HEAD as the keepers' poll last read it. */
+  head?: string | null;
 }
 
 /** Why a keeper's fix loop stopped and waits for the owner. */

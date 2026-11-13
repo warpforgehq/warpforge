@@ -30,7 +30,7 @@ Adding one writes a two-line file into the project, such as `.warpforge/keepers/
 
 A new keeper is on for every task in the project. The switch on each keeper turns it off, or back on, for **this task only**.
 
-Each keeper can run on its own harness and model, so a mechanical check such as Slop can use a cheap, fast model while Review keeps a strong one. The muted text next to the keeper's name shows what it runs on — **Task's agent** until you pick one. Click it to choose the harness, its model and, when the harness offers one, the reasoning effort; **Save** writes them into the keeper's file and leaves the rest of the file as it was. You can set the same `agent`, `model` and `effort` keys in the file by hand.
+Each keeper can run on its own harness and model, so a mechanical check such as Slop can use a cheap, fast model while Review keeps a strong one. The muted text next to the keeper's name shows what it runs on — **Task's agent** until you pick one. Click it to choose the harness, its model and, when the harness offers one, the reasoning effort; **Save** writes them into the keeper's file and leaves the rest of the file as it was. You can set the same `agent`, `model` and `effort` keys in the file by hand. The next run after a harness or model change starts a fresh check with the new one; the previous conversation is not carried over.
 
 ## What happens on a commit
 
@@ -116,6 +116,8 @@ These keepers run in two places, always on the branch's latest commit:
 
 - **Check before PR** in the Keepers tab header, next to **Add keeper**. It appears once the task has one of these keepers switched on, and stays disabled while one of them is still checking. Pressing it again re-runs them, even on a commit they already checked.
 - **Create PR** in the push dialog. Opening the pull request form starts them once; going **Back** and returning does not start them again. The form lists each one with its state — checking, green, the number of findings, or draft ready.
+
+When a keeper's last check was of an older commit, its card says so — "Found on `abc1234`, an older commit" — and its state turns grey instead of red: the findings may already be fixed. Press **Check before PR** to check the current commit. Until then those findings are advice: they put no red dot on the task and no warning in the push dialog.
 
 Their findings go to the task's agent like any other keeper's. PR-ready's result is text, never a pass or a failure: the Keepers tab shows the draft with **Copy** and **Show all**, and when it arrives while the pull request form is open and you have not written a description, it fills the **Description** field for you. Text you typed or generated is never replaced.
 
