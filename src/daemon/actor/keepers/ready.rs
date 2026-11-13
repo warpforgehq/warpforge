@@ -120,6 +120,8 @@ impl Daemon {
                 return Err(held.unwrap_or_else(|| NO_BRANCH.to_string()));
             }
         }
+        let read_head = head.clone();
+        self.keepers_edit_task(task_id, |keepers| keepers.head = Some(read_head));
         let (busy, start): (Vec<_>, Vec<_>) = read
             .keepers
             .into_iter()

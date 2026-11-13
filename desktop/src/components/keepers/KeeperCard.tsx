@@ -10,6 +10,7 @@ import {
   keeperRuns,
   keeperStatus,
   latestDraft,
+  outdatedRun,
 } from "@/lib/keepers";
 import { cn } from "@/lib/utils";
 import type {
@@ -65,6 +66,7 @@ export function KeeperCard({
   const loop = state?.loops[entry.id];
   const findings = on ? currentFindings(state, runs) : [];
   const status = keeperStatus(on, runs, loop, findings.length);
+  const outdated = findings.length > 0 ? outdatedRun(state, runs) : null;
   const [sending, setSending] = useState(false);
   const canSend =
     status !== "fixing" && findings.some((finding) => finding.status === "open" || finding.reply);
@@ -113,12 +115,29 @@ export function KeeperCard({
             onSave={(runsOn) => actions.onRunsOn(entry.id, runsOn)}
           />
         )}
-        <span className={cn("shrink-0 text-xs font-medium", KEEPER_STATUS_META[status].tone)}>
+        <span
+          className={cn(
+            "shrink-0 text-xs font-medium",
+            outdated ? "text-muted-foreground" : KEEPER_STATUS_META[status].tone,
+          )}
+        >
           {KEEPER_STATUS_META[status].label}
           {status === "findings" && findings.length > 0 ? ` · ${findings.length}` : ""}
         </span>
         <Toggle id={switchId} checked={on} onChange={(next) => actions.onSwitch(entry.id, next)} />
       </header>
+      {outdated && (
+        <p className="text-xs text-muted-foreground">
+          Found on <span className="font-mono">{outdated.sha}</span>, an older commit
+          {outdated.ready && (
+            <>
+              {" "}
+              · <span className="font-medium text-foreground">Check before PR</span> checks the
+              current one
+            </>
+          )}
+        </p>
+      )}
       {status === "waiting" && loop?.reason && (
         <p className="text-xs text-warn">Waiting: {loop.reason}</p>
       )}

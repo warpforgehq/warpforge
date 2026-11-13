@@ -196,6 +196,31 @@ describe("KeepersSurface", () => {
     expect(client.dismissKeeperFinding).toHaveBeenCalledWith("t1", "f1", "intended");
   });
 
+  it("says a ready keeper's findings are from an older commit, in a muted tone", async () => {
+    const findings = [finding({ id: "f1", runId: "r1" }), finding({ id: "f2", runId: "r1" })];
+    const runs = [run({ count: 2, id: "r1", keeperId: "intent", outcome: "findings" })];
+    show([entry("intent", { when: "ready" })], {
+      findings,
+      runs: runs.map((r) => ({ ...r, trigger: "ready" as const })),
+      switches: { head: "fedcba9876", overrides: {} },
+    });
+    const intent = await card("Intent");
+    expect(within(intent).getByText(/an older commit/)).toHaveTextContent(
+      "Found on abcdef0, an older commit · Check before PR checks the current one",
+    );
+    expect(within(intent).getByText("Findings · 2")).toHaveClass("text-muted-foreground");
+    cleanup();
+
+    show([entry("intent", { when: "ready" })], {
+      findings,
+      runs,
+      switches: { head: "abcdef0123", overrides: {} },
+    });
+    const current = await card("Intent");
+    expect(within(current).queryByText(/an older commit/)).toBeNull();
+    expect(within(current).getByText("Findings · 2")).toHaveClass("text-destructive");
+  });
+
   it("sends open findings to the agent and toasts the daemon's refusal", async () => {
     client.sendKeeperFindings.mockRejectedValueOnce(
       new DaemonRpcError("invalid_request", "the task's agent is working"),

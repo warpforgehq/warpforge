@@ -267,6 +267,23 @@ export function currentFindings(
 }
 
 /**
+ * The keeper's latest counted run when it checked an older commit than the
+ * task's HEAD; unknown HEAD counts as current.
+ * @param state The task's keeper state.
+ * @param runs The keeper's runs, oldest first.
+ * @returns The run's short sha and whether it was a ready check, or null when current.
+ */
+export function outdatedRun(
+  state: KeeperTaskState | undefined,
+  runs: readonly KeeperRun[],
+): { sha: string; ready: boolean } | null {
+  const head = state?.switches.head;
+  const last = lastCounted(runs);
+  if (!head || !last || last.headSha === head) return null;
+  return { ready: last.trigger === "ready", sha: last.headSha.slice(0, 7) };
+}
+
+/**
  * @param id A keeper.
  * @param definition A keeper's definition, absent for an invalid file.
  * @param state The task's keeper state.
@@ -319,11 +336,12 @@ export function keeperPrecision(state: KeeperTaskState | undefined, keeperId: st
  * Keepers with any activity on the task and what each is doing; a keeper the
  * task switched off is left out. Definitions are not needed: the sidebar has none.
  * @param state The task's keeper state.
- * @returns Keeper id and status, by id.
+ * @returns Keeper id, status, finding count and whether its findings are from
+ * a ready check of an older commit, by id.
  */
 export function activeKeepers(
   state: KeeperTaskState | undefined,
-): { id: string; status: KeeperStatus; findings: number }[] {
+): { id: string; status: KeeperStatus; findings: number; outdated: boolean }[] {
   if (!state) return [];
   const ids = new Set([...state.runs.map((run) => run.keeperId), ...Object.keys(state.loops)]);
   return [...ids].sort().map((id) => {
@@ -331,7 +349,8 @@ export function activeKeepers(
     const on = state.switches.overrides[id] !== false;
     const findings = currentFindings(state, runs).length;
     const status = keeperStatus(on, runs, state.loops[id], findings);
-    return { findings, id, status };
+    const outdated = outdatedRun(state, runs)?.ready ?? false;
+    return { findings, id, outdated, status };
   });
 }
 
@@ -350,11 +369,11 @@ export function keeperIdLabel(id: string): string {
  * @returns One phrase per keeper that is not green, empty when all are.
  */
 export function keeperPushWarnings(state: KeeperTaskState | undefined): string[] {
-  return activeKeepers(state).flatMap(({ findings, id, status }) => {
+  return activeKeepers(state).flatMap(({ findings, id, outdated, status }) => {
     const name = keeperIdLabel(id);
     if (status === "running") return [`${name} is still checking`];
     if (status === "needs_you") return [`${name} needs you`];
-    if (hasOpenFindings({ findings, status }))
+    if (!outdated && hasOpenFindings({ findings, status }))
       return [`${name}: ${findings} ${findings === 1 ? "finding" : "findings"}`];
     return [];
   });
@@ -381,18 +400,23 @@ export function keeperWorst(state: KeeperTaskState | undefined): KeeperWorst | n
 /**
  * The one rule every keeper mark follows: findings nobody is fixing, or a
  * stop that waits for the owner, fail; a check or a fix in progress is checking.
- * @param keeper A keeper's status and its latest finding count.
+ * Findings of a ready check on an older commit are advice and show no mark.
+ * @param keeper A keeper's status, its latest finding count and whether that
+ * count is from a ready check of an older commit.
  * @returns The keeper's mark, or null when it shows none.
  */
 export function keeperMark({
   findings,
+  outdated = false,
   status,
 }: {
   findings: number;
+  outdated?: boolean;
   status: KeeperStatus;
 }): "failing" | "checking" | null {
   if (status === "needs_you") return "failing";
   if (status === "running" || status === "fixing") return "checking";
+  if (outdated) return null;
   return findings > 0 && (status === "findings" || status === "waiting") ? "failing" : null;
 }
 

@@ -19,6 +19,7 @@ import {
   latestDraft,
   missingPresets,
   normalizeKeeperState,
+  outdatedRun,
   presetFile,
   readyKeepers,
   stripTone,
@@ -251,6 +252,7 @@ describe("keeper dot and attention", () => {
     expect(activeKeepers(s).find((k) => k.id === "slop")).toEqual({
       findings: 0,
       id: "slop",
+      outdated: false,
       status: "green",
     });
     expect(keeperWorst(s)).toBeNull();
@@ -265,6 +267,37 @@ describe("keeper dot and attention", () => {
     const fixing = state({ loops: { slop: { ...loop, status: "fixing" } }, runs: [findings] });
     expect(keeperWorst(fixing)).toBe("running");
     expect(keeperLiveItems(fixing).map((item) => item.state)).toEqual(["running"]);
+  });
+
+  it("tells a run on the current HEAD from one on an older commit", () => {
+    const ready = run({ id: "r", trigger: "ready" });
+    const on = (head?: string) => state({ switches: { head, overrides: {} } });
+    expect(outdatedRun(on("abcdef0123"), [ready])).toBeNull();
+    expect(outdatedRun(on(undefined), [ready])).toBeNull();
+    expect(outdatedRun(on("fedcba9876"), [])).toBeNull();
+    expect(outdatedRun(on("fedcba9876"), [ready])).toEqual({ ready: true, sha: "abcdef0" });
+    expect(outdatedRun(on("fedcba9876"), [run({ id: "c" })])).toEqual({
+      ready: false,
+      sha: "abcdef0",
+    });
+  });
+
+  it("reads a ready keeper's findings on an older commit as advice, not failing", () => {
+    const ready = run({ count: 2, id: "f", keeperId: "intent", outcome: "findings" });
+    const s = (head: string, trigger: "ready" | "commit") =>
+      state({
+        findings: [finding({ id: "f1", runId: "f" })],
+        runs: [{ ...ready, trigger }],
+        switches: { head, overrides: {} },
+      });
+    expect(keeperWorst(s("fedcba9876", "ready"))).toBeNull();
+    expect(keeperPushWarnings(s("fedcba9876", "ready"))).toEqual([]);
+    expect(keeperLiveItems(s("fedcba9876", "ready"))).toEqual([]);
+    expect(keeperWorst(s("abcdef0123", "ready"))).toBe("failing");
+    expect(keeperPushWarnings(s("abcdef0123", "ready"))).toEqual(["Intent: 1 finding"]);
+    expect(keeperWorst(s("fedcba9876", "commit"))).toBe("failing");
+    expect(keeperMark({ findings: 2, outdated: true, status: "findings" })).toBeNull();
+    expect(keeperMark({ findings: 2, outdated: true, status: "needs_you" })).toBe("failing");
   });
 
   it("asks the owner only for keepers whose loop stopped, not for findings being fixed", () => {

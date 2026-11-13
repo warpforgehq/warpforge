@@ -124,6 +124,10 @@ pub struct TaskKeepers {
     /// Why the task's keepers are not checking it now.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub held: Option<String>,
+    /// The task's HEAD as the keepers' poll last read it, so clients can
+    /// tell a run on an older commit from one on the current HEAD.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub head: Option<String>,
 }
 
 impl TaskKeepers {

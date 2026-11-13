@@ -179,6 +179,8 @@ impl Daemon {
                 }
                 continue;
             }
+            let read = head.clone();
+            self.keepers_edit_task(&result.task_id, |keepers| keepers.head = Some(read));
             let watch = self
                 .keepers
                 .watches

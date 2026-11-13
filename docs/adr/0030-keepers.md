@@ -294,7 +294,10 @@ gets the advisor's four read-only enforcements and its bridge mode, plus the
 runtime and browser tools for Verify. Later runs re-prompt the same session
 (ADR 0001 `reask: same_session`), so the checker can verify its own earlier
 findings; a dead session falls back to a fresh one given those findings.
-Deleting the task deletes its checkers. *Rejected:* one checker session for
+Deleting the task deletes its checkers. A checker whose agent or model no
+longer matches the keeper's file, or one that is blocked, is deleted at the
+next run and a fresh one replaces it: a saved session cannot be loaded by
+another harness. *Rejected:* one checker session for
 all keepers of a task — the roles would share context, which ADR 0001 rejected
 for reviewers.
 
@@ -573,6 +576,13 @@ agent's, and a strip per keeper does not fit there.
 `TaskPullRequestGlyph` and the header's `TaskPullRequestChip` get a keeper
 dot (worst state wins); Mission Control's tile gains the PR glyph with it.
 The meta lane keeps its width.
+
+**Findings on an older commit are labelled, and a ready keeper's are
+advice.** `TaskKeepers.head` carries the HEAD the poll last read. A card
+whose latest counted run is on another commit names it and mutes its
+status; for a `when: ready` run it points at Check before PR and adds no
+dot, sidebar mark or push warning. The commit count is not shown: the
+daemon reads only HEAD, not the log between.
 
 ## Invariants
 
