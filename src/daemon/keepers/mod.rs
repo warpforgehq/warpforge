@@ -47,17 +47,19 @@ pub const MAX_CHECKERS: usize = 4;
 pub const QUOTA_SKIP: &str = "quota";
 pub const SUPERSEDED: &str = "superseded";
 
+/// `KeeperRun::error` of a run the previous daemon left unfinished; its HEAD
+/// is checked again.
+pub const RESTARTED: &str = "the daemon restarted during the check";
+
 /// Whether a run counts as a check of the HEAD it ran on: it reached an
 /// outcome, was not skipped, and was not superseded by a move of HEAD.
 /// @param run the run to judge
+/// @returns true when the run reached an outcome that is not skipped and not superseded
 pub fn counted(run: &wire::KeeperRun) -> bool {
     run.outcome.is_some()
         && run.outcome != Some(wire::KeeperOutcome::Skipped)
         && run.error.as_deref() != Some(SUPERSEDED)
 }
-/// `KeeperRun::error` of a run the previous daemon left unfinished; its HEAD
-/// is checked again.
-pub const RESTARTED: &str = "the daemon restarted during the check";
 
 /// @param project_path the project's root
 /// @returns where its keeper files live
