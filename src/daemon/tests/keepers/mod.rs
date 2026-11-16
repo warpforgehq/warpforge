@@ -20,6 +20,7 @@ use crate::daemon::actor::KeeperCommand;
 use crate::daemon::keepers::{Change, GitSource, Scripted};
 use warpforge_protocol as wire;
 
+use super::advisor::read_only_capable;
 use ask::*;
 
 const CHECKER: &str = concat!(
