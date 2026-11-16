@@ -1,5 +1,4 @@
-//! Sending one keeper command, reading the actor's answer, and the config
-//! scaffolding the keeper tests share.
+//! Sending one keeper command and reading the actor's answer.
 
 use super::*;
 
@@ -44,20 +43,4 @@ pub(super) async fn send_findings(setup: &Setup, keeper_id: &str) -> Result<(), 
         reply,
     })
     .await
-}
-
-pub(super) fn read_only_capable() -> wire::ConfigOption {
-    wire::ConfigOption {
-        id: "mode".into(),
-        name: "Mode".into(),
-        category: Some("mode".into()),
-        current_value: "default".into(),
-        options: ["default", "read-only"]
-            .into_iter()
-            .map(|value| wire::ConfigChoice {
-                value: value.into(),
-                name: value.into(),
-            })
-            .collect(),
-    }
 }

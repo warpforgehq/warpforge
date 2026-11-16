@@ -20,7 +20,7 @@ struct Setup {
     _dir: tempfile::TempDir,
 }
 
-fn read_only_capable() -> wire::ConfigOption {
+pub(super) fn read_only_capable() -> wire::ConfigOption {
     wire::ConfigOption {
         id: "mode".into(),
         name: "Mode".into(),
