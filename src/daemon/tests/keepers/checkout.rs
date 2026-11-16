@@ -393,6 +393,11 @@ async fn losing_the_branch_drops_a_pending_fix() {
     // Clear the worktree only once the branch is gone: a clean checkout
     // before that would let the pending fix go from the old HEAD.
     setup.script.lock().unwrap().dirty.clear();
+    setup
+        .daemon
+        .send(Command::Keepers(KeeperCommand::Poll))
+        .await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
 
     let state = task_state(&setup, "t_a").await;
     assert!(
