@@ -52,6 +52,8 @@ pub struct Scripted {
     pub branches: std::collections::HashMap<String, String>,
     /// Holds every change read until cleared.
     pub hold_changes: bool,
+    /// Holds every HEAD read, once recorded in `head_reads`, until cleared.
+    pub hold_heads: bool,
 }
 
 impl GitSource {
@@ -67,8 +69,12 @@ impl GitSource {
     pub async fn head(&self, cwd: &str) -> Option<String> {
         #[cfg(test)]
         {
-            let mut script = self.scripted.as_ref()?.lock().unwrap();
-            script.head_reads.push(cwd.to_string());
+            let script = self.scripted.as_ref()?;
+            script.lock().unwrap().head_reads.push(cwd.to_string());
+            while script.lock().unwrap().hold_heads {
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+            let script = script.lock().unwrap();
             script.heads.get(cwd).cloned()
         }
         #[cfg(not(test))]

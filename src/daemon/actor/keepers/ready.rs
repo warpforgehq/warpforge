@@ -125,6 +125,7 @@ impl Daemon {
         let (busy, start): (Vec<_>, Vec<_>) = read
             .keepers
             .into_iter()
+            .filter(|d| self.keeper_switched_on(task_id, d))
             .partition(|d| self.keeper_busy(task_id, &d.id));
         let (current, behind): (Vec<_>, Vec<_>) = busy
             .into_iter()

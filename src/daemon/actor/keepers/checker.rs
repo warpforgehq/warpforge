@@ -89,6 +89,8 @@ impl Daemon {
         let Some(task) = self.tasks.get(task_id).cloned() else {
             return;
         };
+        let mut keepers = keepers;
+        keepers.retain(|d| self.keeper_switched_on(task_id, d));
         let current = match trigger {
             wire::KeeperWhen::Commit => {
                 self.keepers.watches.get(task_id).and_then(|w| w.head()) == Some(head)

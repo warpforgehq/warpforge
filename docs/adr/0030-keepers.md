@@ -652,6 +652,10 @@ daemon reads only HEAD, not the log between.
     author ambiguous, so nothing checks until at most one is running. A fix
     into the shared checkout waits while another folder session of the
     project is mid-turn.
+21. **A switch counts from the moment it flips.** A poll, a ready read or a
+    change read in flight carries the switches from when it started; each
+    re-reads the task's switches when it lands, so a keeper switched off
+    meanwhile starts no check.
 
 ## Consequences
 

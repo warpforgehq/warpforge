@@ -142,7 +142,12 @@ impl Daemon {
         });
         let polled: Vec<String> = results.iter().map(|r| r.task_id.clone()).collect();
         let now = Instant::now();
-        for result in &results {
+        let mut results = results;
+        for result in &mut results {
+            let task_id = &result.task_id;
+            result
+                .keepers
+                .retain(|d| self.keeper_switched_on(task_id, d));
             self.keepers
                 .on
                 .insert(result.task_id.clone(), result.keepers.clone());
@@ -204,6 +209,24 @@ impl Daemon {
         if std::mem::take(&mut self.keepers.poll_again) {
             self.keepers_poll();
         }
+    }
+
+    /// The task's switch for the keeper as it stands now; a poll or read in
+    /// flight carries the switches from when it started (invariant 21).
+    /// @param task_id the task
+    /// @param definition the keeper
+    /// @returns whether the keeper is on for the task
+    pub(super) fn keeper_switched_on(
+        &self,
+        task_id: &str,
+        definition: &wire::KeeperDefinition,
+    ) -> bool {
+        self.tasks
+            .get(task_id)
+            .and_then(|task| task.keepers.as_ref())
+            .and_then(|keepers| keepers.overrides.get(&definition.id))
+            .copied()
+            .unwrap_or(definition.default_on)
     }
 
     /// Not being read or checked already, and its last check was of another

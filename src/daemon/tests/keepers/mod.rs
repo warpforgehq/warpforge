@@ -11,6 +11,7 @@ mod ready;
 mod replies;
 mod send;
 mod stop;
+mod switch_off;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
