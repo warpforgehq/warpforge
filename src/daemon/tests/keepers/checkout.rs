@@ -387,10 +387,12 @@ async fn losing_the_branch_drops_a_pending_fix() {
     })
     .await;
 
-    setup.script.lock().unwrap().dirty.clear();
     commit(&setup, "t_b").await;
     until_branch(&setup, "t_b", Some("feat/x")).await;
     until_branch(&setup, "t_a", None).await;
+    // Clear the worktree only once the branch is gone: a clean checkout
+    // before that would let the pending fix go from the old HEAD.
+    setup.script.lock().unwrap().dirty.clear();
 
     let state = task_state(&setup, "t_a").await;
     assert!(
