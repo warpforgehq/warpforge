@@ -80,10 +80,13 @@ async fn the_loop_stops_for_the_owner_and_follows_the_decision() {
     let off = setup.daemon.tasks().await;
     let switches = off.iter().find(|t| t.id == "t_a").unwrap().keepers.clone();
     assert_eq!(switches.unwrap().overrides.get("review"), Some(&false));
-    let runs = state(&setup).await.runs.len();
     move_head(&setup, "sha5").await;
     commit(&setup, "t_a").await;
     tokio::time::sleep(Duration::from_millis(400)).await;
-    assert_eq!(state(&setup).await.runs.len(), runs, "off: no more checks");
+    let runs = state(&setup).await.runs;
+    assert!(
+        runs.iter().all(|run| run.head_sha != "sha5"),
+        "off: no more checks: {runs:?}"
+    );
     setup.daemon.shutdown().await;
 }

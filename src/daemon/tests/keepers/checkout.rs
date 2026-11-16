@@ -387,6 +387,9 @@ async fn losing_the_branch_drops_a_pending_fix() {
     })
     .await;
 
+    // t_b's own check of the same HEAD approves, so any fix sent below is
+    // t_a's.
+    std::fs::write(&setup.replies, APPROVE).unwrap();
     commit(&setup, "t_b").await;
     until_branch(&setup, "t_b", Some("feat/x")).await;
     until_branch(&setup, "t_a", None).await;
