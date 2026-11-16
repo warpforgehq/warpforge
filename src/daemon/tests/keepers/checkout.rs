@@ -1,7 +1,7 @@
 //! Keepers on tasks without a worktree: the branch a turn ended on, the
 //! shared checkout's guards.
 
-use super::fixer::{fix_prompts, fix_task, loop_event, prompts, until};
+use super::fixer::{fix_prompts, fix_task, loop_event, prompts, until, wake};
 use super::*;
 use crate::daemon::actor::keepers::checkout::{NO_BRANCH, SHARED_CHECKOUT_BUSY};
 use wire::KeeperLoopStatus;
@@ -476,4 +476,35 @@ async fn turn_began(setup: &Setup, task_id: &str) {
     setup.daemon.send(Command::Keepers(began)).await;
     // The HEAD is read off the loop; let that read land before HEAD moves.
     tokio::time::sleep(Duration::from_millis(100)).await;
+}
+
+/// A fix held only by another folder session's turn lands once that turn ends.
+#[tokio::test]
+async fn a_fix_held_by_another_session_lands_when_that_turn_ends() {
+    let mut setup = setup(&[("review", REVIEW)], |wt| {
+        let mut owner = fix_task("t_a", wt);
+        owner.worktree = None;
+        let mut other = fix_task("t_b", wt);
+        other.worktree = None;
+        vec![owner, other]
+    })
+    .await;
+    on_branch(&setup, Some("feat/x"));
+    std::fs::write(&setup.hold, "HOLDME").unwrap();
+    setup
+        .daemon
+        .session_prompt("t_b", "HOLDME, keep going", Vec::new())
+        .await
+        .unwrap();
+    until("t_b's turn", || prompts(&setup.fix_log).len() == 1).await;
+    wake(&setup, "hello").await;
+    loop_event(&mut setup, |s| {
+        s.status == KeeperLoopStatus::Waiting && s.reason.as_deref() == Some(SHARED_CHECKOUT_BUSY)
+    })
+    .await;
+    assert!(fix_prompts(&setup).is_empty(), "no fix while t_b works");
+
+    std::fs::write(format!("{}.go", setup.hold.display()), "").unwrap();
+    until("the fix prompt", || fix_prompts(&setup).len() == 1).await;
+    setup.daemon.shutdown().await;
 }
