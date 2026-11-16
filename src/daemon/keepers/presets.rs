@@ -1,5 +1,7 @@
 use warpforge_protocol as wire;
 
+use super::parse_keeper;
+
 /// Built-in keepers by id. A preset runs only when a project file names it
 /// with `preset:` (ADR 0030 invariant 18), so nothing lists these as keepers.
 pub(super) const PRESETS: &[(&str, &str)] = &[
@@ -41,15 +43,15 @@ pub(super) fn preset_ids() -> String {
 pub fn list_presets() -> Vec<wire::KeeperPreset> {
     PRESETS
         .iter()
-        .filter_map(|(id, text)| {
-            let (definition, _) = crate::daemon::keepers::parse_keeper(id, text);
-            let definition = definition.ok()?;
-            Some(wire::KeeperPreset {
+        .map(|(id, text)| {
+            let (definition, _) = parse_keeper(id, text);
+            let definition = definition.expect("built-in preset parses");
+            wire::KeeperPreset {
                 id: definition.id,
                 name: definition.name,
                 description: definition.description,
                 when: definition.when,
-            })
+            }
         })
         .collect()
 }
