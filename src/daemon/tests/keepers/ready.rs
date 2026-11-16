@@ -10,7 +10,7 @@ use wire::{KeeperFindingStatus as Status, KeeperOutcome as Outcome};
 const SECURITY: &str = "version: 1\npreset: security\nagent: mockkeep\n";
 const PR_READY: &str = "version: 1\npreset: pr-ready\nagent: mockkeep\n";
 
-async fn check_ready(setup: &Setup, task_id: &str) -> Result<Vec<String>, String> {
+async fn try_check_ready(setup: &Setup, task_id: &str) -> Result<Vec<String>, String> {
     check_ready_on(setup, task_id, "sha1").await
 }
 
@@ -30,13 +30,16 @@ async fn check_ready_starts_the_ready_keepers_that_are_on() {
     ];
     let mut setup = setup(&keepers, |wt| vec![task("t_a", Some(wt))]).await;
     std::fs::write(&setup.replies, "WAIT").unwrap();
-    assert_eq!(check_ready(&setup, "t_a").await.unwrap(), vec!["security"]);
+    assert_eq!(
+        try_check_ready(&setup, "t_a").await.unwrap(),
+        vec!["security"]
+    );
     let (started, _) = keeper_event(&mut setup, |run| run.checker_task_id.is_some()).await;
     assert_eq!(
         (started.keeper_id.as_str(), started.trigger),
         ("security", wire::KeeperWhen::Ready)
     );
-    assert!(check_ready(&setup, "t_a").await.unwrap().is_empty());
+    assert!(try_check_ready(&setup, "t_a").await.unwrap().is_empty());
 
     go(&setup, APPROVE);
     let (run, _) = keeper_event(&mut setup, finished).await;
@@ -44,7 +47,10 @@ async fn check_ready_starts_the_ready_keepers_that_are_on() {
         (run.outcome, run.head_sha.as_str()),
         (Some(Outcome::Green), "sha1")
     );
-    assert_eq!(check_ready(&setup, "t_a").await.unwrap(), vec!["security"]);
+    assert_eq!(
+        try_check_ready(&setup, "t_a").await.unwrap(),
+        vec!["security"]
+    );
     let (again, _) = keeper_event(&mut setup, |run| finished(run) && run.run_number == 2).await;
     assert_eq!(again.head_sha, "sha1", "the same HEAD, checked again");
 
@@ -97,7 +103,10 @@ async fn a_draft_is_kept_as_text_and_sends_no_fix() {
         format!("## TL;DR\nAdds the parser.\n{FINDING}"),
     )
     .unwrap();
-    assert_eq!(check_ready(&setup, "t_a").await.unwrap(), vec!["pr-ready"]);
+    assert_eq!(
+        try_check_ready(&setup, "t_a").await.unwrap(),
+        vec!["pr-ready"]
+    );
     let (run, findings) = keeper_event(&mut setup, finished).await;
     assert_eq!((run.outcome, run.count), (Some(Outcome::Draft), 0));
     let draft = run.draft.unwrap();
@@ -119,7 +128,10 @@ async fn a_draft_is_kept_as_text_and_sends_no_fix() {
 #[tokio::test]
 async fn a_ready_keepers_findings_reach_the_fixer() {
     let setup = setup(&[("security", SECURITY)], |wt| vec![fix_task("t_a", wt)]).await;
-    assert_eq!(check_ready(&setup, "t_a").await.unwrap(), vec!["security"]);
+    assert_eq!(
+        try_check_ready(&setup, "t_a").await.unwrap(),
+        vec!["security"]
+    );
     until("the fix prompt", || fix_prompts(&setup).len() == 1).await;
     let prompt = &fix_prompts(&setup)[0];
     assert!(prompt.contains("commit sha1"), "{prompt}");
@@ -139,11 +151,14 @@ async fn a_ready_keepers_findings_reach_the_fixer() {
 async fn a_folder_task_on_the_base_is_refused_with_the_reason() {
     let mut setup = setup(&[("security", SECURITY)], |_| vec![task("t_a", None)]).await;
     on_branch(&setup, None);
-    assert_eq!(check_ready(&setup, "t_a").await.unwrap_err(), NO_BRANCH);
+    assert_eq!(try_check_ready(&setup, "t_a").await.unwrap_err(), NO_BRANCH);
     assert!(checkers(&setup.daemon).await.is_empty());
 
     on_branch(&setup, Some("feat/x"));
-    assert_eq!(check_ready(&setup, "t_a").await.unwrap(), vec!["security"]);
+    assert_eq!(
+        try_check_ready(&setup, "t_a").await.unwrap(),
+        vec!["security"]
+    );
     let (run, _) = keeper_event(&mut setup, finished).await;
     assert_eq!(run.outcome, Some(Outcome::Findings));
     let task = setup
@@ -163,7 +178,10 @@ async fn a_folder_task_on_the_base_is_refused_with_the_reason() {
 async fn a_fix_from_a_ready_check_is_dropped_when_head_moved() {
     let mut setup = setup(&[("security", SECURITY)], |wt| vec![fix_task("t_a", wt)]).await;
     std::fs::write(&setup.replies, "WAIT").unwrap();
-    assert_eq!(check_ready(&setup, "t_a").await.unwrap(), vec!["security"]);
+    assert_eq!(
+        try_check_ready(&setup, "t_a").await.unwrap(),
+        vec!["security"]
+    );
     keeper_event(&mut setup, |run| run.checker_task_id.is_some()).await;
     move_head(&setup, "sha2").await;
     go(&setup, FINDING);
@@ -202,7 +220,10 @@ async fn a_fix_from_a_ready_check_is_dropped_when_head_moved() {
 async fn a_ready_keeper_busy_on_an_older_head_runs_on_the_new_one_after() {
     let mut setup = setup(&[("security", SECURITY)], |wt| vec![task("t_a", Some(wt))]).await;
     std::fs::write(&setup.replies, "WAIT").unwrap();
-    assert_eq!(check_ready(&setup, "t_a").await.unwrap(), vec!["security"]);
+    assert_eq!(
+        try_check_ready(&setup, "t_a").await.unwrap(),
+        vec!["security"]
+    );
     keeper_event(&mut setup, |run| run.checker_task_id.is_some()).await;
     move_head(&setup, "sha2").await;
     let queued = check_ready_on(&setup, "t_a", "sha2").await.unwrap();
@@ -223,7 +244,10 @@ async fn a_ready_keeper_gathering_an_older_head_runs_on_the_new_one() {
     let mut setup = setup(&[("security", SECURITY)], |wt| vec![task("t_a", Some(wt))]).await;
     std::fs::write(&setup.replies, APPROVE).unwrap();
     setup.script.lock().unwrap().hold_changes = true;
-    assert_eq!(check_ready(&setup, "t_a").await.unwrap(), vec!["security"]);
+    assert_eq!(
+        try_check_ready(&setup, "t_a").await.unwrap(),
+        vec!["security"]
+    );
     move_head(&setup, "sha2").await;
     let queued = check_ready_on(&setup, "t_a", "sha2").await.unwrap();
     assert_eq!(queued, vec!["security"]);
