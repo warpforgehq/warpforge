@@ -1,6 +1,5 @@
-import { useState } from "react";
-
 import { Button } from "@/components/ui/button";
+import { useBusy } from "@/hooks/useBusy";
 import type { KeeperRunsOn } from "@/lib/keeperRunsOn";
 import {
   currentFindings,
@@ -67,27 +66,16 @@ export function KeeperCard({
   const findings = on ? currentFindings(state, runs) : [];
   const status = keeperStatus(on, runs, loop, findings.length);
   const outdated = findings.length > 0 ? outdatedRun(state, runs) : null;
-  const [sending, setSending] = useState(false);
   const canSend =
     status !== "fixing" && findings.some((finding) => finding.status === "open" || finding.reply);
   const answered = findings.filter((finding) => finding.reply);
-  const [accepting, setAccepting] = useState(false);
-  const acceptAll = async () => {
-    setAccepting(true);
-    try {
+  const [sending, runSend] = useBusy();
+  const [accepting, runAcceptAll] = useBusy();
+  const acceptAll = () =>
+    runAcceptAll(async () => {
       for (const finding of answered) await actions.onAccept(finding.id);
-    } finally {
-      setAccepting(false);
-    }
-  };
-  const send = async () => {
-    setSending(true);
-    try {
-      await actions.onSend(entry.id);
-    } finally {
-      setSending(false);
-    }
-  };
+    });
+  const send = () => runSend(() => actions.onSend(entry.id));
   const precision = keeperPrecision(state, entry.id);
   const draft = on ? latestDraft(runs) : null;
   const name = definition?.name || entry.id;

@@ -18,6 +18,25 @@ impl Daemon {
         finding_id: &str,
         reason: Option<String>,
     ) -> Result<(), String> {
+        let finding = self.keepers_unresolved_finding(task_id, finding_id)?;
+        let dismissed = wire::KeeperFinding {
+            status: Status::Dismissed,
+            dismiss_reason: reason
+                .map(|text| text.trim().to_string())
+                .filter(|text| !text.is_empty()),
+            resolved_at: Some(now_secs()),
+            ..finding
+        };
+        self.keepers_resolve(task_id, dismissed);
+        Ok(())
+    }
+
+    /// The finding, if it is on the task and the owner has not resolved it.
+    fn keepers_unresolved_finding(
+        &self,
+        task_id: &str,
+        finding_id: &str,
+    ) -> Result<wire::KeeperFinding, String> {
         let finding = self
             .keepers
             .task(task_id)
@@ -27,20 +46,16 @@ impl Daemon {
         if matches!(finding.status, Status::Fixed | Status::Dismissed) {
             return Err("that finding is already resolved".into());
         }
+        Ok(finding)
+    }
+
+    /// Write the owner's verdict, refresh the run's card and let a fix retry.
+    fn keepers_resolve(&mut self, task_id: &str, finding: wire::KeeperFinding) {
         let run_id = finding.run_id.clone();
-        let dismissed = wire::KeeperFinding {
-            status: Status::Dismissed,
-            dismiss_reason: reason
-                .map(|text| text.trim().to_string())
-                .filter(|text| !text.is_empty()),
-            resolved_at: Some(now_secs()),
-            ..finding
-        };
         self.keepers
-            .put_finding(&self.persist, &self.tasks, task_id, dismissed);
+            .put_finding(&self.persist, &self.tasks, task_id, finding);
         self.keeper_emit_run(task_id, &run_id);
         self.keepers_fix(task_id, None);
-        Ok(())
     }
 
     /// The owner takes the fixer's reply: a rebuttal is a Dismiss with the
@@ -50,31 +65,19 @@ impl Daemon {
         task_id: &str,
         finding_id: &str,
     ) -> Result<(), String> {
-        let finding = self
-            .keepers
-            .task(task_id)
-            .and_then(|state| state.findings.iter().find(|f| f.id == finding_id))
-            .cloned()
-            .ok_or_else(|| format!("no finding {finding_id} on task {task_id}"))?;
-        if matches!(finding.status, Status::Fixed | Status::Dismissed) {
-            return Err("that finding is already resolved".into());
-        }
+        let finding = self.keepers_unresolved_finding(task_id, finding_id)?;
         let Some(reply) = finding.reply.clone() else {
             return Err("the agent did not answer that finding".into());
         };
         if reply.verdict == KeeperReplyVerdict::Rebutted {
             return self.keepers_dismiss(task_id, finding_id, Some(reply.reason));
         }
-        let run_id = finding.run_id.clone();
         let fixed = wire::KeeperFinding {
             status: Status::Fixed,
             resolved_at: Some(now_secs()),
             ..finding
         };
-        self.keepers
-            .put_finding(&self.persist, &self.tasks, task_id, fixed);
-        self.keeper_emit_run(task_id, &run_id);
-        self.keepers_fix(task_id, None);
+        self.keepers_resolve(task_id, fixed);
         Ok(())
     }
 

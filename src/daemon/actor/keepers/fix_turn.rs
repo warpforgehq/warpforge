@@ -10,6 +10,14 @@ use super::{Fix, FixPhase};
 use crate::daemon::actor::Daemon;
 use crate::daemon::keepers::parse_replies;
 
+/// A handed-over fix, its turn waiting to end.
+struct SentFix {
+    keepers: Vec<String>,
+    head: String,
+    findings: Vec<String>,
+    prior: Vec<(String, wire::KeeperLoop)>,
+}
+
 impl Daemon {
     /// @param completed the turn ended on its own, not interrupted or failed
     pub(super) fn keepers_fix_ended(&mut self, task_id: &str, completed: bool) {
@@ -17,23 +25,36 @@ impl Daemon {
             self.keepers_fix_revert(task_id, None);
             return;
         }
-        let sent = self
-            .keepers
-            .fixes
-            .get(task_id)
-            .is_some_and(|fix| matches!(fix.phase, FixPhase::Sent { .. }));
-        let Some(fix) = sent.then(|| self.keepers.fixes.remove(task_id)).flatten() else {
+        let Some(taken) = self.keepers_take_sent(task_id) else {
             return;
         };
-        for keeper_id in &fix.keepers {
+        for keeper_id in &taken.keepers {
             let mut done = self.keeper_loop(task_id, keeper_id);
             done.pending_head = None;
             self.keeper_set_loop(task_id, keeper_id, done);
             self.keeper_emit_loop(task_id, keeper_id);
         }
-        if let FixPhase::Sent { findings, .. } = fix.phase {
-            self.keepers_record_replies(task_id, &findings);
-        }
+        self.keepers_record_replies(task_id, &taken.findings);
+    }
+
+    /// Take the handed-over fix, when there is one. Any other phase is left
+    /// in place.
+    fn keepers_take_sent(&mut self, task_id: &str) -> Option<SentFix> {
+        let sent = self
+            .keepers
+            .fixes
+            .get(task_id)
+            .is_some_and(|fix| matches!(fix.phase, FixPhase::Sent { .. }));
+        let fix = sent.then(|| self.keepers.fixes.remove(task_id)).flatten()?;
+        let FixPhase::Sent { findings, prior } = fix.phase else {
+            return None;
+        };
+        Some(SentFix {
+            keepers: fix.keepers,
+            head: fix.head,
+            findings,
+            prior,
+        })
     }
 
     /// Note the fixer's reply on each finding it did not fix; the status
@@ -70,30 +91,22 @@ impl Daemon {
     /// loop is as it was, so the round does not count.
     /// @param waiting why the fix now waits, when it should not retry at once
     pub(super) fn keepers_fix_revert(&mut self, task_id: &str, waiting: Option<String>) {
-        let sent = self
-            .keepers
-            .fixes
-            .get(task_id)
-            .is_some_and(|fix| matches!(fix.phase, FixPhase::Sent { .. }));
-        let Some(fix) = sent.then(|| self.keepers.fixes.remove(task_id)).flatten() else {
+        let Some(taken) = self.keepers_take_sent(task_id) else {
             return;
         };
-        let FixPhase::Sent { findings, prior } = fix.phase else {
-            return;
-        };
-        self.keepers_reopen(task_id, |finding| findings.contains(&finding.id));
-        for (keeper_id, before) in prior {
+        self.keepers_reopen(task_id, |finding| taken.findings.contains(&finding.id));
+        for (keeper_id, before) in taken.prior {
             self.keeper_set_loop(task_id, &keeper_id, before);
         }
         if let Some(reason) = waiting {
             let held = Fix {
-                head: fix.head,
-                keepers: fix.keepers.clone(),
+                head: taken.head,
+                keepers: taken.keepers.clone(),
                 phase: FixPhase::Waiting(reason),
             };
             self.keepers.fixes.insert(task_id.to_string(), held);
         }
-        for keeper_id in &fix.keepers {
+        for keeper_id in &taken.keepers {
             self.keeper_emit_loop(task_id, keeper_id);
         }
     }

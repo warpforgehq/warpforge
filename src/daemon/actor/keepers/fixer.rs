@@ -2,7 +2,6 @@
 //! once every keeper on a HEAD finished, their open findings go as one prompt
 //! into the task's own session, and only into a quiet task.
 
-use tokio::sync::oneshot;
 use warpforge_protocol as wire;
 use wire::{KeeperFindingStatus as Status, KeeperOutcome as Outcome};
 
@@ -38,7 +37,6 @@ enum Planning {
 fn still_checking(names: &[String]) -> String {
     match names {
         [one] => format!("{one} is still checking this commit"),
-        [first, second] => format!("{first} and {second} are still checking this commit"),
         [rest @ .., last] => {
             format!(
                 "{} and {last} are still checking this commit",
@@ -102,18 +100,10 @@ impl Daemon {
         let gate = matches!(phase, FixPhase::Gating).then(|| head.clone());
         let fix = Fix {
             head,
-            keepers: keepers.clone(),
+            keepers,
             phase,
         };
-        let mut told = keepers;
-        if let Some(old) = self.keepers.fixes.insert(task_id.to_string(), fix) {
-            for id in old.keepers {
-                if !told.contains(&id) {
-                    told.push(id);
-                }
-            }
-        }
-        for keeper_id in &told {
+        for keeper_id in &self.keepers_fix_replace(task_id, fix) {
             self.keeper_emit_loop(task_id, keeper_id);
         }
         if let Some(head) = gate {
@@ -122,7 +112,7 @@ impl Daemon {
     }
 
     /// Drop a fix that has not been handed over, telling its keepers.
-    fn keepers_fix_clear(&mut self, task_id: &str) {
+    pub(super) fn keepers_fix_clear(&mut self, task_id: &str) {
         let removable = self
             .keepers
             .fixes
@@ -136,6 +126,20 @@ impl Daemon {
                 self.keeper_emit_loop(task_id, keeper_id);
             }
         }
+    }
+
+    /// Swap the task's pending fix and say which keepers to tell: the new
+    /// fix's, and any the replaced one listed that it no longer does.
+    fn keepers_fix_replace(&mut self, task_id: &str, fix: Fix) -> Vec<String> {
+        let mut told = fix.keepers.clone();
+        if let Some(old) = self.keepers.fixes.insert(task_id.to_string(), fix) {
+            for id in old.keepers {
+                if !told.contains(&id) {
+                    told.push(id);
+                }
+            }
+        }
+        told
     }
 
     /// Every keeper on the task finished on its HEAD; each one's open
@@ -197,7 +201,7 @@ impl Daemon {
             if findings.is_empty() {
                 continue;
             }
-            if fix.round_head.as_deref() != Some(head.as_str()) {
+            if checking.is_empty() && fix.round_head.as_deref() != Some(head.as_str()) {
                 let reraised = findings.iter().any(|f| {
                     history.iter().any(|old| {
                         old.key == f.key && old.run_id != run.id && old.status == Status::Sent
@@ -408,20 +412,13 @@ impl Daemon {
         let keepers: Vec<String> = items.iter().map(|(id, _)| id.clone()).collect();
         let fix = Fix {
             head,
-            keepers: keepers.clone(),
+            keepers,
             phase: FixPhase::Sent {
                 findings: sent,
                 prior,
             },
         };
-        let mut told = keepers;
-        if let Some(old) = self.keepers.fixes.insert(task_id.to_string(), fix) {
-            for id in old.keepers {
-                if !told.contains(&id) {
-                    told.push(id);
-                }
-            }
-        }
+        let told = self.keepers_fix_replace(task_id, fix);
         for finding in items.into_iter().flat_map(|(_, findings)| findings) {
             let finding = wire::KeeperFinding {
                 status: Status::Sent,
@@ -441,22 +438,10 @@ impl Daemon {
         let cmd_tx = self.cmd_tx.clone();
         let task_id = task_id.to_string();
         tokio::spawn(async move {
-            let (reply, answer) = oneshot::channel();
-            let sent = cmd_tx
-                .send(Command::SessionPrompt {
-                    task_id: task_id.clone(),
-                    text,
-                    attachments: Vec::new(),
-                    initiator: TurnInitiator::Keeper,
-                    peer_message: None,
-                    reply,
-                })
-                .await;
-            let error = match (sent, answer.await) {
-                (Ok(()), Ok(Ok(()))) => return,
-                (_, Ok(Err(error))) => error,
-                _ => "the daemon is shutting down".to_string(),
-            };
+            let delivered =
+                super::deliver_prompt(cmd_tx.clone(), task_id.clone(), text, TurnInitiator::Keeper)
+                    .await;
+            let Err(error) = delivered else { return };
             let undelivered = KeeperCommand::FixUndelivered {
                 task_id,
                 error: format!("the fix prompt did not reach the task: {error}"),

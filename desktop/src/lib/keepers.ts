@@ -373,14 +373,12 @@ export function keeperPushWarnings(state: KeeperTaskState | undefined): string[]
     const name = keeperIdLabel(id);
     if (status === "running") return [`${name} is still checking`];
     if (status === "needs_you") return [`${name} needs you`];
-    if (!outdated && hasOpenFindings({ findings, status }))
+    const open =
+      findings > 0 && (status === "findings" || status === "waiting" || status === "fixing");
+    if (!outdated && open)
       return [`${name}: ${findings} ${findings === 1 ? "finding" : "findings"}`];
     return [];
   });
-}
-
-function hasOpenFindings({ findings, status }: { findings: number; status: KeeperStatus }) {
-  return findings > 0 && (status === "findings" || status === "waiting" || status === "fixing");
 }
 
 export type KeeperWorst = "failing" | "running";

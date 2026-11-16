@@ -130,7 +130,10 @@ impl Daemon {
                 self.keeper_close(run, wire::KeeperOutcome::Skipped, reason);
                 continue;
             }
-            let agent = definition.agent.clone().unwrap_or(task.agent.clone());
+            let agent = definition
+                .agent
+                .clone()
+                .unwrap_or_else(|| task.agent.clone());
             let account = match self.keeper_reusable_checker(task_id, &definition, &agent) {
                 Some(checker) => self.spawn_account(&checker),
                 None => SpawnAccount::Active,
@@ -224,7 +227,8 @@ impl Daemon {
         let prompt = render_prompt(&definition, &vars);
         let mut run = self.keeper_new_run(&task.id, &definition.id, trigger, head, Some(change));
         let existing = self.keeper_checker(&task.id, &definition.id);
-        let checker = match existing.clone() {
+        let reused = existing.is_some();
+        let checker = match existing {
             Some(checker) => checker,
             None => self.keeper_create_checker(task, &definition, &agent, &prompt),
         };
@@ -245,9 +249,9 @@ impl Daemon {
         );
         let run_id = run.id.clone();
         self.keeper_record(run, Vec::new());
-        match existing {
-            Some(_) => self.keeper_prompt(&run_id, checker, prompt),
-            None => {
+        match reused {
+            true => self.keeper_prompt(&run_id, checker, prompt),
+            false => {
                 self.keeper_start_session(&checker, &task.project, &definition, &agent, &prompt);
                 if !self.sessions.contains_key(&checker) {
                     let error = self
@@ -332,22 +336,9 @@ impl Daemon {
         let cmd_tx = self.cmd_tx.clone();
         let run_id = run_id.to_string();
         tokio::spawn(async move {
-            let (reply, answer) = oneshot::channel();
-            let sent = cmd_tx
-                .send(Command::SessionPrompt {
-                    task_id: checker,
-                    text,
-                    attachments: Vec::new(),
-                    initiator: TurnInitiator::System,
-                    peer_message: None,
-                    reply,
-                })
-                .await;
-            let error = match (sent, answer.await) {
-                (Ok(()), Ok(Ok(()))) => return,
-                (_, Ok(Err(error))) => error,
-                _ => "the daemon is shutting down".to_string(),
-            };
+            let delivered =
+                super::deliver_prompt(cmd_tx.clone(), checker, text, TurnInitiator::System).await;
+            let Err(error) = delivered else { return };
             let _ = cmd_tx
                 .send(Command::Keepers(KeeperCommand::Undelivered {
                     run_id,

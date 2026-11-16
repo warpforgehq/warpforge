@@ -88,7 +88,7 @@ pub(super) async fn state(setup: &Setup) -> wire::KeeperTaskState {
 /// `done`.
 pub(super) async fn loop_event_of(
     setup: &mut Setup,
-    keeper_id: &str,
+    keeper_id: Option<&str>,
     done: impl Fn(&wire::KeeperLoopState) -> bool,
 ) -> wire::KeeperLoopState {
     timeout(Duration::from_secs(20), async {
@@ -99,7 +99,7 @@ pub(super) async fn loop_event_of(
                 ..
             }) = setup.events.recv().await
             {
-                if id == keeper_id && done(&state) {
+                if keeper_id.is_none_or(|wanted| id == wanted) && done(&state) {
                     return state;
                 }
             }
@@ -114,17 +114,7 @@ pub(super) async fn loop_event(
     setup: &mut Setup,
     done: impl Fn(&wire::KeeperLoopState) -> bool,
 ) -> wire::KeeperLoopState {
-    timeout(Duration::from_secs(20), async {
-        loop {
-            if let Ok(Event::TaskKeeper { state, .. }) = setup.events.recv().await {
-                if done(&state) {
-                    return state;
-                }
-            }
-        }
-    })
-    .await
-    .expect("a keeper loop event")
+    loop_event_of(setup, None, done).await
 }
 
 async fn poll(setup: &Setup) {
@@ -463,7 +453,7 @@ async fn findings_wait_visibly_for_another_keeper_on_the_head() {
     std::fs::write(&setup.slow_replies, "WAIT").unwrap();
     wake(&setup, "hello").await;
     keeper_event(&mut setup, |run| finished(run) && run.keeper_id == "review").await;
-    let waiting = loop_event_of(&mut setup, "review", |s| {
+    let waiting = loop_event_of(&mut setup, Some("review"), |s| {
         s.status == KeeperLoopStatus::Waiting
     })
     .await;
