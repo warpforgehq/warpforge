@@ -85,7 +85,8 @@ export function KeepersSurface({
     queryFn: () => daemon.listKeepers(task.project),
     queryKey: ["keepers", task.project],
   });
-  const entries = list.data ?? [];
+  const entries = list.data?.keepers ?? [];
+  const presets = list.data?.presets ?? [];
   const valid = entries.filter((entry) => entry.definition && !entry.error);
 
   useEffect(() => {
@@ -146,7 +147,7 @@ export function KeepersSurface({
         icon={ShieldCheck}
         title="No keepers yet"
         hint="A keeper is an agent that checks every commit and asks the task's agent to fix what it finds. Keepers belong to the project: one you add here checks every task, and its switch turns it off for one task only."
-        action={<AddKeeper entries={entries} onAdd={add} />}
+        action={<AddKeeper entries={entries} onAdd={add} presets={presets} />}
       />
     );
   }
@@ -168,7 +169,7 @@ export function KeepersSurface({
           {ready.length > 0 && (
             <CheckBeforePr taskId={task.id} running={ready.some((keeper) => keeper.running)} />
           )}
-          <AddKeeper entries={entries} onAdd={add} />
+          <AddKeeper entries={entries} onAdd={add} presets={presets} />
         </div>
       </div>
       <FileProblems entries={entries} />

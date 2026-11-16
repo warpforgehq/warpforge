@@ -95,6 +95,17 @@ pub struct KeeperDefinition {
     pub prompt: String,
 }
 
+/// A built-in keeper **Add keeper** offers, as its file resolves.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct KeeperPreset {
+    pub id: String,
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    pub when: KeeperWhen,
+}
+
 /// One keeper file as listed for a project; an invalid file carries `error`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]

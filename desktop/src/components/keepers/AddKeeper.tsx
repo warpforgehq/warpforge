@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { type KeeperPresetId, missingPresets } from "@/lib/keepers";
-import type { KeeperEntry } from "@/protocol";
+import type { KeeperEntry, KeeperPreset } from "@/protocol";
 
 const GROUPS = [
   { label: "On every commit", when: "commit" },
@@ -22,17 +22,20 @@ const GROUPS = [
  * **Add keeper**: the built-ins the project has no file for, grouped by when
  * they run.
  * @param entries The project's keeper files.
+ * @param presets The built-ins the daemon offers.
  * @param onAdd Writes the picked preset.
  * @returns The menu, or nothing when every preset is taken.
  */
 export function AddKeeper({
   entries,
+  presets: offered,
   onAdd,
 }: {
   entries: readonly KeeperEntry[];
+  presets: readonly KeeperPreset[];
   onAdd: (preset: KeeperPresetId) => void;
 }) {
-  const presets = missingPresets(entries);
+  const presets = missingPresets(entries, offered);
   if (presets.length === 0) return null;
   const groups = GROUPS.map((group) => ({
     ...group,
@@ -61,7 +64,7 @@ export function AddKeeper({
               >
                 <span className="flex flex-col gap-0.5">
                   <span className="text-[13px] font-medium">{preset.name}</span>
-                  <span className="text-xs text-muted-foreground">{preset.hint}</span>
+                  <span className="text-xs text-muted-foreground">{preset.description}</span>
                 </span>
               </DropdownMenuItem>
             ))}

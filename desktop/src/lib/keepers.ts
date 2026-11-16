@@ -3,6 +3,7 @@ import type {
   KeeperEntry,
   KeeperFinding,
   KeeperLoopState,
+  KeeperPreset,
   KeeperRun,
   KeeperSeverity,
   KeeperTaskState,
@@ -13,59 +14,7 @@ import type {
 export const SUPERSEDED = "superseded";
 export const STRIP_LENGTH = 10;
 
-/** The built-in keepers **Add keeper** offers, in menu order. */
-export const KEEPER_PRESETS = [
-  {
-    id: "review",
-    name: "Review",
-    hint: "Bugs, regressions and edge cases in the change.",
-    when: "commit",
-  },
-  {
-    id: "slop",
-    name: "Slop",
-    hint: "Code that reads as generated rather than written.",
-    when: "commit",
-  },
-  {
-    id: "conventions",
-    name: "Conventions",
-    hint: "The change against the project's rules.",
-    when: "commit",
-  },
-  {
-    id: "security",
-    name: "Security",
-    hint: "Vulnerabilities with a plausible exploit path.",
-    when: "ready",
-  },
-  {
-    id: "thermonuclear",
-    name: "Thermonuclear",
-    hint: "Complexity the change could delete rather than move.",
-    when: "ready",
-  },
-  {
-    id: "intent",
-    name: "Intent",
-    hint: "What the brief asked and the change did not.",
-    when: "ready",
-  },
-  {
-    id: "verify",
-    name: "Verify",
-    hint: "The task's claim, checked against the running app.",
-    when: "ready",
-  },
-  {
-    id: "pr-ready",
-    name: "PR-ready",
-    hint: "A pull request description drafted from the change.",
-    when: "ready",
-  },
-] as const;
-
-export type KeeperPresetId = (typeof KEEPER_PRESETS)[number]["id"];
+export type KeeperPresetId = KeeperPreset["id"];
 
 export type KeeperStatus =
   | "off"
@@ -114,11 +63,12 @@ export function presetFile(preset: KeeperPresetId): { path: string; content: str
 
 /**
  * @param entries The project's keeper files.
+ * @param presets The built-ins the daemon offers.
  * @returns The presets no file names yet.
  */
-export function missingPresets(entries: readonly KeeperEntry[]) {
+export function missingPresets(entries: readonly KeeperEntry[], presets: readonly KeeperPreset[]) {
   const taken = new Set(entries.flatMap((entry) => [entry.id, entry.definition?.preset ?? ""]));
-  return KEEPER_PRESETS.filter((preset) => !taken.has(preset.id));
+  return presets.filter((preset) => !taken.has(preset.id));
 }
 
 /**

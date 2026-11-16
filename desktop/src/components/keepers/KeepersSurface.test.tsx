@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DaemonRpcError } from "@/daemon/rpcError";
 import { normalizeKeeperState } from "@/lib/keepers";
-import type { AgentConfig, KeeperEntry, KeeperTaskState, TaskInfo } from "@/protocol";
+import type { AgentConfig, KeeperEntry, KeeperPreset, KeeperTaskState, TaskInfo } from "@/protocol";
 import { finding, run } from "@/test/keepers";
 
 const { toastError } = vi.hoisted(() => ({ toastError: vi.fn<(...args: unknown[]) => void>() }));
@@ -26,7 +26,7 @@ const { client, store } = vi.hoisted(() => {
       decideKeeper: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       dismissKeeperFinding: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       getState: () => state,
-      listKeepers: vi.fn<() => Promise<unknown[]>>(),
+      listKeepers: vi.fn<() => Promise<unknown>>(),
       refreshTaskKeepers: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       saveKeeperRunsOn: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
       sendKeeperFindings: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
@@ -58,8 +58,19 @@ const entry = (id: string, fields: Partial<KeeperEntry["definition"]> = {}): Kee
   id,
 });
 
+const presets: KeeperPreset[] = [
+  { id: "review", name: "Review", when: "commit" },
+  { id: "slop", name: "Slop", when: "commit" },
+  { id: "conventions", name: "Conventions", when: "commit" },
+  { id: "security", name: "Security", when: "ready" },
+  { id: "thermonuclear", name: "Thermonuclear", when: "ready" },
+  { id: "intent", name: "Intent", when: "ready" },
+  { id: "verify", name: "Verify", when: "ready" },
+  { id: "pr-ready", name: "PR-ready", when: "ready" },
+];
+
 function show(entries: KeeperEntry[], state?: Partial<KeeperTaskState>, of: TaskInfo = task) {
-  client.listKeepers.mockResolvedValue(entries);
+  client.listKeepers.mockResolvedValue({ keepers: entries, presets });
   store.taskKeepers = state ? { t1: { ...normalizeKeeperState("t1", null), ...state } } : {};
   const onOpenFile = vi.fn<(path: string, location?: { line?: number }) => void>();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });

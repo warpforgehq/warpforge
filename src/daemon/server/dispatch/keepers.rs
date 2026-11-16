@@ -19,7 +19,8 @@ pub(super) async fn keepers(
             })
             .await
             .unwrap_or_default();
-            Ok(json!({ "keepers": keepers }))
+            let presets = crate::daemon::keepers::list_presets();
+            Ok(json!({ "keepers": keepers, "presets": presets }))
         }
         wire::Method::KeepersState { task_id } => {
             ask(

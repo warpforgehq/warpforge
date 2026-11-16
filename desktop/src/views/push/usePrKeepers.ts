@@ -44,7 +44,7 @@ export function usePrKeepers({
     queryFn: () => daemon.listKeepers(task?.project ?? ""),
     queryKey: ["keepers", task?.project],
   });
-  const ready = readyKeepers(list.data ?? [], state);
+  const ready = readyKeepers(list.data?.keepers ?? [], state);
   const [error, setError] = useState<string | null>(null);
   const [head, setHead] = useState<string | null>(null);
   const asked = useRef(false);
