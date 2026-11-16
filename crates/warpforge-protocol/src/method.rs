@@ -1781,7 +1781,7 @@ pub enum Method {
 
     // ── Keepers (ADR 0030) ──────────────────────────────────────────────────
     /// The project's keeper files, resolved, with parse errors and warnings.
-    /// Returns `{ keepers: KeeperEntry[] }`.
+    /// Returns `{ keepers: KeeperEntry[], presets: KeeperPreset[] }`.
     #[serde(rename = "keepers.list")]
     KeepersList { project: String },
     /// A task's keeper switches, runs, findings and per-keeper precision.

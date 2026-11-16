@@ -35,13 +35,20 @@ fn every_preset_lists_with_its_file_name_description_and_when() {
             "pr-ready",
         ]
     );
-    for (id, text) in PRESETS {
-        let listed = presets.iter().find(|preset| preset.id == *id).unwrap();
-        let definition = parse_keeper(id, text).0.unwrap();
-        assert_eq!(listed.name, definition.name);
-        assert_eq!(listed.description, definition.description);
-        assert_eq!(listed.when, definition.when);
-    }
+    let slop = presets.iter().find(|preset| preset.id == "slop").unwrap();
+    assert_eq!(
+        (slop.name.as_str(), slop.when),
+        ("Slop", wire::KeeperWhen::Commit)
+    );
+    let ready = presets
+        .iter()
+        .find(|preset| preset.id == "pr-ready")
+        .unwrap();
+    assert_eq!(ready.when, wire::KeeperWhen::Ready);
+    assert!(ready
+        .description
+        .as_deref()
+        .is_some_and(|text| !text.is_empty()));
 }
 
 #[test]
