@@ -5,16 +5,6 @@ use super::*;
 
 const READY: &str = "version: 1\npreset: security\n";
 
-async fn check_ready(setup: &Setup) {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let ask = KeeperCommand::CheckReady {
-        task_id: "t_a".into(),
-        reply: tx,
-    };
-    setup.daemon.send(Command::Keepers(ask)).await;
-    assert_eq!(rx.await.unwrap().unwrap().1, vec!["security"]);
-}
-
 fn rewrite(setup: &Setup, yaml: &str) {
     let path = format!(
         "{}/.warpforge/keepers/security.yaml",
@@ -24,7 +14,7 @@ fn rewrite(setup: &Setup, yaml: &str) {
 }
 
 async fn run_once(setup: &mut Setup, number: u64) -> String {
-    check_ready(setup).await;
+    assert_eq!(check_ready(setup).await, vec!["security"]);
     let (run, _) = keeper_event(setup, |run| finished(run) && run.run_number == number).await;
     run.checker_task_id.expect("the run names its checker")
 }

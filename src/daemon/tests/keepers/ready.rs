@@ -14,19 +14,6 @@ async fn check_ready(setup: &Setup, task_id: &str) -> Result<Vec<String>, String
     check_ready_on(setup, task_id, "sha1").await
 }
 
-async fn check_ready_on(setup: &Setup, task_id: &str, sha: &str) -> Result<Vec<String>, String> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let ask = KeeperCommand::CheckReady {
-        task_id: task_id.into(),
-        reply: tx,
-    };
-    setup.daemon.send(Command::Keepers(ask)).await;
-    rx.await.unwrap().map(|(head, started)| {
-        assert_eq!(head, sha, "the reply names the HEAD it checks");
-        started
-    })
-}
-
 fn go(setup: &Setup, reply: &str) {
     std::fs::write(format!("{}.go", setup.replies.display()), reply).unwrap();
 }

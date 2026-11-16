@@ -66,13 +66,12 @@ pub(super) async fn until(what: &str, check: impl Fn() -> bool) {
 /// `keepers.state` for t_a, with the switches as the daemon keeps them: the
 /// reply leaves the saved loops out, and these tests read them.
 pub(super) async fn state(setup: &Setup) -> wire::KeeperTaskState {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let ask = KeeperCommand::State {
+    let mut state = ask(setup, |reply| KeeperCommand::State {
         task_id: "t_a".into(),
-        reply: tx,
-    };
-    setup.daemon.send(Command::Keepers(ask)).await;
-    let mut state = rx.await.unwrap().unwrap();
+        reply,
+    })
+    .await
+    .unwrap();
     assert!(state.switches.loops.is_empty(), "loops stay in the daemon");
     let task = setup
         .daemon
@@ -338,15 +337,14 @@ async fn a_dismissed_finding_is_not_sent_and_the_checker_is_told() {
         .into_iter()
         .find(|f| f.description == "intended quirk")
         .unwrap();
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let dismiss = KeeperCommand::Dismiss {
+    ask(&setup, |reply| KeeperCommand::Dismiss {
         task_id: "t_a".into(),
         finding_id: quirk.id.clone(),
         reason: Some("by design".into()),
-        reply: tx,
-    };
-    setup.daemon.send(Command::Keepers(dismiss)).await;
-    rx.await.unwrap().unwrap();
+        reply,
+    })
+    .await
+    .unwrap();
 
     setup.script.lock().unwrap().dirty.clear();
     poll(&setup).await;

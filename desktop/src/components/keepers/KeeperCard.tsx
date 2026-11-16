@@ -110,7 +110,7 @@ export function KeeperCard({
           )}
         >
           {KEEPER_STATUS_META[status].label}
-          {status === "findings" && findings.length > 0 ? ` · ${findings.length}` : ""}
+          {status === "findings" ? ` · ${findings.length}` : ""}
         </span>
         <Toggle id={switchId} checked={on} onChange={(next) => actions.onSwitch(entry.id, next)} />
       </header>

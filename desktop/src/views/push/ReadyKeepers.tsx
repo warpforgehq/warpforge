@@ -51,7 +51,7 @@ export function ReadyKeepers({
               </span>
               <span className={cn("flex items-center gap-1", label.tone)}>
                 {status === "running" && <Loader2 aria-hidden className="size-3 animate-spin" />}
-                {status === "findings" && count > 0
+                {status === "findings"
                   ? `${count} ${count === 1 ? "finding" : "findings"}`
                   : label.label}
               </span>

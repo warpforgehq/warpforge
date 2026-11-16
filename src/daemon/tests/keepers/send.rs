@@ -7,34 +7,12 @@ use wire::{KeeperFindingStatus as Status, KeeperLoopStatus, KeeperOutcome as Out
 
 const SECURITY: &str = "version: 1\npreset: security\nagent: mockkeep\n";
 
-async fn check_ready(setup: &Setup) {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let ask = KeeperCommand::CheckReady {
-        task_id: "t_a".into(),
-        reply: tx,
-    };
-    setup.daemon.send(Command::Keepers(ask)).await;
-    let (_, started) = rx.await.unwrap().unwrap();
-    assert_eq!(started, vec!["security"]);
-}
-
-async fn send_findings(setup: &Setup, keeper_id: &str) -> Result<(), String> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let ask = KeeperCommand::SendFindings {
-        task_id: "t_a".into(),
-        keeper_id: keeper_id.into(),
-        reply: tx,
-    };
-    setup.daemon.send(Command::Keepers(ask)).await;
-    rx.await.unwrap()
-}
-
 /// A ready check finds one problem on sha1 and HEAD moves to sha2 meanwhile,
 /// so the automatic fix drops it and the finding stays open.
 async fn findings_left_behind() -> Setup {
     let mut setup = setup(&[("security", SECURITY)], |wt| vec![fix_task("t_a", wt)]).await;
     std::fs::write(&setup.replies, "WAIT").unwrap();
-    check_ready(&setup).await;
+    assert_eq!(check_ready(&setup).await, vec!["security"]);
     keeper_event(&mut setup, |run| run.checker_task_id.is_some()).await;
     move_head(&setup, "sha2").await;
     std::fs::write(format!("{}.go", setup.replies.display()), FINDING).unwrap();
@@ -128,7 +106,7 @@ async fn sending_is_refused_mid_turn() {
 async fn sending_is_refused_with_nothing_open() {
     let mut setup = setup(&[("security", SECURITY)], |wt| vec![fix_task("t_a", wt)]).await;
     std::fs::write(&setup.replies, APPROVE).unwrap();
-    check_ready(&setup).await;
+    assert_eq!(check_ready(&setup).await, vec!["security"]);
     let (run, _) = keeper_event(&mut setup, finished).await;
     assert_eq!(run.outcome, Some(Outcome::Green));
     let error = send_findings(&setup, "security").await.unwrap_err();
