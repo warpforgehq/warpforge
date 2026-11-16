@@ -104,10 +104,11 @@ fn commit_in_worktree(path: &str) {
 }
 
 /// Wait until the agent's first turn is over, so a merge is not refused for a
-/// turn that is still running.
+/// turn that is still running. The task is `Queued` until its session attaches.
 async fn wait_for_turn_end(handle: &DaemonHandle, id: &str) {
     for _ in 0..200 {
-        if task_now(handle, id).await.status != crate::daemon::task::TaskStatus::Running {
+        let task = task_now(handle, id).await;
+        if task.session_id.is_some() && task.status != crate::daemon::task::TaskStatus::Running {
             return;
         }
         tokio::time::sleep(Duration::from_millis(25)).await;
