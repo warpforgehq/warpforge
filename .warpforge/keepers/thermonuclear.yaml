@@ -1,3 +1,5 @@
 version: 1
 preset: thermonuclear
 agent: claude
+model: opus
+effort: high
