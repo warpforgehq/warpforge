@@ -35,33 +35,23 @@ pub(super) async fn keepers(
             finding_id,
             reason,
         } => {
-            ask(
-                handle,
-                wire::ErrorCode::InvalidRequest,
-                |reply| KeeperCommand::Dismiss {
-                    task_id,
-                    finding_id,
-                    reason,
-                    reply,
-                },
-                |()| json!({ "ok": true }),
-            )
+            ack(handle, |reply| KeeperCommand::Dismiss {
+                task_id,
+                finding_id,
+                reason,
+                reply,
+            })
             .await
         }
         wire::Method::KeepersAcceptReply {
             task_id,
             finding_id,
         } => {
-            ask(
-                handle,
-                wire::ErrorCode::InvalidRequest,
-                |reply| KeeperCommand::AcceptReply {
-                    task_id,
-                    finding_id,
-                    reply,
-                },
-                |()| json!({ "ok": true }),
-            )
+            ack(handle, |reply| KeeperCommand::AcceptReply {
+                task_id,
+                finding_id,
+                reply,
+            })
             .await
         }
         wire::Method::KeepersDecide {
@@ -71,19 +61,14 @@ pub(super) async fn keepers(
             rounds,
             note,
         } => {
-            ask(
-                handle,
-                wire::ErrorCode::InvalidRequest,
-                |reply| KeeperCommand::Decide {
-                    task_id,
-                    keeper_id,
-                    decision,
-                    rounds,
-                    note,
-                    reply,
-                },
-                |()| json!({ "ok": true }),
-            )
+            ack(handle, |reply| KeeperCommand::Decide {
+                task_id,
+                keeper_id,
+                decision,
+                rounds,
+                note,
+                reply,
+            })
             .await
         }
         wire::Method::KeepersSetSwitch {
@@ -91,30 +76,20 @@ pub(super) async fn keepers(
             keeper_id,
             on,
         } => {
-            ask(
-                handle,
-                wire::ErrorCode::InvalidRequest,
-                |reply| KeeperCommand::SetSwitch {
-                    task_id,
-                    keeper_id,
-                    on,
-                    reply,
-                },
-                |()| json!({ "ok": true }),
-            )
+            ack(handle, |reply| KeeperCommand::SetSwitch {
+                task_id,
+                keeper_id,
+                on,
+                reply,
+            })
             .await
         }
         wire::Method::KeepersSendFindings { task_id, keeper_id } => {
-            ask(
-                handle,
-                wire::ErrorCode::InvalidRequest,
-                |reply| KeeperCommand::SendFindings {
-                    task_id,
-                    keeper_id,
-                    reply,
-                },
-                |()| json!({ "ok": true }),
-            )
+            ack(handle, |reply| KeeperCommand::SendFindings {
+                task_id,
+                keeper_id,
+                reply,
+            })
             .await
         }
         wire::Method::KeepersCheckReady { task_id } => {
@@ -131,6 +106,20 @@ pub(super) async fn keepers(
             message: "not a keepers method".into(),
         }),
     }
+}
+
+/// Ask the actor for an acknowledgement, mapping a refusal to `InvalidRequest`.
+async fn ack(
+    handle: &DaemonHandle,
+    command: impl FnOnce(oneshot::Sender<Result<(), String>>) -> KeeperCommand,
+) -> Result<serde_json::Value, wire::RpcError> {
+    ask(
+        handle,
+        wire::ErrorCode::InvalidRequest,
+        command,
+        |()| json!({ "ok": true }),
+    )
+    .await
 }
 
 /// Ask the actor and turn its answer into a JSON reply, mapping a refusal to

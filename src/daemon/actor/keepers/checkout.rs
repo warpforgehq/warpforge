@@ -197,8 +197,9 @@ impl Daemon {
                 == Some(branch)
     }
 
-    /// The folder task of `project` that owns `branch`, if any.
-    /// @param task_id a task without a worktree
+    /// The folder task sharing `task_id`'s project that owns `branch`.
+    /// @param task_id the task whose project to look in
+    /// @param branch the branch a folder task may own
     fn keepers_branch_owner(&self, task_id: &str, branch: &str) -> Option<&Task> {
         let task = self.tasks.get(task_id)?;
         self.tasks
@@ -221,7 +222,9 @@ impl Daemon {
             .filter(|other| other.project == task.project && other.worktree.is_none())
             .filter(|other| self.keeper_candidate(other))
             .collect();
-        let owned = self.keepers_branch_owner(task_id, branch).is_some();
+        let owned = folder
+            .iter()
+            .any(|other| Self::keepers_owns_branch(other, branch));
         let latest = folder
             .iter()
             .filter(|other| other.keepers.as_ref().is_none_or(|k| k.branch.is_none()))
