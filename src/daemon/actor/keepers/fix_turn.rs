@@ -40,13 +40,9 @@ impl Daemon {
     /// Take the handed-over fix, when there is one. Any other phase is left
     /// in place.
     fn keepers_take_sent(&mut self, task_id: &str) -> Option<SentFix> {
-        let sent = self
-            .keepers
-            .fixes
-            .get(task_id)
-            .is_some_and(|fix| matches!(fix.phase, FixPhase::Sent { .. }));
-        let fix = sent.then(|| self.keepers.fixes.remove(task_id)).flatten()?;
+        let fix = self.keepers.fixes.remove(task_id)?;
         let FixPhase::Sent { findings, prior } = fix.phase else {
+            self.keepers.fixes.insert(task_id.to_string(), fix);
             return None;
         };
         Some(SentFix {

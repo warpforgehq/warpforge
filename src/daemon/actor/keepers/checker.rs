@@ -249,19 +249,18 @@ impl Daemon {
         );
         let run_id = run.id.clone();
         self.keeper_record(run, Vec::new());
-        match reused {
-            true => self.keeper_prompt(&run_id, checker, prompt),
-            false => {
-                self.keeper_start_session(&checker, &task.project, &definition, &agent, &prompt);
-                if !self.sessions.contains_key(&checker) {
-                    let error = self
-                        .tasks
-                        .get(&checker)
-                        .and_then(|task| task.blocked_reason.clone())
-                        .unwrap_or_else(|| "the checker's agent did not start".into());
-                    self.keeper_run_failed(&run_id, wire::KeeperOutcome::Error, error);
-                    return;
-                }
+        if reused {
+            self.keeper_prompt(&run_id, checker, prompt);
+        } else {
+            self.keeper_start_session(&checker, &task.project, &definition, &agent, &prompt);
+            if !self.sessions.contains_key(&checker) {
+                let error = self
+                    .tasks
+                    .get(&checker)
+                    .and_then(|task| task.blocked_reason.clone())
+                    .unwrap_or_else(|| "the checker's agent did not start".into());
+                self.keeper_run_failed(&run_id, wire::KeeperOutcome::Error, error);
+                return;
             }
         }
         let cmd_tx = self.cmd_tx.clone();

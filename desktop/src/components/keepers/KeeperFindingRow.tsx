@@ -45,7 +45,7 @@ export function KeeperFindingRow({
   const file = finding.file;
   const reply = finding.reply;
 
-  const accept = () => run(() => onAccept());
+  const accept = () => run(onAccept);
 
   const dismiss = () =>
     run(async () => {
