@@ -63,8 +63,8 @@ fn prompt(
     let mut out = intro(&head[..head.len().min(10)]);
     for (index, item) in items.iter().enumerate() {
         let f = item.finding;
-        let place = super::prompt::place(f)
-            .map(|place| format!(" {place} —"))
+        let place = super::prompt::at(f)
+            .map(|at| format!(" {at} —"))
             .unwrap_or_default();
         out.push_str(&format!(
             "[{}] [{}, {}]{place} {}\n",

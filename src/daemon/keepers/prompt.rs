@@ -103,7 +103,7 @@ pub fn commits_since(log: &[String], previous: Option<&str>) -> String {
 /// Where a finding is, as `file:line` or `file`.
 /// @param f the finding
 /// @returns the place, or `None` when it names no file
-pub(super) fn place(f: &wire::KeeperFinding) -> Option<String> {
+pub(super) fn at(f: &wire::KeeperFinding) -> Option<String> {
     match (&f.file, f.line) {
         (Some(file), Some(line)) => Some(format!("{file}:{line}")),
         (Some(file), None) => Some(file.clone()),
@@ -119,9 +119,7 @@ pub fn dismissed_list(findings: &[&wire::KeeperFinding]) -> String {
         .iter()
         .filter(|f| f.status == wire::KeeperFindingStatus::Dismissed)
         .map(|f| {
-            let place = place(f)
-                .map(|place| format!("{place} — "))
-                .unwrap_or_default();
+            let place = at(f).map(|place| format!("{place} — ")).unwrap_or_default();
             match &f.dismiss_reason {
                 Some(reason) => format!("- {place}{} (owner: {reason})", f.description),
                 None => format!("- {place}{}", f.description),
