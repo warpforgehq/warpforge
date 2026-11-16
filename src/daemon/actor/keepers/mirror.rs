@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use warpforge_protocol as wire;
 
 use super::KeepersState;
-use crate::daemon::keepers::KeeperState;
+use crate::daemon::keepers::{counted, KeeperState};
 use crate::daemon::runtime::{Persist, Write};
 use crate::daemon::store::KeeperWrite;
 use crate::daemon::task::Task;
@@ -58,6 +58,19 @@ impl KeepersState {
             .runs
             .iter()
             .filter(|run| run.keeper_id == keeper_id)
+            .max_by_key(|run| run.run_number)
+    }
+
+    /// The keeper's latest run that counts as a check of its HEAD.
+    pub(crate) fn latest_counted_run(
+        &self,
+        task_id: &str,
+        keeper_id: &str,
+    ) -> Option<&wire::KeeperRun> {
+        self.task(task_id)?
+            .runs
+            .iter()
+            .filter(|run| run.keeper_id == keeper_id && counted(run))
             .max_by_key(|run| run.run_number)
     }
 

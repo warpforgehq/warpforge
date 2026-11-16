@@ -8,7 +8,7 @@ use wire::{KeeperFindingStatus as Status, KeeperOutcome as Outcome};
 
 use super::{FixPhase, KeeperCommand, Reply};
 use crate::daemon::actor::{Command, Daemon};
-use crate::daemon::keepers::{list_keepers, owner_fix_prompt, FixItem, SUPERSEDED};
+use crate::daemon::keepers::{list_keepers, owner_fix_prompt, FixItem};
 
 impl Daemon {
     /// Read the keeper's name and the worktree's changed files off the
@@ -138,13 +138,9 @@ them with it",
         keeper_id: &str,
     ) -> Option<(String, Vec<wire::KeeperFinding>)> {
         let state = self.keepers.task(task_id)?;
-        let run = state
-            .runs
-            .iter()
-            .filter(|run| run.keeper_id == keeper_id)
-            .filter(|run| run.outcome.is_some_and(|o| o != Outcome::Skipped))
-            .filter(|run| run.error.as_deref() != Some(SUPERSEDED))
-            .max_by_key(|run| run.run_number)
+        let run = self
+            .keepers
+            .latest_counted_run(task_id, keeper_id)
             .filter(|run| run.outcome == Some(Outcome::Findings))?;
         let open = state
             .findings
