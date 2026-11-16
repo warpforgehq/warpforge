@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 use warpforge_protocol as wire;
 
-use super::{FixPhase, KeeperCommand};
+use super::KeeperCommand;
 use crate::daemon::actor::Command;
 use crate::daemon::actor::Daemon;
 use crate::daemon::task::{Task, TaskStatus};
@@ -180,13 +180,39 @@ impl Daemon {
         matches!(self.keepers.turn_heads.get(task_id), Some(Some(start)) if start != head)
     }
 
+    /// Whether the task already owns a branch of the project's checkout.
+    fn keepers_has_branch(task: &Task) -> bool {
+        task.keepers
+            .as_ref()
+            .is_some_and(|keepers| keepers.branch.is_some())
+    }
+
+    /// Whether the task is a folder task that owns `branch`.
+    fn keepers_owns_branch(task: &Task, branch: &str) -> bool {
+        task.worktree.is_none()
+            && task
+                .keepers
+                .as_ref()
+                .and_then(|keepers| keepers.branch.as_deref())
+                == Some(branch)
+    }
+
+    /// The folder task of `project` that owns `branch`, if any.
+    /// @param task_id a task without a worktree
+    fn keepers_branch_owner(&self, task_id: &str, branch: &str) -> Option<&Task> {
+        let task = self.tasks.get(task_id)?;
+        self.tasks
+            .values()
+            .find(|other| other.project == task.project && Self::keepers_owns_branch(other, branch))
+    }
+
     /// No folder task of the project owns `branch`, and `task_id` is the one
     /// that changed last among those with a keeper on and no branch yet.
     fn keepers_heir(&self, task_id: &str, branch: &str) -> bool {
         let Some(task) = self.tasks.get(task_id) else {
             return false;
         };
-        if task.keepers.as_ref().is_some_and(|k| k.branch.is_some()) {
+        if Self::keepers_has_branch(task) {
             return false;
         }
         let folder: Vec<&Task> = self
@@ -195,9 +221,7 @@ impl Daemon {
             .filter(|other| other.project == task.project && other.worktree.is_none())
             .filter(|other| self.keeper_candidate(other))
             .collect();
-        let owned = folder
-            .iter()
-            .any(|other| other.keepers.as_ref().and_then(|k| k.branch.as_deref()) == Some(branch));
+        let owned = self.keepers_branch_owner(task_id, branch).is_some();
         let latest = folder
             .iter()
             .filter(|other| other.keepers.as_ref().is_none_or(|k| k.branch.is_none()))
@@ -229,15 +253,10 @@ impl Daemon {
         let Some(task) = self.tasks.get(task_id) else {
             return;
         };
-        if task.keepers.as_ref().is_some_and(|k| k.branch.is_some()) {
+        if Self::keepers_has_branch(task) {
             return;
         }
-        let owned = self.tasks.values().any(|other| {
-            other.project == task.project
-                && other.worktree.is_none()
-                && other.keepers.as_ref().and_then(|k| k.branch.as_deref()) == Some(branch)
-        });
-        if !owned {
+        if self.keepers_branch_owner(task_id, branch).is_none() {
             self.keepers_claim(task_id, branch);
         }
     }
@@ -252,13 +271,7 @@ impl Daemon {
             .tasks
             .values()
             .filter(|task| task.id != task_id && task.project == project)
-            .filter(|task| task.worktree.is_none())
-            .filter(|task| {
-                task.keepers
-                    .as_ref()
-                    .and_then(|keepers| keepers.branch.as_deref())
-                    == Some(branch)
-            })
+            .filter(|task| Self::keepers_owns_branch(task, branch))
             .map(|task| task.id.clone())
             .collect();
         for other in previous {
@@ -301,16 +314,7 @@ impl Daemon {
         for run_id in touched {
             self.keeper_emit_run(task_id, &run_id);
         }
-        let unsent = self
-            .keepers
-            .fixes
-            .get(task_id)
-            .is_some_and(|fix| matches!(fix.phase, FixPhase::Waiting(_) | FixPhase::Gating));
-        if let Some(fix) = unsent.then(|| self.keepers.fixes.remove(task_id)).flatten() {
-            for keeper_id in &fix.keepers {
-                self.keeper_emit_loop(task_id, keeper_id);
-            }
-        }
+        self.keepers_fix_clear(task_id);
     }
 
     /// A task no poll covers any more keeps no stale reason.

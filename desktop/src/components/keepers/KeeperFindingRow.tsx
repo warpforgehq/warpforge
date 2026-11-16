@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useBusy } from "@/hooks/useBusy";
 import { cn } from "@/lib/utils";
 import type { KeeperFinding, KeeperReplyVerdict, KeeperSeverity } from "@/protocol";
 
@@ -40,28 +41,17 @@ export function KeeperFindingRow({
 }) {
   const [asking, setAsking] = useState(false);
   const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, run] = useBusy();
   const file = finding.file;
   const reply = finding.reply;
 
-  const accept = async () => {
-    setBusy(true);
-    try {
-      await onAccept();
-    } finally {
-      setBusy(false);
-    }
-  };
+  const accept = () => run(() => onAccept());
 
-  const dismiss = async () => {
-    setBusy(true);
-    try {
+  const dismiss = () =>
+    run(async () => {
       await onDismiss(reason);
       setAsking(false);
-    } finally {
-      setBusy(false);
-    }
-  };
+    });
 
   return (
     <li className="flex flex-col gap-1.5 border-t border-border/60 py-2 first:border-t-0">

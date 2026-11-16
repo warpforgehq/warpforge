@@ -19,10 +19,11 @@ mod trigger;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 use warpforge_protocol as wire;
 
-use crate::daemon::actor::Daemon;
+use crate::daemon::acp::TurnInitiator;
+use crate::daemon::actor::{Command, Daemon};
 use crate::daemon::keepers::{precision, Change, GitSource, HeadWatch, KeeperState};
 use crate::daemon::store::Store;
 
@@ -33,6 +34,33 @@ pub(crate) use trigger::spawn_poll;
 pub(crate) const KEEPER_ORIGIN: &str = "keeper";
 
 type Reply<T> = oneshot::Sender<Result<T, String>>;
+
+/// Send one prompt through `SessionPrompt`, so a lost session resumes the way
+/// a person's message would, and await the daemon's answer.
+/// @returns the failure to report, if any
+pub(super) async fn deliver_prompt(
+    cmd_tx: mpsc::Sender<Command>,
+    task_id: String,
+    text: String,
+    initiator: TurnInitiator,
+) -> Result<(), String> {
+    let (reply, answer) = oneshot::channel();
+    let sent = cmd_tx
+        .send(Command::SessionPrompt {
+            task_id,
+            text,
+            attachments: Vec::new(),
+            initiator,
+            peer_message: None,
+            reply,
+        })
+        .await;
+    match (sent, answer.await) {
+        (Ok(()), Ok(Ok(()))) => Ok(()),
+        (_, Ok(Err(error))) => Err(error),
+        _ => Err("the daemon is shutting down".to_string()),
+    }
+}
 
 pub enum KeeperCommand {
     /// A task's switches, runs, findings and per-keeper precision.

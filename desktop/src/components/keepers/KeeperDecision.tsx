@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useBusy } from "@/hooks/useBusy";
 import type { KeeperDecision as Decision, KeeperLoopState } from "@/protocol";
 
 const STOP_REASON: Record<NonNullable<KeeperLoopState["stop"]>, string> = {
@@ -26,16 +27,10 @@ export function KeeperDecision({
   const [extending, setExtending] = useState(false);
   const [rounds, setRounds] = useState(2);
   const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, run] = useBusy();
 
-  const decide = async (decision: Decision, options?: { rounds?: number; note?: string }) => {
-    setBusy(true);
-    try {
-      await onDecide(decision, options);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const decide = (decision: Decision, options?: { rounds?: number; note?: string }) =>
+    run(() => onDecide(decision, options));
 
   const why = loop.stop ? STOP_REASON[loop.stop] : "stopped";
   return (

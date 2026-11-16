@@ -12,9 +12,9 @@ use warpforge_protocol as wire;
 use super::{KeeperCommand, Polled};
 use crate::daemon::actor::{Command, Daemon};
 use crate::daemon::keepers::{
-    list_keepers, ChangeQuery, GitSource, POLL_INTERVAL, QUOTA_SKIP, RESTARTED,
+    list_keepers, ChangeQuery, GitSource, POLL_INTERVAL, QUOTA_SKIP, RESTARTED, SUPERSEDED,
 };
-use crate::daemon::task::{Task, TaskStatus};
+use crate::daemon::task::{now_secs, Task, TaskStatus};
 
 const HEAD_READS_AT_ONCE: usize = 8;
 
@@ -294,7 +294,7 @@ impl Daemon {
                 flight.superseded = true;
             }
             if let Some(mut run) = self.keepers.run(task_id, &run_id).cloned() {
-                run.error = Some(crate::daemon::keepers::SUPERSEDED.into());
+                run.error = Some(SUPERSEDED.into());
                 self.keeper_record(run, Vec::new());
             }
         }
@@ -311,7 +311,7 @@ impl Daemon {
             .collect();
         for mut run in orphans {
             run.outcome = Some(wire::KeeperOutcome::Inconclusive);
-            run.finished_at = Some(crate::daemon::task::now_secs());
+            run.finished_at = Some(now_secs());
             run.error = Some(RESTARTED.into());
             self.keeper_record(run, Vec::new());
         }
@@ -373,12 +373,11 @@ async fn poll(git: GitSource, candidates: Vec<Candidate>) -> Vec<Polled> {
                 // HEAD before the branch: a switch between the reads then holds
                 // the task rather than checking another branch's HEAD.
                 let head = git.head(&candidate.cwd).await;
-                let branch = match candidate.folder {
-                    true => {
-                        let base = candidate.base_branch.as_deref();
-                        git.feature_branch(&candidate.cwd, base).await
-                    }
-                    false => None,
+                let branch = if candidate.folder {
+                    let base = candidate.base_branch.as_deref();
+                    git.feature_branch(&candidate.cwd, base).await
+                } else {
+                    None
                 };
                 Polled {
                     head,

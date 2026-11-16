@@ -3,6 +3,7 @@ import { Popover } from "radix-ui";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useBusy } from "@/hooks/useBusy";
 import { type KeeperRunsOn, runsOnLabel, runsOnOptions } from "@/lib/keeperRunsOn";
 import type { AgentConfig, ConfigOption, KeeperDefinition } from "@/protocol";
 
@@ -68,7 +69,7 @@ export function RunsOnPicker({
   onSave: (runsOn: KeeperRunsOn) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [saving, run] = useBusy();
   const [draft, setDraft] = useState<KeeperRunsOn>({});
   const enabled = agents.filter((agent) => agent.enabled);
   const unknown = draft.agent && !enabled.some((agent) => agent.id === draft.agent);
@@ -81,15 +82,11 @@ export function RunsOnPicker({
     }
     setOpen(next);
   };
-  const save = async () => {
-    setSaving(true);
-    try {
+  const save = () =>
+    run(async () => {
       await onSave(draft);
       setOpen(false);
-    } finally {
-      setSaving(false);
-    }
-  };
+    });
 
   return (
     <Popover.Root open={open} onOpenChange={toggle}>
