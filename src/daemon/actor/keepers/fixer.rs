@@ -18,6 +18,37 @@ struct Plan {
     items: Vec<(wire::KeeperDefinition, Vec<wire::KeeperFinding>)>,
 }
 
+/// What there is to send on the task's HEAD.
+enum Planning {
+    /// Findings from every keeper, ready for one prompt.
+    Ready(Plan),
+    /// Findings, but other keepers on this HEAD are still checking, so the
+    /// prompt waits for them and says which.
+    Checking {
+        head: String,
+        keepers: Vec<String>,
+        names: Vec<String>,
+    },
+    /// Nothing open to send.
+    Nothing,
+}
+
+/// Names the keepers a fix waits on.
+/// @param names the keepers still checking this HEAD
+fn still_checking(names: &[String]) -> String {
+    match names {
+        [one] => format!("{one} is still checking this commit"),
+        [first, second] => format!("{first} and {second} are still checking this commit"),
+        [rest @ .., last] => {
+            format!(
+                "{} and {last} are still checking this commit",
+                rest.join(", ")
+            )
+        }
+        [] => "the other keepers are still checking this commit".into(),
+    }
+}
+
 impl Daemon {
     /// Move the task's fix along: plan it, wait for a quiet task, read the
     /// worktree off the loop, then hand it over. `quiet` is the HEAD the
@@ -33,30 +64,44 @@ impl Daemon {
         ) {
             return;
         }
-        let Some(plan) = self.keepers_fix_plan(task_id) else {
-            self.keepers_fix_clear(task_id);
-            return;
-        };
-        let keepers: Vec<String> = plan.items.iter().map(|(d, _)| d.id.clone()).collect();
-        let phase = match self.keepers_fix_busy(task_id) {
-            Some(reason) => FixPhase::Waiting(reason),
-            None if quiet == Some(plan.head.as_str()) => {
-                self.keepers_fix_dispatch(task_id, plan);
+        let (head, keepers, phase) = match self.keepers_fix_plan(task_id) {
+            Planning::Nothing => {
+                self.keepers_fix_clear(task_id);
                 return;
             }
-            None => FixPhase::Gating,
+            Planning::Checking {
+                head,
+                keepers,
+                names,
+            } => {
+                let reason = self
+                    .keepers_fix_busy(task_id)
+                    .unwrap_or_else(|| still_checking(&names));
+                (head, keepers, FixPhase::Waiting(reason))
+            }
+            Planning::Ready(plan) => {
+                let keepers: Vec<String> = plan.items.iter().map(|(d, _)| d.id.clone()).collect();
+                match self.keepers_fix_busy(task_id) {
+                    Some(reason) => (plan.head.clone(), keepers, FixPhase::Waiting(reason)),
+                    None if quiet == Some(plan.head.as_str()) => {
+                        self.keepers_fix_dispatch(task_id, plan);
+                        return;
+                    }
+                    None => (plan.head.clone(), keepers, FixPhase::Gating),
+                }
+            }
         };
         let unchanged = self.keepers.fixes.get(task_id).is_some_and(|fix| {
-            fix.head == plan.head
+            fix.head == head
                 && fix.keepers == keepers
                 && matches!((&fix.phase, &phase), (FixPhase::Waiting(a), FixPhase::Waiting(b)) if a == b)
         });
         if unchanged {
             return;
         }
-        let gate = matches!(phase, FixPhase::Gating).then(|| plan.head.clone());
+        let gate = matches!(phase, FixPhase::Gating).then(|| head.clone());
         let fix = Fix {
-            head: plan.head,
+            head,
             keepers: keepers.clone(),
             phase,
         };
@@ -95,34 +140,41 @@ impl Daemon {
 
     /// Every keeper on the task finished on its HEAD; each one's open
     /// findings at or above `min_severity`, unless its loop stops here.
-    /// Ready keepers count when they were asked for on that HEAD.
-    fn keepers_fix_plan(&mut self, task_id: &str) -> Option<Plan> {
-        let task = self.tasks.get(task_id)?;
+    /// Ready keepers count when they were asked for on that HEAD. Findings
+    /// that must wait for another keeper still checking are reported as such,
+    /// so the card can say why nothing went out yet.
+    fn keepers_fix_plan(&mut self, task_id: &str) -> Planning {
+        let Some(task) = self.tasks.get(task_id) else {
+            return Planning::Nothing;
+        };
         if !self.keeper_candidate(task) {
-            return None;
+            return Planning::Nothing;
         }
         let ready = self.keepers.ready.get(task_id);
         let head = match self.keepers.watches.get(task_id).and_then(|w| w.head()) {
             Some(head) => head.to_string(),
-            None => ready?.head.clone(),
+            None => match ready {
+                Some(ready) => ready.head.clone(),
+                None => return Planning::Nothing,
+            },
         };
         let mut on = self.keepers.on.get(task_id).cloned().unwrap_or_default();
         if let Some(ready) = ready.filter(|ready| ready.head == head) {
             on.extend(ready.keepers.iter().cloned());
         }
-        for definition in &on {
-            let key = (task_id.to_string(), definition.id.clone());
-            let busy = self.keepers.gathering.contains(&key)
-                || self
-                    .keepers
-                    .in_flight
-                    .values()
-                    .any(|run| run.task_id == task_id && run.definition.id == definition.id);
-            let latest = self.keepers.latest_run(task_id, &definition.id);
-            if busy || !latest.is_some_and(|run| run.head_sha == head && run.outcome.is_some()) {
-                return None;
-            }
-        }
+        let checking: Vec<(String, String)> =
+            on.iter()
+                .filter(|definition| {
+                    let key = (task_id.to_string(), definition.id.clone());
+                    let busy = self.keepers.gathering.contains(&key)
+                        || self.keepers.in_flight.values().any(|run| {
+                            run.task_id == task_id && run.definition.id == definition.id
+                        });
+                    let latest = self.keepers.latest_run(task_id, &definition.id);
+                    busy || !latest.is_some_and(|run| run.head_sha == head && run.outcome.is_some())
+                })
+                .map(|definition| (definition.id.clone(), definition.name.clone()))
+                .collect();
         let mut items = Vec::new();
         for definition in on {
             let fix = self.keeper_loop(task_id, &definition.id);
@@ -165,7 +217,22 @@ impl Daemon {
             }
             items.push((definition, findings));
         }
-        (!items.is_empty()).then_some(Plan { head, items })
+        if items.is_empty() {
+            return Planning::Nothing;
+        }
+        if !checking.is_empty() {
+            let keepers = items
+                .iter()
+                .map(|(definition, _)| definition.id.clone())
+                .collect();
+            let names = checking.into_iter().map(|(_, name)| name).collect();
+            return Planning::Checking {
+                head,
+                keepers,
+                names,
+            };
+        }
+        Planning::Ready(Plan { head, items })
     }
 
     /// The keeper's counted run before `run`: one that reached a verdict on

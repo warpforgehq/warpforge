@@ -372,6 +372,13 @@ keeper shows "waiting" with the reason and retries on the next `TurnEnded` or
 poll. A dirty tree means someone is editing; mixing a fix into it would
 commit their half-done work.
 
+**A fix waits for the other keepers on its HEAD.** Findings from one keeper
+are held until every keeper on that HEAD has answered, because their results
+merge into one prompt. While a check on that HEAD is still running, the
+keeper with findings shows "waiting" and names the keeper it waits for; it
+does not read as idle with nothing but **Send to agent**, which is the owner
+asking anyway.
+
 **The user always wins a race.** A message sent during a keeper's fix turn
 queues behind it as today; force-send interrupts it. An interrupted keeper
 turn feeds nothing (ADR 0011 invariant 3), does not count a round, and the

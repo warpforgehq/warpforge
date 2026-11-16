@@ -43,6 +43,10 @@ struct Setup {
     fix_log: PathBuf,
     /// Holds a fixer turn whose prompt contains this file's text.
     hold: PathBuf,
+    /// The slow mock checker's log and replies: one run can be held while
+    /// another keeper on the same HEAD finishes.
+    slow_log: PathBuf,
+    slow_replies: PathBuf,
     db: PathBuf,
     projects: Vec<crate::registry::ProjectEntry>,
     _dir: tempfile::TempDir,
@@ -89,6 +93,8 @@ async fn setup(keepers: &[(&str, &str)], tasks: impl Fn(&str) -> Vec<Task>) -> S
     let replies = dir.path().join("replies.txt");
     let fix_log = dir.path().join("fixer.log");
     let hold = dir.path().join("hold");
+    let slow_log = dir.path().join("slow.log");
+    let slow_replies = dir.path().join("slow-replies.txt");
     std::fs::write(&replies, FINDING).unwrap();
     let db = dir.path().join("keepers.db");
     let store = Store::open_at(&db).unwrap();
@@ -128,6 +134,8 @@ async fn setup(keepers: &[(&str, &str)], tasks: impl Fn(&str) -> Vec<Task>) -> S
         replies,
         fix_log,
         hold,
+        slow_log,
+        slow_replies,
         db,
         projects,
         _dir: dir,
@@ -148,6 +156,7 @@ async fn wire_up(setup: &Setup) {
     };
     let (log, replies) = (setup.log.display(), setup.replies.display());
     let (fix_log, hold) = (setup.fix_log.display(), setup.hold.display());
+    let (slow_log, slow_replies) = (setup.slow_log.display(), setup.slow_replies.display());
     setup
         .daemon
         .send(Command::UpdateAgents {
@@ -166,6 +175,11 @@ async fn wire_up(setup: &Setup) {
                     "mockfix",
                     "Mock fixer",
                     format!("node {FIXER} {fix_log} {hold}"),
+                ),
+                agent(
+                    "mockslow",
+                    "Slow keeper",
+                    format!("node {CHECKER} {slow_log} {slow_replies}"),
                 ),
             ],
         })

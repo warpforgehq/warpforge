@@ -84,6 +84,31 @@ pub(super) async fn state(setup: &Setup) -> wire::KeeperTaskState {
     state
 }
 
+/// The next `task.keeper` event for `keeper_id` whose loop state satisfies
+/// `done`.
+pub(super) async fn loop_event_of(
+    setup: &mut Setup,
+    keeper_id: &str,
+    done: impl Fn(&wire::KeeperLoopState) -> bool,
+) -> wire::KeeperLoopState {
+    timeout(Duration::from_secs(20), async {
+        loop {
+            if let Ok(Event::TaskKeeper {
+                state,
+                keeper_id: id,
+                ..
+            }) = setup.events.recv().await
+            {
+                if id == keeper_id && done(&state) {
+                    return state;
+                }
+            }
+        }
+    })
+    .await
+    .expect("a keeper loop event")
+}
+
 /// The next `task.keeper` event whose loop state satisfies `done`.
 pub(super) async fn loop_event(
     setup: &mut Setup,
@@ -421,5 +446,35 @@ async fn a_task_without_keepers_is_untouched() {
     while let Ok(event) = setup.events.try_recv() {
         assert!(!matches!(event, Event::TaskKeeper { .. }));
     }
+    setup.daemon.shutdown().await;
+}
+
+const SLOW_SLOP: &str = "version: 1\npreset: slop\nagent: mockslow\n";
+
+/// While another keeper on the HEAD is still checking, the keeper with
+/// findings says it waits for it instead of reading as idle with nothing but
+/// **Send to agent**; the prompt goes out once the other keeper answers.
+#[tokio::test]
+async fn findings_wait_visibly_for_another_keeper_on_the_head() {
+    let mut setup = setup(&[("review", REVIEW), ("slop", SLOW_SLOP)], |wt| {
+        vec![fix_task("t_a", wt)]
+    })
+    .await;
+    std::fs::write(&setup.slow_replies, "WAIT").unwrap();
+    wake(&setup, "hello").await;
+    keeper_event(&mut setup, |run| finished(run) && run.keeper_id == "review").await;
+    let waiting = loop_event_of(&mut setup, "review", |s| {
+        s.status == KeeperLoopStatus::Waiting
+    })
+    .await;
+    assert_eq!(
+        waiting.reason.as_deref(),
+        Some("Slop is still checking this commit"),
+        "the card names the keeper the fix waits for"
+    );
+    assert!(fix_prompts(&setup).is_empty(), "nothing sent yet");
+
+    std::fs::write(format!("{}.go", setup.slow_replies.display()), APPROVE).unwrap();
+    until("the fix prompt", || fix_prompts(&setup).len() == 1).await;
     setup.daemon.shutdown().await;
 }
