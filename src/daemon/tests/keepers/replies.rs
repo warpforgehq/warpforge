@@ -38,14 +38,12 @@ fn finding(state: &wire::KeeperTaskState, description: &str) -> wire::KeeperFind
 }
 
 async fn accept(setup: &Setup, finding_id: &str) -> Result<(), String> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let ask = KeeperCommand::AcceptReply {
+    ask(setup, |reply| KeeperCommand::AcceptReply {
         task_id: "t_a".into(),
         finding_id: finding_id.into(),
-        reply: tx,
-    };
-    setup.daemon.send(Command::Keepers(ask)).await;
-    rx.await.unwrap()
+        reply,
+    })
+    .await
 }
 
 #[tokio::test]
@@ -96,14 +94,7 @@ async fn the_closing_block_notes_replies_and_accept_resolves_them() {
 async fn sending_again_rejects_the_replies_and_carries_only_the_answered() {
     let setup = answered(ANSWER).await;
     std::fs::remove_file(format!("{}.reply", setup.fix_log.display())).unwrap();
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let ask = KeeperCommand::SendFindings {
-        task_id: "t_a".into(),
-        keeper_id: "review".into(),
-        reply: tx,
-    };
-    setup.daemon.send(Command::Keepers(ask)).await;
-    rx.await.unwrap().unwrap();
+    send_findings(&setup, "review").await.unwrap();
     until("the second fix prompt", || fix_prompts(&setup).len() == 2).await;
     let prompt = &fix_prompts(&setup)[1];
     assert!(prompt.contains("[1] [Review, high] src/lib.rs — first"));

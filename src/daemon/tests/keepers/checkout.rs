@@ -85,13 +85,13 @@ async fn a_folder_task_owns_the_branch_its_last_turn_ended_on() {
     let away = "the checkout is on other, not feat/x";
     until_held(&setup, "t_b", Some(away)).await;
     tokio::time::sleep(Duration::from_millis(300)).await;
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let ask = KeeperCommand::State {
+    let runs = ask(&setup, |reply| KeeperCommand::State {
         task_id: "t_b".into(),
-        reply: tx,
-    };
-    setup.daemon.send(Command::Keepers(ask)).await;
-    let runs = rx.await.unwrap().unwrap().runs;
+        reply,
+    })
+    .await
+    .unwrap()
+    .runs;
     assert!(
         runs.iter().all(|run| run.head_sha == "sha1"),
         "no check of another branch's HEAD"
@@ -224,13 +224,12 @@ pub(super) async fn move_checkout_head(setup: &Setup, sha: &str) {
 
 /// `keepers.state` for an arbitrary task.
 async fn task_state(setup: &Setup, task_id: &str) -> wire::KeeperTaskState {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let ask = KeeperCommand::State {
+    ask(setup, |reply| KeeperCommand::State {
         task_id: task_id.into(),
-        reply: tx,
-    };
-    setup.daemon.send(Command::Keepers(ask)).await;
-    rx.await.unwrap().unwrap()
+        reply,
+    })
+    .await
+    .unwrap()
 }
 
 /// A sub-agent commits mid-turn while another task owns the branch: the poll

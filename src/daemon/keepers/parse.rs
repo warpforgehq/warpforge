@@ -92,7 +92,7 @@ fn read_raw(yaml: &str, warnings: &mut Vec<String>) -> Result<RawKeeper, String>
             warnings.push(format!("unknown key `{key}`"));
         }
     }
-    serde_yaml::from_str(yaml).map_err(|e| format!("invalid keeper: {e}"))
+    serde_yaml::from_value(value).map_err(|e| format!("invalid keeper: {e}"))
 }
 
 fn build(

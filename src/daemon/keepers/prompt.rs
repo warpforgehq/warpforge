@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use warpforge_protocol as wire;
 use wire::KeeperResultKind as Kind;
 
+use crate::daemon::workflow::{reask_verdict_prompt, reask_verify_prompt};
 use crate::workflow_config::render_template;
 
 /// Values for a keeper prompt's placeholders.
@@ -79,12 +80,12 @@ fn protocol(kind: Kind) -> &'static str {
 /// @returns the follow-up prompt
 pub fn reask_prompt(kind: Kind, reason: &str) -> String {
     match kind {
-        Kind::Verdict => crate::daemon::workflow::reask_verify_prompt(reason),
+        Kind::Verdict => reask_verify_prompt(reason),
         Kind::Draft => format!(
             "Your reply could not be used as the draft ({reason}). Reply again with only \
              the draft text."
         ),
-        Kind::Findings | Kind::PassFail => crate::daemon::workflow::reask_verdict_prompt(reason),
+        Kind::Findings | Kind::PassFail => reask_verdict_prompt(reason),
     }
 }
 
@@ -99,6 +100,17 @@ pub fn commits_since(log: &[String], previous: Option<&str>) -> String {
     newer.cloned().collect::<Vec<_>>().join("\n")
 }
 
+/// Where a finding is, as `file:line` or `file`.
+/// @param f the finding
+/// @returns the place, or `None` when it names no file
+pub(super) fn place(f: &wire::KeeperFinding) -> Option<String> {
+    match (&f.file, f.line) {
+        (Some(file), Some(line)) => Some(format!("{file}:{line}")),
+        (Some(file), None) => Some(file.clone()),
+        _ => None,
+    }
+}
+
 /// Findings the owner dismissed, for "do not raise these again".
 /// @param findings the keeper's findings on this task
 /// @returns one line per dismissed finding
@@ -107,11 +119,9 @@ pub fn dismissed_list(findings: &[&wire::KeeperFinding]) -> String {
         .iter()
         .filter(|f| f.status == wire::KeeperFindingStatus::Dismissed)
         .map(|f| {
-            let place = match (&f.file, f.line) {
-                (Some(file), Some(line)) => format!("{file}:{line} — "),
-                (Some(file), None) => format!("{file} — "),
-                _ => String::new(),
-            };
+            let place = place(f)
+                .map(|place| format!("{place} — "))
+                .unwrap_or_default();
             match &f.dismiss_reason {
                 Some(reason) => format!("- {place}{} (owner: {reason})", f.description),
                 None => format!("- {place}{}", f.description),

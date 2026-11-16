@@ -63,11 +63,9 @@ fn prompt(
     let mut out = intro(&head[..head.len().min(10)]);
     for (index, item) in items.iter().enumerate() {
         let f = item.finding;
-        let place = match (&f.file, f.line) {
-            (Some(file), Some(line)) => format!(" {file}:{line} —"),
-            (Some(file), None) => format!(" {file} —"),
-            _ => String::new(),
-        };
+        let place = super::prompt::place(f)
+            .map(|place| format!(" {place} —"))
+            .unwrap_or_default();
         out.push_str(&format!(
             "[{}] [{}, {}]{place} {}\n",
             index + 1,

@@ -7,17 +7,16 @@ use super::*;
 use wire::{KeeperDecision, KeeperFindingStatus as Status, KeeperLoopStatus, KeeperStop};
 
 async fn decide(setup: &Setup, decision: KeeperDecision, rounds: u32, note: Option<&str>) {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let ask = KeeperCommand::Decide {
+    ask(setup, |reply| KeeperCommand::Decide {
         task_id: "t_a".into(),
         keeper_id: "review".into(),
         decision,
         rounds: Some(rounds),
         note: note.map(str::to_string),
-        reply: tx,
-    };
-    setup.daemon.send(Command::Keepers(ask)).await;
-    rx.await.unwrap().unwrap();
+        reply,
+    })
+    .await
+    .unwrap();
 }
 
 /// Rounds count per HEAD up to `max_rounds`; Extend adds one with guidance;

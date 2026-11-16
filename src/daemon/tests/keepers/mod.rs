@@ -78,6 +78,45 @@ fn read_only_capable() -> wire::ConfigOption {
     }
 }
 
+/// Send one `KeeperCommand` and await the actor's answer.
+async fn ask<T>(
+    setup: &Setup,
+    command: impl FnOnce(tokio::sync::oneshot::Sender<Result<T, String>>) -> KeeperCommand,
+) -> Result<T, String> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    setup.daemon.send(Command::Keepers(command(tx))).await;
+    rx.await
+        .unwrap_or_else(|_| Err("daemon dropped the reply".into()))
+}
+
+/// `keepers.checkReady` for `task_id`, with the keepers it started.
+async fn check_ready_on(setup: &Setup, task_id: &str, sha: &str) -> Result<Vec<String>, String> {
+    ask(setup, |reply| KeeperCommand::CheckReady {
+        task_id: task_id.into(),
+        reply,
+    })
+    .await
+    .map(|(head, started)| {
+        assert_eq!(head, sha, "the reply names the HEAD it checks");
+        started
+    })
+}
+
+/// `keepers.checkReady` for t_a on sha1, with the keepers it started.
+async fn check_ready(setup: &Setup) -> Vec<String> {
+    check_ready_on(setup, "t_a", "sha1").await.unwrap()
+}
+
+/// **Send to agent** for `keeper_id` on t_a.
+async fn send_findings(setup: &Setup, keeper_id: &str) -> Result<(), String> {
+    ask(setup, |reply| KeeperCommand::SendFindings {
+        task_id: "t_a".into(),
+        keeper_id: keeper_id.into(),
+        reply,
+    })
+    .await
+}
+
 /// A project whose `.warpforge/keepers/` holds `keepers` (id, yaml), the
 /// tasks given, and HEAD `sha1` in every worktree task's checkout.
 async fn setup(keepers: &[(&str, &str)], tasks: impl Fn(&str) -> Vec<Task>) -> Setup {
@@ -418,17 +457,13 @@ async fn an_exhausted_account_skips_the_run_and_the_next_poll_retries() {
 
     commit(&setup, "t_a").await;
     tokio::time::sleep(Duration::from_millis(300)).await;
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let state = KeeperCommand::State {
+    let state = ask(&setup, |reply| KeeperCommand::State {
         task_id: "t_a".into(),
-        reply: tx,
-    };
-    setup.daemon.send(Command::Keepers(state)).await;
-    assert_eq!(
-        rx.await.unwrap().unwrap().runs.len(),
-        1,
-        "no second skipped row"
-    );
+        reply,
+    })
+    .await
+    .unwrap();
+    assert_eq!(state.runs.len(), 1, "no second skipped row");
 
     setup
         .daemon
