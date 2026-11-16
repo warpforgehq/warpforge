@@ -1,17 +1,23 @@
 import { type KeeperRunsOn, setKeeperRunsOn } from "../lib/keeperRunsOn";
 import { type KeeperPresetId, normalizeKeeperState, presetFile } from "../lib/keepers";
-import type { FileDoc, KeeperDecision, KeeperEntry, KeeperTaskState } from "../protocol";
+import type { FileDoc, KeeperDecision, KeeperList, KeeperTaskState } from "../protocol";
 import type { CoreClient } from "./client";
 import type { Constructor } from "./types";
 
 export function KeeperMethods<TBase extends Constructor<CoreClient>>(Base: TBase) {
   // ── Keeper RPCs (ADR 0030) ──
   return class extends Base {
-    /** The project's keeper files, an invalid one carrying its parse error. */
-    async listKeepers(project: string): Promise<KeeperEntry[]> {
+    /**
+     * The project's keeper files, an invalid one carrying its parse error, and
+     * the built-in presets the daemon offers.
+     */
+    async listKeepers(project: string): Promise<KeeperList> {
       const result = await this.request("keepers.list", { project });
-      const keepers = (result as { keepers?: KeeperEntry[] } | null)?.keepers;
-      return Array.isArray(keepers) ? keepers : [];
+      const reply = result as Partial<KeeperList> | null;
+      return {
+        keepers: Array.isArray(reply?.keepers) ? reply.keepers : [],
+        presets: Array.isArray(reply?.presets) ? reply.presets : [],
+      };
     }
 
     /** Fetch a task's keeper state into `taskKeepers`; asks once more when a

@@ -30,12 +30,26 @@ export interface KeeperDefinition {
   prompt: string;
 }
 
+/** A built-in keeper **Add keeper** offers, as its file resolves. */
+export interface KeeperPreset {
+  id: string;
+  name: string;
+  description?: string;
+  when: KeeperWhen;
+}
+
 /** One keeper file from `keepers.list`; an invalid file carries `error`. */
 export interface KeeperEntry {
   id: string;
   definition?: KeeperDefinition;
   error?: string;
   warnings?: string[];
+}
+
+/** The `keepers.list` reply: the project's files and the presets to offer. */
+export interface KeeperList {
+  keepers: KeeperEntry[];
+  presets: KeeperPreset[];
 }
 
 /** A task's per-keeper switches over each file's `default`. */

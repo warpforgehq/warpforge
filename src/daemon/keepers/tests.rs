@@ -19,6 +19,32 @@ fn error(yaml: &str) -> String {
 }
 
 #[test]
+fn every_preset_lists_with_its_file_name_description_and_when() {
+    let presets = list_presets();
+    let ids: Vec<&str> = presets.iter().map(|preset| preset.id.as_str()).collect();
+    assert_eq!(
+        ids,
+        [
+            "review",
+            "slop",
+            "conventions",
+            "security",
+            "thermonuclear",
+            "intent",
+            "verify",
+            "pr-ready",
+        ]
+    );
+    for (id, text) in PRESETS {
+        let listed = presets.iter().find(|preset| preset.id == *id).unwrap();
+        let definition = parse_keeper(id, text).0.unwrap();
+        assert_eq!(listed.name, definition.name);
+        assert_eq!(listed.description, definition.description);
+        assert_eq!(listed.when, definition.when);
+    }
+}
+
+#[test]
 fn a_full_file_parses_every_field() {
     let definition = valid(
         r#"

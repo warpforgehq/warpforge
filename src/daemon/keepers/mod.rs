@@ -24,6 +24,7 @@ pub use git::{Change, ChangeQuery, GitSource};
 pub use outcome::{map_result, meets, Mapped};
 pub use parse::parse_keeper;
 pub use paths::touches;
+pub use presets::list_presets;
 pub use prompt::{commits_since, dismissed_list, reask_prompt, render_prompt, PromptVars};
 pub use registry::list_keepers;
 pub use reply::parse_replies;

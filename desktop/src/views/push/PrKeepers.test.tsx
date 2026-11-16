@@ -15,7 +15,7 @@ const { client, emit, store } = vi.hoisted(() => {
       checkReadyKeepers:
         vi.fn<(taskId: string) => Promise<{ head: string | null; started: string[] }>>(),
       getState: () => state,
-      listKeepers: vi.fn<() => Promise<unknown[]>>(),
+      listKeepers: vi.fn<() => Promise<unknown>>(),
       refreshTaskKeepers: vi.fn<(taskId: string) => Promise<void>>(),
       request: vi.fn<(method: string) => Promise<unknown>>(),
       subscribe: (listener: () => void) => {
@@ -98,10 +98,10 @@ beforeEach(() => {
     remoteBranch: "feat/x",
     upstream: "origin/feat/x",
   });
-  client.listKeepers.mockResolvedValue([
-    entry("intent", "Intent", "pass_fail"),
-    entry("pr-ready", "PR-ready", "draft"),
-  ]);
+  client.listKeepers.mockResolvedValue({
+    keepers: [entry("intent", "Intent", "pass_fail"), entry("pr-ready", "PR-ready", "draft")],
+    presets: [],
+  });
   client.checkReadyKeepers.mockResolvedValue({
     head: "abcdef0123",
     started: ["intent", "pr-ready"],

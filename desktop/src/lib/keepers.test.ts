@@ -212,8 +212,18 @@ describe("eligibility and presets", () => {
       content: "version: 1\npreset: slop\n",
       path: ".warpforge/keepers/slop.yaml",
     });
+    const presets = [
+      "review",
+      "slop",
+      "conventions",
+      "security",
+      "thermonuclear",
+      "intent",
+      "verify",
+      "pr-ready",
+    ].map((id) => ({ id, name: id, when: "commit" as const }));
     const entries = [{ id: "review" }, { definition: { preset: "slop" } as never, id: "my-slop" }];
-    expect(missingPresets(entries).map((p) => p.id)).toEqual([
+    expect(missingPresets(entries, presets).map((p) => p.id)).toEqual([
       "conventions",
       "security",
       "thermonuclear",
