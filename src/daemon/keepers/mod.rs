@@ -33,6 +33,8 @@ pub use state::{precision, KeeperState};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use warpforge_protocol as wire;
+
 /// How often eligible tasks' HEADs are read.
 pub const POLL_INTERVAL: Duration = Duration::from_secs(20);
 /// How long a new HEAD must stay put before it is checked, unless a turn
@@ -44,6 +46,15 @@ pub const MAX_CHECKERS: usize = 4;
 /// such a run does not count as a check of its HEAD.
 pub const QUOTA_SKIP: &str = "quota";
 pub const SUPERSEDED: &str = "superseded";
+
+/// Whether a run counts as a check of the HEAD it ran on: it reached an
+/// outcome, was not skipped, and was not superseded by a move of HEAD.
+/// @param run the run to judge
+pub fn counted(run: &wire::KeeperRun) -> bool {
+    run.outcome.is_some()
+        && run.outcome != Some(wire::KeeperOutcome::Skipped)
+        && run.error.as_deref() != Some(SUPERSEDED)
+}
 /// `KeeperRun::error` of a run the previous daemon left unfinished; its HEAD
 /// is checked again.
 pub const RESTARTED: &str = "the daemon restarted during the check";

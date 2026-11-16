@@ -8,7 +8,7 @@ use wire::{KeeperFindingStatus as Status, KeeperOutcome as Outcome};
 use super::{Fix, FixPhase, KeeperCommand};
 use crate::daemon::acp::TurnInitiator;
 use crate::daemon::actor::{Command, Daemon};
-use crate::daemon::keepers::{fix_prompt, meets, stop_rule, FixItem, QUOTA_SKIP, SUPERSEDED};
+use crate::daemon::keepers::{counted, fix_prompt, meets, stop_rule, FixItem, QUOTA_SKIP};
 use crate::daemon::task::TaskStatus;
 
 /// The findings one fix prompt would carry, by keeper.
@@ -252,7 +252,7 @@ impl Daemon {
             .iter()
             .filter(|r| r.keeper_id == run.keeper_id && r.run_number < run.run_number)
             .filter(|r| matches!(r.outcome, Some(Outcome::Findings | Outcome::Green)))
-            .filter(|r| r.error.as_deref() != Some(SUPERSEDED))
+            .filter(|r| counted(r))
             .max_by_key(|r| r.run_number)
     }
 
