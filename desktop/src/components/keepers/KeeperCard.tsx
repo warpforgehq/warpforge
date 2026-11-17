@@ -64,7 +64,7 @@ export function KeeperCard({
   const runs = keeperRuns(state, entry.id);
   const loop = state?.loops[entry.id];
   const findings = on ? currentFindings(state, runs) : [];
-  const status = keeperStatus(on, runs, loop, findings.length);
+  const status = keeperStatus(on, runs, loop, findings.length, state);
   const outdated = findings.length > 0 ? outdatedRun(state, runs) : null;
   const canSend =
     status !== "fixing" && findings.some((finding) => finding.status === "open" || finding.reply);

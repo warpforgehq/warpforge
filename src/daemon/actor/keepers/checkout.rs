@@ -264,9 +264,34 @@ impl Daemon {
         }
     }
 
+    /// Shared-checkout descendants attribute their work to the root parent.
+    fn keepers_claim_owner(&self, task_id: &str) -> String {
+        let mut owner = task_id;
+        let mut seen = HashSet::new();
+        while let Some(task) = self.tasks.get(owner) {
+            if task.worktree.is_some() || !seen.insert(owner) {
+                break;
+            }
+            let Some(parent) = task
+                .parent_task_id
+                .as_deref()
+                .and_then(|id| self.tasks.get(id))
+            else {
+                break;
+            };
+            if parent.project != task.project || parent.worktree.is_some() {
+                break;
+            }
+            owner = &parent.id;
+        }
+        owner.to_string()
+    }
+
     /// The branch moves to `task_id`; other tasks of the project's checkout
     /// that owned it let it go and their open findings are superseded.
     fn keepers_claim(&mut self, task_id: &str, branch: &str) {
+        let owner = self.keepers_claim_owner(task_id);
+        let task_id = owner.as_str();
         let Some(project) = self.tasks.get(task_id).map(|task| task.project.clone()) else {
             return;
         };

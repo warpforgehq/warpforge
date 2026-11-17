@@ -3,6 +3,7 @@ import { CHECKING_DOT } from "@/lib/liveActivity";
 import { cn } from "@/lib/utils";
 
 export const KEEPER_WORST_META: Record<KeeperWorst, { label: string; dotClass: string }> = {
+  not_checked: { dotClass: "bg-muted-foreground", label: "Keepers not checked" },
   failing: { dotClass: "bg-destructive", label: "Keepers need attention" },
   running: { dotClass: CHECKING_DOT, label: "Keepers checking" },
 };

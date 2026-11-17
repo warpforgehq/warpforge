@@ -87,8 +87,23 @@ describe("keeper status", () => {
 
   it("reads a findings run with no open findings as quiet, not failing", () => {
     const superseded = [run({ count: 1, id: "r1", outcome: "findings" })];
-    expect(keeperStatus(true, superseded, undefined, 0)).toBe("green");
+    expect(keeperStatus(true, superseded, undefined, 0)).toBe("not_checked");
     expect(keeperStatus(true, superseded, undefined, 1)).toBe("findings");
+  });
+
+  it("keeps paused and superseded results neutral on cards and glyphs", () => {
+    const runs = [run({ id: "green", outcome: "green" })];
+    const paused = state({ runs, switches: { overrides: {}, held: "no branch" } });
+    expect(keeperStatus(true, runs, undefined, 0, paused)).toBe("not_checked");
+    expect(activeKeepers(paused)[0].status).toBe("not_checked");
+    expect(keeperWorst(paused)).toBe("not_checked");
+    expect(keeperStatus(true, runs, undefined, 0, undefined, true)).toBe("not_checked");
+    const failed = run({ id: "failed", outcome: "findings", count: 1 });
+    const superseded = state({
+      runs: [failed],
+      findings: [finding({ id: "old", runId: failed.id, status: "superseded" })],
+    });
+    expect(activeKeepers(superseded)[0].status).toBe("not_checked");
   });
 
   it("follows the task's switch over the file's default", () => {
@@ -263,9 +278,9 @@ describe("keeper dot and attention", () => {
       findings: 0,
       id: "slop",
       outdated: false,
-      status: "green",
+      status: "not_checked",
     });
-    expect(keeperWorst(s)).toBeNull();
+    expect(keeperWorst(s)).toBe("not_checked");
     expect(keeperPushWarnings(s)).toEqual([]);
   });
 

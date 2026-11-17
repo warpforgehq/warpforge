@@ -657,6 +657,11 @@ daemon reads only HEAD, not the log between.
     re-reads the task's switches when it lands, so a keeper switched off
     meanwhile starts no check.
 
+22. **Shared-checkout child tasks claim for their root parent.** Walk the
+    parent chain when attributing a branch claim; children with their own
+    worktree keep independent ownership. Unrelated folder tasks still
+    transfer ownership normally.
+
 ## Consequences
 
 - Each commit on a task with three keepers costs three checker turns and, when
