@@ -24,11 +24,6 @@ export function TaskPullRequestGlyph({ taskId, receded }: { taskId: string; rece
     <button
       type="button"
       onClick={(event) => openPullRequest(taskId, pr.url, event)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          openPullRequest(taskId, pr.url, event);
-        }
-      }}
       data-task-pr={pr.state}
       title={summary}
       className={cn(

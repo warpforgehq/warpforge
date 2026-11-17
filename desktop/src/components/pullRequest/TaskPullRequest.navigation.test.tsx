@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { daemon } from "@/daemon";
@@ -129,7 +130,7 @@ it("renders compact status without archive controls or another refresh", () => {
   expect(refresh).toHaveBeenCalledTimes(1);
 });
 
-it.each(["Enter", " "])("honours modifiers on %s for chip and glyph", (key) => {
+it.each(["Enter", " "])("honours modifiers on %s for chip and glyph", async (key) => {
   setup();
   const external = vi.spyOn(links, "openExternalLink").mockResolvedValue();
   render(
@@ -141,7 +142,8 @@ it.each(["Enter", " "])("honours modifiers on %s for chip and glyph", (key) => {
   for (const button of screen
     .getAllByRole("button")
     .filter((el) => el.hasAttribute("data-task-pr"))) {
-    fireEvent.keyDown(button, { key, metaKey: true });
+    button.focus();
+    await userEvent.keyboard("{Meta>}" + (key === "Enter" ? "{Enter}" : " ") + "{/Meta}");
   }
   expect(external.mock.calls).toEqual([[pr.url], [pr.url]]);
   expect(useUi.getState().activeSurface).toBe("diff");
@@ -155,4 +157,16 @@ it("matches an owning task URL regardless of case", () => {
     />,
   );
   expect(screen.getByText("→ task")).toBeInTheDocument();
+});
+
+it.each(["Shift", "Alt"])("keeps %s clicks inside Warpforge", async (modifier) => {
+  setup();
+  const external = vi.spyOn(links, "openExternalLink").mockResolvedValue();
+  render(<TaskPullRequestGlyph taskId={task.id} receded={false} />);
+  const user = userEvent.setup();
+  await user.keyboard(`{${modifier}>}`);
+  await user.click(screen.getByRole("button"));
+  await user.keyboard(`{/${modifier}}`);
+  expect(external).not.toHaveBeenCalled();
+  expect(useUi.getState().activeSurface).toBe("pull-request");
 });

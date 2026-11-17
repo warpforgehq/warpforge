@@ -226,3 +226,12 @@ describe("DiffSurface", () => {
     expect(rail()).toBeInTheDocument();
   });
 });
+
+it("disables the History Create PR action for an existing PR", () => {
+  fixture.pr = { number: 12 };
+  renderSurface({ diff: { ...taskDiff(1), branch: "feature" } });
+  const button = screen.getByRole("button", { name: "Create PR" });
+  expect(button).toBeDisabled();
+  expect(button).toHaveAttribute("title", "This task already has a pull request");
+  fixture.pr = null;
+});

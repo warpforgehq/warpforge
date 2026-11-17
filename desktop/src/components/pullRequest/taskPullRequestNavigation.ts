@@ -14,7 +14,7 @@ export function openTaskPullRequest(taskId: string) {
 export function openPullRequest(taskId: string, url: string, event: MouseEvent | KeyboardEvent) {
   event.preventDefault();
   event.stopPropagation();
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) void openExternalLink(url);
+  if (event.metaKey || event.ctrlKey) void openExternalLink(url);
   else openTaskPullRequest(taskId);
 }
 
