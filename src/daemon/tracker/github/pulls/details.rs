@@ -24,7 +24,7 @@ pub(crate) async fn github_pr_details(
         "query($owner: String!, $repo: String!, $number: Int!) { \
            repository(owner: $owner, name: $repo) { \
              pullRequest(number: $number) { \
-               title url state isDraft body author { login } \
+               title url state isDraft updatedAt body author { login } \
                baseRefName headRefName reviewDecision \
                reviewRequests(first: 10) { nodes { requestedReviewer { \
                  ... on User { login } } } } \
@@ -61,6 +61,11 @@ pub(crate) async fn github_pr_details(
         })
         .unwrap_or_default();
     Ok(wire::PullRequestDetails {
+        updated_at: pr
+            .get("updatedAt")
+            .and_then(|v| v.as_str())
+            .map(crate::daemon::tracker::rfc3339_secs)
+            .unwrap_or_default(),
         title: pr
             .get("title")
             .and_then(|v| v.as_str())

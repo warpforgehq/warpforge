@@ -7,6 +7,7 @@
 
 export type SessionSurface =
   | "files"
+  | "pull-request"
   | "diff"
   | "keepers"
   | "runtime"

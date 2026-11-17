@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { TaskPullRequestSurface } from "@/components/pullRequest/TaskPullRequestSurface";
 import { Card } from "@/components/ui/card";
 import { Panel, PanelCollapseHint, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { FlipButton, SurfaceRail } from "@/components/workspace";
@@ -300,6 +301,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
               />
             </DiffNotesProvider>
           )}
+          {activeSurface === "pull-request" && <TaskPullRequestSurface task={task} />}
           {activeSurface === "keepers" && <KeepersSurface task={task} onOpenFile={openFileTab} />}
           {activeSurface === "runtime" && (
             <RuntimePanel

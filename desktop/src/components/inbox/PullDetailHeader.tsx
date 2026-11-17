@@ -10,6 +10,7 @@ import {
 
 import { AuthorBadge } from "@/components/inbox/AuthorBadge";
 import { ReviewDecisionGlyph } from "@/components/inbox/ReviewDecisionChip";
+import { PullRequestTaskLink } from "@/components/pullRequest/PullRequestTaskLink";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -59,6 +60,7 @@ export function PullDetailHeader({
             <span className="min-w-0 truncate text-foreground/80">{author}</span>
           </span>
         )}
+        <PullRequestTaskLink pr={pr} />
         <span className="flex-1" />
         <Button
           type="button"

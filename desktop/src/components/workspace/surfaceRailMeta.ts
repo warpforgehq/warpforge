@@ -3,6 +3,7 @@ import type { LiveTally } from "@/lib/liveActivity";
 import type { SurfaceTab, WorkspaceSurface } from "./SurfaceTabs";
 
 const NOUNS: Record<WorkspaceSurface, readonly [string, string]> = {
+  "pull-request": ["pull request", "pull requests"],
   browser: ["tab", "tabs"],
   diff: ["changed file", "changed files"],
   files: ["file", "files"],
@@ -13,6 +14,7 @@ const NOUNS: Record<WorkspaceSurface, readonly [string, string]> = {
 };
 
 const RESTING: Record<WorkspaceSurface, string> = {
+  "pull-request": "Review pull request",
   browser: "Browse the web",
   diff: "No changes yet",
   files: "Project tree and editor",

@@ -109,7 +109,7 @@ describe("task pull request", () => {
     expect(container.querySelectorAll("[data-task-keepers='failing']")).toHaveLength(2);
     expect(
       screen.getByRole("button", {
-        name: "PR #12 · Open · Keepers need attention: open on GitHub",
+        name: "PR #12 · Open · Keepers need attention: open in Warpforge",
       }),
     ).toBeInTheDocument();
 
