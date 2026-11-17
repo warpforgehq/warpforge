@@ -151,24 +151,20 @@ export const PullDiffFile = React.memo(function PullDiffFile({
           {stats.additions > 0 && <span className="text-ok">+{stats.additions}</span>}
           {stats.deletions > 0 && <span className="text-destructive">−{stats.deletions}</span>}
         </span>
-        {reviewHandlers && (
+        {review && reviewHandlers && (
           <button
             type="button"
             onClick={reviewHandlers.toggleViewed}
-            aria-pressed={reviewHandlers.review.viewed}
-            title={reviewHandlers.review.viewed ? "Mark as not viewed" : "Mark as viewed"}
+            aria-pressed={review.viewed}
+            title={review.viewed ? "Mark as not viewed" : "Mark as viewed"}
             className={cn(
               "flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs",
-              reviewHandlers.review.viewed
+              review.viewed
                 ? "bg-ok/15 text-ok"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground",
             )}
           >
-            {reviewHandlers.review.viewed ? (
-              <SquareCheck className="size-3.5" />
-            ) : (
-              <Square className="size-3.5" />
-            )}
+            {review.viewed ? <SquareCheck className="size-3.5" /> : <Square className="size-3.5" />}
             Viewed
           </button>
         )}
@@ -196,9 +192,8 @@ export const PullDiffFile = React.memo(function PullDiffFile({
                 hunk={hunk}
                 mode={mode}
                 tokens={tokens ?? undefined}
-                {...(reviewHandlers
-                  ? { onComment: reviewHandlers.comment, lineExtras: reviewHandlers.lineExtras }
-                  : {})}
+                onComment={reviewHandlers?.comment}
+                lineExtras={reviewHandlers?.lineExtras}
                 range={
                   review?.draft
                     ? {
@@ -230,7 +225,6 @@ function useReviewHandlers(review: PullDiffReview | undefined, block: PatchFileB
   return React.useMemo(() => {
     if (!review) return undefined;
     return {
-      review,
       comment: (line: PatchLine, intent: CommentIntent) => review.onComment(path, line, intent),
       toggleViewed: () => review.onToggleViewed(path),
       lineExtras: (line: PatchLine) => {
