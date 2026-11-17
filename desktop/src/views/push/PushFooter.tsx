@@ -15,7 +15,7 @@ import type { RepositoryOperation } from "../../store/ui";
 interface PushFooterProps {
   info: GitPushInfo | null;
   loading: boolean;
-  pushing: "push" | "force" | null;
+  pushing: boolean;
   hasPr?: boolean;
   repositoryOperation: RepositoryOperation | null;
   onCreatePr: () => void;
@@ -35,7 +35,7 @@ export function PushFooter({
 }: PushFooterProps) {
   const count = info?.commits.length ?? 0;
   const upToDate = info?.hasUpstream && count === 0;
-  const disabled = !info || loading || Boolean(pushing) || Boolean(repositoryOperation);
+  const disabled = !info || loading || pushing || Boolean(repositoryOperation);
   const pushDisabled = disabled || Boolean(upToDate);
   return (
     <footer className="flex shrink-0 items-center justify-end gap-2 border-t p-2">
@@ -86,7 +86,7 @@ export function PushFooter({
           </DropdownMenuTrigger>
           <DropdownMenuPortal>
             <DropdownMenuContent side="top" align="end">
-              <DropdownMenuItem disabled={pushDisabled} onSelect={() => onPush(true)}>
+              <DropdownMenuItem onSelect={() => onPush(true)}>
                 Force push (force-with-lease)
               </DropdownMenuItem>
             </DropdownMenuContent>
