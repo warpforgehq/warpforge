@@ -9,6 +9,14 @@ use warpforge_protocol as wire;
 /// @param base preferred base branch
 /// @returns newest-first commits and their push status
 pub async fn branch_commits(repo: &str, base: Option<&str>) -> Result<Vec<wire::GitBranchCommit>> {
+    Ok(branch_commits_with_base(repo, base).await?.0)
+}
+
+/// Read the shared PR commit selection together with its resolved merge-base.
+pub(super) async fn branch_commits_with_base(
+    repo: &str,
+    base: Option<&str>,
+) -> Result<(Vec<wire::GitBranchCommit>, Option<String>)> {
     let base = pr_merge_base(repo, base).await;
     let range = base.as_ref().map(|base| format!("{base}..HEAD"));
     let format = "--format=%H%x00%h%x00%s%x00%an%x00%aI";
@@ -63,7 +71,7 @@ pub async fn branch_commits(repo: &str, base: Option<&str>) -> Result<Vec<wire::
             pushed,
         });
     }
-    Ok(commits)
+    Ok((commits, base))
 }
 
 /// Read one commit without modifying the checkout.

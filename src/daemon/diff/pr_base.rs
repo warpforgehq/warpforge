@@ -35,7 +35,7 @@ pub(crate) async fn pr_merge_base(repo: &str, base: Option<&str>) -> Option<Stri
 /// Commit subjects (oldest first, one `- ` line each) and the combined diff of
 /// what a pull request for the branch would contain.
 ///
-/// Falls back to the commits not yet pushed when no PR base resolves.
+/// Falls back to History’s local-only commit selection when no PR base resolves.
 ///
 /// @param repo Path of the checkout.
 /// @param base The task's base branch, when known.
@@ -44,35 +44,91 @@ pub(crate) async fn pr_material(
     repo: &str,
     base: Option<&str>,
 ) -> Result<(String, String), String> {
-    let (subjects, range) = match pr_merge_base(repo, base).await {
-        Some(sha) => {
-            let range = format!("{sha}..HEAD");
-            let log = git(repo, &["log", "--reverse", "--format=- %s", &range])
+    let (commits, merge_base) = super::history::branch_commits_with_base(repo, base)
+        .await
+        .map_err(|e| e.to_string())?;
+    let oldest = commits
+        .last()
+        .ok_or_else(|| "no commits on this branch to describe".to_string())?;
+    let subjects = commits
+        .iter()
+        .rev()
+        .map(|c| format!("- {}", c.subject))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let start = match merge_base {
+        Some(base) => base,
+        None => {
+            let parent = format!("{}^", oldest.hash);
+            let out = git(repo, &["rev-parse", "--verify", &parent])
                 .await
                 .map_err(|e| e.to_string())?;
-            let subjects = String::from_utf8_lossy(&log.stdout).trim().to_string();
-            if subjects.is_empty() {
-                return Err("no commits on this branch to describe".to_string());
+            if out.status.success() {
+                parent
+            } else {
+                // Hash the empty tree so root commits work with either Git object format.
+                let empty = git(repo, &["hash-object", "-t", "tree", "--stdin"])
+                    .await
+                    .map_err(|e| e.to_string())?;
+                String::from_utf8_lossy(&empty.stdout).trim().to_string()
             }
-            (subjects, range)
-        }
-        None => {
-            let info = super::push_info(repo).await.map_err(|e| e.to_string())?;
-            let Some(first) = info.commits.first() else {
-                return Err("no outgoing commits to describe".to_string());
-            };
-            let subjects = info
-                .commits
-                .iter()
-                .map(|c| format!("- {}", c.subject))
-                .collect::<Vec<_>>()
-                .join("\n");
-            (subjects, format!("{}^..HEAD", first.hash))
         }
     };
+    let range = format!("{start}..HEAD");
     let diff = git(repo, &["diff", &range])
         .await
         .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
         .unwrap_or_default();
     Ok((subjects, diff))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::daemon::diff::{
+        branch_commits,
+        testsupport::{git, init_repo},
+    };
+
+    #[tokio::test]
+    async fn no_base_material_matches_history_including_root() {
+        let dir = tempfile::tempdir().unwrap();
+        let d = dir.path();
+        init_repo(d).await;
+        std::fs::write(d.join("a"), "root\n").unwrap();
+        git(d, &["add", "."]).await;
+        git(d, &["commit", "-qm", "root"]).await;
+        std::fs::write(d.join("b"), "second\n").unwrap();
+        git(d, &["add", "."]).await;
+        git(d, &["commit", "-qm", "second"]).await;
+        let repo = d.to_str().unwrap();
+        let commits = branch_commits(repo, None).await.unwrap();
+        let (subjects, diff) = pr_material(repo, None).await.unwrap();
+        assert_eq!(
+            subjects,
+            commits
+                .iter()
+                .rev()
+                .map(|c| format!("- {}", c.subject))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+        assert_eq!(subjects, "- root\n- second");
+        assert!(diff.contains("+root"));
+        assert!(diff.contains("+second"));
+
+        git(d, &["update-ref", "refs/remotes/origin/feature", "HEAD^"]).await;
+        let commits = branch_commits(repo, None).await.unwrap();
+        let (subjects, diff) = pr_material(repo, None).await.unwrap();
+        assert_eq!(commits.len(), 1);
+        assert_eq!(subjects, format!("- {}", commits[0].subject));
+        assert!(!diff.contains("+root"));
+        assert!(diff.contains("+second"));
+
+        git(d, &["update-ref", "refs/remotes/origin/feature", "HEAD"]).await;
+        assert_eq!(
+            pr_material(repo, None).await.unwrap_err(),
+            "no commits on this branch to describe"
+        );
+    }
 }
