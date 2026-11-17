@@ -29,10 +29,7 @@ export function InlinePrPanel({
     generatePr,
   } = actions;
   return (
-    <section
-      aria-label="Create pull request"
-      className="flex min-h-0 flex-1 flex-col overflow-auto"
-    >
+    <section aria-label="Create pull request" className="flex min-h-0 flex-1 flex-col">
       <PrForm
         info={info}
         needsPush={needsPush}

@@ -32,7 +32,7 @@ export function PrForm({
   onGenerate,
 }: PrFormProps) {
   return (
-    <div className="flex shrink-0 flex-col gap-2.5 p-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3">
       <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
         <GitBranch className="size-3.5 shrink-0 text-primary" />
         <span className="truncate font-mono text-foreground">{info?.branch}</span>
@@ -57,15 +57,14 @@ export function PrForm({
           className="h-8 rounded-md border bg-background px-2 py-1 font-sans text-[13px] outline-none placeholder:font-sans placeholder:text-muted-foreground focus:border-primary"
         />
       </label>
-      <label className="flex flex-col gap-1">
+      <label className="flex min-h-0 flex-1 flex-col gap-1">
         <span className="text-[11px] font-medium text-muted-foreground">Description</span>
-        <div className="relative">
+        <div className="relative flex min-h-0 flex-1">
           <textarea
-            rows={8}
             value={prBody}
             onChange={(e) => setPrBody(e.target.value)}
             placeholder="Optional — Markdown supported"
-            className="block min-h-44 w-full resize-y rounded-md border bg-background py-1.5 pl-2 pr-9 font-sans text-[13px] leading-5 outline-none placeholder:font-sans placeholder:text-muted-foreground focus:border-primary"
+            className="min-h-44 flex-1 resize-none rounded-md border bg-background py-1.5 pl-2 pr-9 font-sans text-[13px] leading-5 outline-none placeholder:font-sans placeholder:text-muted-foreground focus:border-primary"
           />
           <button
             type="button"
