@@ -45,6 +45,7 @@ export function PushFooter({
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button
+          size="sm"
           type="button"
           variant="secondary"
           disabled={!info || loading || Boolean(pushing) || Boolean(createPrDisabledReason)}
@@ -56,8 +57,9 @@ export function PushFooter({
         </Button>
         <div className="relative flex">
           <Button
+            size="sm"
             type="button"
-            className="rounded-r-none px-4"
+            className="rounded-r-none"
             disabled={
               !info?.commits.length || loading || Boolean(pushing) || Boolean(repositoryOperation)
             }
@@ -71,9 +73,9 @@ export function PushFooter({
             Push
           </Button>
           <Button
+            size="sm"
             type="button"
-            size="icon"
-            className="rounded-l-none border-l border-primary-foreground/20"
+            className="w-7 rounded-l-none border-l border-primary-foreground/20"
             disabled={
               !info?.commits.length || loading || Boolean(pushing) || Boolean(repositoryOperation)
             }

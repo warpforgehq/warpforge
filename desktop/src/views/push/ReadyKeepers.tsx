@@ -37,9 +37,9 @@ export function ReadyKeepers({
   return (
     <section
       aria-label="Keepers before the pull request"
-      className="flex shrink-0 flex-col gap-1 border-t px-5 py-2 text-[13px]"
+      className="flex shrink-0 flex-col gap-1 border-t px-3 py-2 text-[13px]"
     >
-      <ul className="flex flex-wrap items-center gap-x-4 gap-y-1">
+      <ul className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {ready.map(({ entry, runs }) => {
           const count = currentFindings(state, runs).length;
           const status = keeperStatus(true, runs, state?.loops[entry.id], count);
