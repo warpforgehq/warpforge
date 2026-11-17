@@ -1,32 +1,17 @@
-import { RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { daemon } from "@/daemon";
 import { openExternalLink } from "@/lib/externalLinks";
-import { cn } from "@/lib/utils";
+import type { GitOpResult, GitPushInfo, TaskInfo } from "@/protocol";
 import { useUi } from "@/store/ui";
 
-import { daemon } from "../daemon";
-import type { GitOpResult, GitPushInfo, TaskInfo } from "../protocol";
-import { KeeperWarning } from "./push/KeeperWarning";
-import { PrFooter } from "./push/PrFooter";
-import { PrForm } from "./push/PrForm";
-import { PushFooter } from "./push/PushFooter";
-import { PushPreview } from "./push/PushPreview";
-import { ReadyKeepers } from "./push/ReadyKeepers";
-import { usePrKeepers } from "./push/usePrKeepers";
+import { usePrKeepers } from "./usePrKeepers";
 
-interface Props {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  task: TaskInfo | null;
-}
-
-export default function PushDialog({ open, onOpenChange, task }: Props) {
+export function useBranchActions(task: TaskInfo | null) {
+  const queryClient = useQueryClient();
   const [info, setInfo] = useState<GitPushInfo | null>(null);
-  const [selectedHash, setSelectedHash] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [pushing, setPushing] = useState<"push" | "force" | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -64,11 +49,6 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
         task_id: taskId,
       })) as GitPushInfo;
       setInfo(next);
-      setSelectedHash((current) =>
-        next.commits.some((commit) => commit.hash === current)
-          ? current
-          : (next.commits[0]?.hash ?? null),
-      );
       setPrTitle((current) =>
         current
           ? current
@@ -85,13 +65,15 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
   }, [taskId]);
 
   useEffect(() => {
+    setInfo(null);
+    setError(null);
+    setMode("push");
+    setPrTitle("");
+    setPrBody("");
+    setPrBodyEdited(false);
+    setPrBase("");
     void load();
   }, [load]);
-
-  const selected = useMemo(
-    () => info?.commits.find((commit) => commit.hash === selectedHash) ?? null,
-    [info, selectedHash],
-  );
 
   const push = async (force: boolean) => {
     if (!task || pushing || repositoryOperation) {
@@ -107,10 +89,12 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
       })) as GitOpResult;
       if (result.status === "ok") {
         toast.success(result.message);
-        onOpenChange(false);
+        void queryClient.invalidateQueries({ queryKey: ["branchCommits", task.id] });
+        void load();
       } else if (result.status === "up_to_date") {
         toast.info(result.message);
-        onOpenChange(false);
+        void queryClient.invalidateQueries({ queryKey: ["branchCommits", task.id] });
+        void load();
       } else {
         toast.error(result.message);
       }
@@ -152,7 +136,7 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
   };
 
   const createPr = async () => {
-    if (!task || creatingPr || !prTitle.trim()) {
+    if (!task || creatingPr || repositoryOperation || !info || !prTitle.trim()) {
       return;
     }
     setCreatingPr(true);
@@ -160,7 +144,9 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
       setRepositoryOperation({ kind: "push", taskId: task.id });
     }
     try {
-      if (needsPush) {
+      const latest = (await daemon.request("git.pushInfo", { task_id: task.id })) as GitPushInfo;
+      if (!latest.hasUpstream || latest.commits.length > 0) {
+        setRepositoryOperation({ kind: "push", taskId: task.id });
         setPrStep("pushing");
         const pushed = (await daemon.request("git.push", {
           force: false,
@@ -171,6 +157,7 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
           return;
         }
       }
+      void queryClient.invalidateQueries({ queryKey: ["branchCommits", task.id] });
       setPrStep("creating");
       const result = (await daemon.request("git.createPr", {
         base: prBase.trim() || undefined,
@@ -187,7 +174,8 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
       } else {
         toast.success("Pull request created");
       }
-      onOpenChange(false);
+      void queryClient.invalidateQueries({ queryKey: ["branchCommits", task.id] });
+      void load();
     } catch (reason) {
       toast.error(reason instanceof Error ? reason.message : String(reason));
     } finally {
@@ -200,89 +188,32 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={(next) => !pushing && !creatingPr && onOpenChange(next)}>
-      <DialogContent className="flex h-[72vh] max-h-[760px] w-[min(1050px,92vw)] max-w-none flex-col gap-0 overflow-hidden p-0">
-        <div className="flex h-14 shrink-0 items-center border-b px-5">
-          <div className="min-w-0">
-            <DialogTitle className="truncate text-base">
-              Push commits to {task?.project ?? "project"}
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              Review outgoing commits and their files before pushing the current branch.
-            </DialogDescription>
-          </div>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="ml-auto mr-8 size-8"
-            disabled={loading || Boolean(pushing)}
-            onClick={() => void load()}
-            title="Refresh push preview"
-          >
-            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-          </Button>
-        </div>
-
-        {mode === "pr" && (
-          <PrForm
-            info={info}
-            needsPush={needsPush}
-            prTitle={prTitle}
-            setPrTitle={setPrTitle}
-            prBody={prBody}
-            setPrBody={(body) => {
-              setPrBody(body);
-              setPrBodyEdited(true);
-            }}
-            prBase={prBase}
-            setPrBase={setPrBase}
-            generatingPr={generatingPr}
-            textGenAgentId={textGenAgentId}
-            error={error}
-            onGenerate={() => void generatePr()}
-          />
-        )}
-
-        {mode === "push" && (
-          <PushPreview
-            info={info}
-            loading={loading}
-            error={error}
-            selected={selected}
-            selectedHash={selectedHash}
-            onSelect={setSelectedHash}
-          />
-        )}
-
-        {mode === "pr" && <ReadyKeepers {...prKeepers} />}
-        <KeeperWarning taskId={task?.id ?? null} />
-        {mode === "pr" ? (
-          <PrFooter
-            creatingPr={creatingPr}
-            prTitle={prTitle}
-            prStep={prStep}
-            needsPush={needsPush}
-            repositoryOperation={repositoryOperation}
-            onBack={() => setMode("push")}
-            onCancel={() => onOpenChange(false)}
-            onCreatePr={() => void createPr()}
-          />
-        ) : (
-          <PushFooter
-            info={info}
-            loading={loading}
-            pushing={pushing}
-            menuOpen={menuOpen}
-            onMenuOpenChange={setMenuOpen}
-            repositoryOperation={repositoryOperation}
-            onCancel={() => onOpenChange(false)}
-            onCreatePr={() => setMode("pr")}
-            onPush={(force) => void push(force)}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
-  );
+  return {
+    info,
+    loading,
+    pushing,
+    menuOpen,
+    setMenuOpen,
+    error,
+    mode,
+    setMode,
+    prTitle,
+    setPrTitle,
+    prBody,
+    setPrBody,
+    setPrBodyEdited,
+    prBase,
+    setPrBase,
+    creatingPr,
+    prStep,
+    generatingPr,
+    textGenAgentId,
+    repositoryOperation,
+    prKeepers,
+    needsPush,
+    generatePr,
+    createPr,
+    push,
+    load,
+  };
 }

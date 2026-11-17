@@ -97,9 +97,6 @@ vi.mock("./views/NewTaskDialog", () => ({
       </div>
     ) : null,
 }));
-vi.mock("./views/PushDialog", () => ({
-  default: ({ open }: { open: boolean }) => (open ? <div data-testid="push-dialog" /> : null),
-}));
 vi.mock("./views/AgentSetupDialog", () => ({
   default: vi.fn<() => React.ReactNode>(() => <div data-testid="agent-setup" />),
 }));

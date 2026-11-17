@@ -23,7 +23,6 @@ import { QuickOpenHost, type ProjectSubject } from "./QuickOpenHost";
 const AddProjectDialog = lazy(() => import("../views/AddProjectDialog"));
 const AgentSetupDialog = lazy(() => import("../views/AgentSetupDialog"));
 const BootstrapWizard = lazy(() => import("@/components/BootstrapWizard"));
-const PushDialog = lazy(() => import("../views/PushDialog"));
 const SettingsView = lazy(() => import("../views/settings"));
 
 export interface AppOverlaysProps {
@@ -40,7 +39,6 @@ export interface AppOverlaysProps {
 export function AppOverlays({
   dialogs,
   snapshot,
-  openTask,
   openTaskId,
   hasOpenTask,
   projects,
@@ -49,8 +47,6 @@ export function AppOverlays({
   const pendingAgentSetup = useSyncExternalStore(daemon.subscribe, getPendingAgentSetup);
   const pendingQuit = useTauriClose();
   const {
-    pushOpen,
-    setPushOpen,
     addProjectOpen,
     setAddProjectOpen,
     wizardProject,
@@ -61,7 +57,6 @@ export function AppOverlays({
 
   return (
     <>
-      {pushOpen && <PushDialog open onOpenChange={setPushOpen} task={openTask} />}
       <QuickOpenHost openTaskId={openTaskId} hasOpenTask={hasOpenTask} project={projectSubject} />
       <PrAssistantLifecycleHost projects={projects} />
       <AgentUpdatesHost />

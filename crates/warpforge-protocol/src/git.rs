@@ -318,3 +318,15 @@ pub struct SymbolMatch {
     pub column: u32,
     pub text: String,
 }
+
+/// A branch commit relative to its pull request base.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GitBranchCommit {
+    pub hash: String,
+    pub short_hash: String,
+    pub subject: String,
+    pub author: String,
+    pub date: String,
+    pub pushed: bool,
+}

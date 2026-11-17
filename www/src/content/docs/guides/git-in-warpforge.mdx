@@ -56,7 +56,13 @@ If an agent turns down a request (drafting a commit message, say), the message i
 
 Push uses `--force-with-lease` — the safe force, which refuses if someone else pushed since you last fetched.
 
-**Open pull request** goes through the [GitHub CLI](https://cli.github.com/) with a title and body drafted from the branch's outgoing commits and their combined diff. It needs `gh` installed and authenticated; commit and push don't. If the task has keepers that run [before the pull request](/guides/keepers/#before-the-pull-request), opening the form starts them and lists their state, and PR-ready's draft fills an empty description.
+Open the task's **Diff** surface and select **Commits** to review the branch relative to its PR base. Commits appear newest first; pushed commits are marked and unpushed commits are highlighted. Select one to read its patch. Use **Working changes** in the header to return to the working tree. Commit patches are read-only.
+
+Push from the bottom of **Commits**, with **Force Push** available in Push options. **⌘⇧K** (Ctrl+Shift+K on Windows/Linux) opens Diff → Commits.
+
+The small **Create PR** button in the Diff header opens an inline form. It offers title, description, base branch, description generation, and keeper results. Generation errors remain visible in the form. Creating pushes first when needed; afterwards the header shows the PR status and link.
+
+**Create PR** goes through the [GitHub CLI](https://cli.github.com/) with a title and body drafted from the branch's outgoing commits and their combined diff. It needs `gh` installed and authenticated; commit and push don't. If the task has keepers that run [before the pull request](/guides/keepers/#before-the-pull-request), opening the form starts them and lists their state, and PR-ready's draft fills an empty description.
 
 Once a worktree task's branch has a pull request, the task says so. Its sidebar row carries the pull request's state — open, draft, merged or closed — with a dot when checks are failing or still running, and the task header shows the number, the state and the checks; click it to open the pull request on GitHub. The status refreshes when you open the task or come back to the window, and every few minutes while the pull request is open. When it merges, **Archive and remove worktree** (in the header, or the row's **More** menu) moves the task to history and deletes its worktree and its task branch, after asking; the conversation stays. It refuses while the agent is working, while the worktree has uncommitted changes, and while it holds commits that are neither pushed nor in the pull request — a squash merge, or a head branch GitHub deleted, does not count against you. A branch you picked yourself when creating the task is never deleted, only its checkout. Without `gh`, or for a repository that is not on GitHub, nothing is shown.
 

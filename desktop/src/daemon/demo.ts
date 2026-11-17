@@ -56,6 +56,10 @@ export class DaemonDemo extends DaemonEvents {
   protected demoRequest(method: string, params?: unknown): Promise<unknown> {
     const p = (params ?? {}) as Record<string, unknown>;
     switch (method) {
+      case "git.branchCommits":
+        return Promise.resolve([]);
+      case "git.commitDiff":
+        return Promise.resolve({ ...this.demoDiff!(String(p.task_id)), files: [] });
       case "diff.get":
         return Promise.resolve(this.demoDiff!(String(p.task_id)));
       case "file.contents":

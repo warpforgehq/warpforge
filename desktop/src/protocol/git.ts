@@ -226,3 +226,12 @@ export interface GitPushInfo {
   hasUpstream: boolean;
   commits: GitPushCommit[];
 }
+
+export interface GitBranchCommit {
+  hash: string;
+  shortHash: string;
+  subject: string;
+  author: string;
+  date: string;
+  pushed: boolean;
+}

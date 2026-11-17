@@ -201,3 +201,38 @@ pub(super) async fn git_create_pr(
     crate::daemon::pull_status::refresh(handle, Some(&[task_id]), Some(0)).await;
     Ok(json!({ "url": url }))
 }
+
+pub(super) async fn git_history(
+    handle: &DaemonHandle,
+    task_id: String,
+    hash: Option<String>,
+) -> Result<serde_json::Value, wire::RpcError> {
+    let fail = |message| wire::RpcError {
+        code: wire::ErrorCode::Internal,
+        message,
+    };
+    let root = handle
+        .resolve_root(&task_id, None)
+        .await
+        .ok_or_else(|| fail("no checkout for task".into()))?;
+    if let Some(hash) = hash {
+        let files = crate::daemon::diff::commit_diff(&root, &hash)
+            .await
+            .map_err(|e| fail(e.to_string()))?;
+        Ok(json!(wire::TaskDiff {
+            task_id,
+            files,
+            ..Default::default()
+        }))
+    } else {
+        let tasks = handle.tasks().await;
+        let task = tasks
+            .iter()
+            .find(|t| t.id == task_id)
+            .ok_or_else(|| fail("task not found".into()))?;
+        let commits = crate::daemon::diff::branch_commits(&root, task.base_branch.as_deref())
+            .await
+            .map_err(|e| fail(e.to_string()))?;
+        Ok(json!(commits))
+    }
+}

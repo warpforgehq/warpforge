@@ -41,6 +41,8 @@ pub(super) fn method_runs_concurrently(method: &wire::Method) -> bool {
             | GitRoots { .. }
             | GitIgnored { .. }
             | GitStatus { .. }
+            | GitBranchCommits { .. }
+            | GitCommitDiff { .. }
             | GitPushInfo { .. }
             | GitLastCommitMessage { .. }
             | ServiceLogs { .. }
@@ -120,6 +122,8 @@ pub(super) fn method_is_mutation(method: &wire::Method) -> bool {
             | GitRoots { .. }
             | GitIgnored { .. }
             | GitStatus { .. }
+            | GitBranchCommits { .. }
+            | GitCommitDiff { .. }
             | GitPushInfo { .. }
             | GitLastCommitMessage { .. }
             | OrchestrateList {}

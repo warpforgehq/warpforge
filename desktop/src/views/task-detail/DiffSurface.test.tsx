@@ -1,15 +1,21 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef } from "react";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { FileDiff, TaskDiff } from "../../protocol";
+import type { FileDiff, TaskDiff, TaskInfo } from "../../protocol";
 import { useUi } from "../../store/ui";
 import { DiffSurface } from "./DiffSurface";
 import type { DiffWorkspaceHandle } from "./DiffWorkspace";
 
 vi.mock("./DiffWorkspace", () => ({
-  DiffWorkspace: () => <div data-testid="diff-workspace" />,
+  DiffWorkspace: ({ diff, editable }: { diff: TaskDiff | null; editable: boolean }) => (
+    <div data-testid="diff-workspace" data-editable={String(editable)}>
+      {diff?.files.map((f) => f.path).join(",")}
+    </div>
+  ),
   estimateFileHeight: () => 384,
 }));
 vi.mock("./FileDiffSkeleton", () => ({
@@ -18,7 +24,42 @@ vi.mock("./FileDiffSkeleton", () => ({
   ),
 }));
 vi.mock("../../components/ChangesRail", () => ({
-  ChangesRail: () => <div data-testid="changes-rail" />,
+  ChangesRail: ({ commitsPanel }: { commitsPanel: ReactNode }) => (
+    <div data-testid="changes-rail">{commitsPanel}</div>
+  ),
+}));
+
+const fixture = vi.hoisted(() => ({
+  snapshot: { tasks: [{ id: "task-1", project: "warpforge", worktree: "/wt" }] },
+  pr: null as unknown,
+}));
+vi.mock("@/daemon", () => ({
+  daemon: {
+    subscribe: () => () => {},
+    getState: () => ({ snapshot: fixture.snapshot }),
+    branchCommits: async () => [
+      { hash: "abc", shortHash: "abc", subject: "Feature", author: "Dev", date: "", pushed: true },
+    ],
+    commitDiff: async () => ({ files: [{ path: "historical.ts", hunks: [], status: "modified" }] }),
+  },
+}));
+vi.mock("@/hooks/useTaskPullRequest", () => ({ useTaskPullRequest: () => fixture.pr }));
+vi.mock("@/components/pullRequest/TaskPullRequestChip", () => ({
+  TaskPullRequestChip: () => <span>PR status link</span>,
+}));
+vi.mock("../push/useBranchActions", () => ({
+  useBranchActions: () => ({
+    info: null,
+    loading: false,
+    pushing: null,
+    menuOpen: false,
+    setMenuOpen: () => {},
+    repositoryOperation: null,
+    error: null,
+    mode: "push",
+    setMode: () => {},
+    push: () => {},
+  }),
 }));
 
 function taskDiff(count: number): TaskDiff {
@@ -40,33 +81,72 @@ function taskDiff(count: number): TaskDiff {
   };
 }
 
-function renderSurface(overrides: { diff?: TaskDiff | null } = {}) {
+function renderSurface(overrides: { diff?: TaskDiff | null; baseBranch?: string } = {}) {
   return render(
-    <DiffSurface
-      commitExpanded={false}
-      diff={overrides.diff ?? null}
-      diffError={null}
-      diffView="unified"
-      diffWorkspaceRef={createRef<DiffWorkspaceHandle | null>()}
-      editable
-      localRes={{}}
-      onCommitExpandedChange={() => {}}
-      onCommitted={() => {}}
-      onOpenFile={() => {}}
-      onOpenFiles={() => {}}
-      onRefresh={() => {}}
-      onResolve={() => {}}
-      onSelect={() => {}}
-      onSendToChat={() => {}}
-      onSetDiffView={() => {}}
-      project="warpforge"
-      selected={null}
-      taskId="task-1"
-    />,
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <DiffSurface
+        commitExpanded={false}
+        diff={overrides.diff ?? null}
+        diffError={null}
+        diffView="unified"
+        diffWorkspaceRef={createRef<DiffWorkspaceHandle | null>()}
+        editable
+        localRes={{}}
+        onCommitExpandedChange={() => {}}
+        onCommitted={() => {}}
+        onOpenFile={() => {}}
+        onOpenFiles={() => {}}
+        onRefresh={() => {}}
+        onResolve={() => {}}
+        onSelect={() => {}}
+        onSendToChat={() => {}}
+        onSetDiffView={() => {}}
+        project="warpforge"
+        selected={null}
+        task={{ ...fixture.snapshot.tasks[0], baseBranch: overrides.baseBranch } as TaskInfo}
+        taskId="task-1"
+      />
+    </QueryClientProvider>,
   );
 }
 
 describe("DiffSurface", () => {
+  it("selects only a commit patch read-only and returns to working changes", async () => {
+    fixture.pr = null;
+    renderSurface({ diff: taskDiff(1) });
+    await userEvent.click(await screen.findByRole("button", { name: /Feature/ }));
+    await waitFor(() =>
+      expect(screen.getByTestId("diff-workspace")).toHaveTextContent("historical.ts"),
+    );
+    expect(screen.getByTestId("diff-workspace")).toHaveAttribute("data-editable", "false");
+    await userEvent.click(screen.getByRole("button", { name: "Back to working changes" }));
+    expect(screen.getByTestId("diff-workspace")).toHaveTextContent("src/file-0.ts");
+    expect(screen.getByTestId("diff-workspace")).toHaveAttribute("data-editable", "true");
+  });
+
+  it.each(["main", "master", "release"])("disables PR creation on base branch %s", (branch) => {
+    fixture.pr = null;
+    renderSurface({ diff: { ...taskDiff(0), branch }, baseBranch: "release" });
+    const button = screen.getAllByRole("button", { name: "Create PR" })[0];
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("title", "Switch to a feature branch to create a pull request");
+  });
+
+  it("offers Create PR without a PR, and the status chip with one", () => {
+    fixture.pr = null;
+    const first = renderSurface();
+    expect(screen.getByRole("button", { name: "Create PR" })).toBeInTheDocument();
+    first.unmount();
+    fixture.pr = { number: 12 };
+    const second = renderSurface();
+    expect(screen.getByText("PR status link")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create PR" })).not.toBeInTheDocument();
+    second.unmount();
+    fixture.pr = null;
+  });
+
   it("paints the shell first and mounts the workspace a frame later", async () => {
     renderSurface();
 
@@ -85,7 +165,7 @@ describe("DiffSurface", () => {
     renderSurface({ diff: taskDiff(3) });
 
     expect(screen.getAllByTestId("file-skeleton")).toHaveLength(3);
-    expect(screen.queryByText(/Loading /)).not.toBeInTheDocument();
+    expect(screen.queryByText("Loading changes…")).not.toBeInTheDocument();
   });
 
   it("caps the shell skeleton and still draws some before a diff arrives", () => {

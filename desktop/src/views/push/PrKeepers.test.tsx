@@ -31,7 +31,14 @@ const { client, emit, store } = vi.hoisted(() => {
 });
 vi.mock("@/daemon", () => ({ daemon: client }));
 
-import PushDialog from "../PushDialog";
+import { InlinePrPanel } from "./InlinePrPanel";
+import { useBranchActions } from "./useBranchActions";
+function PrSurface({ task: of }: { task: TaskInfo }) {
+  const actions = useBranchActions(of);
+  return actions.mode === "pr" ? <InlinePrPanel actions={actions} taskId={of.id}
+    onClose={() => actions.setMode("push")} /> :
+    <button onClick={() => actions.setMode("pr")}>Create PR</button>;
+}
 
 const task = {
   id: "t1",
@@ -70,7 +77,7 @@ async function openPrForm(runs: KeeperRun[] | null, of: TaskInfo = task) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <PushDialog open onOpenChange={() => {}} task={of} />
+      <PrSurface task={of} />
     </QueryClientProvider>,
   );
   const user = userEvent.setup({ pointerEventsCheck: 0 });
@@ -108,8 +115,8 @@ beforeEach(() => {
   });
 });
 
-describe("Create PR dialog keepers", () => {
-  it("checks the ready keepers once per dialog and lists their state", async () => {
+describe("Inline PR keepers", () => {
+  it("checks the ready keepers once per surface and lists their state", async () => {
     const user = await openPrForm([oldDraft]);
     await waitFor(() => expect(client.checkReadyKeepers).toHaveBeenCalledWith("t1"));
     setRuns([oldDraft, fresh(null), run({ id: "i1", keeperId: "intent", outcome: null })]);
