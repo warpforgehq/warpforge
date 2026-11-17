@@ -115,9 +115,9 @@ Some checks are worth running once, when the work is done, rather than on every 
 These keepers run in two places, always on the branch's latest commit:
 
 - **Check before PR** in the Keepers tab header, next to **Add keeper**. It appears once the task has one of these keepers switched on, and stays disabled while one of them is still checking. Pressing it again re-runs them, even on a commit they already checked.
-- **Create PR** in the push dialog. Opening the pull request form starts them once; going **Back** and returning does not start them again. The form lists each one with its state — checking, green, the number of findings, or draft ready.
+- **Create PR** in the Diff header. Opening the pull request form starts them once; going **Back** and returning does not start them again. The form lists each one with its state — checking, green, the number of findings, or draft ready.
 
-When a keeper's last check was of an older commit, its card says so — "Found on `abc1234`, an older commit" — and its state turns grey instead of red: the findings may already be fixed. Press **Check before PR** to check the current commit. Until then those findings are advice: they put no red dot on the task and no warning in the push dialog.
+When a keeper's last check was of an older commit, its card says so — "Found on `abc1234`, an older commit" — and its state turns grey instead of red: the findings may already be fixed. Press **Check before PR** to check the current commit. Until then those findings are advice: they put no red dot on the task and no warning in the Diff header.
 
 Their findings go to the task's agent like any other keeper's. PR-ready's result is text, never a pass or a failure: the Keepers tab shows the draft with **Copy** and **Show all**, and when it arrives while the pull request form is open and you have not written a description, it fills the **Description** field for you. Text you typed or generated is never replaced.
 
@@ -125,7 +125,7 @@ Nothing here blocks you. **Create Pull Request** stays available while the keepe
 
 ## Pushing before the keepers are green
 
-Keepers never block a push. When you push or create a pull request while a keeper still has findings, is still checking or is waiting for you, the dialog says which ones above its buttons — push anyway if you have decided the findings don't matter.
+Keepers never block a push. When you push or create a pull request while a keeper still has findings, is still checking or is waiting for you, the Diff surface says which ones above its buttons — push anyway if you have decided the findings don't matter.
 
 ## See also
 

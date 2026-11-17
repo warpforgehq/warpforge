@@ -535,25 +535,7 @@ impl Daemon {
                 base,
                 reply,
             } => {
-                let repo = self.tasks.get(&task_id).and_then(|task| {
-                    task.worktree
-                        .clone()
-                        .or_else(|| self.project_path(&task.project))
-                });
-                // Creating a PR shells out to the forge's CLI over the network;
-                // it changes nothing the actor holds, so it just answers from a
-                // task of its own (ADR 0002).
-                tokio::spawn(async move {
-                    let result = match repo {
-                        Some(path) => {
-                            crate::daemon::diff::create_pr(&path, &title, &body, base.as_deref())
-                                .await
-                                .map_err(|e| e.to_string())
-                        }
-                        None => Err(format!("no repo for task {task_id}")),
-                    };
-                    let _ = reply.send(result);
-                });
+                self.create_task_pr(task_id, title, body, base, reply);
             }
 
             other => self.handle_shelf_command(other).await,

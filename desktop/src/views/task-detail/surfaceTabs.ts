@@ -48,7 +48,6 @@ export function taskSurfaceTabs(input: {
       // single-agent task has no pipeline, and a permanently empty tab is
       // just a dead affordance on most of the screens in the app.
       .filter((tab) => tab.id !== "pipeline" || input.pipelineCount !== undefined)
-      .filter((tab) => tab.id !== "pull-request" || input.pullRequest === true)
       .filter((tab) => tab.id !== "keepers" || input.keepers === true)
       .filter((tab) => !input.chat || CHAT_SURFACES.has(tab.id))
       .map((tab) => {

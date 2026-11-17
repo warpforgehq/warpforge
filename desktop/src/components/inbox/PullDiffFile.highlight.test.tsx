@@ -39,14 +39,7 @@ it("never shows previous patch tokens while new highlighting is pending or empty
     }),
   );
   const view = (patch: PatchFileBlock) => (
-    <PullDiffFile
-      block={patch}
-      mode="unified"
-      expanded
-      viewed={false}
-      readOnly
-      onToggleExpanded={() => {}}
-    />
+    <PullDiffFile block={patch} mode="unified" expanded onToggleExpanded={() => {}} />
   );
   const { rerender } = render(view(previous));
   await act(async () => {});

@@ -233,6 +233,7 @@ pub(crate) async fn build_textgen_prompt(
     repo: &str,
     kind: wire::TextGenKind,
     message: Option<&str>,
+    base: Option<&str>,
 ) -> Result<String, String> {
     pub(crate) async fn git_out(repo: &str, args: &[&str]) -> Result<String, String> {
         let out = tokio::process::Command::new("git")
@@ -314,7 +315,7 @@ pub(crate) async fn build_textgen_prompt(
                 clamp(parts.join("\n\n"))
             ))
         }
-        wire::TextGenKind::PrDescription => build_pr_prompt(repo, None).await,
+        wire::TextGenKind::PrDescription => build_pr_prompt(repo, base).await,
         wire::TextGenKind::TaskTitle => {
             let prompt = message.unwrap_or("");
             if prompt.trim().is_empty() {
@@ -396,9 +397,10 @@ mod tests {
         // after the tracked diff instead of the file.
         let (_dir, r) = two_change_repo().await;
 
-        let prompt = build_textgen_prompt(&r, wire::TextGenKind::ShelfName, Some("oranges.txt"))
-            .await
-            .unwrap();
+        let prompt =
+            build_textgen_prompt(&r, wire::TextGenKind::ShelfName, Some("oranges.txt"), None)
+                .await
+                .unwrap();
         assert!(prompt.contains("oranges are orange"), "got: {prompt}");
         assert!(
             !prompt.contains("GREEN APPLES"),
@@ -410,9 +412,10 @@ mod tests {
     async fn shelf_name_scopes_tracked_files_to_the_selection() {
         let (_dir, r) = two_change_repo().await;
 
-        let prompt = build_textgen_prompt(&r, wire::TextGenKind::ShelfName, Some("apples.txt"))
-            .await
-            .unwrap();
+        let prompt =
+            build_textgen_prompt(&r, wire::TextGenKind::ShelfName, Some("apples.txt"), None)
+                .await
+                .unwrap();
         assert!(prompt.contains("GREEN APPLES"), "got: {prompt}");
         assert!(!prompt.contains("oranges are orange"), "got: {prompt}");
     }
@@ -421,7 +424,7 @@ mod tests {
     async fn shelf_name_without_selection_describes_everything() {
         let (_dir, r) = two_change_repo().await;
 
-        let prompt = build_textgen_prompt(&r, wire::TextGenKind::ShelfName, None)
+        let prompt = build_textgen_prompt(&r, wire::TextGenKind::ShelfName, None, None)
             .await
             .unwrap();
         assert!(prompt.contains("GREEN APPLES"), "got: {prompt}");
@@ -438,13 +441,15 @@ mod tests {
         let r = d.to_str().unwrap().to_string();
 
         assert!(
-            build_textgen_prompt(&r, wire::TextGenKind::ShelfName, Some("a.txt"))
+            build_textgen_prompt(&r, wire::TextGenKind::ShelfName, Some("a.txt"), None)
                 .await
                 .is_err()
         );
-        assert!(build_textgen_prompt(&r, wire::TextGenKind::ShelfName, None)
-            .await
-            .is_err());
+        assert!(
+            build_textgen_prompt(&r, wire::TextGenKind::ShelfName, None, None)
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]

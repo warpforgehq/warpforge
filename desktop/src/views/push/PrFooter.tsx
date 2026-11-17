@@ -11,7 +11,6 @@ interface PrFooterProps {
   needsPush: boolean;
   repositoryOperation: RepositoryOperation | null;
   onBack: () => void;
-  onCancel: () => void;
   onCreatePr: () => void;
 }
 
@@ -22,7 +21,6 @@ export function PrFooter({
   needsPush,
   repositoryOperation,
   onBack,
-  onCancel,
   onCreatePr,
 }: PrFooterProps) {
   return (
@@ -32,9 +30,6 @@ export function PrFooter({
         Back
       </Button>
       <div className="ml-auto flex items-center gap-2">
-        <Button size="sm" type="button" variant="outline" disabled={creatingPr} onClick={onCancel}>
-          Cancel
-        </Button>
         <Button
           size="sm"
           type="button"

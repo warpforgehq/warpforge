@@ -94,3 +94,15 @@ async fn shared_folder_branch_is_cached_per_task_and_can_be_force_refreshed() {
     assert_eq!(cached[&tasks[1].id], open);
     assert_eq!(calls.load(Ordering::SeqCst), 3);
 }
+
+#[test]
+fn shared_checkout_descendants_follow_the_root_claim() {
+    let root = folder(Some("feat/root"));
+    let mut child = folder(None);
+    child.parent_task_id = Some(root.id.clone());
+    let mut grandchild = folder(None);
+    grandchild.parent_task_id = Some(child.id.clone());
+    let found = super::super::targets(&[root.clone(), child.clone(), grandchild.clone()], &paths());
+    assert_eq!(found[&child.id].head.as_deref(), Some("feat/root"));
+    assert_eq!(found[&grandchild.id], found[&root.id]);
+}

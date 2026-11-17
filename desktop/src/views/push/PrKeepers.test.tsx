@@ -35,9 +35,11 @@ import { InlinePrPanel } from "./InlinePrPanel";
 import { useBranchActions } from "./useBranchActions";
 function PrSurface({ task: of }: { task: TaskInfo }) {
   const actions = useBranchActions(of);
-  return actions.mode === "pr" ? <InlinePrPanel actions={actions} taskId={of.id}
-    onClose={() => actions.setMode("push")} /> :
-    <button onClick={() => actions.setMode("pr")}>Create PR</button>;
+  return actions.mode === "pr" ? (
+    <InlinePrPanel actions={actions} taskId={of.id} onClose={() => actions.setMode("push")} />
+  ) : (
+    <button onClick={() => actions.setMode("pr")}>Create PR</button>
+  );
 }
 
 const task = {
@@ -116,6 +118,15 @@ beforeEach(() => {
 });
 
 describe("Inline PR keepers", () => {
+  it("closes and resets the form after creating a PR before status arrives", async () => {
+    const user = await openPrForm([]);
+    await user.type(screen.getByLabelText(/^Description/), "Description");
+    await user.click(screen.getByRole("button", { name: "Create Pull Request" }));
+    expect(await screen.findByRole("button", { name: "Create PR" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Create PR" }));
+    expect(screen.getByLabelText(/^Description/)).toHaveValue("");
+  });
+
   it("checks the ready keepers once per surface and lists their state", async () => {
     const user = await openPrForm([oldDraft]);
     await waitFor(() => expect(client.checkReadyKeepers).toHaveBeenCalledWith("t1"));

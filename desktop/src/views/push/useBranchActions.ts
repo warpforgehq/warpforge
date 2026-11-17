@@ -9,6 +9,11 @@ import { useUi } from "@/store/ui";
 
 import { usePrKeepers } from "./usePrKeepers";
 
+export const branchCommitsKey = (taskId: string) => ["branchCommits", taskId] as const;
+
+const pushNeeded = (info: GitPushInfo | null) =>
+  Boolean(info && (!info.hasUpstream || info.commits.length > 0));
+
 export function useBranchActions(task: TaskInfo | null) {
   const queryClient = useQueryClient();
   const [info, setInfo] = useState<GitPushInfo | null>(null);
@@ -16,6 +21,7 @@ export function useBranchActions(task: TaskInfo | null) {
   const [pushing, setPushing] = useState<"push" | "force" | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [mode, setMode] = useState<"push" | "pr">("push");
   const [prTitle, setPrTitle] = useState("");
   const [prBody, setPrBody] = useState("");
@@ -87,13 +93,9 @@ export function useBranchActions(task: TaskInfo | null) {
         force,
         task_id: task.id,
       })) as GitOpResult;
-      if (result.status === "ok") {
-        toast.success(result.message);
-        void queryClient.invalidateQueries({ queryKey: ["branchCommits", task.id] });
-        void load();
-      } else if (result.status === "up_to_date") {
-        toast.info(result.message);
-        void queryClient.invalidateQueries({ queryKey: ["branchCommits", task.id] });
+      if (result.status === "ok" || result.status === "up_to_date") {
+        (result.status === "ok" ? toast.success : toast.info)(result.message);
+        void queryClient.invalidateQueries({ queryKey: branchCommitsKey(task.id) });
         void load();
       } else {
         toast.error(result.message);
@@ -109,14 +111,14 @@ export function useBranchActions(task: TaskInfo | null) {
     }
   };
 
-  const needsPush = Boolean(info) && (!info?.hasUpstream || (info?.commits.length ?? 0) > 0);
+  const needsPush = pushNeeded(info);
 
   const generatePr = async () => {
     if (!task || !textGenAgentId || generatingPr) {
       return;
     }
     setGeneratingPr(true);
-    setError(null);
+    setGenerateError(null);
     try {
       const text = await daemon.generateText(
         task.id,
@@ -129,7 +131,7 @@ export function useBranchActions(task: TaskInfo | null) {
       setPrBody(rest.join("\n").trim());
       setPrBodyEdited(true);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      setGenerateError(reason instanceof Error ? reason.message : String(reason));
     } finally {
       setGeneratingPr(false);
     }
@@ -140,13 +142,10 @@ export function useBranchActions(task: TaskInfo | null) {
       return;
     }
     setCreatingPr(true);
-    if (needsPush) {
-      setRepositoryOperation({ kind: "push", taskId: task.id });
-    }
+    setRepositoryOperation({ kind: "push", taskId: task.id });
     try {
       const latest = (await daemon.request("git.pushInfo", { task_id: task.id })) as GitPushInfo;
-      if (!latest.hasUpstream || latest.commits.length > 0) {
-        setRepositoryOperation({ kind: "push", taskId: task.id });
+      if (pushNeeded(latest)) {
         setPrStep("pushing");
         const pushed = (await daemon.request("git.push", {
           force: false,
@@ -157,7 +156,7 @@ export function useBranchActions(task: TaskInfo | null) {
           return;
         }
       }
-      void queryClient.invalidateQueries({ queryKey: ["branchCommits", task.id] });
+      void queryClient.invalidateQueries({ queryKey: branchCommitsKey(task.id) });
       setPrStep("creating");
       const result = (await daemon.request("git.createPr", {
         base: prBase.trim() || undefined,
@@ -165,6 +164,12 @@ export function useBranchActions(task: TaskInfo | null) {
         task_id: task.id,
         title: prTitle.trim(),
       })) as { url: string };
+      setMode("push");
+      setPrTitle("");
+      setPrBody("");
+      setPrBodyEdited(false);
+      setPrBase("");
+      setGenerateError(null);
       if (result.url) {
         toast.success("Pull request created", {
           action: { label: "Open", onClick: () => void openExternalLink(result.url) },
@@ -174,7 +179,7 @@ export function useBranchActions(task: TaskInfo | null) {
       } else {
         toast.success("Pull request created");
       }
-      void queryClient.invalidateQueries({ queryKey: ["branchCommits", task.id] });
+      void queryClient.invalidateQueries({ queryKey: branchCommitsKey(task.id) });
       void load();
     } catch (reason) {
       toast.error(reason instanceof Error ? reason.message : String(reason));
@@ -195,6 +200,7 @@ export function useBranchActions(task: TaskInfo | null) {
     menuOpen,
     setMenuOpen,
     error,
+    generateError,
     mode,
     setMode,
     prTitle,

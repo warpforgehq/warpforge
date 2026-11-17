@@ -177,8 +177,7 @@ export function keeperStatus(
   runs: readonly KeeperRun[],
   loop: KeeperLoopState | undefined,
   openFindings: number,
-  state?: KeeperTaskState,
-  unavailable = false,
+  { state, unavailable = false }: { state?: KeeperTaskState; unavailable?: boolean } = {},
 ): KeeperStatus {
   if (!on) return "off";
   if (unavailable || state?.switches.held) return "not_checked";
@@ -309,7 +308,7 @@ export function activeKeepers(
     const runs = keeperRuns(state, id);
     const on = state.switches.overrides[id] !== false;
     const findings = currentFindings(state, runs).length;
-    const status = keeperStatus(on, runs, state.loops[id], findings, state);
+    const status = keeperStatus(on, runs, state.loops[id], findings, { state });
     const outdated = outdatedRun(state, runs)?.ready ?? false;
     return { findings, id, outdated, status };
   });
@@ -351,10 +350,11 @@ export type KeeperWorst = "failing" | "running" | "not_checked";
  * @returns The worst state, or null when every keeper is green or there are none.
  */
 export function keeperWorst(state: KeeperTaskState | undefined): KeeperWorst | null {
-  const marks = activeKeepers(state).map(keeperMark);
+  const active = activeKeepers(state);
+  const marks = active.map(keeperMark);
   if (marks.includes("failing")) return "failing";
   if (marks.includes("checking")) return "running";
-  return activeKeepers(state).some(({ status }) => status === "not_checked") ? "not_checked" : null;
+  return active.some(({ status }) => status === "not_checked") ? "not_checked" : null;
 }
 
 /**

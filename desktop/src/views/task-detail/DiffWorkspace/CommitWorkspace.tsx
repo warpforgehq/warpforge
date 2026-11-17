@@ -1,6 +1,8 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
 
 import { PullDiffFile } from "@/components/inbox/PullDiffFile";
+import { PullDiffSkeleton } from "@/components/inbox/PullDiffSkeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { PatchHunk, PatchLine } from "@/lib/pullDiff";
 import type { FileDiff } from "@/protocol";
 
@@ -70,7 +72,7 @@ export const CommitWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function C
         const node =
           index === undefined
             ? null
-            : anchors.current.get(path)?.querySelectorAll("[data-hunk-id]")[index ?? -1];
+            : anchors.current.get(path)?.querySelectorAll("[data-hunk-id]")[index];
         node?.scrollIntoView();
         return Boolean(node);
       },
@@ -79,24 +81,22 @@ export const CommitWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function C
   );
   return (
     <div className="min-h-0 flex-1 overflow-auto" aria-label="Commit patch">
-      {diffError && <p role="alert">{diffError}</p>}
-      {!diff && !diffError && <p>Loading commit patch…</p>}
-      {diff?.files.length === 0 && <p>No file changes in this commit.</p>}
-      {diff?.files.map((file) => (
+      {diffError && <EmptyState role="alert" title={diffError} />}
+      {!diff && !diffError && <PullDiffSkeleton mode={diffView} />}
+      {diff?.files.length === 0 && <EmptyState title="No file changes in this commit." />}
+      {blocks.map((block) => (
         <section
-          key={file.path}
-          id={fileAnchor(file.path)}
+          key={block.path}
+          id={fileAnchor(block.path)}
           ref={(node) => {
-            if (node) anchors.current.set(file.path, node);
-            else anchors.current.delete(file.path);
+            if (node) anchors.current.set(block.path, node);
+            else anchors.current.delete(block.path);
           }}
         >
           <PullDiffFile
-            block={blocks.find((block) => block.path === file.path)!}
+            block={block}
             mode={diffView}
-            readOnly
-            expanded={!collapsed.has(file.path)}
-            viewed={false}
+            expanded={!collapsed.has(block.path)}
             onToggleExpanded={(path) =>
               setCollapsed((previous) => {
                 const next = new Set(previous);

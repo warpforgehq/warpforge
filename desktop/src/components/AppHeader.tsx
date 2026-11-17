@@ -95,7 +95,7 @@ export default function AppHeader({ view, openTask, onAddProject, onCloseTask }:
                 Git Worktree
               </span>
             )}
-            {openTask.worktree && <TaskPullRequestChip task={openTask} />}
+            <TaskPullRequestChip task={openTask} />
           </>
         ) : view === "project" ? (
           <>

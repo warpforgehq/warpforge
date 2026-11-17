@@ -73,6 +73,7 @@ vi.mock("@/components/pullRequest/TaskPullRequestChip", () => ({
   TaskPullRequestChip: () => <span>PR status link</span>,
 }));
 vi.mock("../push/useBranchActions", () => ({
+  branchCommitsKey: (taskId: string) => ["branchCommits", taskId],
   useBranchActions: () => ({
     info: null,
     loading: false,
@@ -159,14 +160,14 @@ describe("DiffSurface", () => {
     expect(button).toHaveAttribute("title", "Switch to a feature branch to create a pull request");
   });
 
-  it("offers Create PR without a PR, and the status chip with one", () => {
+  it("offers Create PR without a PR, and leaves the existing PR chip to the header", () => {
     fixture.pr = null;
     const first = renderSurface();
     expect(screen.getByRole("button", { name: "Create PR" })).toBeInTheDocument();
     first.unmount();
     fixture.pr = { number: 12 };
     const second = renderSurface();
-    expect(screen.getByText("PR status link")).toBeInTheDocument();
+    expect(screen.queryByText("PR status link")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create PR" })).not.toBeInTheDocument();
     second.unmount();
     fixture.pr = null;

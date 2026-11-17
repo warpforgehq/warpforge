@@ -68,6 +68,12 @@ pub enum KeeperCommand {
         task_id: String,
         reply: Reply<wire::KeeperTaskState>,
     },
+    /// A PR created by the user claims its folder branch for the root owner.
+    PrCreated {
+        task_id: String,
+        branch: String,
+        reply: Reply<()>,
+    },
     /// Read eligible tasks' HEADs now.
     Poll,
     /// `git.commit` succeeded in the task: check it without waiting to settle.
@@ -339,6 +345,14 @@ impl Daemon {
             } => {
                 let sent = self.keepers_send_findings(&task_id, &keeper_id, &name, changed);
                 let _ = reply.send(sent);
+            }
+            KeeperCommand::PrCreated {
+                task_id,
+                branch,
+                reply,
+            } => {
+                self.keepers_claim(&task_id, &branch);
+                let _ = reply.send(Ok(()));
             }
             KeeperCommand::CheckReady { task_id, reply } => {
                 self.keepers_check_ready(&task_id, reply);

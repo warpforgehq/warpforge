@@ -1,6 +1,6 @@
 use warpforge_protocol as wire;
 
-use crate::daemon::actor::prompt::{build_pr_prompt, build_textgen_prompt};
+use crate::daemon::actor::prompt::build_textgen_prompt;
 use crate::daemon::actor::{Command, Daemon};
 
 impl Daemon {
@@ -46,12 +46,8 @@ impl Daemon {
                                 wire::TextGenKind::ShelfName => input.as_deref(),
                                 _ => None,
                             };
-                            let built = match kind {
-                                wire::TextGenKind::PrDescription => {
-                                    build_pr_prompt(&repo, base.as_deref()).await
-                                }
-                                _ => build_textgen_prompt(&repo, kind, message).await,
-                            };
+                            let built =
+                                build_textgen_prompt(&repo, kind, message, base.as_deref()).await;
                             let result = match built {
                                 Ok(prompt) => {
                                     crate::daemon::acp::generate_text(
@@ -92,6 +88,7 @@ impl Daemon {
                                 &repo,
                                 wire::TextGenKind::EnhancePrompt,
                                 Some(&prompt),
+                                None,
                             )
                             .await
                             {

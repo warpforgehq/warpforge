@@ -32,7 +32,22 @@ pub(crate) fn targets(
                     )),
                 },
                 None => {
-                    let branch = task.keepers.as_ref()?.branch.as_ref()?;
+                    let mut owner = task;
+                    let mut seen = std::collections::HashSet::new();
+                    while owner.worktree.is_none() && seen.insert(&owner.id) {
+                        let Some(parent) = owner
+                            .parent_task_id
+                            .as_ref()
+                            .and_then(|id| tasks.iter().find(|t| &t.id == id))
+                        else {
+                            break;
+                        };
+                        if parent.project != task.project || parent.worktree.is_some() {
+                            break;
+                        }
+                        owner = parent;
+                    }
+                    let branch = owner.keepers.as_ref()?.branch.as_ref()?;
                     if branch.is_empty()
                         || matches!(branch.as_str(), "main" | "master")
                         || task.base_branch.as_ref() == Some(branch)

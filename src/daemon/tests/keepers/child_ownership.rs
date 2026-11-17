@@ -23,7 +23,6 @@ async fn child_turn_preserves_root_findings_and_parent_reclaims_after_sibling() 
     assert!(!findings.is_empty());
 
     commit(&setup, "t_child").await;
-    tokio::time::sleep(Duration::from_millis(300)).await;
     // Wait for the child's poll to land, including its ownership decision.
     timeout(Duration::from_secs(10), async {
         loop {
@@ -87,4 +86,26 @@ async fn a_child_with_its_own_worktree_keeps_independent_ownership() {
         Some("feat/x")
     );
     setup.daemon.shutdown().await;
+}
+
+#[tokio::test]
+async fn creating_a_pr_claims_an_unowned_branch_for_the_root() {
+    let setup = setup(&[("review", REVIEW)], |_| {
+        let mut child = task("t_child", None);
+        child.parent_task_id = Some("t_parent".into());
+        vec![task("t_parent", None), child]
+    })
+    .await;
+    super::ask::ask(&setup, |reply| KeeperCommand::PrCreated {
+        task_id: "t_child".into(),
+        branch: "feat/ui-created".into(),
+        reply,
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        switches(&setup.daemon, "t_parent").await.branch.as_deref(),
+        Some("feat/ui-created")
+    );
+    assert_eq!(switches(&setup.daemon, "t_child").await.branch, None);
 }

@@ -152,9 +152,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
             </span>
             <TaskLiveGlyph project={task.project} taskId={task.id} receded={receded} />
             {factory && <FactoryStageChip task={task} receded={receded} />}
-            {task.worktree && !factory && (
-              <TaskPullRequestGlyph taskId={task.id} receded={receded} />
-            )}
+            {!factory && <TaskPullRequestGlyph taskId={task.id} receded={receded} />}
             {pipeline ? (
               <span
                 title={

@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { InboxDetailPane } from "@/components/inbox/InboxDetailPane";
+import { PullDiffSkeleton } from "@/components/inbox/PullDiffSkeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { daemon } from "@/daemon";
 import { useTaskPullRequest } from "@/hooks/useTaskPullRequest";
 import { inboxItemKey, markInboxItemSeen } from "@/lib/inboxSeen";
@@ -21,13 +23,15 @@ export function TaskPullRequestSurface({ task }: { task: TaskInfo }) {
     if (repo && pr && updatedAt)
       markInboxItemSeen({ key: inboxItemKey({ repo, number: pr.number }), updatedAt: updatedAt });
   }, [repo, pr, updatedAt]);
-  if (!pr || !repo) return <p className="p-3">Pull request unavailable.</p>;
-  if (details.isPending) return <p className="p-3">Loading pull request…</p>;
+  if (!pr || !repo) return <EmptyState title="Pull request unavailable." />;
+  if (details.isPending) return <PullDiffSkeleton mode="unified" />;
   if (details.error)
     return (
-      <p className="p-3">
-        Could not load pull request. <button onClick={() => void details.refetch()}>Retry</button>
-      </p>
+      <EmptyState
+        role="alert"
+        title="Could not load pull request."
+        action={<button onClick={() => void details.refetch()}>Retry</button>}
+      />
     );
   const summary: PullRequestSummary = {
     ...details.data,

@@ -202,37 +202,48 @@ pub(super) async fn git_create_pr(
     Ok(json!({ "url": url }))
 }
 
-pub(super) async fn git_history(
+async fn history_root(handle: &DaemonHandle, task_id: &str) -> Result<String, wire::RpcError> {
+    handle
+        .resolve_root(task_id, None)
+        .await
+        .ok_or_else(|| history_error("no checkout for task"))
+}
+
+fn history_error(error: impl ToString) -> wire::RpcError {
+    wire::RpcError {
+        code: wire::ErrorCode::Internal,
+        message: error.to_string(),
+    }
+}
+
+pub(super) async fn git_commit_diff(
     handle: &DaemonHandle,
     task_id: String,
-    hash: Option<String>,
+    hash: String,
 ) -> Result<serde_json::Value, wire::RpcError> {
-    let fail = |message| wire::RpcError {
-        code: wire::ErrorCode::Internal,
-        message,
-    };
-    let root = handle
-        .resolve_root(&task_id, None)
+    let root = history_root(handle, &task_id).await?;
+    let files = crate::daemon::diff::commit_diff(&root, &hash)
         .await
-        .ok_or_else(|| fail("no checkout for task".into()))?;
-    if let Some(hash) = hash {
-        let files = crate::daemon::diff::commit_diff(&root, &hash)
-            .await
-            .map_err(|e| fail(e.to_string()))?;
-        Ok(json!(wire::TaskDiff {
-            task_id,
-            files,
-            ..Default::default()
-        }))
-    } else {
-        let tasks = handle.tasks().await;
-        let task = tasks
-            .iter()
-            .find(|t| t.id == task_id)
-            .ok_or_else(|| fail("task not found".into()))?;
-        let commits = crate::daemon::diff::branch_commits(&root, task.base_branch.as_deref())
-            .await
-            .map_err(|e| fail(e.to_string()))?;
-        Ok(json!(commits))
-    }
+        .map_err(history_error)?;
+    Ok(json!(wire::TaskDiff {
+        task_id,
+        files,
+        ..Default::default()
+    }))
+}
+
+pub(super) async fn git_branch_commits(
+    handle: &DaemonHandle,
+    task_id: String,
+) -> Result<serde_json::Value, wire::RpcError> {
+    let root = history_root(handle, &task_id).await?;
+    let tasks = handle.tasks().await;
+    let task = tasks
+        .iter()
+        .find(|t| t.id == task_id)
+        .ok_or_else(|| history_error("task not found"))?;
+    let commits = crate::daemon::diff::branch_commits(&root, task.base_branch.as_deref())
+        .await
+        .map_err(history_error)?;
+    Ok(json!(commits))
 }
