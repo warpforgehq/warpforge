@@ -1,3 +1,4 @@
+import { GitPullRequest } from "lucide-react";
 import { useMemo } from "react";
 
 import {
@@ -6,6 +7,7 @@ import {
   type WorkspaceSurface,
 } from "@/components/workspace";
 import { useTaskKeepers } from "@/hooks/useTaskKeepers";
+import { useTaskPullRequest } from "@/hooks/useTaskPullRequest";
 import { keepersEligible } from "@/lib/keepers";
 import { type LiveItem, liveItems, surfaceTally } from "@/lib/liveActivity";
 import { isChat } from "@/lib/taskKind";
@@ -27,6 +29,7 @@ const CHAT_SURFACES: ReadonlySet<WorkspaceSurface> = new Set(["files", "terminal
  */
 export function taskSurfaceTabs(input: {
   chat: boolean;
+  pullRequest?: boolean;
   keepers?: boolean;
   diffCount?: number;
   runtimeCount?: number;
@@ -36,11 +39,16 @@ export function taskSurfaceTabs(input: {
 }): SurfaceTab[] {
   const live = input.live ?? [];
   return (
-    DEFAULT_SURFACE_TABS
+    DEFAULT_SURFACE_TABS.flatMap((tab): SurfaceTab[] =>
+      tab.id === "diff" && input.pullRequest
+        ? [tab, { id: "pull-request", label: "Pull request", icon: GitPullRequest }]
+        : [tab],
+    )
       // Hidden unless this task actually farmed work out: an ordinary
       // single-agent task has no pipeline, and a permanently empty tab is
       // just a dead affordance on most of the screens in the app.
       .filter((tab) => tab.id !== "pipeline" || input.pipelineCount !== undefined)
+      .filter((tab) => tab.id !== "pull-request" || input.pullRequest === true)
       .filter((tab) => tab.id !== "keepers" || input.keepers === true)
       .filter((tab) => !input.chat || CHAT_SURFACES.has(tab.id))
       .map((tab) => {
@@ -74,6 +82,7 @@ export function useTaskSurfaceTabs(
   pipelineCount: number | undefined,
 ): SurfaceTab[] {
   const { portforwards, services, terminals } = snapshot;
+  const pr = useTaskPullRequest(task.id);
   const keeperState = useTaskKeepers(task.id);
   const keepers = keepersEligible(task);
   return useMemo(() => {
@@ -86,6 +95,7 @@ export function useTaskSurfaceTabs(
       items.filter((item) => item.project === task.project).length;
     return taskSurfaceTabs({
       chat,
+      pullRequest: !!pr,
       diffCount,
       keepers,
       live,
@@ -95,6 +105,7 @@ export function useTaskSurfaceTabs(
     });
   }, [
     chat,
+    pr,
     diffCount,
     keeperState,
     keepers,

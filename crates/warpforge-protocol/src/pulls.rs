@@ -73,6 +73,8 @@ pub struct PullRequestSummary {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PullRequestDetails {
+    #[serde(default)]
+    pub updated_at: u64,
     pub title: String,
     pub url: String,
     pub state: String,

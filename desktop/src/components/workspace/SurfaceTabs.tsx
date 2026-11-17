@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 export type WorkspaceSurface =
   | "files"
+  | "pull-request"
   | "diff"
   | "keepers"
   | "runtime"

@@ -38,6 +38,7 @@ export type RepositoryOperation = { taskId: string; kind: "pull" | "push" };
 /** Center-pane workspace surface. Exactly one is active per task at a time. */
 export type TaskSurface =
   | "files"
+  | "pull-request"
   | "diff"
   | "keepers"
   | "runtime"

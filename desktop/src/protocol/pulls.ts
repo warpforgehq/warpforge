@@ -42,6 +42,7 @@ export interface PullRequestSummary {
 
 /** Body-level fields of one pull request, for the detail pane. */
 export interface PullRequestDetails {
+  updatedAt?: number;
   title: string;
   url: string;
   state: string;
