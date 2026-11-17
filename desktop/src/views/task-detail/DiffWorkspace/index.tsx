@@ -1,11 +1,7 @@
 import { forwardRef } from "react";
 
 import { CommitWorkspace } from "./CommitWorkspace";
-import {
-  DiffWorkspace as WorkingWorkspace,
-  type Props,
-  type DiffWorkspaceHandle,
-} from "./WorkingWorkspace";
+import { WorkingWorkspace, type Props, type DiffWorkspaceHandle } from "./WorkingWorkspace";
 export { estimateFileHeight } from "./WorkingWorkspace";
 export type { DiffWorkspaceHandle } from "./WorkingWorkspace";
 

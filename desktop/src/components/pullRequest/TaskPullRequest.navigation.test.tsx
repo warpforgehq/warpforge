@@ -7,7 +7,7 @@ import { daemon } from "@/daemon";
 import * as clipboard from "@/lib/clipboard";
 import * as links from "@/lib/externalLinks";
 import { isInboxEntryUnseen } from "@/lib/inboxSeen";
-import type { TaskInfo, TaskPullRequest } from "@/protocol";
+import type { PullRequestSummary, TaskInfo, TaskPullRequest } from "@/protocol";
 import { useUi } from "@/store/ui";
 
 import { PullRequestTaskLink } from "./PullRequestTaskLink";
@@ -34,6 +34,24 @@ const pr: TaskPullRequest = {
   title: "Change",
   state: "open",
 };
+function summary(overrides: Partial<PullRequestSummary>): PullRequestSummary {
+  return {
+    project: "demo",
+    repo: "acme/widgets",
+    number: pr.number,
+    title: pr.title,
+    url: pr.url,
+    state: "open",
+    draft: false,
+    labels: [],
+    assignees: [],
+    baseRefName: "main",
+    headRefName: "feat/change",
+    createdAt: 0,
+    updatedAt: 0,
+    ...overrides,
+  };
+}
 function setup() {
   vi.spyOn(daemon, "getState").mockReturnValue({
     ...daemon.getState(),
@@ -106,7 +124,7 @@ it("opens the exact task PR without fetching the filtered inbox and marks it see
 it("returns from a PR to its owning task", () => {
   setup();
   useUi.setState({ openTaskId: "other-task" });
-  render(<PullRequestTaskLink pr={{ ...pr, repo: "acme/widgets" } as never} />);
+  render(<PullRequestTaskLink pr={summary({})} />);
   fireEvent.click(screen.getByText("→ task"));
   expect(useUi.getState()).toMatchObject({ openTaskId: task.id, activeSurface: "pull-request" });
 });
@@ -152,9 +170,7 @@ it.each(["Enter", " "])("honours modifiers on %s for chip and glyph", async (key
 it("matches an owning task URL regardless of case", () => {
   setup();
   render(
-    <PullRequestTaskLink
-      pr={{ ...pr, url: pr.url.toUpperCase(), repo: "elsewhere/repo" } as never}
-    />,
+    <PullRequestTaskLink pr={summary({ url: pr.url.toUpperCase(), repo: "elsewhere/repo" })} />,
   );
   expect(screen.getByText("→ task")).toBeInTheDocument();
 });

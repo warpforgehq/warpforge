@@ -88,7 +88,7 @@ export interface Props {
   onToggleCollapsed?: (path: string) => void;
 }
 
-export const DiffWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function DiffWorkspace(
+export const WorkingWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function WorkingWorkspace(
   {
     diff,
     diffError,
