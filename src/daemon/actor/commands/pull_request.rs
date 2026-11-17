@@ -29,14 +29,17 @@ impl Daemon {
                 if folder {
                     if let Some(branch) = branch {
                         let (reply, answer) = oneshot::channel();
-                        tx.send(Command::Keepers(KeeperCommand::PrCreated {
-                            task_id,
-                            branch,
-                            reply,
-                        }))
-                        .await
-                        .map_err(|e| e.to_string())?;
-                        answer.await.map_err(|e| e.to_string())??;
+                        if tx
+                            .send(Command::Keepers(KeeperCommand::PrCreated {
+                                task_id,
+                                branch,
+                                reply,
+                            }))
+                            .await
+                            .is_ok()
+                        {
+                            let _ = answer.await;
+                        }
                     }
                 }
                 Ok(url)

@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { GitPullRequest, PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import { useEffect, useState, useTransition, type RefObject } from "react";
 
+import { TaskPullRequestChip } from "@/components/pullRequest/TaskPullRequestChip";
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { PaneHeader } from "@/components/workspace";
 import { daemon } from "@/daemon";
@@ -107,7 +108,7 @@ export function DiffSurface({
   const queryClient = useQueryClient();
   const actions = useBranchActions(task);
   const pr = useTaskPullRequest(taskId);
-  const [commit, setSelection] = useState<GitBranchCommit | null>(null);
+  const [commit, setCommit] = useState<GitBranchCommit | null>(null);
   const history = useQuery({
     queryKey: ["commitDiff", taskId, commit?.hash],
     queryFn: () => daemon.commitDiff(taskId, commit!.hash),
@@ -116,11 +117,11 @@ export function DiffSurface({
   const shownDiff = commit ? (history.data ?? null) : diff;
   const branch = diff?.branch ?? actions.info?.branch;
   const prDisabled =
-    branch === "main" || branch === "master" || Boolean(branch && branch === task?.baseBranch);
+    branch === "main" || branch === "master" || Boolean(branch && branch === task.baseBranch);
   const prDisabledReason = prDisabled
     ? "Switch to a feature branch to create a pull request"
     : undefined;
-  const showPr = actions.mode === "pr" && !pr;
+  const showPr = actions.mode === "pr";
   const collapsed = useUi((s) => s.diffPanelCollapsed);
   const setCollapsed = useUi((s) => s.setDiffPanelCollapsed);
   const toggleCollapsed = useUi((s) => s.toggleDiffPanelCollapsed);
@@ -160,14 +161,16 @@ export function DiffSurface({
                   type="button"
                   aria-label="Back to working changes"
                   title="Back to working changes"
-                  onClick={() => setSelection(null)}
+                  onClick={() => setCommit(null)}
                   className="shrink-0 rounded p-0.5 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <X aria-hidden className="size-3" />
                 </button>
               </span>
             )}
-            {!pr && (
+            {pr ? (
+              <TaskPullRequestChip task={task} compact />
+            ) : (
               <button
                 type="button"
                 disabled={prDisabled}
@@ -265,7 +268,7 @@ export function DiffSurface({
                   taskId={taskId}
                   selected={commit?.hash ?? null}
                   onSelect={(picked) => {
-                    setSelection(picked);
+                    setCommit(picked);
                     actions.setMode("push");
                   }}
                   actions={actions}

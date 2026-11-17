@@ -1,12 +1,11 @@
 import { useTaskKeepers } from "@/hooks/useTaskKeepers";
 import { useTaskPullRequest } from "@/hooks/useTaskPullRequest";
-import { openExternalLink } from "@/lib/externalLinks";
 import { keeperWorst } from "@/lib/keepers";
 import { cn } from "@/lib/utils";
 
 import { KeeperDot, withKeeperLabel } from "./KeeperDot";
 import { liveChecks, PULL_CHECKS_META, PULL_STATE_META, pullRequestSummary } from "./meta";
-import { openTaskPullRequest } from "./taskPullRequestNavigation";
+import { openPullRequest } from "./taskPullRequestNavigation";
 
 /**
  * The sidebar row's pull-request mark: the state glyph in its colour, with a
@@ -22,24 +21,20 @@ export function TaskPullRequestGlyph({ taskId, receded }: { taskId: string; rece
   const Icon = meta.icon;
   const summary = withKeeperLabel(pullRequestSummary(pr), keepers);
   return (
-    <span
-      role="button"
-      tabIndex={0}
-      onClick={(event) => {
-        event.stopPropagation();
-        if (event.metaKey || event.ctrlKey) void openExternalLink(pr.url);
-        else openTaskPullRequest(taskId);
-      }}
+    <button
+      type="button"
+      onClick={(event) => openPullRequest(taskId, pr.url, event)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          event.stopPropagation();
-          openTaskPullRequest(taskId);
+          openPullRequest(taskId, pr.url, event);
         }
       }}
       data-task-pr={pr.state}
       title={summary}
-      className={cn("relative inline-flex shrink-0", receded && "opacity-50")}
+      className={cn(
+        "relative inline-flex shrink-0 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        receded && "opacity-50",
+      )}
     >
       <Icon aria-hidden className={cn("size-3", meta.toneClass)} />
       {checks && checks !== "passing" && (
@@ -54,6 +49,6 @@ export function TaskPullRequestGlyph({ taskId, receded }: { taskId: string; rece
       )}
       <KeeperDot worst={keepers} />
       <span className="sr-only">{summary}</span>
-    </span>
+    </button>
   );
 }

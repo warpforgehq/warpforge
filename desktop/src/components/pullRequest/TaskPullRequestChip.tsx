@@ -18,7 +18,7 @@ import type { TaskInfo } from "@/protocol";
 import { ArchiveMergedTaskDialog } from "./ArchiveMergedTaskDialog";
 import { KeeperDot, withKeeperLabel } from "./KeeperDot";
 import { liveChecks, PULL_CHECKS_META, PULL_STATE_META, pullRequestSummary } from "./meta";
-import { openTaskPullRequest } from "./taskPullRequestNavigation";
+import { openPullRequest, openTaskPullRequest } from "./taskPullRequestNavigation";
 
 const CHIP =
   "flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-px text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
@@ -28,8 +28,22 @@ const CHIP =
  * review inside Warpforge. Once it is merged, the next step is offered beside
  * it — archive the task and remove its worktree, after a confirmation.
  */
-export function TaskPullRequestChip({ task }: { task: TaskInfo }) {
+export function TaskPullRequestChip({
+  task,
+  compact = false,
+}: {
+  task: TaskInfo;
+  compact?: boolean;
+}) {
+  return compact ? <ChipContent task={task} compact /> : <RefreshingChip task={task} />;
+}
+
+function RefreshingChip({ task }: { task: TaskInfo }) {
   useOpenTaskPullRequestRefresh(task.id);
+  return <ChipContent task={task} compact={false} />;
+}
+
+function ChipContent({ task, compact }: { task: TaskInfo; compact: boolean }) {
   const pr = useTaskPullRequest(task.id);
   const keepers = keeperWorst(useTaskKeepers(task.id));
   const [confirming, setConfirming] = useState(false);
@@ -50,9 +64,10 @@ export function TaskPullRequestChip({ task }: { task: TaskInfo }) {
               data-task-pr={pr.state}
               aria-label={`${summary}: open in Warpforge`}
               title={pr.title}
-              onClick={(event) => {
-                if (event.metaKey || event.ctrlKey) void openExternalLink(pr.url);
-                else openTaskPullRequest(task.id);
+              onClick={(event) => openPullRequest(task.id, pr.url, event)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ")
+                  openPullRequest(task.id, pr.url, event);
               }}
               className={CHIP}
             >
@@ -94,7 +109,7 @@ export function TaskPullRequestChip({ task }: { task: TaskInfo }) {
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-      {pr.state === "merged" && task.worktree && (
+      {!compact && pr.state === "merged" && task.worktree && (
         <>
           <button type="button" onClick={() => setConfirming(true)} className={CHIP}>
             <Archive aria-hidden className="size-3 shrink-0" />

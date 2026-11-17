@@ -5,6 +5,7 @@ import { TaskLiveGlyph } from "@/components/liveActivity/LiveActivityGlyph";
 import { TaskPullRequestGlyph } from "@/components/pullRequest/TaskPullRequestGlyph";
 import { TaskAgentMark } from "@/components/TaskSmith";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTaskPullRequest } from "@/hooks/useTaskPullRequest";
 import { isFactoryTask } from "@/lib/factory";
 import { elapsed } from "@/lib/status";
 import { isOrchestratorTask } from "@/lib/taskGroups";
@@ -95,6 +96,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
   const receded = state === "snoozed" || state === "settled" || state === "done";
   const orchestrator = isOrchestratorTask(task, childCount);
   const factory = isFactoryTask(task);
+  const pr = useTaskPullRequest(task.id);
   const pipeline = factory && (childCount > 0 || task.workflowRun != null);
 
   return (
@@ -152,7 +154,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
             </span>
             <TaskLiveGlyph project={task.project} taskId={task.id} receded={receded} />
             {factory && <FactoryStageChip task={task} receded={receded} />}
-            {!factory && <TaskPullRequestGlyph taskId={task.id} receded={receded} />}
+            {!factory && pr && <span aria-hidden className="size-3 shrink-0" />}
             {pipeline ? (
               <span
                 title={
@@ -206,6 +208,15 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
           />
         </TooltipContent>
       </Tooltip>
+
+      {!factory && pr && (
+        <div
+          className="absolute top-1/2 flex -translate-y-1/2"
+          style={{ right: 6 + LANE_META_PX + 8 + (pipeline || orchestrator ? 20 : 0) }}
+        >
+          <TaskPullRequestGlyph taskId={task.id} receded={receded} />
+        </div>
+      )}
 
       {childCount > 0 && (
         <button

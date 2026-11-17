@@ -7,8 +7,8 @@ import { daemon } from "@/daemon";
 import { cn } from "@/lib/utils";
 import type { GitBranchCommit } from "@/protocol";
 
+import { HistoryListSkeleton } from "./HistoryListSkeleton";
 import { PushFooter } from "./PushFooter";
-import { PushPreviewSkeleton } from "./PushPreviewSkeleton";
 import { branchCommitsKey } from "./useBranchActions";
 import type { useBranchActions } from "./useBranchActions";
 
@@ -56,7 +56,7 @@ export function CommitsPanel({
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto py-1">
-        {query.isPending && <PushPreviewSkeleton />}
+        {query.isPending && <HistoryListSkeleton />}
         {query.error && <EmptyState compact role="alert" title={query.error.message} />}
         {query.data?.length === 0 && <EmptyState compact title="No commits relative to base." />}
         {query.data?.map((commit) => {

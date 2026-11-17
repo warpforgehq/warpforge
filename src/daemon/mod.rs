@@ -43,6 +43,7 @@ pub mod smiths;
 pub mod spend;
 pub mod store;
 pub mod task;
+pub(crate) mod task_owner;
 pub mod tracker;
 pub mod wire;
 pub mod workflow;

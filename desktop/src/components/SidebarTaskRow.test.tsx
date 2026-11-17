@@ -254,3 +254,12 @@ describe("SidebarTaskRow live activity", () => {
     expect(container.querySelector("[data-live-activity]")).toBeNull();
   });
 });
+
+it("places the PR control outside the task row button", () => {
+  renderRow(base);
+  pushPullRequest(pullRequest());
+  const taskButton = screen.getByRole("button", { name: "Open task: Do the thing" });
+  const prButton = screen.getByRole("button", { name: /PR #52/ });
+  expect(taskButton).not.toContainElement(prButton);
+  expect(prButton.tagName).toBe("BUTTON");
+});
