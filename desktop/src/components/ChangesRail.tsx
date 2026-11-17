@@ -62,7 +62,7 @@ export function ChangesRail({
   } | null>(null);
 
   const tabs: { id: RailTab; label: string }[] = [
-    { id: "commits", label: "Commits" },
+    { id: "commits", label: "History" },
     { id: "commit", label: "Commit" },
     { id: "shelf", label: "Shelf" },
     { id: "stash", label: "Stash" },

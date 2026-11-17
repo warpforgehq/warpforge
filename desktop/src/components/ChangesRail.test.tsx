@@ -81,6 +81,12 @@ function renderRail(ui: ReactElement) {
 }
 
 describe("ChangesRail commit flow", () => {
+  it("labels the branch history tab History", () => {
+    renderRail(<ChangesRail {...baseProps} files={[]} />);
+    expect(screen.getByRole("tab", { name: "History" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Commits" })).not.toBeInTheDocument();
+  });
+
   beforeEach(() => {
     stubDaemon();
   });

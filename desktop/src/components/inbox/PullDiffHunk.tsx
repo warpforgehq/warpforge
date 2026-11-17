@@ -15,7 +15,7 @@ export const ROW_HEIGHT_PX = 20;
  * `content-visibility` skips painting them but not creating them, which is why
  * off-screen hunks stand in here as a spacer instead.
  */
-export function PullDiffHunk({
+export const PullDiffHunk = React.memo(function PullDiffHunk({
   pinned,
   ...props
 }: PullDiffLinesProps & {
@@ -52,8 +52,12 @@ export function PullDiffHunk({
 
   const mounted = near || pinned;
   return (
-    <div ref={spacer} style={mounted ? undefined : { height: height.current }}>
+    <div
+      data-hunk-id={hunk.id}
+      ref={spacer}
+      style={mounted ? undefined : { height: height.current }}
+    >
       {mounted ? <PullDiffLines {...props} /> : null}
     </div>
   );
-}
+});

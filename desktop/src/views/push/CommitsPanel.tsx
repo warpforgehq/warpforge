@@ -32,7 +32,7 @@ export function CommitsPanel({
   });
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-9 shrink-0 items-center gap-2 border-b px-3 text-xs text-muted-foreground">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-b px-2 text-[11px] text-muted-foreground">
         <GitCommitHorizontal aria-hidden className="size-3.5" />
         <span className="min-w-0 flex-1 truncate">{actions.info?.branch ?? "Branch commits"}</span>
         <button
@@ -52,7 +52,7 @@ export function CommitsPanel({
           />
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto p-2">
+      <div className="min-h-0 flex-1 overflow-auto py-1">
         {query.isPending && <p className="p-3">Loading commits…</p>}
         {query.error && (
           <p
@@ -70,25 +70,26 @@ export function CommitsPanel({
             aria-pressed={selected === commit.hash}
             onClick={() => onSelect(commit)}
             className={cn(
-              "flex w-full items-start gap-2 rounded-md px-3 py-2 text-left transition-colors",
-              selected === commit.hash ? "bg-primary/15 text-foreground" : "hover:bg-secondary/60",
-              !commit.pushed && selected !== commit.hash && "bg-primary/5",
+              "flex w-full items-start gap-2 px-2 py-1 text-left transition-colors",
+              selected === commit.hash ? "bg-accent text-foreground" : "hover:bg-accent/50",
             )}
           >
             {commit.pushed ? (
               <CloudCheck
                 aria-label="Pushed"
-                className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                className="mt-0.5 size-3 shrink-0 text-muted-foreground"
               />
             ) : (
-              <ArrowUp aria-label="Unpushed" className="mt-0.5 size-4 shrink-0 text-primary" />
+              <ArrowUp aria-label="Unpushed" className="mt-0.5 size-3 shrink-0 text-primary" />
             )}
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm">{commit.subject}</span>
-              <span className="mt-0.5 flex items-center gap-2 text-[13px] text-muted-foreground">
+              <span className="block truncate text-[13px]">{commit.subject}</span>
+              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                 <span className="font-mono">{commit.shortHash}</span>
+                <span aria-hidden>·</span>
                 <span className="truncate">{commit.author}</span>
-                <time className="ml-auto shrink-0" dateTime={commit.date} title={commit.date}>
+                <span aria-hidden>·</span>
+                <time className="shrink-0" dateTime={commit.date} title={commit.date}>
                   {Number.isFinite(Date.parse(commit.date))
                     ? relativeTime(Date.parse(commit.date))
                     : ""}

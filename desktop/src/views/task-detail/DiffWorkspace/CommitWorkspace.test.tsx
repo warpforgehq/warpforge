@@ -40,6 +40,11 @@ it("renders the historical patch without fetching working file contents or offer
       onSendToChat={() => {}}
     />,
   );
+  expect(screen.getByRole("button", { name: "removed.txt" })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  expect(screen.queryByRole("button", { name: /comment|viewed/i })).not.toBeInTheDocument();
   expect(screen.getByText("old historical content")).toBeInTheDocument();
   expect(screen.getByText("new historical content")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /accept|reject|save/i })).not.toBeInTheDocument();

@@ -30,7 +30,7 @@ interface Props {
  * @param branch the task's current branch, when known
  * @param repositoryOperation the pull or push in flight, if any
  * @param onOpenCommit opens the commit dialog
- * @param onOpenPush opens Diff → Commits
+ * @param onOpenPush opens Diff → History
  */
 export function TaskStatusStrip({
   task,
