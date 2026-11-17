@@ -75,11 +75,14 @@ vi.mock("@/components/pullRequest/TaskPullRequestChip", () => ({
 vi.mock("../push/useBranchActions", () => ({
   branchCommitsKey: (taskId: string) => ["branchCommits", taskId],
   useBranchActions: () => ({
-    info: null,
+    info: {
+      branch: "feature",
+      upstream: "origin/feature",
+      hasUpstream: false,
+      commits: [{ hash: "abc" }],
+    },
     loading: false,
     pushing: null,
-    menuOpen: false,
-    setMenuOpen: () => {},
     repositoryOperation: null,
     error: null,
     mode: "push",
@@ -142,6 +145,7 @@ describe("DiffSurface", () => {
     fixture.pr = null;
     renderSurface({ diff: taskDiff(1) });
     await userEvent.click(await screen.findByRole("button", { name: /Feature/ }));
+    expect(screen.getByRole("button", { name: "Push ↑1" })).toBeEnabled();
     expect(await screen.findByRole("button", { name: "historical.ts" })).toBeInTheDocument();
     expect(screen.getByText("before")).toBeInTheDocument();
     expect(screen.getByText("after")).toBeInTheDocument();
@@ -226,11 +230,9 @@ describe("DiffSurface", () => {
   });
 });
 
-it("disables the History Create PR action for an existing PR", () => {
+it("hides the History Create PR action for an existing PR", () => {
   fixture.pr = { number: 12 };
   renderSurface({ diff: { ...taskDiff(1), branch: "feature" } });
-  const button = screen.getByRole("button", { name: "Create PR" });
-  expect(button).toBeDisabled();
-  expect(button).toHaveAttribute("title", "This task already has a pull request");
+  expect(screen.queryByRole("button", { name: "Create PR" })).not.toBeInTheDocument();
   fixture.pr = null;
 });

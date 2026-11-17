@@ -278,6 +278,7 @@ export function DiffSurface({
                     actions.setMode("push");
                   }}
                   actions={actions}
+                  hasPr={Boolean(pr)}
                   createPrDisabledReason={prCreationReason}
                   onCreatePr={() => actions.setMode("pr")}
                 />

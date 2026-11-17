@@ -19,6 +19,7 @@ export function CommitsPanel({
   actions,
   onCreatePr,
   createPrDisabledReason,
+  hasPr,
 }: {
   taskId: string;
   selected: string | null;
@@ -26,6 +27,7 @@ export function CommitsPanel({
   actions: ReturnType<typeof useBranchActions>;
   onCreatePr: () => void;
   createPrDisabledReason?: string;
+  hasPr?: boolean;
 }) {
   const queryClient = useQueryClient();
   const query = useQuery({
@@ -101,8 +103,7 @@ export function CommitsPanel({
         info={actions.info}
         loading={actions.loading}
         pushing={actions.pushing}
-        menuOpen={actions.menuOpen}
-        onMenuOpenChange={actions.setMenuOpen}
+        hasPr={hasPr}
         repositoryOperation={actions.repositoryOperation}
         createPrDisabledReason={createPrDisabledReason}
         onCreatePr={onCreatePr}
