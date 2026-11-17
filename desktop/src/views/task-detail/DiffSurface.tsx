@@ -46,12 +46,7 @@ export function DiffSkeleton({ files }: { files: readonly FileDiff[] }) {
   );
 }
 
-function prCreationDisabledReason(
-  branch: string | undefined,
-  base: string | null | undefined,
-  hasPr: boolean,
-) {
-  if (hasPr) return "This task already has a pull request";
+function prCreationDisabledReason(branch: string | undefined, base: string | null | undefined) {
   if (branch === "main" || branch === "master" || Boolean(branch && branch === base)) {
     return "Switch to a feature branch to create a pull request";
   }
@@ -127,7 +122,7 @@ export function DiffSurface({
   });
   const shownDiff = commit ? (history.data ?? null) : diff;
   const branch = diff?.branch ?? actions.info?.branch;
-  const prCreationReason = prCreationDisabledReason(branch, task.baseBranch, Boolean(pr));
+  const prCreationReason = prCreationDisabledReason(branch, task.baseBranch);
   const collapsed = useUi((s) => s.diffPanelCollapsed);
   const setCollapsed = useUi((s) => s.setDiffPanelCollapsed);
   const toggleCollapsed = useUi((s) => s.toggleDiffPanelCollapsed);

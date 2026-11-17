@@ -21,7 +21,7 @@ function footer(overrides: Partial<React.ComponentProps<typeof PushFooter>> = {}
     <PushFooter
       info={info}
       loading={false}
-      pushing={null}
+      pushing={false}
       repositoryOperation={null}
       onCreatePr={() => {}}
       onPush={onPush}

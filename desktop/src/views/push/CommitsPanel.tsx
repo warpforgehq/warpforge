@@ -102,7 +102,7 @@ export function CommitsPanel({
       <PushFooter
         info={actions.info}
         loading={actions.loading}
-        pushing={actions.pushing}
+        pushing={Boolean(actions.pushing)}
         hasPr={hasPr}
         repositoryOperation={actions.repositoryOperation}
         createPrDisabledReason={createPrDisabledReason}
