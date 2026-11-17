@@ -240,6 +240,7 @@ export default function PushDialog({ open, onOpenChange, task }: Props) {
             setPrBase={setPrBase}
             generatingPr={generatingPr}
             textGenAgentId={textGenAgentId}
+            error={error}
             onGenerate={() => void generatePr()}
           />
         )}

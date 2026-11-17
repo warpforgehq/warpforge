@@ -13,6 +13,7 @@ interface PrFormProps {
   setPrBase: (v: string) => void;
   generatingPr: boolean;
   textGenAgentId: string | null;
+  error: string | null;
   onGenerate: () => void;
 }
 
@@ -27,6 +28,7 @@ export function PrForm({
   setPrBase,
   generatingPr,
   textGenAgentId,
+  error,
   onGenerate,
 }: PrFormProps) {
   return (
@@ -69,7 +71,7 @@ export function PrForm({
             aria-label="Draft pull request title and description"
             title={
               textGenAgentId
-                ? "Draft the title and description from the outgoing commits"
+                ? "Draft the title and description from the branch's commits"
                 : "Pick a text-generation agent in Settings first"
             }
             onClick={onGenerate}
@@ -82,6 +84,14 @@ export function PrForm({
           </button>
         </div>
       </label>
+      {error && (
+        <div
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+        >
+          {error}
+        </div>
+      )}
       <label className="flex flex-col gap-1.5">
         <span className="text-[13px] font-medium text-muted-foreground">
           Base branch <span className="text-muted-foreground/60">(optional)</span>
