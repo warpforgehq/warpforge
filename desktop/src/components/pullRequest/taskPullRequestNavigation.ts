@@ -1,4 +1,4 @@
-import type { KeyboardEvent, MouseEvent } from "react";
+import type { MouseEvent } from "react";
 
 import { openExternalLink } from "@/lib/externalLinks";
 import { useUi } from "@/store/ui";
@@ -10,8 +10,8 @@ export function openTaskPullRequest(taskId: string) {
   useUi.setState({ activeSurface: "pull-request", showDiff: true, sidebarMode: "tasks" });
 }
 
-/** Activate a task PR consistently from pointer and keyboard controls. */
-export function openPullRequest(taskId: string, url: string, event: MouseEvent | KeyboardEvent) {
+/** Activate a task PR on click, including keyboard-initiated clicks. */
+export function openPullRequest(taskId: string, url: string, event: MouseEvent) {
   event.preventDefault();
   event.stopPropagation();
   if (event.metaKey || event.ctrlKey) void openExternalLink(url);
