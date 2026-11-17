@@ -118,10 +118,11 @@ export function DiffSurface({
   const branch = diff?.branch ?? actions.info?.branch;
   const prDisabled =
     branch === "main" || branch === "master" || Boolean(branch && branch === task.baseBranch);
-  const prDisabledReason = prDisabled
-    ? "Switch to a feature branch to create a pull request"
-    : undefined;
-  const showPr = actions.mode === "pr";
+  const prDisabledReason = pr
+    ? "This task already has a pull request"
+    : prDisabled
+      ? "Switch to a feature branch to create a pull request"
+      : undefined;
   const collapsed = useUi((s) => s.diffPanelCollapsed);
   const setCollapsed = useUi((s) => s.setDiffPanelCollapsed);
   const toggleCollapsed = useUi((s) => s.toggleDiffPanelCollapsed);
@@ -218,7 +219,7 @@ export function DiffSurface({
       <PanelGroup orientation="horizontal" className="min-h-0 min-w-0 flex-1">
         <Panel pin className="min-h-0 min-w-0">
           <DiffNotesBar onJump={(path) => diffWorkspaceRef.current?.scrollToFile(path)} />
-          {showPr ? (
+          {actions.mode === "pr" ? (
             <InlinePrPanel
               actions={actions}
               taskId={taskId}
@@ -273,9 +274,7 @@ export function DiffSurface({
                   }}
                   actions={actions}
                   createPrDisabledReason={prDisabledReason}
-                  onCreatePr={() => {
-                    if (!prDisabled) actions.setMode("pr");
-                  }}
+                  onCreatePr={() => actions.setMode("pr")}
                 />
               }
               project={project}

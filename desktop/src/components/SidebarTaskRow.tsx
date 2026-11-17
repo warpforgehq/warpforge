@@ -5,7 +5,6 @@ import { TaskLiveGlyph } from "@/components/liveActivity/LiveActivityGlyph";
 import { TaskPullRequestGlyph } from "@/components/pullRequest/TaskPullRequestGlyph";
 import { TaskAgentMark } from "@/components/TaskSmith";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useTaskPullRequest } from "@/hooks/useTaskPullRequest";
 import { isFactoryTask } from "@/lib/factory";
 import { elapsed } from "@/lib/status";
 import { isOrchestratorTask } from "@/lib/taskGroups";
@@ -38,7 +37,7 @@ import { RowActions } from "./Sidebar/TaskRowActions";
  *
  * Every lane is fixed and shared (spec 08 §C.1): the gutter is `depth × 12px`
  * with the tree rail absolutely positioned inside it, then a 16px twisty lane,
- * a 16px glyph, the flexing title, and a 68px meta lane. Indent is the button's
+ * a 16px glyph, the flexing title, and a 68px meta lane. Indent is the row's
  * `padding-left`, so the row fills the list width and hover/active never
  * stair-step; it is not `margin-left`.
  *
@@ -96,7 +95,6 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
   const receded = state === "snoozed" || state === "settled" || state === "done";
   const orchestrator = isOrchestratorTask(task, childCount);
   const factory = isFactoryTask(task);
-  const pr = useTaskPullRequest(task.id);
   const pipeline = factory && (childCount > 0 || task.workflowRun != null);
 
   return (
@@ -109,12 +107,10 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
       />
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
-            type="button"
-            data-task-id={task.id}
+          <div
+            data-task-row={task.id}
             data-task-state={state}
             onClick={() => onOpen(task.id)}
-            aria-label={`Open task: ${label}`}
             style={{ paddingLeft: sidebarContentLeft(depth) }}
             className={cn(
               "flex h-8 w-full items-center gap-2 rounded-md pr-1.5 text-left transition-colors",
@@ -122,39 +118,47 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
               active ? "font-medium text-foreground" : "hover:bg-accent/60",
             )}
           >
-            {/* Inline, not a reserved lane: most rows are silent, so a
+            <button
+              type="button"
+              data-task-id={task.id}
+              data-task-state={state}
+              aria-label={`Open task: ${label}`}
+              className="flex min-w-0 flex-1 items-center gap-2 self-stretch text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+            >
+              {/* Inline, not a reserved lane: most rows are silent, so a
                 placeholder column would indent the whole list for the minority
                 that draws one. Its box is the glyph lane, so a glyphed title
                 lands on the project name's column. */}
-            {meta.rowGlyph && (
-              // WKWebView can stall a spin on a bare <svg> until something else
-              // repaints; an HTML box with its own layer keeps it on the compositor.
+              {meta.rowGlyph && (
+                // WKWebView can stall a spin on a bare <svg> until something else
+                // repaints; an HTML box with its own layer keeps it on the compositor.
+                <span
+                  aria-hidden
+                  data-task-glyph={state}
+                  style={{ height: LANE_GLYPH_PX, width: LANE_GLYPH_PX }}
+                  className={cn(
+                    "inline-flex shrink-0",
+                    meta.toneClass,
+                    meta.live &&
+                      "animate-[spin_3s_linear_infinite] will-change-transform motion-reduce:animate-none",
+                  )}
+                >
+                  <StateIcon className="size-full" />
+                </span>
+              )}
               <span
-                aria-hidden
-                data-task-glyph={state}
-                style={{ height: LANE_GLYPH_PX, width: LANE_GLYPH_PX }}
+                data-lane="title"
                 className={cn(
-                  "inline-flex shrink-0",
-                  meta.toneClass,
-                  meta.live &&
-                    "animate-[spin_3s_linear_infinite] will-change-transform motion-reduce:animate-none",
+                  "min-w-0 flex-1 truncate text-[13px] leading-none",
+                  active ? "font-medium text-foreground" : meta.titleClass,
                 )}
               >
-                <StateIcon className="size-full" />
+                {label}
               </span>
-            )}
-            <span
-              data-lane="title"
-              className={cn(
-                "min-w-0 flex-1 truncate text-[13px] leading-none",
-                active ? "font-medium text-foreground" : meta.titleClass,
-              )}
-            >
-              {label}
-            </span>
-            <TaskLiveGlyph project={task.project} taskId={task.id} receded={receded} />
-            {factory && <FactoryStageChip task={task} receded={receded} />}
-            {!factory && pr && <span aria-hidden className="size-3 shrink-0" />}
+              <TaskLiveGlyph project={task.project} taskId={task.id} receded={receded} />
+              {factory && <FactoryStageChip task={task} receded={receded} />}
+            </button>
+            {!factory && <TaskPullRequestGlyph taskId={task.id} receded={receded} />}
             {pipeline ? (
               <span
                 title={
@@ -197,7 +201,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
                 </span>
               )}
             </span>
-          </button>
+          </div>
         </TooltipTrigger>
         <TooltipContent side="right" align="start" sideOffset={10} className="p-2">
           <SidebarTaskTooltipBody
@@ -208,15 +212,6 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
           />
         </TooltipContent>
       </Tooltip>
-
-      {!factory && pr && (
-        <div
-          className="absolute top-1/2 flex -translate-y-1/2"
-          style={{ right: 6 + LANE_META_PX + 8 + (pipeline || orchestrator ? 20 : 0) }}
-        >
-          <TaskPullRequestGlyph taskId={task.id} receded={receded} />
-        </div>
-      )}
 
       {childCount > 0 && (
         <button

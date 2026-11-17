@@ -65,10 +65,6 @@ function ChipContent({ task, compact }: { task: TaskInfo; compact: boolean }) {
               aria-label={`${summary}: open in Warpforge`}
               title={pr.title}
               onClick={(event) => openPullRequest(task.id, pr.url, event)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ")
-                  openPullRequest(task.id, pr.url, event);
-              }}
               className={CHIP}
             >
               <span className="relative inline-flex shrink-0">

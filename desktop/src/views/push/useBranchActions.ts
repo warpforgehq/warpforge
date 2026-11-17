@@ -45,9 +45,6 @@ export function useBranchActions(task: TaskInfo) {
 
   const taskId = task.id;
   const load = useCallback(async () => {
-    if (!taskId) {
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
@@ -71,13 +68,6 @@ export function useBranchActions(task: TaskInfo) {
   }, [taskId]);
 
   useEffect(() => {
-    setInfo(null);
-    setError(null);
-    setMode("push");
-    setPrTitle("");
-    setPrBody("");
-    setPrBodyEdited(false);
-    setPrBase("");
     void load();
   }, [load]);
 

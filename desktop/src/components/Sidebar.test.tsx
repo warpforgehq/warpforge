@@ -185,7 +185,8 @@ function taskRows(id?: string) {
   return screen
     .getAllByRole("button")
     .filter((el) => el.hasAttribute("data-task-id"))
-    .filter((el) => (id ? el.getAttribute("data-task-id") === id : true));
+    .filter((el) => (id ? el.getAttribute("data-task-id") === id : true))
+    .map((el) => el.closest<HTMLElement>("[data-task-row]")!);
 }
 
 function rowState(id: string): string | null {

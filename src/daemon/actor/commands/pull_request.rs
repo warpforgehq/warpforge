@@ -26,20 +26,18 @@ impl Daemon {
                 let url = crate::daemon::diff::create_pr(&path, &title, &body, base.as_deref())
                     .await
                     .map_err(|e| e.to_string())?;
-                if folder {
-                    if let Some(branch) = branch {
-                        let (reply, answer) = oneshot::channel();
-                        if tx
-                            .send(Command::Keepers(KeeperCommand::PrCreated {
-                                task_id,
-                                branch,
-                                reply,
-                            }))
-                            .await
-                            .is_ok()
-                        {
-                            let _ = answer.await;
-                        }
+                if let (true, Some(branch)) = (folder, branch) {
+                    let (reply, answer) = oneshot::channel();
+                    if tx
+                        .send(Command::Keepers(KeeperCommand::PrCreated {
+                            task_id,
+                            branch,
+                            reply,
+                        }))
+                        .await
+                        .is_ok()
+                    {
+                        let _ = answer.await;
                     }
                 }
                 Ok(url)

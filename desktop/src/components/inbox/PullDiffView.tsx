@@ -145,7 +145,7 @@ export function PullDiffView({
    */
   const toggleViewed = React.useCallback(
     (path: string) => {
-      const next = !viewed.has(path);
+      const next = !viewedRef.current.has(path);
       setPullFileViewed(prKey, path, fingerprints.get(path) ?? "", next);
       // Falling back to the derived default folds a freshly viewed file and
       // reopens a freshly unticked one; any manual fold the reviewer chose
@@ -157,7 +157,7 @@ export function PullDiffView({
         return cleared;
       });
     },
-    [fingerprints, prKey, viewed],
+    [fingerprints, prKey],
   );
   const [activePath, setActivePath] = React.useState<string | null>(blocks[0]?.path ?? null);
   const { draft, onComment, setDraft } = usePullLineDraft();
