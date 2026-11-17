@@ -19,7 +19,6 @@ export function useBranchActions(task: TaskInfo) {
   const [info, setInfo] = useState<GitPushInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [pushing, setPushing] = useState<"push" | "force" | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [mode, setMode] = useState<"push" | "pr">("push");
@@ -74,7 +73,6 @@ export function useBranchActions(task: TaskInfo) {
     if (pushing || repositoryOperation) {
       return;
     }
-    setMenuOpen(false);
     setPushing(force ? "force" : "push");
     setRepositoryOperation({ kind: "push", taskId: task.id });
     try {
@@ -185,8 +183,6 @@ export function useBranchActions(task: TaskInfo) {
     info,
     loading,
     pushing,
-    menuOpen,
-    setMenuOpen,
     error,
     generateError,
     mode,
