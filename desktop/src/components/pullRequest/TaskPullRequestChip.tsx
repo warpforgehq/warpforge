@@ -21,7 +21,7 @@ const CHIP =
  * it — archive the task and remove its worktree, after a confirmation.
  */
 export function TaskPullRequestChip({ task }: { task: TaskInfo }) {
-  useOpenTaskPullRequestRefresh(task.id, Boolean(task.worktree));
+  useOpenTaskPullRequestRefresh(task.id);
   const pr = useTaskPullRequest(task.id);
   const keepers = keeperWorst(useTaskKeepers(task.id));
   const [confirming, setConfirming] = useState(false);

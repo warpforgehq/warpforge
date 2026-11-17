@@ -117,6 +117,26 @@ describe("task pull request", () => {
     expect(container.querySelector("[data-task-keepers]")).toBeNull();
   });
 
+  it("refreshes and renders an owned project-folder task", () => {
+    const request = vi.spyOn(daemon, "request").mockResolvedValue({ pullRequests: {} });
+    const folder = {
+      ...task,
+      worktree: undefined,
+    };
+    const { container } = render(
+      <>
+        <TaskPullRequestGlyph taskId={folder.id} receded={false} />
+        <TaskPullRequestChip task={folder} />
+      </>,
+    );
+    expect(request).toHaveBeenCalledWith("task.pullRequests", {
+      task_ids: [folder.id],
+      max_age_secs: 15,
+    });
+    push(pr());
+    expect(container.querySelectorAll("[data-task-pr='open']")).toHaveLength(2);
+  });
+
   it("offers archiving a merged task, and removes the worktree only once confirmed", async () => {
     const user = userEvent.setup();
     vi.spyOn(daemon, "request").mockResolvedValue({ pullRequests: {} });
