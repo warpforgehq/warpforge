@@ -24,8 +24,6 @@ export interface AppDialogs {
   newTaskOptions: NewTaskOptions;
   /** A project added while the composer was open; it switches to it. */
   newTaskAddedProject: string | null;
-  pushOpen: boolean;
-  setPushOpen: (open: boolean) => void;
   addProjectOpen: boolean;
   setAddProjectOpen: (open: boolean) => void;
   wizardProject: string | null;
@@ -55,7 +53,6 @@ export function useAppDialogs(): AppDialogs {
   // The app launches on the new-task composer.
   const [newTaskOpen, setNewTaskOpen] = useState(true);
   const [newTaskAddedProject, setNewTaskAddedProject] = useState<string | null>(null);
-  const [pushOpen, setPushOpen] = useState(false);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   const [wizardProject, setWizardProject] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -116,8 +113,6 @@ export function useAppDialogs(): AppDialogs {
     newTaskBacklogItemId,
     newTaskOptions,
     newTaskAddedProject,
-    pushOpen,
-    setPushOpen,
     addProjectOpen,
     setAddProjectOpen,
     wizardProject,

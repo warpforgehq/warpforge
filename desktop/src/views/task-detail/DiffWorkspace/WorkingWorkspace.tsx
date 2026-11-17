@@ -14,21 +14,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { saveFile } from "@/lib/saveFile";
 
-import type { EditHunk, FileDiff, HunkResolution, TaskDiff } from "../../protocol";
-import { fileAnchor, hunkKey } from "./diffAnchors";
-import { estimateFileHeight, fileRowKey, measureDiffRow } from "./diffRowLayout";
-import { DiffSkeleton } from "./DiffSurface";
-import { matchingHunkIndexes } from "./editHunkMatch";
-import { EditorSkeleton } from "./EditorSkeleton";
-import { FileDiffSkeleton } from "./FileDiffSkeleton";
-import { pinToTop } from "./pinToTop";
-import { useSplitFileQueries } from "./useTaskQueries";
+import type { EditHunk, FileDiff, HunkResolution, TaskDiff } from "../../../protocol";
+import { fileAnchor, hunkKey } from "../diffAnchors";
+import { estimateFileHeight, fileRowKey, measureDiffRow } from "../diffRowLayout";
+import { DiffSkeleton } from "../DiffSurface";
+import { matchingHunkIndexes } from "../editHunkMatch";
+import { EditorSkeleton } from "../EditorSkeleton";
+import { FileDiffSkeleton } from "../FileDiffSkeleton";
+import { pinToTop } from "../pinToTop";
+import { useSplitFileQueries } from "../useTaskQueries";
 
 const MergeDiff = lazy(async () => ({
-  default: (await import("../../components/MergeDiff")).MergeDiff,
+  default: (await import("../../../components/MergeDiff")).MergeDiff,
 }));
 const UnifiedDiff = lazy(async () => ({
-  default: (await import("../../components/UnifiedDiff")).UnifiedDiff,
+  default: (await import("../../../components/UnifiedDiff")).UnifiedDiff,
 }));
 const EMPTY_DIFF_FILES: FileDiff[] = [];
 
@@ -70,7 +70,7 @@ export interface DiffWorkspaceHandle {
   explicitScrollNonce: () => number;
 }
 
-interface Props {
+export interface Props {
   diff: TaskDiff | null;
   diffError: string | null;
   diffView: "unified" | "split";

@@ -12,8 +12,8 @@ interface PushFooterProps {
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   repositoryOperation: RepositoryOperation | null;
-  onCancel: () => void;
   onCreatePr: () => void;
+  createPrDisabledReason?: string;
   onPush: (force: boolean) => void;
 }
 
@@ -24,12 +24,12 @@ export function PushFooter({
   menuOpen,
   onMenuOpenChange,
   repositoryOperation,
-  onCancel,
   onCreatePr,
+  createPrDisabledReason,
   onPush,
 }: PushFooterProps) {
   return (
-    <footer className="flex h-[72px] shrink-0 items-center border-t bg-card/50 px-5">
+    <footer className="flex shrink-0 flex-col gap-2 border-t bg-card/50 p-3">
       <div className="min-w-0 text-[13px] text-muted-foreground">
         {info && !info.hasUpstream && info.commits.length > 0 && (
           <span>
@@ -43,16 +43,13 @@ export function PushFooter({
           </span>
         )}
       </div>
-      <div className="ml-auto flex items-center gap-3">
-        <Button type="button" variant="outline" disabled={Boolean(pushing)} onClick={onCancel}>
-          Cancel
-        </Button>
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
           variant="secondary"
-          disabled={!info || loading || Boolean(pushing)}
+          disabled={!info || loading || Boolean(pushing) || Boolean(createPrDisabledReason)}
           onClick={onCreatePr}
-          title="Open a pull request for this branch"
+          title={createPrDisabledReason ?? "Open a pull request for this branch"}
         >
           <GitPullRequestArrow className="size-4" />
           Create PR

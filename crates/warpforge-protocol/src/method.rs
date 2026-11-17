@@ -953,6 +953,10 @@ pub enum Method {
     /// Describe the commits and files that would be sent by `git.push`.
     #[serde(rename = "git.pushInfo")]
     GitPushInfo { task_id: String },
+    #[serde(rename = "git.branchCommits")]
+    GitBranchCommits { task_id: String },
+    #[serde(rename = "git.commitDiff")]
+    GitCommitDiff { task_id: String, hash: String },
     /// Full message of the task repo's latest commit, for pre-filling an amend.
     /// Returns `{ message }`, empty when the repo has no commits yet.
     #[serde(rename = "git.lastCommitMessage")]

@@ -1,5 +1,7 @@
 import type {
   AdvisorPick,
+  GitBranchCommit,
+  TaskDiff,
   ChatFolder,
   DeleteSettledResult,
   ExternalSession,
@@ -11,6 +13,13 @@ import type { Constructor } from "./types";
 
 export function TaskMethods<TBase extends Constructor<CoreClient>>(Base: TBase) {
   return class extends Base {
+    branchCommits(taskId: string): Promise<GitBranchCommit[]> {
+      return this.request("git.branchCommits", { task_id: taskId }) as Promise<GitBranchCommit[]>;
+    }
+    commitDiff(taskId: string, hash: string): Promise<TaskDiff> {
+      return this.request("git.commitDiff", { task_id: taskId, hash }) as Promise<TaskDiff>;
+    }
+
     /**
      * Create a task. `origin` marks a task a surface owns rather than the board
      * — `pr-review` for the PR Assistant's conversation, which is filtered out

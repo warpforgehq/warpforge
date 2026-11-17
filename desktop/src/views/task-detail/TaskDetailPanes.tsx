@@ -265,6 +265,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
           {activeSurface === "diff" && (
             <DiffNotesProvider key={task.id} task={task}>
               <DiffSurface
+                task={task}
                 diff={diff}
                 diffError={diffError}
                 diffView={diffView}

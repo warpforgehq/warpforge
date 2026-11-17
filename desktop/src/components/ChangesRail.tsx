@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import { useBranchNavigation } from "@/views/push/branchNavigation";
 
 import type { FileDiff } from "../protocol";
 import { CommitPane } from "./changes/CommitPane";
@@ -8,7 +9,7 @@ import { ShelfTab } from "./changes/ShelfTab";
 import { ShelveDialog } from "./changes/ShelveDialog";
 import { StashTab } from "./changes/StashTab";
 
-type RailTab = "commit" | "shelf" | "stash";
+type RailTab = "commits" | "commit" | "shelf" | "stash";
 
 /**
  * Changes rail shell: Commit / Shelf / Stash tabs around the panes that do
@@ -17,6 +18,7 @@ type RailTab = "commit" | "shelf" | "stash";
  * placeholder until stash support lands.
  */
 export function ChangesRail({
+  commitsPanel,
   project,
   files,
   untrackedPaths,
@@ -30,6 +32,7 @@ export function ChangesRail({
   onCommitted,
   onRefresh,
 }: {
+  commitsPanel?: ReactNode;
   project: string;
   files: FileDiff[];
   /** Paths within `files` that git does not track yet. */
@@ -49,12 +52,17 @@ export function ChangesRail({
   onRefresh: () => void;
 }) {
   const [tab, setTab] = useState<RailTab>("commit");
+  const navigation = useBranchNavigation();
+  useEffect(() => {
+    if (navigation.taskId === taskId) setTab("commits");
+  }, [navigation, taskId]);
   const [bundleDialog, setBundleDialog] = useState<{
     mode: "shelf" | "stash";
     paths: string[];
   } | null>(null);
 
   const tabs: { id: RailTab; label: string }[] = [
+    { id: "commits", label: "Commits" },
     { id: "commit", label: "Commit" },
     { id: "shelf", label: "Shelf" },
     { id: "stash", label: "Stash" },
@@ -83,6 +91,7 @@ export function ChangesRail({
       </div>
 
       <div className="min-h-0 flex-1">
+        {tab === "commits" && commitsPanel}
         {tab === "commit" && (
           <CommitPane
             project={project}

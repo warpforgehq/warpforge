@@ -1,9 +1,14 @@
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { GitPullRequest, PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import { useEffect, useState, useTransition, type RefObject } from "react";
 
+import { TaskPullRequestChip } from "@/components/pullRequest/TaskPullRequestChip";
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { PaneHeader } from "@/components/workspace";
+import { daemon } from "@/daemon";
+import { useTaskPullRequest } from "@/hooks/useTaskPullRequest";
 import { cn } from "@/lib/utils";
+import type { GitBranchCommit, TaskInfo } from "@/protocol";
 import { PANEL_BOUNDS, useAutoHiddenRail, usePanelSize } from "@/store/panelLayout";
 import { useUi } from "@/store/ui";
 
@@ -11,6 +16,9 @@ import { ChangesRail } from "../../components/ChangesRail";
 import { DiffNotesBar } from "../../components/diffNotes/DiffNotesBar";
 import type { EditHunk, FileDiff, HunkResolution, TaskDiff } from "../../protocol";
 import type { DiffView } from "../../store/ui";
+import { CommitsPanel } from "../push/CommitsPanel";
+import { InlinePrPanel } from "../push/InlinePrPanel";
+import { useBranchActions } from "../push/useBranchActions";
 import { ChangesRailSkeleton } from "./ChangesRailSkeleton";
 import { DiffWorkspace, estimateFileHeight, type DiffWorkspaceHandle } from "./DiffWorkspace";
 import { FileDiffSkeleton } from "./FileDiffSkeleton";
@@ -44,6 +52,7 @@ export function DiffSkeleton({ files }: { files: readonly FileDiff[] }) {
  * resizable panel that folds away from its header control.
  */
 export function DiffSurface({
+  task,
   diff,
   diffError,
   diffView,
@@ -68,6 +77,7 @@ export function DiffSurface({
   collapsedFiles,
   onToggleCollapsed,
 }: {
+  task: TaskInfo | null;
   diff: TaskDiff | null;
   diffError: string | null;
   diffView: DiffView;
@@ -95,6 +105,27 @@ export function DiffSurface({
   collapsedFiles?: ReadonlySet<string>;
   onToggleCollapsed?: (path: string) => void;
 }) {
+  const queryClient = useQueryClient();
+  const actions = useBranchActions(task);
+  const pr = useTaskPullRequest(taskId);
+  const [selection, setSelection] = useState<{ taskId: string; commit: GitBranchCommit } | null>(
+    null,
+  );
+  useEffect(() => setSelection(null), [taskId]);
+  const commit = selection?.taskId === taskId ? selection.commit : null;
+  const history = useQuery({
+    queryKey: ["commitDiff", taskId, commit?.hash],
+    queryFn: () => daemon.commitDiff(taskId, commit!.hash),
+    enabled: Boolean(commit),
+  });
+  const shownDiff = commit ? (history.data ?? null) : diff;
+  const branch = diff?.branch ?? actions.info?.branch;
+  const prDisabled =
+    branch === "main" || branch === "master" || Boolean(branch && branch === task?.baseBranch);
+  const prDisabledReason = prDisabled
+    ? "Switch to a feature branch to create a pull request"
+    : undefined;
+  const showPr = actions.mode === "pr" && !pr;
   const collapsed = useUi((s) => s.diffPanelCollapsed);
   const setCollapsed = useUi((s) => s.setDiffPanelCollapsed);
   const toggleCollapsed = useUi((s) => s.toggleDiffPanelCollapsed);
@@ -116,14 +147,46 @@ export function DiffSurface({
     <div ref={surfaceRef} className="flex h-full min-h-0 flex-col">
       <PaneHeader
         leading={
-          diff ? (
+          shownDiff ? (
             <span className="tnum text-[11px] text-muted-foreground">
-              {diff.files.length} files
+              {shownDiff.files.length} files
             </span>
           ) : undefined
         }
         actions={
           <>
+            {commit && (
+              <span className="flex min-w-0 max-w-64 items-center gap-1 rounded border border-border px-1.5 py-px text-[11px] text-muted-foreground">
+                <span className="shrink-0 font-mono">{commit.shortHash}</span>
+                <span className="truncate" title={commit.subject}>
+                  {commit.subject}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Back to working changes"
+                  title="Back to working changes"
+                  onClick={() => setSelection(null)}
+                  className="shrink-0 rounded p-0.5 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <X aria-hidden className="size-3" />
+                </button>
+              </span>
+            )}
+            {task &&
+              (pr ? (
+                <TaskPullRequestChip task={task} />
+              ) : (
+                <button
+                  type="button"
+                  disabled={prDisabled}
+                  title={prDisabledReason ?? "Create a pull request"}
+                  onClick={() => actions.setMode("pr")}
+                  className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background/30 px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <GitPullRequest aria-hidden className="size-3.5" />
+                  Create PR
+                </button>
+              ))}
             <div className="flex rounded-md border border-border bg-background/30 p-0.5">
               {(["unified", "split"] as const).map((v) => (
                 <button
@@ -160,14 +223,22 @@ export function DiffSurface({
       <PanelGroup orientation="horizontal" className="min-h-0 min-w-0 flex-1">
         <Panel pin className="min-h-0 min-w-0">
           <DiffNotesBar onJump={(path) => diffWorkspaceRef.current?.scrollToFile(path)} />
-          {workspaceReady ? (
+          {showPr ? (
+            <InlinePrPanel
+              key={taskId}
+              actions={actions}
+              taskId={taskId}
+              onClose={() => actions.setMode("push")}
+            />
+          ) : workspaceReady ? (
             <DiffWorkspace
+              historical={Boolean(commit)}
               ref={diffWorkspaceRef}
-              diff={diff}
-              diffError={diffError}
+              diff={shownDiff}
+              diffError={commit ? (history.error?.message ?? null) : diffError}
               diffView={diffView}
-              editable={editable}
-              localRes={localRes}
+              editable={editable && !commit}
+              localRes={commit ? {} : localRes}
               onOpenFiles={onOpenFiles}
               onResolve={onResolve}
               onSendToChat={onSendToChat}
@@ -198,6 +269,21 @@ export function DiffSurface({
         >
           {diff ? (
             <ChangesRail
+              commitsPanel={
+                <CommitsPanel
+                  taskId={taskId}
+                  selected={commit?.hash ?? null}
+                  onSelect={(picked) => {
+                    setSelection({ taskId, commit: picked });
+                    actions.setMode("push");
+                  }}
+                  actions={actions}
+                  createPrDisabledReason={prDisabledReason}
+                  onCreatePr={() => {
+                    if (!prDisabled) actions.setMode("pr");
+                  }}
+                />
+              }
               project={project}
               files={diff.files}
               untrackedPaths={diff.untrackedPaths}
@@ -206,7 +292,11 @@ export function DiffSurface({
               taskId={taskId}
               commitExpanded={commitExpanded}
               onCommitExpandedChange={onCommitExpandedChange}
-              onCommitted={onCommitted}
+              onCommitted={() => {
+                void queryClient.invalidateQueries({ queryKey: ["branchCommits", taskId] });
+                void actions.load();
+                onCommitted();
+              }}
               onRefresh={onRefresh}
               onSelect={onSelect}
               onOpenFile={onOpenFile}

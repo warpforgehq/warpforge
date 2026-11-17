@@ -25,6 +25,7 @@ import { useDaemonEvents } from "./hooks/useDaemonEvents";
 import { useFontScaling } from "./hooks/useFontScaling";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { usePullShortcut } from "./hooks/usePullShortcut";
+import { openBranchCommits } from "./views/push/branchNavigation";
 import { usePushShortcut } from "./hooks/usePushShortcut";
 import { useRunnerEvents } from "./hooks/useRunner";
 import { useTheme } from "./hooks/useTheme";
@@ -59,7 +60,6 @@ export default function App() {
   const {
     newTaskOpen,
     setNewTaskOpen,
-    setPushOpen,
     setAddProjectOpen,
     setSettingsOpen,
     startNewTask,
@@ -151,7 +151,7 @@ export default function App() {
     [snapshot.projects],
   );
   usePullShortcut(snapshot.tasks);
-  usePushShortcut(snapshot.tasks, setPushOpen);
+  usePushShortcut(snapshot.tasks);
   useShellShortcuts(startNewTask, toggleSidebarCollapsed, handleSelectMode, () =>
     startNewTask(undefined, undefined, undefined, { chat: true }),
   );
@@ -249,7 +249,7 @@ export default function App() {
                   onCloseTask={() => setOpenTaskId(null)}
                   onAddProject={() => setAddProjectOpen(true)}
                   onNewTask={startNewTask}
-                  onOpenPush={() => setPushOpen(true)}
+                  onOpenPush={openBranchCommits}
                   projectNames={projectNames}
                   showPersistent={showPersistent}
                 />
