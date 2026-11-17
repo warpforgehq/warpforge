@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 import { daemon } from "@/daemon";
 import type { PullRequestSummary } from "@/protocol";
 
-import { openTaskPullRequest } from "./taskPullRequestNavigation";
+import { openTaskPullRequest, pullRequestRepo } from "./taskPullRequestNavigation";
 
 /** Return to the task that owns this pull request, when the cache knows it. */
 export function PullRequestTaskLink({ pr }: { pr: PullRequestSummary }) {
@@ -15,11 +15,9 @@ export function PullRequestTaskLink({ pr }: { pr: PullRequestSummary }) {
         Object.entries(cache).find(
           ([, pull]) =>
             pull &&
-            (pull.url === pr.url ||
+            (pull.url.toLowerCase() === pr.url.toLowerCase() ||
               (pull.number === pr.number &&
-                pull.url
-                  .toLowerCase()
-                  .startsWith(`https://github.com/${pr.repo.toLowerCase()}/pull/`))),
+                pullRequestRepo(pull.url)?.toLowerCase() === pr.repo.toLowerCase())),
         )?.[0] ?? null
       );
     },

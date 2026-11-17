@@ -266,25 +266,14 @@ impl Daemon {
 
     /// Shared-checkout descendants attribute their work to the root parent.
     fn keepers_claim_owner(&self, task_id: &str) -> String {
-        let mut owner = task_id;
-        let mut seen = HashSet::new();
-        while let Some(task) = self.tasks.get(owner) {
-            if task.worktree.is_some() || !seen.insert(owner) {
-                break;
-            }
-            let Some(parent) = task
-                .parent_task_id
-                .as_deref()
-                .and_then(|id| self.tasks.get(id))
-            else {
-                break;
-            };
-            if parent.project != task.project || parent.worktree.is_some() {
-                break;
-            }
-            owner = &parent.id;
-        }
-        owner.to_string()
+        self.tasks
+            .get(task_id)
+            .map(|task| {
+                crate::daemon::task_owner::root_owner(task, |id| self.tasks.get(id))
+                    .id
+                    .clone()
+            })
+            .unwrap_or_else(|| task_id.to_string())
     }
 
     /// The branch moves to `task_id`; other tasks of the project's checkout

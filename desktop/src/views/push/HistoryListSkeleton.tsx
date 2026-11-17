@@ -1,31 +1,23 @@
 import { SkeletonBar, SkeletonBlock, skeletonWidth } from "@/components/ui/skeleton";
 
-/**
- * Placeholder for the push preview while the outgoing commits are read. The
- * slot it fills is the commit scroller, so it draws `CommitRow`'s own shape —
- * `px-3 py-2`, a commit glyph, a subject line and a meta line of hash, author
- * and file count — three deep, which covers the `min-h-40` the list starts at.
- * The branch header and the push button live outside this slot and are not
- * drawn here.
- */
-
+/** Three compact history rows while branch commits are read. */
 const COMMITS = 3;
 
-export function PushPreviewSkeleton() {
+export function HistoryListSkeleton() {
   return (
     <SkeletonBlock
       role="status"
-      aria-label="Reading outgoing commits"
-      data-testid="push-preview-skeleton"
-      className="flex min-h-40 flex-col"
+      aria-label="Reading commits"
+      data-testid="history-list-skeleton"
+      className="flex flex-col"
     >
       {Array.from({ length: COMMITS }, (_, row) => (
         <div
           key={row}
-          data-testid="push-preview-skeleton-row"
-          className="flex w-full items-start gap-2 rounded-md px-3 py-2"
+          data-testid="history-list-skeleton-row"
+          className="flex w-full items-start gap-2 px-2 py-1"
         >
-          <SkeletonBar className="mt-0.5 size-4 shrink-0" />
+          <SkeletonBar className="mt-0.5 size-3 shrink-0" />
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="flex h-5 items-center">
               <SkeletonBar h={10} w={skeletonWidth(row, 0, 40, 85)} tone="primary" />

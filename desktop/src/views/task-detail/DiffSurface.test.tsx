@@ -160,14 +160,14 @@ describe("DiffSurface", () => {
     expect(button).toHaveAttribute("title", "Switch to a feature branch to create a pull request");
   });
 
-  it("offers Create PR without a PR, and leaves the existing PR chip to the header", () => {
+  it("offers Create PR without a PR, and shows compact PR status with one", () => {
     fixture.pr = null;
     const first = renderSurface();
     expect(screen.getByRole("button", { name: "Create PR" })).toBeInTheDocument();
     first.unmount();
     fixture.pr = { number: 12 };
     const second = renderSurface();
-    expect(screen.queryByText("PR status link")).not.toBeInTheDocument();
+    expect(screen.getByText("PR status link")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create PR" })).not.toBeInTheDocument();
     second.unmount();
     fixture.pr = null;

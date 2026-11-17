@@ -14,7 +14,7 @@ export const branchCommitsKey = (taskId: string) => ["branchCommits", taskId] as
 const pushNeeded = (info: GitPushInfo | null) =>
   Boolean(info && (!info.hasUpstream || info.commits.length > 0));
 
-export function useBranchActions(task: TaskInfo | null) {
+export function useBranchActions(task: TaskInfo) {
   const queryClient = useQueryClient();
   const [info, setInfo] = useState<GitPushInfo | null>(null);
   const [loading, setLoading] = useState(false);
@@ -43,7 +43,7 @@ export function useBranchActions(task: TaskInfo | null) {
     task,
   });
 
-  const taskId = task?.id;
+  const taskId = task.id;
   const load = useCallback(async () => {
     if (!taskId) {
       return;
@@ -82,7 +82,7 @@ export function useBranchActions(task: TaskInfo | null) {
   }, [load]);
 
   const push = async (force: boolean) => {
-    if (!task || pushing || repositoryOperation) {
+    if (pushing || repositoryOperation) {
       return;
     }
     setMenuOpen(false);
@@ -114,7 +114,7 @@ export function useBranchActions(task: TaskInfo | null) {
   const needsPush = pushNeeded(info);
 
   const generatePr = async () => {
-    if (!task || !textGenAgentId || generatingPr) {
+    if (!textGenAgentId || generatingPr) {
       return;
     }
     setGeneratingPr(true);
@@ -138,7 +138,7 @@ export function useBranchActions(task: TaskInfo | null) {
   };
 
   const createPr = async () => {
-    if (!task || creatingPr || repositoryOperation || !info || !prTitle.trim()) {
+    if (creatingPr || repositoryOperation || !info || !prTitle.trim()) {
       return;
     }
     setCreatingPr(true);
@@ -156,7 +156,6 @@ export function useBranchActions(task: TaskInfo | null) {
           return;
         }
       }
-      void queryClient.invalidateQueries({ queryKey: branchCommitsKey(task.id) });
       setPrStep("creating");
       const result = (await daemon.request("git.createPr", {
         base: prBase.trim() || undefined,
