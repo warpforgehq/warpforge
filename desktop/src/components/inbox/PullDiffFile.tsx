@@ -66,7 +66,12 @@ export const PullDiffFile = React.memo(function PullDiffFile({
   /** Lets the file rail scroll this block into view. */
   registerAnchor?: (path: string, node: HTMLDivElement | null) => void;
 }) {
-  const [tokens, setTokens] = React.useState<PatchHighlight | null>(null);
+  const [highlight, setHighlight] = React.useState<{
+    block: PatchFileBlock;
+    tokens: PatchHighlight;
+  } | null>(null);
+  // Line ids repeat across patches; tokens may only render their source block.
+  const tokens = highlight?.block === block ? highlight.tokens : null;
   const stats = React.useMemo(() => countPatchStats([block]), [block]);
 
   /**
@@ -152,7 +157,7 @@ export const PullDiffFile = React.memo(function PullDiffFile({
     void highlightPatchBlock(block).then((next) => {
       // An empty map means there was nothing to colour (no grammar for this
       // file, or past the budget). Not worth a re-render.
-      if (!cancelled && next.size > 0) setTokens(next);
+      if (!cancelled && next.size > 0) setHighlight({ block, tokens: next });
     });
     return () => {
       cancelled = true;
