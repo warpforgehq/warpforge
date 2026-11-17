@@ -11,6 +11,8 @@ import { PullDiffHunk, ROW_HEIGHT_PX } from "./PullDiffHunk";
 import { lineNumberFor, lineSide, type CommentIntent } from "./PullDiffLines";
 import { PullLineComments } from "./PullLineComments";
 
+const noop = () => {};
+
 /** The comment being written, when it is being written on *this* file. */
 export interface FileDraft {
   side: "LEFT" | "RIGHT";
@@ -26,38 +28,41 @@ export interface FileDraft {
  */
 export const PullDiffFile = React.memo(function PullDiffFile({
   block,
+  readOnly = false,
   mode,
   expanded,
   viewed,
-  project,
-  number,
+  project = "",
+  number = 0,
   threads,
   draft,
   onToggleExpanded,
-  onToggleViewed,
-  onComment,
-  onCompose,
-  onCancelDraft,
-  onPosted,
+  onToggleViewed = noop,
+  onComment = noop,
+  onCompose = noop,
+  onCancelDraft = noop,
+  onPosted = noop,
   registerAnchor,
 }: {
   block: PatchFileBlock;
+  /** Historical patches expose no review controls. */
+  readOnly?: boolean;
   mode: "unified" | "split";
   expanded: boolean;
   viewed: boolean;
-  project: string;
-  number: number;
+  project?: string;
+  number?: number;
   /** Review threads on this file, by post-image line. */
   threads?: ReadonlyMap<number, PullComment[]>;
   /** Set only while the comment being written belongs to this file, so a drag
    *  re-renders one file instead of all of them. */
   draft?: FileDraft;
   onToggleExpanded: (path: string) => void;
-  onToggleViewed: (path: string) => void;
-  onComment: (path: string, line: PatchLine, intent: CommentIntent) => void;
-  onCompose: (path: string, line: number, side: "LEFT" | "RIGHT") => void;
-  onCancelDraft: () => void;
-  onPosted: () => void;
+  onToggleViewed?: (path: string) => void;
+  onComment?: (path: string, line: PatchLine, intent: CommentIntent) => void;
+  onCompose?: (path: string, line: number, side: "LEFT" | "RIGHT") => void;
+  onCancelDraft?: () => void;
+  onPosted?: () => void;
   /** Lets the file rail scroll this block into view. */
   registerAnchor?: (path: string, node: HTMLDivElement | null) => void;
 }) {
@@ -194,21 +199,23 @@ export const PullDiffFile = React.memo(function PullDiffFile({
           {stats.additions > 0 && <span className="text-ok">+{stats.additions}</span>}
           {stats.deletions > 0 && <span className="text-destructive">−{stats.deletions}</span>}
         </span>
-        <button
-          type="button"
-          onClick={toggleViewed}
-          aria-pressed={viewed}
-          title={viewed ? "Mark as not viewed" : "Mark as viewed"}
-          className={cn(
-            "flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs",
-            viewed
-              ? "bg-ok/15 text-ok"
-              : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-          )}
-        >
-          {viewed ? <SquareCheck className="size-3.5" /> : <Square className="size-3.5" />}
-          Viewed
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={toggleViewed}
+            aria-pressed={viewed}
+            title={viewed ? "Mark as not viewed" : "Mark as viewed"}
+            className={cn(
+              "flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs",
+              viewed
+                ? "bg-ok/15 text-ok"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+            )}
+          >
+            {viewed ? <SquareCheck className="size-3.5" /> : <Square className="size-3.5" />}
+            Viewed
+          </button>
+        )}
       </div>
 
       {expanded &&
@@ -233,9 +240,13 @@ export const PullDiffFile = React.memo(function PullDiffFile({
                 hunk={hunk}
                 mode={mode}
                 tokens={tokens ?? undefined}
-                onComment={comment}
-                lineExtras={lineExtras}
-                range={draft ? { end: draft.end, side: draft.side, start: draft.start } : undefined}
+                onComment={readOnly ? undefined : comment}
+                lineExtras={readOnly ? undefined : lineExtras}
+                range={
+                  !readOnly && draft
+                    ? { end: draft.end, side: draft.side, start: draft.start }
+                    : undefined
+                }
                 // A composer and a reply box keep their typed text in the DOM
                 // they render into, so a file carrying either stays mounted
                 // however far it scrolls away.

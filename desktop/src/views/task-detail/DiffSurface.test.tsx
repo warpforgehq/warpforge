@@ -10,14 +10,29 @@ import { useUi } from "../../store/ui";
 import { DiffSurface } from "./DiffSurface";
 import type { DiffWorkspaceHandle } from "./DiffWorkspace";
 
-vi.mock("./DiffWorkspace", () => ({
-  DiffWorkspace: ({ diff, editable }: { diff: TaskDiff | null; editable: boolean }) => (
-    <div data-testid="diff-workspace" data-editable={String(editable)}>
-      {diff?.files.map((f) => f.path).join(",")}
-    </div>
-  ),
-  estimateFileHeight: () => 384,
-}));
+vi.mock("./DiffWorkspace", async () => {
+  const { CommitWorkspace } = await import("./DiffWorkspace/CommitWorkspace");
+  return {
+    DiffWorkspace: (props: { diff: TaskDiff | null; editable: boolean; historical?: boolean }) =>
+      props.historical ? (
+        <CommitWorkspace
+          {...props}
+          diffError={null}
+          diffView="unified"
+          localRes={{}}
+          taskId="task-1"
+          onOpenFiles={() => {}}
+          onResolve={() => {}}
+          onSendToChat={() => {}}
+        />
+      ) : (
+        <div data-testid="diff-workspace" data-editable={String(props.editable)}>
+          {props.diff?.files.map((f) => f.path).join(",")}
+        </div>
+      ),
+    estimateFileHeight: () => 384,
+  };
+});
 vi.mock("./FileDiffSkeleton", () => ({
   FileDiffSkeleton: ({ index }: { index: number }) => (
     <div data-testid="file-skeleton" data-index={index} />
@@ -40,7 +55,17 @@ vi.mock("@/daemon", () => ({
     branchCommits: async () => [
       { hash: "abc", shortHash: "abc", subject: "Feature", author: "Dev", date: "", pushed: true },
     ],
-    commitDiff: async () => ({ files: [{ path: "historical.ts", hunks: [], status: "modified" }] }),
+    commitDiff: async () => ({
+      files: [
+        {
+          path: "historical.ts",
+          hunks: [
+            { oldStart: 1, oldLines: 1, newStart: 1, newLines: 1, lines: ["-before", "+after"] },
+          ],
+          status: "modified",
+        },
+      ],
+    }),
   },
 }));
 vi.mock("@/hooks/useTaskPullRequest", () => ({ useTaskPullRequest: () => fixture.pr }));
@@ -117,10 +142,10 @@ describe("DiffSurface", () => {
     fixture.pr = null;
     renderSurface({ diff: taskDiff(1) });
     await userEvent.click(await screen.findByRole("button", { name: /Feature/ }));
-    await waitFor(() =>
-      expect(screen.getByTestId("diff-workspace")).toHaveTextContent("historical.ts"),
-    );
-    expect(screen.getByTestId("diff-workspace")).toHaveAttribute("data-editable", "false");
+    expect(await screen.findByRole("button", { name: "historical.ts" })).toBeInTheDocument();
+    expect(screen.getByText("before")).toBeInTheDocument();
+    expect(screen.getByText("after")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /comment|viewed/i })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Back to working changes" }));
     expect(screen.getByTestId("diff-workspace")).toHaveTextContent("src/file-0.ts");
     expect(screen.getByTestId("diff-workspace")).toHaveAttribute("data-editable", "true");

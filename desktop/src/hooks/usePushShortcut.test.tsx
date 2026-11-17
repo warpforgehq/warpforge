@@ -7,7 +7,7 @@ import { useBranchNavigation } from "@/views/push/branchNavigation";
 
 import { usePushShortcut } from "./usePushShortcut";
 
-it("opens the task's Diff surface and Commits rail", () => {
+it("opens the task's Diff surface and History rail", () => {
   useUi.setState({ openTaskId: "t1", activeSurface: "files", diffPanelCollapsed: true });
   renderHook(() => usePushShortcut([{ id: "t1" } as TaskInfo]));
   fireEvent.keyDown(window, { key: "K", ctrlKey: true, shiftKey: true });

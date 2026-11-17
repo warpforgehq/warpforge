@@ -17,7 +17,7 @@ import { heldMessage, planCheckout } from "./branchCheckout";
  * @param opts.openActionDialog Closes the popover and opens a branch dialog.
  * @param opts.switchTo Switches this checkout to a local branch.
  * @param opts.update Syncs the current branch with its remote.
- * @param opts.openPush Opens Diff → Commits.
+ * @param opts.openPush Opens Diff → History.
  * @param opts.openMerge Opens the worktree merge dialog.
  * @returns Handler taking the action id and the row's branch.
  */

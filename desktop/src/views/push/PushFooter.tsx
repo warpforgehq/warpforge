@@ -29,8 +29,8 @@ export function PushFooter({
   onPush,
 }: PushFooterProps) {
   return (
-    <footer className="flex shrink-0 flex-col gap-2 border-t bg-card/50 p-3">
-      <div className="min-w-0 text-[13px] text-muted-foreground">
+    <footer className="flex shrink-0 flex-col gap-2 border-t p-2">
+      <div className="min-w-0 text-[11px] text-muted-foreground">
         {info && !info.hasUpstream && info.commits.length > 0 && (
           <span>
             First push will create upstream{" "}
@@ -48,6 +48,7 @@ export function PushFooter({
           size="sm"
           type="button"
           variant="secondary"
+          className="text-[13px]"
           disabled={!info || loading || Boolean(pushing) || Boolean(createPrDisabledReason)}
           onClick={onCreatePr}
           title={createPrDisabledReason ?? "Open a pull request for this branch"}
@@ -59,7 +60,7 @@ export function PushFooter({
           <Button
             size="sm"
             type="button"
-            className="rounded-r-none"
+            className="rounded-r-none text-[13px]"
             disabled={
               !info?.commits.length || loading || Boolean(pushing) || Boolean(repositoryOperation)
             }

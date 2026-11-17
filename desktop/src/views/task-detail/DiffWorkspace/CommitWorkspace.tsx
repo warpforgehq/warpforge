@@ -1,6 +1,6 @@
-import { forwardRef, useImperativeHandle, useRef } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
 
-import { PullDiffHunk } from "@/components/inbox/PullDiffHunk";
+import { PullDiffFile } from "@/components/inbox/PullDiffFile";
 import type { PatchHunk, PatchLine } from "@/lib/pullDiff";
 import type { FileDiff } from "@/protocol";
 
@@ -17,13 +17,19 @@ function patchHunks(file: FileDiff): PatchHunk[] {
       newStart: newNumber,
       header: `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@`,
       lines: hunk.lines.map((text, lineIndex): PatchLine => {
-        const kind = text.startsWith("+") ? "add" : text.startsWith("-") ? "del" : "context";
+        const kind = text.startsWith("\\")
+          ? "meta"
+          : text.startsWith("+")
+            ? "add"
+            : text.startsWith("-")
+              ? "del"
+              : "context";
         return {
           id: `${index}:${lineIndex}`,
           kind,
           text: text.slice(1),
-          oldNumber: kind === "add" ? undefined : oldNumber++,
-          newNumber: kind === "del" ? undefined : newNumber++,
+          oldNumber: kind === "add" || kind === "meta" ? undefined : oldNumber++,
+          newNumber: kind === "del" || kind === "meta" ? undefined : newNumber++,
         };
       }),
     };
@@ -36,6 +42,17 @@ export const CommitWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function C
 ) {
   const anchors = useRef(new Map<string, HTMLElement>());
   const nonce = useRef(0);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const blocks = useMemo(
+    () =>
+      diff?.files.map((file) => ({
+        path: file.path,
+        oldPath: file.oldPath ?? undefined,
+        binary: false,
+        hunks: patchHunks(file),
+      })) ?? [],
+    [diff],
+  );
   useImperativeHandle(
     ref,
     () => ({
@@ -50,7 +67,10 @@ export const CommitWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function C
         const index = diff?.files
           .find((f) => f.path === path)
           ?.hunks.findIndex((h) => hunkKey(h) === key);
-        const node = index === undefined ? null : anchors.current.get(`${path}#${index}`);
+        const node =
+          index === undefined
+            ? null
+            : anchors.current.get(path)?.querySelectorAll("[data-hunk-id]")[index ?? -1];
         node?.scrollIntoView();
         return Boolean(node);
       },
@@ -71,20 +91,21 @@ export const CommitWorkspace = forwardRef<DiffWorkspaceHandle, Props>(function C
             else anchors.current.delete(file.path);
           }}
         >
-          <div className="sticky top-0 z-10 border-y bg-card p-2 font-mono text-xs">
-            {file.path} · {file.status}
-          </div>
-          {patchHunks(file).map((hunk, index) => (
-            <div
-              key={hunk.id}
-              ref={(node) => {
-                if (node) anchors.current.set(`${file.path}#${index}`, node);
-                else anchors.current.delete(`${file.path}#${index}`);
-              }}
-            >
-              <PullDiffHunk hunk={hunk} mode={diffView} />
-            </div>
-          ))}
+          <PullDiffFile
+            block={blocks.find((block) => block.path === file.path)!}
+            mode={diffView}
+            readOnly
+            expanded={!collapsed.has(file.path)}
+            viewed={false}
+            onToggleExpanded={(path) =>
+              setCollapsed((previous) => {
+                const next = new Set(previous);
+                if (next.has(path)) next.delete(path);
+                else next.add(path);
+                return next;
+              })
+            }
+          />
         </section>
       ))}
     </div>
