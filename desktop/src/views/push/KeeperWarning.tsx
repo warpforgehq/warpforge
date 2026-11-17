@@ -15,7 +15,7 @@ export function KeeperWarning({ taskId }: { taskId: string | null }) {
   return (
     <div
       role="status"
-      className="flex shrink-0 items-start gap-2 border-t border-warn/30 bg-warn/10 px-5 py-2 text-[13px] text-warn"
+      className="flex shrink-0 items-start gap-2 border-t border-warn/30 bg-warn/10 px-3 py-2 text-[13px] text-warn"
     >
       <ShieldAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
       <p className="min-w-0">

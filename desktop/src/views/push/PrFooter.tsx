@@ -26,16 +26,17 @@ export function PrFooter({
   onCreatePr,
 }: PrFooterProps) {
   return (
-    <footer className="flex h-[72px] shrink-0 items-center border-t bg-card/50 px-5">
-      <Button type="button" variant="ghost" disabled={creatingPr} onClick={onBack}>
+    <footer className="flex shrink-0 items-center border-t bg-card/50 p-3">
+      <Button size="sm" type="button" variant="ghost" disabled={creatingPr} onClick={onBack}>
         <ArrowLeft className="size-4" />
         Back
       </Button>
-      <div className="ml-auto flex items-center gap-3">
-        <Button type="button" variant="outline" disabled={creatingPr} onClick={onCancel}>
+      <div className="ml-auto flex items-center gap-2">
+        <Button size="sm" type="button" variant="outline" disabled={creatingPr} onClick={onCancel}>
           Cancel
         </Button>
         <Button
+          size="sm"
           type="button"
           disabled={creatingPr || !prTitle.trim() || Boolean(repositoryOperation)}
           onClick={onCreatePr}
