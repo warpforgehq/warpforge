@@ -4,6 +4,10 @@ use anyhow::{bail, Result};
 use std::collections::HashSet;
 use warpforge_protocol as wire;
 
+/// Read commits relative to the pull request base.
+/// @param repo checkout path
+/// @param base preferred base branch
+/// @returns newest-first commits and their push status
 pub async fn branch_commits(repo: &str, base: Option<&str>) -> Result<Vec<wire::GitBranchCommit>> {
     let base = pr_merge_base(repo, base).await;
     let range = base.as_ref().map(|base| format!("{base}..HEAD"));
@@ -62,6 +66,10 @@ pub async fn branch_commits(repo: &str, base: Option<&str>) -> Result<Vec<wire::
     Ok(commits)
 }
 
+/// Read one commit without modifying the checkout.
+/// @param repo checkout path
+/// @param hash commit object id
+/// @returns files and hunks changed by the commit
 pub async fn commit_diff(repo: &str, hash: &str) -> Result<Vec<wire::FileDiff>> {
     if hash.len() != 40 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
         bail!("expected a full commit hash");

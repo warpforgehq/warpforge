@@ -289,7 +289,7 @@ impl Daemon {
 
     /// The branch moves to `task_id`; other tasks of the project's checkout
     /// that owned it let it go and their open findings are superseded.
-    fn keepers_claim(&mut self, task_id: &str, branch: &str) {
+    pub(crate) fn keepers_claim(&mut self, task_id: &str, branch: &str) {
         let owner = self.keepers_claim_owner(task_id);
         let task_id = owner.as_str();
         let Some(project) = self.tasks.get(task_id).map(|task| task.project.clone()) else {

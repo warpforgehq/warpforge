@@ -2,6 +2,7 @@
 //!
 //! - [`working`] — the working tree read the Changes rail is built on
 //!   (tracked, untracked and ignored answered separately);
+//! - [`history`], [`pr_base`] — branch commits, commit patches and PR base material;
 //! - [`roots`] — the project's checkout plus any nested ones (`git.roots`);
 //! - [`listing`], [`files`] — the editor's file tree and single-file reads;
 //! - [`branch`], [`sync`], [`remote`] — branch ops, pull/rebase/merge, push/PR;
@@ -18,11 +19,10 @@ use tokio::process::Command;
 use warpforge_protocol as wire;
 
 mod branch;
-mod history;
-pub use history::{branch_commits, commit_diff};
 mod branch_worktrees;
 mod commit;
 mod files;
+mod history;
 mod listing;
 mod parse;
 mod pr_base;
@@ -37,6 +37,7 @@ pub use branch::{branch_create, delete_branch, list_branches, rename_branch, swi
 pub use commit::{commit, last_commit_message, reject_hunk, stage_paths};
 pub(crate) use files::resolve_target_in_root;
 pub use files::{create_file, delete_file, file_doc, rename_file, save_file};
+pub use history::{branch_commits, commit_diff};
 pub use listing::{is_ignored_path, list_files};
 pub(crate) use pr_base::pr_material;
 pub use remote::{create_draft_pr, create_pr, push, push_info};

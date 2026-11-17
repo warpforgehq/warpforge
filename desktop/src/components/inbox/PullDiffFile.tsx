@@ -11,8 +11,6 @@ import { PullDiffHunk, ROW_HEIGHT_PX } from "./PullDiffHunk";
 import { lineNumberFor, lineSide, type CommentIntent } from "./PullDiffLines";
 import { PullLineComments } from "./PullLineComments";
 
-const noop = () => {};
-
 /** The comment being written, when it is being written on *this* file. */
 export interface FileDraft {
   side: "LEFT" | "RIGHT";
@@ -28,44 +26,43 @@ export interface FileDraft {
  */
 export const PullDiffFile = React.memo(function PullDiffFile({
   block,
-  readOnly = false,
   mode,
   expanded,
-  viewed,
-  project = "",
-  number = 0,
-  threads,
-  draft,
+  review,
   onToggleExpanded,
-  onToggleViewed = noop,
-  onComment = noop,
-  onCompose = noop,
-  onCancelDraft = noop,
-  onPosted = noop,
   registerAnchor,
 }: {
   block: PatchFileBlock;
-  /** Historical patches expose no review controls. */
-  readOnly?: boolean;
   mode: "unified" | "split";
   expanded: boolean;
-  viewed: boolean;
-  project?: string;
-  number?: number;
-  /** Review threads on this file, by post-image line. */
-  threads?: ReadonlyMap<number, PullComment[]>;
-  /** Set only while the comment being written belongs to this file, so a drag
-   *  re-renders one file instead of all of them. */
-  draft?: FileDraft;
   onToggleExpanded: (path: string) => void;
-  onToggleViewed?: (path: string) => void;
-  onComment?: (path: string, line: PatchLine, intent: CommentIntent) => void;
-  onCompose?: (path: string, line: number, side: "LEFT" | "RIGHT") => void;
-  onCancelDraft?: () => void;
-  onPosted?: () => void;
+  review?: {
+    viewed: boolean;
+    project: string;
+    number: number;
+    threads?: ReadonlyMap<number, PullComment[]>;
+    draft?: FileDraft;
+    onToggleViewed: (path: string) => void;
+    onComment: (path: string, line: PatchLine, intent: CommentIntent) => void;
+    onCompose: (path: string, line: number, side: "LEFT" | "RIGHT") => void;
+    onCancelDraft: () => void;
+    onPosted: () => void;
+  };
   /** Lets the file rail scroll this block into view. */
   registerAnchor?: (path: string, node: HTMLDivElement | null) => void;
 }) {
+  const {
+    draft,
+    threads,
+    viewed,
+    project,
+    number,
+    onComment,
+    onToggleViewed,
+    onCompose,
+    onCancelDraft,
+    onPosted,
+  } = review ?? {};
   const [highlight, setHighlight] = React.useState<{
     block: PatchFileBlock;
     tokens: PatchHighlight;
@@ -108,11 +105,11 @@ export const PullDiffFile = React.memo(function PullDiffFile({
   }, []);
 
   const comment = React.useCallback(
-    (line: PatchLine, intent: CommentIntent) => onComment(path, line, intent),
+    (line: PatchLine, intent: CommentIntent) => onComment?.(path, line, intent),
     [onComment, path],
   );
   const toggleExpanded = React.useCallback(() => onToggleExpanded(path), [onToggleExpanded, path]);
-  const toggleViewed = React.useCallback(() => onToggleViewed(path), [onToggleViewed, path]);
+  const toggleViewed = React.useCallback(() => onToggleViewed?.(path), [onToggleViewed, path]);
 
   /**
    * The threads and the composer that hang under a line. Built here rather
@@ -121,6 +118,7 @@ export const PullDiffFile = React.memo(function PullDiffFile({
    */
   const lineExtras = React.useCallback(
     (line: PatchLine) => {
+      if (project === undefined || number === undefined || !onCancelDraft || !onPosted) return null;
       const lineNumber = lineNumberFor(line);
       if (lineNumber === undefined) return null;
       const side = lineSide(line);
@@ -142,7 +140,7 @@ export const PullDiffFile = React.memo(function PullDiffFile({
           comments={comments}
           composing={composing}
           suggestionSeed={span ? linesInRange(block, side, span.start, span.end) : []}
-          onCompose={() => onCompose(path, lineNumber, side)}
+          onCompose={() => onCompose?.(path, lineNumber, side)}
           onCancel={onCancelDraft}
           onPosted={onPosted}
         />
@@ -204,7 +202,7 @@ export const PullDiffFile = React.memo(function PullDiffFile({
           {stats.additions > 0 && <span className="text-ok">+{stats.additions}</span>}
           {stats.deletions > 0 && <span className="text-destructive">−{stats.deletions}</span>}
         </span>
-        {!readOnly && (
+        {review && (
           <button
             type="button"
             onClick={toggleViewed}
@@ -245,10 +243,10 @@ export const PullDiffFile = React.memo(function PullDiffFile({
                 hunk={hunk}
                 mode={mode}
                 tokens={tokens ?? undefined}
-                onComment={readOnly ? undefined : comment}
-                lineExtras={readOnly ? undefined : lineExtras}
+                onComment={review ? comment : undefined}
+                lineExtras={review ? lineExtras : undefined}
                 range={
-                  !readOnly && draft
+                  review && draft
                     ? { end: draft.end, side: draft.side, start: draft.start }
                     : undefined
                 }

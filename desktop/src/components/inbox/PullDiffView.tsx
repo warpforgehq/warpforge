@@ -332,18 +332,20 @@ export function PullDiffView({
                       block={block}
                       mode={mode}
                       expanded={isExpanded(block.path)}
-                      viewed={viewed.has(block.path)}
-                      project={pr.project}
-                      number={pr.number}
-                      threads={threadsByPath.get(block.path)}
-                      draft={draft?.path === block.path ? draft : undefined}
                       registerAnchor={registerAnchor}
                       onToggleExpanded={toggleExpanded}
-                      onToggleViewed={toggleViewed}
-                      onComment={onComment}
-                      onCompose={compose}
-                      onCancelDraft={cancelDraft}
-                      onPosted={onPosted}
+                      review={{
+                        viewed: viewed.has(block.path),
+                        project: pr.project,
+                        number: pr.number,
+                        threads: threadsByPath.get(block.path),
+                        draft: draft?.path === block.path ? draft : undefined,
+                        onToggleViewed: toggleViewed,
+                        onComment,
+                        onCompose: compose,
+                        onCancelDraft: cancelDraft,
+                        onPosted,
+                      }}
                     />
                   ))}
                 </div>

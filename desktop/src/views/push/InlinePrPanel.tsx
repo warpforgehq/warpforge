@@ -25,7 +25,7 @@ export function InlinePrPanel({
     setPrBase,
     generatingPr,
     textGenAgentId,
-    error,
+    generateError,
     generatePr,
   } = actions;
   return (
@@ -44,7 +44,7 @@ export function InlinePrPanel({
         setPrBase={setPrBase}
         generatingPr={generatingPr}
         textGenAgentId={textGenAgentId}
-        error={error}
+        error={generateError}
         onGenerate={() => void generatePr()}
       />
       <ReadyKeepers {...actions.prKeepers} />
@@ -56,7 +56,6 @@ export function InlinePrPanel({
         needsPush={needsPush}
         repositoryOperation={actions.repositoryOperation}
         onBack={onClose}
-        onCancel={onClose}
         onCreatePr={() => void actions.createPr()}
       />
     </section>

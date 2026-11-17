@@ -94,10 +94,10 @@ describe("keeper status", () => {
   it("keeps paused and superseded results neutral on cards and glyphs", () => {
     const runs = [run({ id: "green", outcome: "green" })];
     const paused = state({ runs, switches: { overrides: {}, held: "no branch" } });
-    expect(keeperStatus(true, runs, undefined, 0, paused)).toBe("not_checked");
+    expect(keeperStatus(true, runs, undefined, 0, { state: paused })).toBe("not_checked");
     expect(activeKeepers(paused)[0].status).toBe("not_checked");
     expect(keeperWorst(paused)).toBe("not_checked");
-    expect(keeperStatus(true, runs, undefined, 0, undefined, true)).toBe("not_checked");
+    expect(keeperStatus(true, runs, undefined, 0, { unavailable: true })).toBe("not_checked");
     const failed = run({ id: "failed", outcome: "findings", count: 1 });
     const superseded = state({
       runs: [failed],

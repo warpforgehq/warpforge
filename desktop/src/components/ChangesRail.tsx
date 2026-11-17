@@ -54,7 +54,10 @@ export function ChangesRail({
   const [tab, setTab] = useState<RailTab>("commit");
   const navigation = useBranchNavigation();
   useEffect(() => {
-    if (navigation.taskId === taskId) setTab("commits");
+    if (navigation.taskId === taskId) {
+      setTab("commits");
+      useBranchNavigation.setState({ taskId: null });
+    }
   }, [navigation, taskId]);
   const [bundleDialog, setBundleDialog] = useState<{
     mode: "shelf" | "stash";

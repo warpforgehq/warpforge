@@ -2,11 +2,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUp, CloudCheck, GitCommitHorizontal, RefreshCw } from "lucide-react";
 
 import { relativeTime } from "@/components/backlog/BacklogRow";
+import { EmptyState } from "@/components/ui/empty-state";
 import { daemon } from "@/daemon";
 import { cn } from "@/lib/utils";
 import type { GitBranchCommit } from "@/protocol";
 
 import { PushFooter } from "./PushFooter";
+import { PushPreviewSkeleton } from "./PushPreviewSkeleton";
+import { branchCommitsKey } from "./useBranchActions";
 import type { useBranchActions } from "./useBranchActions";
 
 export function CommitsPanel({
@@ -26,7 +29,7 @@ export function CommitsPanel({
 }) {
   const queryClient = useQueryClient();
   const query = useQuery({
-    queryKey: ["branchCommits", taskId],
+    queryKey: branchCommitsKey(taskId),
     queryFn: () => daemon.branchCommits(taskId),
     refetchOnWindowFocus: "always",
   });
@@ -43,7 +46,7 @@ export function CommitsPanel({
           disabled={actions.loading || query.isFetching}
           onClick={() => {
             void actions.load();
-            void queryClient.invalidateQueries({ queryKey: ["branchCommits", taskId] });
+            void queryClient.invalidateQueries({ queryKey: branchCommitsKey(taskId) });
           }}
         >
           <RefreshCw
@@ -53,60 +56,47 @@ export function CommitsPanel({
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto py-1">
-        {query.isPending && <p className="p-3">Loading commits…</p>}
-        {query.error && (
-          <p
-            role="alert"
-            className="m-1 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
-          >
-            {query.error.message}
-          </p>
-        )}
-        {query.data?.length === 0 && <p className="p-3">No commits relative to base.</p>}
-        {query.data?.map((commit) => (
-          <button
-            type="button"
-            key={commit.hash}
-            aria-pressed={selected === commit.hash}
-            onClick={() => onSelect(commit)}
-            className={cn(
-              "flex w-full items-start gap-2 px-2 py-1 text-left transition-colors",
-              selected === commit.hash ? "bg-accent text-foreground" : "hover:bg-accent/50",
-            )}
-          >
-            {commit.pushed ? (
-              <CloudCheck
-                aria-label="Pushed"
-                className="mt-0.5 size-3 shrink-0 text-muted-foreground"
-              />
-            ) : (
-              <ArrowUp aria-label="Unpushed" className="mt-0.5 size-3 shrink-0 text-primary" />
-            )}
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px]">{commit.subject}</span>
-              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                <span className="font-mono">{commit.shortHash}</span>
-                <span aria-hidden>·</span>
-                <span className="truncate">{commit.author}</span>
-                <span aria-hidden>·</span>
-                <time className="shrink-0" dateTime={commit.date} title={commit.date}>
-                  {Number.isFinite(Date.parse(commit.date))
-                    ? relativeTime(Date.parse(commit.date))
-                    : ""}
-                </time>
+        {query.isPending && <PushPreviewSkeleton />}
+        {query.error && <EmptyState compact role="alert" title={query.error.message} />}
+        {query.data?.length === 0 && <EmptyState compact title="No commits relative to base." />}
+        {query.data?.map((commit) => {
+          const date = Date.parse(commit.date);
+          return (
+            <button
+              type="button"
+              key={commit.hash}
+              aria-pressed={selected === commit.hash}
+              onClick={() => onSelect(commit)}
+              className={cn(
+                "flex w-full items-start gap-2 px-2 py-1 text-left transition-colors",
+                selected === commit.hash ? "bg-accent text-foreground" : "hover:bg-accent/50",
+              )}
+            >
+              {commit.pushed ? (
+                <CloudCheck
+                  aria-label="Pushed"
+                  className="mt-0.5 size-3 shrink-0 text-muted-foreground"
+                />
+              ) : (
+                <ArrowUp aria-label="Unpushed" className="mt-0.5 size-3 shrink-0 text-primary" />
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px]">{commit.subject}</span>
+                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <span className="font-mono">{commit.shortHash}</span>
+                  <span aria-hidden>·</span>
+                  <span className="truncate">{commit.author}</span>
+                  <span aria-hidden>·</span>
+                  <time className="shrink-0" dateTime={commit.date} title={commit.date}>
+                    {Number.isFinite(date) ? relativeTime(date) : ""}
+                  </time>
+                </span>
               </span>
-            </span>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
-      {actions.error && (
-        <p
-          role="alert"
-          className="m-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
-        >
-          {actions.error}
-        </p>
-      )}
+      {actions.error && <EmptyState compact role="alert" title={actions.error} />}
       <PushFooter
         info={actions.info}
         loading={actions.loading}

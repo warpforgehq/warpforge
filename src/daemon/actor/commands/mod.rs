@@ -6,6 +6,7 @@ mod files;
 mod git;
 mod memory;
 mod project;
+mod pull_request;
 mod session;
 mod shelf;
 mod stash;
