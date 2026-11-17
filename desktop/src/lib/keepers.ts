@@ -17,6 +17,7 @@ export const STRIP_LENGTH = 10;
 export type KeeperPresetId = KeeperPreset["id"];
 
 export type KeeperStatus =
+  | "not_checked"
   | "off"
   | "needs_you"
   | "running"
@@ -176,8 +177,11 @@ export function keeperStatus(
   runs: readonly KeeperRun[],
   loop: KeeperLoopState | undefined,
   openFindings: number,
+  state?: KeeperTaskState,
+  unavailable = false,
 ): KeeperStatus {
   if (!on) return "off";
+  if (unavailable || state?.switches.held) return "not_checked";
   if (loop?.status === "needs_you") return "needs_you";
   if (runs.some(inFlight)) return "running";
   if (loop?.status === "fixing") return "fixing";
@@ -187,7 +191,14 @@ export function keeperStatus(
   if (!last) return "idle";
   if (last.outcome === "green") return "green";
   if (last.outcome === "draft") return "draft";
-  if (last.outcome === "findings") return openFindings > 0 ? "findings" : "green";
+  if (last.outcome === "findings") {
+    if (openFindings > 0) return "findings";
+    const findings = state?.findings.filter((finding) => finding.runId === last.id);
+    return findings?.length &&
+      findings.every((finding) => finding.status === "fixed" || finding.status === "dismissed")
+      ? "green"
+      : "not_checked";
+  }
   return "inconclusive";
 }
 
@@ -298,7 +309,7 @@ export function activeKeepers(
     const runs = keeperRuns(state, id);
     const on = state.switches.overrides[id] !== false;
     const findings = currentFindings(state, runs).length;
-    const status = keeperStatus(on, runs, state.loops[id], findings);
+    const status = keeperStatus(on, runs, state.loops[id], findings, state);
     const outdated = outdatedRun(state, runs)?.ready ?? false;
     return { findings, id, outdated, status };
   });
@@ -331,7 +342,7 @@ export function keeperPushWarnings(state: KeeperTaskState | undefined): string[]
   });
 }
 
-export type KeeperWorst = "failing" | "running";
+export type KeeperWorst = "failing" | "running" | "not_checked";
 
 /**
  * The task's keepers folded into one mark for the pull-request glyph: a keeper
@@ -342,7 +353,8 @@ export type KeeperWorst = "failing" | "running";
 export function keeperWorst(state: KeeperTaskState | undefined): KeeperWorst | null {
   const marks = activeKeepers(state).map(keeperMark);
   if (marks.includes("failing")) return "failing";
-  return marks.includes("checking") ? "running" : null;
+  if (marks.includes("checking")) return "running";
+  return activeKeepers(state).some(({ status }) => status === "not_checked") ? "not_checked" : null;
 }
 
 /**
@@ -391,6 +403,7 @@ export function keeperAttentionReasons(
 
 /** How each keeper status reads on its card; other surfaces override entries. */
 export const KEEPER_STATUS_META: Record<KeeperStatus, { label: string; tone: string }> = {
+  not_checked: { label: "Not checked", tone: "text-muted-foreground" },
   accepted: { label: "Accepted", tone: "text-ok" },
   draft: { label: "Draft ready", tone: "text-muted-foreground" },
   findings: { label: "Findings", tone: "text-destructive" },
