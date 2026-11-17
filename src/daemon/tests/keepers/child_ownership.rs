@@ -1,5 +1,5 @@
 //! Descendants share branch ownership with their root orchestrator.
-use super::checkout::{on_branch, switches, until_branch};
+use super::checkout::{move_checkout_head, on_branch, switches, until_branch, until_head};
 use super::*;
 
 #[tokio::test]
@@ -23,17 +23,17 @@ async fn child_turn_preserves_root_findings_and_parent_reclaims_after_sibling() 
     assert!(!findings.is_empty());
 
     commit(&setup, "t_child").await;
-    // Wait for the child's poll to land, including its ownership decision.
-    timeout(Duration::from_secs(10), async {
-        loop {
-            if switches(&setup.daemon, "t_child").await.held.is_some() {
-                break;
-            }
-            tokio::time::sleep(Duration::from_millis(50)).await;
-        }
+    // The child's commit nudges once and moves HEAD. Let the daemon arm that
+    // nudge before HEAD moves, then wait for the owner's poll of the new HEAD:
+    // the one-shot nudge has then landed and cannot race the sibling's.
+    ask(&setup, |reply| KeeperCommand::State {
+        task_id: "t_child".into(),
+        reply,
     })
     .await
     .unwrap();
+    move_checkout_head(&setup, "sha2").await;
+    until_head(&setup, "t_parent", "sha2").await;
     assert_eq!(
         switches(&setup.daemon, "t_parent").await.branch.as_deref(),
         Some("feat/x")
@@ -57,10 +57,11 @@ async fn child_turn_preserves_root_findings_and_parent_reclaims_after_sibling() 
         );
     }
 
+    move_checkout_head(&setup, "sha3").await;
     commit(&setup, "t_sibling").await;
     until_branch(&setup, "t_sibling", Some("feat/x")).await;
     keeper_event(&mut setup, |r| finished(r) && r.task_id == "t_sibling").await;
-    super::checkout::move_checkout_head(&setup, "sha2").await;
+    move_checkout_head(&setup, "sha4").await;
     commit(&setup, "t_parent").await;
     until_branch(&setup, "t_parent", Some("feat/x")).await;
     keeper_event(&mut setup, |r| finished(r) && r.task_id == "t_parent").await;

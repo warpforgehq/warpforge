@@ -213,6 +213,25 @@ pub(super) async fn until_branch(setup: &Setup, task_id: &str, branch: Option<&s
     .unwrap_or_else(|_| panic!("{task_id} owns {branch:?}"));
 }
 
+/// Wait until a poll has read the checkout's `head` and recorded it on a task
+/// that may check: that poll, and so every nudge armed before it, has landed.
+pub(super) async fn until_head(setup: &Setup, task_id: &str, head: &str) {
+    timeout(Duration::from_secs(10), async {
+        loop {
+            setup
+                .daemon
+                .send(Command::Keepers(KeeperCommand::Poll))
+                .await;
+            if switches(&setup.daemon, task_id).await.head.as_deref() == Some(head) {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("{task_id} polled {head}"));
+}
+
 /// Move the shared checkout's HEAD, as a folder task's commit would.
 pub(super) async fn move_checkout_head(setup: &Setup, sha: &str) {
     let root = setup.projects[0].path.clone();
