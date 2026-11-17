@@ -7,7 +7,7 @@ import type { TaskPullRequest } from "@/protocol";
 /** How stale an opened task's pull request may be before it is re-checked. */
 const OPEN_TASK_MAX_AGE_SECS = 15;
 
-/** The pull request a task's worktree branch has, or null. */
+/** The pull request a task's branch has, or null. */
 export function useTaskPullRequest(taskId: string): TaskPullRequest | null {
   return useSyncExternalStore(
     daemon.subscribe,
@@ -17,7 +17,7 @@ export function useTaskPullRequest(taskId: string): TaskPullRequest | null {
 }
 
 /**
- * Re-check worktree tasks' pull requests on connect and whenever the window
+ * Re-check tasks' pull requests on connect and whenever the window
  * regains focus; the daemon polls open ones in between and throttles repeats.
  * A daemon without `gh` (or without the call) leaves the map empty.
  */
@@ -32,9 +32,8 @@ export function useTaskPullRequestSync(connection: ConnectionState) {
 }
 
 /** Re-check one task's pull request when it is opened. */
-export function useOpenTaskPullRequestRefresh(taskId: string, hasWorktree: boolean) {
+export function useOpenTaskPullRequestRefresh(taskId: string) {
   useEffect(() => {
-    if (!hasWorktree) return;
     void daemon.refreshTaskPullRequests([taskId], OPEN_TASK_MAX_AGE_SECS).catch(() => {});
-  }, [taskId, hasWorktree]);
+  }, [taskId]);
 }

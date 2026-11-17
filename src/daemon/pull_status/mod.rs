@@ -1,4 +1,4 @@
-//! Pull-request state of worktree tasks, for the sidebar row and the task
+//! Pull-request state of branch-owning tasks, for the sidebar row and the task
 //! header. A cache refreshed through `gh` on spawned tasks, never on the actor
 //! loop; changes go out as `task.pullRequest` (docs/adr/0020).
 
@@ -6,6 +6,8 @@ mod checks;
 mod comments;
 mod gh;
 mod removal;
+mod targets;
+pub(crate) use targets::targets;
 #[cfg(test)]
 mod tests;
 
@@ -42,7 +44,7 @@ pub(crate) struct PullTarget {
     pub worktree: String,
     pub base_branch: Option<String>,
     /// The pull request's head branch when it is not what `worktree` has
-    /// checked out: a Factory run in the project checkout, given back since.
+    /// checked out: an owned folder branch or a Factory task branch.
     pub head: Option<String>,
 }
 
@@ -333,46 +335,6 @@ pub(crate) async fn refresh(
     handle
         .pulls
         .refresh(targets(&tasks, &paths), only, max_age, &handle.event_tx)
-}
-
-/// Every live task with an isolated checkout, keyed by task id, plus every
-/// Factory task that ran in its project checkout (`paths`, by project name).
-/// Archived tasks sit folded on the sidebar's done shelf and are not worth a
-/// `gh` call, except a Factory task, whose merge is what closes its backlog item.
-pub(crate) fn targets(
-    tasks: &[Task],
-    paths: &HashMap<String, String>,
-) -> HashMap<String, PullTarget> {
-    tasks
-        .iter()
-        .filter(|task| task.status != crate::daemon::task::TaskStatus::Done || is_factory(task))
-        .filter_map(|task| {
-            let target = match task.worktree.clone() {
-                Some(worktree) => PullTarget {
-                    worktree,
-                    base_branch: task.base_branch.clone(),
-                    head: None,
-                },
-                None if is_factory(task) && task.base_branch.is_some() => PullTarget {
-                    worktree: paths.get(&task.project)?.clone(),
-                    base_branch: task.base_branch.clone(),
-                    head: Some(format!(
-                        "{}{}",
-                        crate::daemon::worktree::TASK_BRANCH_PREFIX,
-                        task.id
-                    )),
-                },
-                None => return None,
-            };
-            Some((task.id.clone(), target))
-        })
-        .collect()
-}
-
-fn is_factory(task: &Task) -> bool {
-    task.tags
-        .iter()
-        .any(|tag| tag == crate::daemon::runner::RUNNER_TAG)
 }
 
 fn project_paths(projects: Vec<crate::registry::ProjectEntry>) -> HashMap<String, String> {

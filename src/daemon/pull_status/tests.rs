@@ -1,3 +1,5 @@
+mod targets;
+
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -409,26 +411,4 @@ async fn a_merged_pull_request_costs_no_remarks_read() {
     watch.refresh(targets(&["t1"]), None, Duration::ZERO, &events);
     next_pull_event(&mut rx).await;
     assert_eq!(calls.load(Ordering::SeqCst), 0);
-}
-
-/// A Factory task that ran in the project checkout is followed by its task
-/// branch from the project's path, whatever the checkout has out now; any
-/// other task without a worktree is not followed.
-#[test]
-fn a_factory_run_in_the_checkout_is_followed_by_its_task_branch() {
-    use crate::daemon::task::Task;
-    let mut factory = Task::new("demo", "p", "claude", vec!["runner".into()]);
-    factory.base_branch = Some("main".into());
-    let plain = Task::new("demo", "p", "claude", Vec::new());
-    let paths = HashMap::from([("demo".to_string(), "/work/demo".to_string())]);
-    let found = super::targets(&[factory.clone(), plain], &paths);
-    assert_eq!(found.len(), 1);
-    assert_eq!(
-        found[&factory.id],
-        PullTarget {
-            worktree: "/work/demo".into(),
-            base_branch: Some("main".into()),
-            head: Some(format!("warpforge/task/{}", factory.id)),
-        }
-    );
 }
