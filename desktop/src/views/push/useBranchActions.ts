@@ -43,13 +43,12 @@ export function useBranchActions(task: TaskInfo) {
     task,
   });
 
-  const taskId = task.id;
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const next = (await daemon.request("git.pushInfo", {
-        task_id: taskId,
+        task_id: task.id,
       })) as GitPushInfo;
       setInfo(next);
       setPrTitle((current) =>
@@ -65,7 +64,7 @@ export function useBranchActions(task: TaskInfo) {
     } finally {
       setLoading(false);
     }
-  }, [taskId]);
+  }, [task.id]);
 
   useEffect(() => {
     void load();

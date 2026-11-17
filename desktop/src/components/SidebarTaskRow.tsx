@@ -121,14 +121,13 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
             <button
               type="button"
               data-task-id={task.id}
-              data-task-state={state}
               aria-label={`Open task: ${label}`}
               className="flex min-w-0 flex-1 items-center gap-2 self-stretch text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
             >
               {/* Inline, not a reserved lane: most rows are silent, so a
-                placeholder column would indent the whole list for the minority
-                that draws one. Its box is the glyph lane, so a glyphed title
-                lands on the project name's column. */}
+                  placeholder column would indent the whole list for the minority
+                  that draws one. Its box is the glyph lane, so a glyphed title
+                  lands on the project name's column. */}
               {meta.rowGlyph && (
                 // WKWebView can stall a spin on a bare <svg> until something else
                 // repaints; an HTML box with its own layer keeps it on the compositor.

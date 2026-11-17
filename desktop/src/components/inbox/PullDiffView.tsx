@@ -23,7 +23,7 @@ import type {
 import { PANEL_BOUNDS, useAutoHiddenRail, usePanelSize } from "@/store/panelLayout";
 import { useUi } from "@/store/ui";
 
-import { PullDiffFile } from "./PullDiffFile";
+import { PullDiffFile, type PullDiffReview } from "./PullDiffFile";
 import { PullDiffSkeleton } from "./PullDiffSkeleton";
 import { PullDiffToolbar } from "./PullDiffToolbar";
 import { PullFilesRail } from "./PullFilesRail";
@@ -327,25 +327,23 @@ export function PullDiffView({
                   change does not touch: ticking one file off, folding one, or
                   dragging a comment span re-renders that file alone. */}
                   {blocks.map((block) => (
-                    <PullDiffFile
+                    <ReviewedDiffFile
                       key={block.path || block.hunks[0]?.id}
                       block={block}
                       mode={mode}
                       expanded={isExpanded(block.path)}
                       registerAnchor={registerAnchor}
                       onToggleExpanded={toggleExpanded}
-                      review={{
-                        viewed: viewed.has(block.path),
-                        project: pr.project,
-                        number: pr.number,
-                        threads: threadsByPath.get(block.path),
-                        draft: draft?.path === block.path ? draft : undefined,
-                        onToggleViewed: toggleViewed,
-                        onComment,
-                        onCompose: compose,
-                        onCancelDraft: cancelDraft,
-                        onPosted,
-                      }}
+                      viewed={viewed.has(block.path)}
+                      project={pr.project}
+                      number={pr.number}
+                      threads={threadsByPath.get(block.path)}
+                      draft={draft?.path === block.path ? draft : undefined}
+                      onToggleViewed={toggleViewed}
+                      onComment={onComment}
+                      onCompose={compose}
+                      onCancelDraft={cancelDraft}
+                      onPosted={onPosted}
                     />
                   ))}
                 </div>
@@ -379,4 +377,46 @@ export function PullDiffView({
       </PanelGroup>
     </div>
   );
+}
+
+function ReviewedDiffFile({
+  viewed,
+  project,
+  number,
+  threads,
+  draft,
+  onToggleViewed,
+  onComment,
+  onCompose,
+  onCancelDraft,
+  onPosted,
+  ...props
+}: Omit<React.ComponentProps<typeof PullDiffFile>, "review"> & PullDiffReview) {
+  const review = React.useMemo(
+    () => ({
+      viewed,
+      project,
+      number,
+      threads,
+      draft,
+      onToggleViewed,
+      onComment,
+      onCompose,
+      onCancelDraft,
+      onPosted,
+    }),
+    [
+      viewed,
+      project,
+      number,
+      threads,
+      draft,
+      onToggleViewed,
+      onComment,
+      onCompose,
+      onCancelDraft,
+      onPosted,
+    ],
+  );
+  return <PullDiffFile {...props} review={review} />;
 }

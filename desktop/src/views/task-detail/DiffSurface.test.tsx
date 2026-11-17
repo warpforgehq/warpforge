@@ -132,7 +132,6 @@ function renderSurface(overrides: { diff?: TaskDiff | null; baseBranch?: string 
         project="warpforge"
         selected={null}
         task={{ ...fixture.snapshot.tasks[0], baseBranch: overrides.baseBranch } as TaskInfo}
-        taskId="task-1"
       />
     </QueryClientProvider>,
   );

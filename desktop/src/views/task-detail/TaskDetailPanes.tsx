@@ -276,7 +276,6 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
                 onResolve={resolveHunk}
                 onSendToChat={sendDiffToChat}
                 onSetDiffView={setDiffView}
-                taskId={task.id}
                 project={task.project}
                 selected={selectedDiffFile}
                 onSelect={openDiffFile}
