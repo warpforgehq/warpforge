@@ -1,6 +1,6 @@
 use warpforge_protocol as wire;
 
-use crate::daemon::actor::prompt::build_textgen_prompt;
+use crate::daemon::actor::prompt::{build_pr_prompt, build_textgen_prompt};
 use crate::daemon::actor::{Command, Daemon};
 
 impl Daemon {
@@ -28,13 +28,13 @@ impl Daemon {
                     let command = self.resolve_agent_command(&task.project, &agent_id);
                     let env = self.resolve_agent_env(&agent_id, account);
                     let prompt = task.prompt.clone();
-                    Ok((repo, command, prompt, env))
+                    Ok((repo, command, prompt, env, task.base_branch.clone()))
                 });
                 match resolved {
                     Some(Err(error)) => {
                         let _ = reply.send(Err(error));
                     }
-                    Some(Ok((repo, command, prompt, env))) => {
+                    Some(Ok((repo, command, prompt, env, base))) => {
                         tokio::spawn(async move {
                             let message = match kind {
                                 wire::TextGenKind::TaskTitle => Some(prompt.as_str()),
@@ -46,7 +46,13 @@ impl Daemon {
                                 wire::TextGenKind::ShelfName => input.as_deref(),
                                 _ => None,
                             };
-                            let result = match build_textgen_prompt(&repo, kind, message).await {
+                            let built = match kind {
+                                wire::TextGenKind::PrDescription => {
+                                    build_pr_prompt(&repo, base.as_deref()).await
+                                }
+                                _ => build_textgen_prompt(&repo, kind, message).await,
+                            };
+                            let result = match built {
                                 Ok(prompt) => {
                                     crate::daemon::acp::generate_text(
                                         command, repo, prompt, model, env,

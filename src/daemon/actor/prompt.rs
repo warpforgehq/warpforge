@@ -205,6 +205,27 @@ details unchanged — only clarify, organise, and improve the phrasing. Do not i
 requirements that are not implied by the text. Reply with ONLY the rewritten task — \
 no code fences, no preamble, no closing remarks.";
 
+fn clamp(mut diff: String) -> String {
+    if diff.len() > TEXTGEN_DIFF_LIMIT {
+        diff.truncate(TEXTGEN_DIFF_LIMIT);
+        diff.push_str("\n… diff truncated …\n");
+    }
+    diff
+}
+
+/// The `text.generate` prompt for a pull request title and description.
+///
+/// @param repo Path of the checkout.
+/// @param base The task's base branch, when known.
+/// @returns The prompt, or an error when the branch has nothing to describe.
+pub(crate) async fn build_pr_prompt(repo: &str, base: Option<&str>) -> Result<String, String> {
+    let (subjects, diff) = crate::daemon::diff::pr_material(repo, base).await?;
+    Ok(format!(
+        "{PR_INSTRUCTION}\n\n----- commits -----\n{subjects}\n\n----- combined diff -----\n{}",
+        clamp(diff)
+    ))
+}
+
 /// Build the one-shot prompt for `text.generate` from the repo's git state.
 /// When `message` is set (required for `TaskTitle`), it is used verbatim as the
 /// input to describe instead of running git.
@@ -229,14 +250,6 @@ pub(crate) async fn build_textgen_prompt(
             ));
         }
         Ok(String::from_utf8_lossy(&out.stdout).into_owned())
-    }
-
-    pub(crate) fn clamp(mut diff: String) -> String {
-        if diff.len() > TEXTGEN_DIFF_LIMIT {
-            diff.truncate(TEXTGEN_DIFF_LIMIT);
-            diff.push_str("\n… diff truncated …\n");
-        }
-        diff
     }
 
     match kind {
@@ -301,28 +314,7 @@ pub(crate) async fn build_textgen_prompt(
                 clamp(parts.join("\n\n"))
             ))
         }
-        wire::TextGenKind::PrDescription => {
-            let info = crate::daemon::diff::push_info(repo)
-                .await
-                .map_err(|e| e.to_string())?;
-            if info.commits.is_empty() {
-                return Err("no outgoing commits to describe".to_string());
-            }
-            let subjects = info
-                .commits
-                .iter()
-                .map(|c| format!("- {}", c.subject))
-                .collect::<Vec<_>>()
-                .join("\n");
-            // commits are oldest-first; parent of the first covers exactly the
-            // outgoing range without depending on the upstream ref existing.
-            let range = format!("{}^..HEAD", info.commits[0].hash);
-            let diff = git_out(repo, &["diff", &range]).await.unwrap_or_default();
-            Ok(format!(
-                "{PR_INSTRUCTION}\n\n----- commits -----\n{subjects}\n\n----- combined diff -----\n{}",
-                clamp(diff)
-            ))
-        }
+        wire::TextGenKind::PrDescription => build_pr_prompt(repo, None).await,
         wire::TextGenKind::TaskTitle => {
             let prompt = message.unwrap_or("");
             if prompt.trim().is_empty() {
@@ -453,5 +445,29 @@ mod tests {
         assert!(build_textgen_prompt(&r, wire::TextGenKind::ShelfName, None)
             .await
             .is_err());
+    }
+
+    #[tokio::test]
+    async fn a_pushed_branch_still_lists_its_commits_for_the_pr() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let d = dir.path();
+        init_repo(d).await;
+        git(d, &["checkout", "-q", "-b", "main"]).await;
+        std::fs::write(d.join("a.txt"), "a\n").unwrap();
+        git(d, &["add", "."]).await;
+        git(d, &["commit", "-q", "-m", "init"]).await;
+        git(d, &["update-ref", "refs/remotes/origin/main", "HEAD"]).await;
+        git(d, &["checkout", "-q", "-b", "feat"]).await;
+        std::fs::write(d.join("a.txt"), "a\nFEATURE LINE\n").unwrap();
+        git(d, &["commit", "-qam", "add the feature"]).await;
+        git(d, &["update-ref", "refs/remotes/origin/feat", "HEAD"]).await;
+        git(d, &["config", "branch.feat.remote", "origin"]).await;
+        git(d, &["config", "branch.feat.merge", "refs/heads/feat"]).await;
+        let r = d.to_str().unwrap();
+
+        let prompt = build_pr_prompt(r, Some("main")).await.unwrap();
+        assert!(prompt.contains("- add the feature"));
+        assert!(prompt.contains("FEATURE LINE"));
+        assert!(!prompt.contains("- init"));
     }
 }
