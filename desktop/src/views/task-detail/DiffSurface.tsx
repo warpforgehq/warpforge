@@ -47,10 +47,9 @@ export function DiffSkeleton({ files }: { files: readonly FileDiff[] }) {
 }
 
 function prCreationDisabledReason(branch: string | undefined, base: string | null | undefined) {
-  if (branch === "main" || branch === "master" || Boolean(branch && branch === base)) {
-    return "Switch to a feature branch to create a pull request";
-  }
-  return undefined;
+  return branch === "main" || branch === "master" || (branch && branch === base)
+    ? "Switch to a feature branch to create a pull request"
+    : undefined;
 }
 
 /**
