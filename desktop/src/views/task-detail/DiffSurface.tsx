@@ -46,16 +46,16 @@ export function DiffSkeleton({ files }: { files: readonly FileDiff[] }) {
   );
 }
 
-function prCreationAvailability(
+function prCreationDisabledReason(
   branch: string | undefined,
   base: string | null | undefined,
   hasPr: boolean,
 ) {
-  if (hasPr) return { disabled: true, reason: "This task already has a pull request" };
+  if (hasPr) return "This task already has a pull request";
   if (branch === "main" || branch === "master" || Boolean(branch && branch === base)) {
-    return { disabled: true, reason: "Switch to a feature branch to create a pull request" };
+    return "Switch to a feature branch to create a pull request";
   }
-  return { disabled: false, reason: undefined };
+  return undefined;
 }
 
 /**
@@ -127,7 +127,7 @@ export function DiffSurface({
   });
   const shownDiff = commit ? (history.data ?? null) : diff;
   const branch = diff?.branch ?? actions.info?.branch;
-  const prCreation = prCreationAvailability(branch, task.baseBranch, Boolean(pr));
+  const prCreationReason = prCreationDisabledReason(branch, task.baseBranch, Boolean(pr));
   const collapsed = useUi((s) => s.diffPanelCollapsed);
   const setCollapsed = useUi((s) => s.setDiffPanelCollapsed);
   const toggleCollapsed = useUi((s) => s.toggleDiffPanelCollapsed);
@@ -179,8 +179,8 @@ export function DiffSurface({
             ) : (
               <button
                 type="button"
-                disabled={prCreation.disabled}
-                title={prCreation.reason ?? "Create a pull request"}
+                disabled={Boolean(prCreationReason)}
+                title={prCreationReason ?? "Create a pull request"}
                 onClick={() => actions.setMode("pr")}
                 className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background/30 px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -278,7 +278,7 @@ export function DiffSurface({
                     actions.setMode("push");
                   }}
                   actions={actions}
-                  createPrDisabledReason={prCreation.reason}
+                  createPrDisabledReason={prCreationReason}
                   onCreatePr={() => actions.setMode("pr")}
                 />
               }

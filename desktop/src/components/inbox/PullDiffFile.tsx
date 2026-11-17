@@ -96,11 +96,6 @@ export const PullDiffFile = React.memo(function PullDiffFile({
 
   const toggleExpanded = React.useCallback(() => onToggleExpanded(path), [onToggleExpanded, path]);
 
-  /**
-   * The threads and the composer that hang under a line. Built here rather
-   * than handed down as a closure from the view: a per-file closure changed
-   * identity on every parent render, which re-rendered every file's rows.
-   */
   const reviewHandlers = useReviewHandlers(review, block);
 
   React.useEffect(() => {
@@ -156,20 +151,24 @@ export const PullDiffFile = React.memo(function PullDiffFile({
           {stats.additions > 0 && <span className="text-ok">+{stats.additions}</span>}
           {stats.deletions > 0 && <span className="text-destructive">−{stats.deletions}</span>}
         </span>
-        {review && (
+        {reviewHandlers && (
           <button
             type="button"
-            onClick={reviewHandlers?.toggleViewed}
-            aria-pressed={review.viewed}
-            title={review.viewed ? "Mark as not viewed" : "Mark as viewed"}
+            onClick={reviewHandlers.toggleViewed}
+            aria-pressed={reviewHandlers.review.viewed}
+            title={reviewHandlers.review.viewed ? "Mark as not viewed" : "Mark as viewed"}
             className={cn(
               "flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs",
-              review.viewed
+              reviewHandlers.review.viewed
                 ? "bg-ok/15 text-ok"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground",
             )}
           >
-            {review.viewed ? <SquareCheck className="size-3.5" /> : <Square className="size-3.5" />}
+            {reviewHandlers.review.viewed ? (
+              <SquareCheck className="size-3.5" />
+            ) : (
+              <Square className="size-3.5" />
+            )}
             Viewed
           </button>
         )}
@@ -197,8 +196,9 @@ export const PullDiffFile = React.memo(function PullDiffFile({
                 hunk={hunk}
                 mode={mode}
                 tokens={tokens ?? undefined}
-                onComment={reviewHandlers?.comment}
-                lineExtras={reviewHandlers?.lineExtras}
+                {...(reviewHandlers
+                  ? { onComment: reviewHandlers.comment, lineExtras: reviewHandlers.lineExtras }
+                  : {})}
                 range={
                   review?.draft
                     ? {
@@ -220,11 +220,17 @@ export const PullDiffFile = React.memo(function PullDiffFile({
   );
 });
 
+/**
+ * The threads and the composer that hang under a line. Built here rather
+ * than handed down as a closure from the view: a per-file closure changed
+ * identity on every parent render, which re-rendered every file's rows.
+ */
 function useReviewHandlers(review: PullDiffReview | undefined, block: PatchFileBlock) {
   const path = block.path;
   return React.useMemo(() => {
     if (!review) return undefined;
     return {
+      review,
       comment: (line: PatchLine, intent: CommentIntent) => review.onComment(path, line, intent),
       toggleViewed: () => review.onToggleViewed(path),
       lineExtras: (line: PatchLine) => {
