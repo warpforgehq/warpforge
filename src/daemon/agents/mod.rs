@@ -8,8 +8,11 @@ use std::collections::HashMap;
 
 use warpforge_protocol as wire;
 
+mod antigravity;
 mod detect;
 mod manage;
+
+pub(crate) use antigravity::expose_managed_bin;
 
 pub(crate) use detect::{
     compare_versions, first_version_token, latest_npm_version, npm_global_version,
@@ -145,6 +148,17 @@ pub static KNOWN_AGENTS: &[KnownAgent] = &[
         homebrew_formula: None,
         install_hint:
             "curl -fsSL https://x.ai/cli/install.sh | bash (or npm install -g @xai-official/grok)",
+    },
+    KnownAgent {
+        id: "antigravity",
+        display_name: "Google Antigravity",
+        binary: "agy",
+        default_acp_command: "agy acp",
+        npm_package: None,
+        extra_npm_packages: &[],
+        homebrew_formula: None,
+        custom_upgrade_command: None,
+        install_hint: "Install agy >=1.5: https://antigravity.google/docs/getting-started",
     },
 ];
 

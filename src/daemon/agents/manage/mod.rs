@@ -7,8 +7,11 @@ mod run;
 pub(crate) use install::{install_agent, InstallError, InstallRequest};
 pub use run::run_manage_command;
 
+use super::antigravity;
 use super::detect::PackageManager;
 use super::KnownAgent;
+
+const ANTIGRAVITY: &str = "antigravity";
 
 /// Append any co-install packages to an install/update command.
 fn with_extras(agent: &KnownAgent, base: String) -> String {
@@ -32,6 +35,9 @@ fn npm_with_extras(agent: &KnownAgent, base: &str) -> String {
 /// agent, given how its binary is installed. Returns the command string to run
 /// via `sh -c`, or None when there is no safe automated path.
 pub fn install_command(agent: &KnownAgent) -> Option<String> {
+    if agent.id == ANTIGRAVITY {
+        return (!cfg!(windows)).then(|| antigravity::MANAGED_LABEL.to_string());
+    }
     if let Some(pkg) = agent.npm_package {
         Some(npm_with_extras(
             agent,
@@ -43,6 +49,11 @@ pub fn install_command(agent: &KnownAgent) -> Option<String> {
 }
 
 pub(super) fn update_command(agent: &KnownAgent, resolved_path: Option<&str>) -> Option<String> {
+    if agent.id == ANTIGRAVITY {
+        return resolved_path
+            .filter(|path| antigravity::is_managed(path))
+            .map(|_| antigravity::MANAGED_LABEL.to_string());
+    }
     if let Some(formula) = agent.homebrew_formula {
         // brew-managed agents always update via brew.
         if agent.npm_package.is_none() {

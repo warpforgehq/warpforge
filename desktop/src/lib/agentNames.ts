@@ -8,6 +8,7 @@ const AGENT_NAMES: Record<string, string> = {
   cursor: "Cursor",
   pi: "Pi",
   grok: "Grok Build",
+  antigravity: "Google Antigravity",
 };
 
 export function agentDisplayName(agentId: string, override?: string): string {

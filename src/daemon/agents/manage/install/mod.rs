@@ -6,12 +6,13 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use super::super::antigravity;
 use super::super::detect::{package_manager_for_path, which};
 use super::super::known_agent;
 use super::run::run_manage_command_with_timeout;
 use super::{
     broken_install, broken_install_summary, can_reinstall, clean_install_command, install_command,
-    update_command,
+    update_command, ANTIGRAVITY,
 };
 use crate::daemon::accounts::AgentEnv;
 
@@ -96,6 +97,16 @@ impl InstallOps for RealInstallOps {
     async fn plan(&self, id: &str, clean: bool) -> Option<InstallPlan> {
         let agent = known_agent(id)?;
         let path = which(agent.binary).await;
+        if agent.id == ANTIGRAVITY {
+            if clean || path.as_deref().is_some_and(|p| !antigravity::is_managed(p)) {
+                return None;
+            }
+            let manifest = antigravity::fetch_manifest().await?;
+            return Some(InstallPlan {
+                command: antigravity::install_script(&manifest)?,
+                clean_command: None,
+            });
+        }
         let manager = path.as_deref().map(package_manager_for_path);
         let clean_command = can_reinstall(manager, agent.npm_package)
             .then(|| clean_install_command(agent))

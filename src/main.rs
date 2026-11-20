@@ -74,6 +74,7 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Daemon { dev, owner } => {
             mcp::identity::forget_inherited_session();
+            daemon::agents::expose_managed_bin();
             let projects = registry::list_projects().unwrap_or_default();
             let store = daemon::Store::open().ok();
             let handle = daemon::Daemon::spawn(projects, store);

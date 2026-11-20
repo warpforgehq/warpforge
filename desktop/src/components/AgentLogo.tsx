@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useThemeMode } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 
+import antigravityLogo from "../assets/app-logos/antigravity.svg?no-inline";
 import claudeLogo from "../assets/app-logos/claude-ai-icon.svg?no-inline";
 import codexDark from "../assets/app-logos/codex_dark.svg?no-inline";
 import codexLight from "../assets/app-logos/codex_light.svg?no-inline";
@@ -32,6 +33,7 @@ interface AgentIconAsset {
 }
 
 const AGENT_ICONS: Record<string, AgentIconAsset> = {
+  antigravity: { dark: antigravityLogo, light: antigravityLogo },
   claude: { dark: claudeLogo, light: claudeLogo },
   codex: { dark: codexDark, light: codexLight },
   opencode: { dark: opencodeDark, light: opencodeLight },
@@ -53,6 +55,7 @@ const AGENT_COLORS: Record<string, string> = {
   cursor: "#6366f1",
   pi: "#16a34a",
   grok: "#1d9bf0",
+  antigravity: "#4285f4",
 };
 
 function initials(name: string): string {

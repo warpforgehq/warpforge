@@ -97,7 +97,7 @@ Read the full pitch in **[Why Warpforge?](https://warpforge.app/concepts/why-war
 
 ## Bring your own agents
 
-Warpforge detects Claude Code, Codex, OpenCode, Qwen Code, Goose, Junie, Cursor, Pi, and Grok Build as globally installed binaries and speaks [ACP](https://agentclientprotocol.com/) to them over stdio — no separate Warpforge account, no new API key, your existing agent login just works. Any other ACP-compatible agent can be added with a custom command.
+Warpforge detects Claude Code, Codex, OpenCode, Qwen Code, Goose, Junie, Cursor, Pi, Grok Build, and Google Antigravity as globally installed binaries and speaks [ACP](https://agentclientprotocol.com/) to them over stdio — no separate Warpforge account, no new API key, your existing agent login just works. Any other ACP-compatible agent can be added with a custom command.
 
 See **[Bring your own agents](https://warpforge.app/concepts/agents/)** for the full list and setup details.
 

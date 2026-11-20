@@ -19,8 +19,11 @@ Warpforge detects agents as globally installed binaries and spawns them directly
 | Cursor | `cursor-agent-acp` | `cursor-agent-acp` | `npm install -g @blowmage/cursor-agent-acp` |
 | Pi | `pi-acp` | `pi-acp` | `npm install -g @earendil-works/pi-coding-agent pi-acp` |
 | Grok Build | `grok` | `grok agent stdio` | `curl -fsSL https://x.ai/cli/install.sh \| bash` |
+| Google Antigravity | `agy` | `agy acp` | One click in the agent panel |
 
 Claude Code and Codex reach ACP through small adapter binaries. Warpforge shows whether each agent is present, which version is installed, and whether a newer one exists — and installs or updates it in one click from the agent panel. After an install or update it checks the agent actually starts, repairs a global install that is missing the native binary it needs, and offers a **Reinstall** button when the agent still can't. The same check also runs quietly in the background — on startup, when you enable an agent, and whenever a task tries to start one — so a broken install shows up in the agent panel as soon as Warpforge notices, not just after you press Install or Update. Any other ACP-compatible agent can be added with a custom command, globally or per project through `agentTemplates` — see the [configuration reference](/reference/configuration/#agenttemplates).
+
+Google Antigravity runs through Google's `agy` CLI, version 1.5 or newer. Press **Install** in the agent panel and Warpforge downloads the official release, checks its checksum, and keeps it up to date from the same panel — it never updates itself behind your back. If you already installed `agy` yourself, Warpforge uses yours, tells you when a newer version exists, and leaves updating it to you (see [Google's getting started guide](https://antigravity.google/docs/getting-started)).
 
 <Aside type="tip">
   Agent capabilities vary. Image input, session resume, slash commands, model selection, and permission semantics are negotiated with each ACP implementation.

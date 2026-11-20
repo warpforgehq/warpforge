@@ -281,7 +281,9 @@ async fn detect_one(agent: &'static KnownAgent, check_latest: bool) -> wire::Det
 
     let version = installed_version(agent, path.as_deref()).await;
     let update = update_command(agent, path.as_deref());
-    let latest = if check_latest && registry_is_baseline(update.as_deref()) {
+    let latest = if check_latest && agent.id == "antigravity" {
+        super::antigravity::latest_version().await
+    } else if check_latest && registry_is_baseline(update.as_deref()) {
         match agent.npm_package {
             Some(pkg) => latest_npm_version(pkg).await,
             None => None,
@@ -290,15 +292,23 @@ async fn detect_one(agent: &'static KnownAgent, check_latest: bool) -> wire::Det
         None
     };
 
-    let status = match (&version, &latest) {
-        (Some(v), Some(l)) => {
-            if compare_versions(v, l) == std::cmp::Ordering::Less {
-                "behind"
-            } else {
-                "current"
+    let below_minimum = agent.id == "antigravity"
+        && version
+            .as_deref()
+            .is_some_and(super::antigravity::below_minimum);
+    let status = if below_minimum {
+        "behind"
+    } else {
+        match (&version, &latest) {
+            (Some(v), Some(l)) => {
+                if compare_versions(v, l) == std::cmp::Ordering::Less {
+                    "behind"
+                } else {
+                    "current"
+                }
             }
+            _ => "unknown",
         }
-        _ => "unknown",
     }
     .to_string();
 
