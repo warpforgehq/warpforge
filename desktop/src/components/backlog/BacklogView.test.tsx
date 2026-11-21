@@ -382,7 +382,7 @@ describe("BacklogView", () => {
     expect(warpforgeCalls()).toBe(1);
   });
 
-  it("starts one item or a selection in Factory, and batches from the toolbar", async () => {
+  it("starts one item or a selection in Factory", async () => {
     vi.spyOn(daemon, "runnerStatus").mockResolvedValue(
       normalizeRunnerStatus("warpforge", {
         entries: [
@@ -401,8 +401,7 @@ describe("BacklogView", () => {
       }),
     );
     const onStartInFactory = vi.fn<(items: WorkItem[]) => void>();
-    const onRunInFactory = vi.fn<(selected: WorkItem[]) => void>();
-    renderBacklog({ onRunInFactory, onStartInFactory });
+    renderBacklog({ onStartInFactory });
     await vi.waitFor(() => expect(rowTitles()).toHaveLength(PAGE_SIZE));
     const user = userEvent.setup({ pointerEventsCheck: 0 });
 
@@ -416,11 +415,6 @@ describe("BacklogView", () => {
     expect(screen.getByRole("checkbox", { name: "Select Issue 69" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Select Issue 67" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Select Issue 68" })).not.toBeChecked();
-    await user.click(screen.getByRole("button", { name: "Run in Factory…" }));
-    expect(onRunInFactory).toHaveBeenLastCalledWith([
-      expect.objectContaining({ id: "b-69" }),
-      expect.objectContaining({ id: "b-67" }),
-    ]);
     await user.click(screen.getByRole("button", { name: "Start 2 in Factory" }));
     expect(onStartInFactory).toHaveBeenLastCalledWith([
       expect.objectContaining({ id: "b-69" }),
@@ -434,6 +428,5 @@ describe("BacklogView", () => {
     await vi.waitFor(() => expect(rowTitles()).toHaveLength(PAGE_SIZE));
     expect(screen.queryByRole("checkbox")).toBeNull();
     expect(screen.queryByRole("button", { name: "Start in Factory" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Run in Factory…" })).toBeNull();
   });
 });

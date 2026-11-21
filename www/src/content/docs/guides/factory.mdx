@@ -8,7 +8,7 @@ sidebar:
 
 **Factory** is a task mode. A Factory task runs a [workflow template](/reference/workflow-files/) from start to finish: an agent implements the change, other agents review it and send it back for fixes until they approve, and — when the template has a verify stage — an agent tests it in the running app first. Turn on **Open a draft PR when done** and a successful run comes back as a **draft pull request**; merging it marks its backlog item done.
 
-Start one from New Task, or straight from the backlog — for one item, a few, or every item that matches a filter. It works with local backlog items and with issues synced from GitHub or Linear. For a GitHub issue, the pull request says `Closes #N`, so merging it closes the issue too.
+Start one from New Task, or straight from the backlog — for one item or a few you pick. It works with local backlog items and with issues synced from GitHub or Linear. For a GitHub issue, the pull request says `Closes #N`, so merging it closes the issue too.
 
 <Aside type="note">
   The Factory never merges. Agents review each other inside the workflow, and people review the finished draft pull request — the same way you review anyone else's work.
@@ -35,10 +35,9 @@ The dialog opens with the project's defaults, which you set in [Factory settings
 Open a project's **Backlog**:
 
 - **One item:** press **Start in Factory** on its row, or in the item's details. New Task opens in Factory mode with the item's text as the prompt, linked to the item. Text imported from GitHub or Linear is marked as a description, so the agent treats it as the work to do, never as instructions to follow.
-- **Several items:** select the rows and press **Start 3 in Factory** (the button counts what you picked). The same dialog sets up one configuration for all of them, and each item gets its own Factory task.
-- **Everything that matches:** press **Run in Factory…** in the toolbar. Choose which items to include — by status (*To do* by default), source (*All*, *GitHub*, *Linear* or *Local*), a search, or just the selected items — and the dialog shows how many match. Confirm, and every matching item gets a Factory task; they start as slots free up.
+- **Several items:** select the rows and press **Start 3 in Factory** (the button counts what you picked). The same dialog lists them and sets up one configuration for all of them; each item gets its own Factory task, and they start as slots free up. To narrow the board first, use its filters and search, then select.
 
-**Run in Factory…** is a one-time batch. Items added to the backlog later are not picked up — a person always decides what goes into the Factory.
+Items added to the backlog later are not picked up — a person always decides what goes into the Factory.
 
 An item that already has a Factory task is skipped. The notice after you confirm says what happened, for example *3 started · 1 queued · 1 already in Factory*. An item with a Factory task shows **In Factory** in the backlog, with where it is: *In Factory · Queued*, *In Factory · PR #41*.
 
