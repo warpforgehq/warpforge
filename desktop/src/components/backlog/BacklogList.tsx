@@ -45,6 +45,31 @@ export function BacklogList({
     [actions],
   );
   const keyExtractor = React.useCallback((item: WorkItem) => item.id, []);
+  const frame = React.useRef<HTMLDivElement>(null);
+  const wantMore = hasNextPage && !isFetchingNextPage;
+
+  // LegendList's end-reached latches until the user scrolls well away from the
+  // end, and never fires for a list too short to scroll. Both left pages
+  // unloaded, so the list asks itself: near the end, or not overflowing.
+  React.useEffect(() => {
+    const scroller = frame.current?.firstElementChild;
+    if (!wantMore || !(scroller instanceof HTMLElement)) return;
+    const check = () => {
+      const { clientHeight, scrollHeight, scrollTop } = scroller;
+      if (clientHeight > 0 && scrollHeight - scrollTop - clientHeight <= clientHeight / 2) {
+        onEndReached();
+      }
+    };
+    const raf = requestAnimationFrame(check);
+    const observer = new ResizeObserver(check);
+    observer.observe(scroller);
+    scroller.addEventListener("scroll", check, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+      scroller.removeEventListener("scroll", check);
+    };
+  }, [items.length, onEndReached, wantMore]);
 
   if (error) {
     return <Message>{error}</Message>;
@@ -76,28 +101,30 @@ export function BacklogList({
   }
 
   return (
-    <LegendList<WorkItem>
-      data={items}
-      keyExtractor={keyExtractor}
-      renderItem={renderItem}
-      // Mounted rows re-render only when `extraData` changes, not when
-      // `renderItem` does; without it a selection never reaches the checkboxes.
-      extraData={actions}
-      estimatedItemSize={ESTIMATED_ROW_HEIGHT}
-      recycleItems
-      onEndReached={onEndReached}
-      onEndReachedThreshold={0.5}
-      className="h-full min-w-0 overflow-x-hidden [overflow-anchor:none]"
-      ListFooterComponent={
-        isFetchingNextPage ? (
-          <BacklogRowSkeleton rows={1} />
-        ) : hasNextPage ? null : (
-          <div className="py-3 text-center text-[11px] text-muted-foreground/70">
-            End of backlog
-          </div>
-        )
-      }
-    />
+    <div ref={frame} className="h-full min-w-0">
+      <LegendList<WorkItem>
+        data={items}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        // Mounted rows re-render only when `extraData` changes, not when
+        // `renderItem` does; without it a selection never reaches the checkboxes.
+        extraData={actions}
+        estimatedItemSize={ESTIMATED_ROW_HEIGHT}
+        recycleItems
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.5}
+        className="h-full min-w-0 overflow-x-hidden [overflow-anchor:none]"
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <BacklogRowSkeleton rows={1} />
+          ) : hasNextPage ? null : (
+            <div className="py-3 text-center text-[11px] text-muted-foreground/70">
+              End of backlog
+            </div>
+          )
+        }
+      />
+    </div>
   );
 }
 

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -337,6 +337,53 @@ describe("BacklogView", () => {
       expect(vi.mocked(daemon.listBacklog).mock.calls.length).toBeGreaterThan(listed),
     );
     await vi.waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+  });
+
+  it("still loads the next page when the pull's refetch cancels it", async () => {
+    let finishImport: (value: { items: []; synced: [] }) => void = () => {};
+    vi.spyOn(daemon, "importExternalWorkItems").mockImplementation(
+      () => new Promise((resolve) => (finishImport = resolve)),
+    );
+    const list = vi.mocked(daemon.listBacklog);
+    const serve = list.getMockImplementation()!;
+    let holdNextPage = true;
+    list.mockImplementation((input) =>
+      input.page === 1 && holdNextPage ? new Promise(() => {}) : serve(input),
+    );
+    renderBacklog();
+    await vi.waitFor(() => expect(rowTitles()).toHaveLength(PAGE_SIZE));
+
+    // The list asks for page two, and the pull lands while that is in flight.
+    await loadMore();
+    await vi.waitFor(() => expect(list.mock.calls.some(([input]) => input.page === 1)).toBe(true));
+    holdNextPage = false;
+    finishImport({ items: [], synced: [] });
+
+    await vi.waitFor(() => expect(rowTitles()).toHaveLength(PAGE_SIZE * 2));
+  });
+
+  it("keeps loading while the list is too short to scroll", async () => {
+    const box = (name: "clientHeight" | "scrollHeight", value: number) =>
+      vi.spyOn(HTMLElement.prototype, name, "get").mockReturnValue(value);
+    box("clientHeight", 2000);
+    box("scrollHeight", 1100);
+    renderBacklog();
+    await vi.waitFor(() => expect(rowTitles()).toHaveLength(allItems.length));
+  });
+
+  it("loads the next page when scrolled near the end, without the list's own signal", async () => {
+    const box = (name: "clientHeight" | "scrollHeight" | "scrollTop", value: number) =>
+      vi.spyOn(HTMLElement.prototype, name, "get").mockReturnValue(value);
+    box("clientHeight", 800);
+    box("scrollHeight", 5000);
+    box("scrollTop", 0);
+    renderBacklog();
+    await vi.waitFor(() => expect(rowTitles()).toHaveLength(PAGE_SIZE));
+
+    box("scrollTop", 4300);
+    expect(rowTitles()).toHaveLength(PAGE_SIZE);
+    fireEvent.scroll(screen.getByRole("button", { name: "scroll to end" }).parentElement!);
+    await vi.waitFor(() => expect(rowTitles().length).toBeGreaterThan(PAGE_SIZE));
   });
 
   it("syncs by rerunning the same pull, not a second request", async () => {
