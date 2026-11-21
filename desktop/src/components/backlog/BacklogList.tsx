@@ -80,6 +80,9 @@ export function BacklogList({
       data={items}
       keyExtractor={keyExtractor}
       renderItem={renderItem}
+      // Mounted rows re-render only when `extraData` changes, not when
+      // `renderItem` does; without it a selection never reaches the checkboxes.
+      extraData={actions}
       estimatedItemSize={ESTIMATED_ROW_HEIGHT}
       recycleItems
       onEndReached={onEndReached}
