@@ -297,8 +297,6 @@ function WorkItemDetails({
         </div>
       </header>
 
-      {/* The panel is wide so a long issue body has room, but prose is capped
-          at a readable measure rather than run edge to edge. */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <span className="inline-flex h-7 items-center gap-1.5 text-[13px] text-muted-foreground">
@@ -390,10 +388,12 @@ function WorkItemDetails({
               }
             }}
             placeholder="Describe the work… (markdown)"
-            className="min-h-[12rem] w-full max-w-[80ch] resize-y rounded-md border border-border bg-background/40 p-3 text-[13px] leading-relaxed text-foreground/90 outline-none placeholder:text-muted-foreground/50 focus:border-border"
+            // Same type as the rendered description, and pulled out by its own
+            // padding, so switching to edit does not move or resize the text.
+            className="-mx-3 -my-2 min-h-[16rem] w-[calc(100%+1.5rem)] flex-1 resize-none rounded-md border border-border/60 bg-background/30 px-3 py-2 text-[0.9375rem] leading-7 text-foreground/90 outline-none placeholder:text-muted-foreground/50 focus:border-border"
           />
         ) : (
-          <div className="group/description relative max-w-[80ch]">
+          <div className="group/description relative">
             {body ? (
               // Tracker descriptions are markdown; rendering them as plain text
               // turned every link and checklist in them into noise.

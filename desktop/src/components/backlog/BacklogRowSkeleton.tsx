@@ -4,7 +4,7 @@ import { ESTIMATED_ROW_HEIGHT } from "./BacklogList";
 
 /**
  * Backlog rows before the first page arrives. Mirrors `BacklogRow`'s one-line
- * geometry: `h-9` plus its bottom border, a source dot, the title, then the
+ * geometry: `h-9` plus its bottom border, the title, then the
  * same status / priority / source / assignee / updated lanes at the same
  * widths and the same breakpoints, so no column arrives from nowhere on swap.
  * Ten rows fill the cold list; one row stands in for the next page.
@@ -20,7 +20,6 @@ export function BacklogRowSkeleton({ rows = 10 }: { rows?: number }) {
           style={{ height: ESTIMATED_ROW_HEIGHT }}
         >
           <div className="flex h-full min-w-0 flex-1 items-center gap-3 pl-3 pr-2">
-            <SkeletonBar className="size-1.5 shrink-0 rounded-full" />
             <span className="flex min-w-0 flex-1 items-center">
               <SkeletonBar h={10} w={skeletonWidth(row, 0, 30, 75)} tone="primary" />
             </span>
