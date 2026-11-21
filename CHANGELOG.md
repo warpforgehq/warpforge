@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.31.1
+
+### Patch Changes
+
+- [#63](https://github.com/warpforgehq/warpforge/pull/63) [`4d1ed95`](https://github.com/warpforgehq/warpforge/commit/4d1ed95698f951a454ea52578b34c4046227debe) Thanks [@ephor](https://github.com/ephor)! - Backlog item details use the full width of the panel, and editing a description keeps the same text size and position as reading it, so switching to edit no longer jumps. Rows drop the extra source dot; the source column already says where each item comes from.
+
+- [#63](https://github.com/warpforgehq/warpforge/pull/63) [`41c88f3`](https://github.com/warpforgehq/warpforge/commit/41c88f31318f9c86f4d019f004789f061179db7d) Thanks [@ephor](https://github.com/ephor)! - The backlog now tells you when it is still fetching from GitHub or Linear. Your own items show right away, and a small "Loading GitHub…" note floats at the bottom of the board until the tracker's latest arrives.
+
+- [#63](https://github.com/warpforgehq/warpforge/pull/63) [`51c75cf`](https://github.com/warpforgehq/warpforge/commit/51c75cf345e697a34ce37c426e57bf1aeda34f85) Thanks [@ephor](https://github.com/ephor)! - Selecting backlog items for Factory now shows the ticked checkboxes, so you can see exactly which items a batch will start.
+
+- [#63](https://github.com/warpforgehq/warpforge/pull/63) [`ff358db`](https://github.com/warpforgehq/warpforge/commit/ff358db3af5eb46dd192ba047af3163de91f2f29) Thanks [@ephor](https://github.com/ephor)! - Starting several backlog items in the Factory is now one clear path: select them on the board and press **Start in Factory**. The dialog lists exactly the items you picked, instead of a separate filter form that could quietly match dozens more.
+
+- [#63](https://github.com/warpforgehq/warpforge/pull/63) [`c3da197`](https://github.com/warpforgehq/warpforge/commit/c3da1970c8453d301e626f9a8aa90f9741ec5bcc) Thanks [@ephor](https://github.com/ephor)! - The backlog and the pull request inbox load much faster. Your board shows right away and fills in GitHub's latest as soon as it arrives, instead of waiting on GitHub before showing anything. GitHub works the same whether you pasted a personal access token or just ran `gh auth login`, so a token is now optional. Repositories cloned through an SSH alias like `git@github-work:team/repo` are recognized too.
+
+- [#63](https://github.com/warpforgehq/warpforge/pull/63) [`f4cb077`](https://github.com/warpforgehq/warpforge/commit/f4cb077f4b3cfe05c18ce3e7b371b1d0d1ce4fdd) Thanks [@ephor](https://github.com/ephor)! - The pull request inbox now opens on the pull requests waiting for your review, instead of every open pull request across your projects. Switch to **Mine** or **Everyone** from the menu next to the filter box, and the unread badge follows the same view, so it only lights up when someone is waiting on you.
+
 ## 0.31.0
 
 ### Minor Changes
