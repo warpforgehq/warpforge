@@ -1,103 +1,64 @@
-//! The GraphQL calls: the issue listing with its board column, and the pull
-//! request conversation.
+//! The GraphQL query texts: the issue listing with its board column, the
+//! batched lookup by number, and the pull request conversation.
 
-#![allow(deprecated)]
+use std::fmt::Write;
 
-use anyhow::{bail, Context, Result};
-
-use super::cli::gh;
-use super::{github_token, GITHUB_GRAPHQL};
-use crate::daemon::tracker::NETWORK_TIMEOUT;
-
-pub(super) async fn github_graphql(
-    token: &str,
-    query: &str,
-    vars: serde_json::Value,
-) -> Result<serde_json::Value> {
-    let client = reqwest::Client::new();
-    let resp = client
-        .post(GITHUB_GRAPHQL)
-        .header("Authorization", format!("Bearer {token}"))
-        .header("Content-Type", "application/json")
-        .header("User-Agent", "warpforge")
-        .timeout(NETWORK_TIMEOUT)
-        .json(&serde_json::json!({"query":query,"variables":vars}))
-        .send()
-        .await
-        .context("GitHub GraphQL request")?;
-    let text = resp
-        .text()
-        .await
-        .context("reading GitHub GraphQL response")?;
-    let v: serde_json::Value =
-        serde_json::from_str(&text).context("parsing GitHub GraphQL response")?;
-    if let Some(errs) = v.get("errors") {
-        bail!("GitHub GraphQL error: {errs}");
+/// The fields every issue read asks for. `body` is left out of the closed
+/// half of the listing: a closed issue is never adopted, only re-statused.
+fn issue_fields(with_body: bool, with_board: bool) -> String {
+    let mut fields = String::from(
+        "number title url state stateReason createdAt updatedAt \
+         assignees(first: 1) { nodes { login } }",
+    );
+    if with_body {
+        fields.push_str(" body");
     }
-    Ok(v)
-}
-
-/// Run a query with the PAT when there is one, and through `gh api graphql`
-/// when there is not. Both paths return the same envelope, so callers read one
-/// shape.
-pub(super) async fn github_query(
-    repo_dir: &str,
-    query: &str,
-    vars: serde_json::Value,
-) -> Result<serde_json::Value> {
-    if let Some(tok) = github_token() {
-        return github_graphql(&tok, query, vars).await;
-    }
-    let mut args: Vec<String> = vec![
-        "api".into(),
-        "graphql".into(),
-        "-f".into(),
-        format!("query={query}"),
-    ];
-    // `-F` types the value the way GraphQL needs it, so a number stays a number;
-    // `-f` would send every variable as a string and fail an `Int!`.
-    for (key, value) in vars.as_object().into_iter().flatten() {
-        let literal = match value {
-            serde_json::Value::String(text) => text.clone(),
-            other => other.to_string(),
-        };
-        args.push("-F".into());
-        args.push(format!("{key}={literal}"));
-    }
-    let args: Vec<&str> = args.iter().map(String::as_str).collect();
-    let out = gh(Some(repo_dir), &args).await?;
-    if !out.status.success() {
-        bail!(
-            "GitHub GraphQL query failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
+    if with_board {
+        fields.push_str(
+            " projectItems(first: 5, includeArchived: false) { nodes { \
+               fieldValueByName(name: \"Status\") { \
+                 ... on ProjectV2ItemFieldSingleSelectValue { name } } } }",
         );
     }
-    serde_json::from_slice(&out.stdout).context("parsing GitHub GraphQL response")
+    fields
 }
 
-/// The issue listing query. `state` is `open` for import (a closed issue is not
-/// backlog) and anything else for sync (an item on the board may since have
-/// been closed).
+/// The board listing: the most recently updated open issues and, in the same
+/// round trip, the most recently updated closed ones. Open ones feed import;
+/// both refresh the status of issues already on the board (ADR-0002).
 ///
-/// The state filter is interpolated rather than passed as a variable: `gh`
-/// sends every `-f` as a string and the field takes a list of enums. Both
-/// values are ours, not a caller's, so there is nothing to inject.
-pub(super) fn project_issues_query(state: &str) -> String {
-    let states = if state.eq_ignore_ascii_case("open") {
-        "[OPEN]"
-    } else {
-        "[OPEN, CLOSED]"
+/// `with_board` drops `projectItems` for a token without `read:project`,
+/// which GitHub would otherwise refuse the whole query for.
+pub(super) fn project_issues_query(with_board: bool) -> String {
+    let issues = |states: &str, with_body: bool| {
+        format!(
+            "issues(first: $first, states: {states}, \
+               orderBy: {{field: UPDATED_AT, direction: DESC}}) {{ nodes {{ {} }} }}",
+            issue_fields(with_body, with_board)
+        )
     };
     format!(
         "query($owner: String!, $repo: String!, $first: Int!) {{ \
            repository(owner: $owner, name: $repo) {{ \
-             issues(first: $first, states: {states}, orderBy: {{field: UPDATED_AT, direction: DESC}}) {{ \
-               nodes {{ number title body url state stateReason createdAt updatedAt \
-                 assignees(first: 1) {{ nodes {{ login }} }} \
-                 projectItems(first: 5, includeArchived: false) {{ nodes {{ \
-                   fieldValueByName(name: \"Status\") {{ \
-                     ... on ProjectV2ItemFieldSingleSelectValue {{ name }} }} }} }} }} }} }} }}"
+             open: {} closed: {} }} }}",
+        issues("[OPEN]", true),
+        issues("[CLOSED]", false),
     )
+}
+
+/// One query for many issues by number, each under its own alias
+/// (`i123: issue(number: 123)`). A deleted issue answers `null` with a
+/// `NOT_FOUND` error on its alias' path. Numbers are `u64`s, so nothing a
+/// caller sends can reach the query text.
+pub(super) fn issues_by_number_query(numbers: &[u64], with_board: bool) -> String {
+    let fields = issue_fields(false, with_board);
+    let mut query = String::from("query($owner: String!, $repo: String!) {");
+    query.push_str(" repository(owner: $owner, name: $repo) {");
+    for number in numbers {
+        let _ = write!(query, " i{number}: issue(number: {number}) {{ {fields} }}");
+    }
+    query.push_str(" } }");
+    query
 }
 
 /// A pull request conversation in one round trip: the issue-style comments, the
@@ -141,17 +102,38 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_issue_query_asks_for_the_status_field_and_scopes_by_state() {
-        let import = project_issues_query("open");
-        assert!(import.contains("states: [OPEN]"), "{import}");
+    fn the_listing_reads_open_and_closed_in_one_query() {
+        let query = project_issues_query(true);
+        assert_eq!(query.matches("query(").count(), 1);
         assert!(
-            project_issues_query("all").contains("states: [OPEN, CLOSED]"),
-            "sync must see issues that were closed since"
+            query.contains("open: issues(first: $first, states: [OPEN]"),
+            "{query}"
         );
         assert!(
-            import.contains("fieldValueByName(name: \"Status\")"),
-            "{import}"
+            query.contains("closed: issues(first: $first, states: [CLOSED]"),
+            "{query}"
         );
+        assert!(
+            query.contains("fieldValueByName(name: \"Status\")"),
+            "{query}"
+        );
+        assert_eq!(
+            query.matches(" body").count(),
+            1,
+            "closed issues skip the body"
+        );
+        assert!(!project_issues_query(false).contains("projectItems"));
+    }
+
+    #[test]
+    fn the_batched_lookup_aliases_each_issue_by_number() {
+        let query = issues_by_number_query(&[12, 345], true);
+        assert!(query.contains("i12: issue(number: 12) {"), "{query}");
+        assert!(query.contains("i345: issue(number: 345) {"), "{query}");
+        assert_eq!(query.matches("query(").count(), 1);
+        assert!(query.contains("stateReason"));
+        assert!(query.contains("projectItems"));
+        assert!(!issues_by_number_query(&[1], false).contains("projectItems"));
     }
 
     #[test]

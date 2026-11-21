@@ -5,8 +5,8 @@
 use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 
-use super::super::cli::github_owner_repo;
-use super::super::graphql::github_query;
+use super::super::http::github_graphql;
+use super::super::repo::github_owner_repo;
 use crate::daemon::pull_status::{check_name, check_state};
 use warpforge_protocol as wire;
 
@@ -27,8 +27,7 @@ pub(crate) async fn github_pr_checks(
     number: u64,
 ) -> Result<Vec<wire::PullCheckRun>> {
     let (owner, repo) = github_owner_repo(repo_dir).await?;
-    let payload = github_query(
-        repo_dir,
+    let payload = github_graphql(
         CHECKS_QUERY,
         serde_json::json!({"owner": owner, "repo": repo, "number": number}),
     )
@@ -63,7 +62,7 @@ struct RawContext {
     description: Option<String>,
 }
 
-pub(super) fn parse_checks(pr: &serde_json::Value) -> Result<Vec<wire::PullCheckRun>> {
+pub(crate) fn parse_checks(pr: &serde_json::Value) -> Result<Vec<wire::PullCheckRun>> {
     let Some(nodes) = pr
         .pointer("/commits/nodes/0/commit/statusCheckRollup/contexts/nodes")
         .filter(|nodes| !nodes.is_null())

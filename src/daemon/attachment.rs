@@ -22,7 +22,6 @@
 
 use anyhow::{anyhow, bail, Result};
 use base64::Engine as _;
-use tokio::process::Command;
 use warpforge_protocol as wire;
 
 use super::tracker;
@@ -97,23 +96,6 @@ fn check_redirect(url: &reqwest::Url) -> Result<()> {
     Ok(())
 }
 
-/// `gh`'s token for api.github.com. Absent when `gh` is missing or logged out,
-/// in which case a public attachment still works and a private one does not.
-async fn github_token() -> Option<String> {
-    let mut cmd = Command::new("gh");
-    cmd.args(["auth", "token"]);
-    cmd.kill_on_drop(true);
-    let out = tokio::time::timeout(NETWORK_TIMEOUT, cmd.output())
-        .await
-        .ok()?
-        .ok()?;
-    if !out.status.success() {
-        return None;
-    }
-    let token = String::from_utf8_lossy(&out.stdout).trim().to_string();
-    (!token.is_empty()).then_some(token)
-}
-
 /// The credential for the host being asked, if warpforge holds one.
 async fn authorization_for(host: &str) -> Option<String> {
     if host.ends_with("linear.app") {
@@ -121,7 +103,9 @@ async fn authorization_for(host: &str) -> Option<String> {
     }
     if host == "github.com" || host == "www.github.com" || host.ends_with(".githubusercontent.com")
     {
-        return github_token().await.map(|token| format!("Bearer {token}"));
+        return tracker::github_token()
+            .await
+            .map(|token| format!("Bearer {token}"));
     }
     None
 }

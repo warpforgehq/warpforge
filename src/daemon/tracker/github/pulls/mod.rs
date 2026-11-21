@@ -1,16 +1,12 @@
 //! Reading and writing GitHub pull requests: the inbox listing, the detail
 //! body, the file stats + raw patch, the conversation thread, and comments.
 //!
-//! Every call has the same two paths as the rest of `github/`: the PAT goes
-//! straight to `api.github.com` over reqwest, and without one the same shape
-//! arrives through a deprecated `gh` spawn. Both paths land in the same wire
-//! types, so callers never learn which one ran.
+//! Every call goes through the shared client in `http`, with whichever
+//! credential `auth` resolved — a PAT or the `gh` session's token.
 //!
 //! Layout: `list` the inbox listing, `details` the body and the changes,
 //! `thread` the conversation, `comment` the writes; the actor shapes and the
 //! viewer login they all share live here.
-
-#![allow(deprecated)]
 
 mod checks;
 mod comment;
@@ -22,7 +18,7 @@ mod review;
 mod tests;
 mod thread;
 
-pub(crate) use checks::github_pr_checks;
+pub(crate) use checks::{github_pr_checks, parse_checks};
 pub(crate) use comment::{github_pr_comment, github_pr_review_comment};
 pub(crate) use commits::{github_pr_commits, github_pr_range_diff};
 pub(crate) use details::{github_pr_details, github_pr_diff};
@@ -30,11 +26,8 @@ pub(crate) use list::github_pr_list;
 pub(crate) use review::github_pr_review;
 pub(crate) use thread::github_pr_conversation;
 
-use anyhow::Context;
 use serde::Deserialize;
 
-use super::{github_token, GITHUB_API};
-use crate::daemon::tracker::NETWORK_TIMEOUT;
 use warpforge_protocol as wire;
 
 /// Anything past this and the patch is cut with a `truncated` flag rather
@@ -116,33 +109,9 @@ pub(super) fn github_avatar_url(login: &str) -> Option<String> {
     ))
 }
 
-/// The login the connected credentials act as: the PAT's identity over REST,
-/// else the `gh` session's. Assigned-to-me filtering happens daemon-side, so
-/// the caller never needs it — this is only for that filter.
-async fn viewer_login(_repo_dir: &str) -> anyhow::Result<String> {
-    if let Some(token) = github_token() {
-        let client = reqwest::Client::new();
-        let resp = client
-            .get(format!("{GITHUB_API}/user"))
-            .header("Authorization", format!("Bearer {token}"))
-            .header("User-Agent", "warpforge")
-            .timeout(NETWORK_TIMEOUT)
-            .send()
-            .await
-            .context("GitHub user request")?
-            .error_for_status()
-            .context("GitHub user request")?;
-        let value: serde_json::Value = resp.json().await.context("parsing GitHub user")?;
-        let login = value
-            .get("login")
-            .and_then(|login| login.as_str())
-            .unwrap_or_default()
-            .to_string();
-        if login.is_empty() {
-            anyhow::bail!("GitHub did not return a login");
-        }
-        return Ok(login);
-    }
+/// The login the connected credentials act as. Assigned-to-me filtering
+/// happens daemon-side, so this is only for that filter.
+async fn viewer_login() -> anyhow::Result<String> {
     super::github_login()
         .await
         .ok_or_else(|| anyhow::anyhow!("could not determine the GitHub login"))

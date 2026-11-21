@@ -9,7 +9,7 @@ use anyhow::anyhow;
 use tokio::sync::broadcast;
 use warpforge_protocol as wire;
 
-use super::gh::parse_pull_list;
+use super::github::parse_pull_list;
 use super::{CommentsFetcher, Event, Fetcher, Listed, PullTarget, PullWatch};
 
 type Scripted = anyhow::Result<Option<wire::TaskPullRequest>>;
@@ -170,13 +170,40 @@ async fn forgetting_a_task_clears_its_badge() {
     assert_eq!(next_pull_event(&mut rx).await, ("t1".into(), None));
 }
 
+/// The listing nodes for `json`, written in the flat `statusCheckRollup: [...]`
+/// shape for readability and nested the way GraphQL answers.
+fn nodes(json: &[u8]) -> serde_json::Value {
+    let mut pulls: Vec<serde_json::Value> = serde_json::from_slice(json).unwrap();
+    for pull in &mut pulls {
+        let mut checks = pull
+            .as_object_mut()
+            .unwrap()
+            .remove("statusCheckRollup")
+            .unwrap_or_default();
+        for check in checks.as_array_mut().into_iter().flatten() {
+            if let Some(name) = check.as_object_mut().unwrap().remove("workflowName") {
+                let workflow = serde_json::json!({ "workflow": { "name": name } });
+                check["checkSuite"] = serde_json::json!({ "workflowRun": workflow });
+            }
+        }
+        let rollup = if checks.is_null() {
+            serde_json::Value::Null
+        } else {
+            serde_json::json!({ "contexts": { "nodes": checks } })
+        };
+        let commit = serde_json::json!({ "commit": { "statusCheckRollup": rollup } });
+        pull["commits"] = serde_json::json!({ "nodes": [commit] });
+    }
+    serde_json::Value::Array(pulls)
+}
+
 #[test]
 fn the_open_pull_request_wins_over_older_closed_ones() {
     let json = br#"[
         {"number": 9, "title": "Old", "url": "u9", "state": "CLOSED", "isDraft": false, "statusCheckRollup": []},
         {"number": 12, "title": "New", "url": "u12", "state": "OPEN", "isDraft": true, "statusCheckRollup": []}
     ]"#;
-    let pull = parse_pull_list(json).unwrap().unwrap().pull;
+    let pull = parse_pull_list(&nodes(json)).unwrap().unwrap().pull;
     assert_eq!(pull.number, 12);
     assert_eq!(pull.state, wire::TaskPullState::Draft);
     assert_eq!(pull.checks, None);
@@ -184,9 +211,9 @@ fn the_open_pull_request_wins_over_older_closed_ones() {
 
 #[test]
 fn no_pull_request_reads_none_and_merged_reads_merged() {
-    assert_eq!(parse_pull_list(b"[]").unwrap(), None);
+    assert_eq!(parse_pull_list(&nodes(b"[]")).unwrap(), None);
     let json = br#"[{"number": 3, "title": "t", "url": "u", "state": "MERGED", "statusCheckRollup": null}]"#;
-    let pull = parse_pull_list(json).unwrap().unwrap().pull;
+    let pull = parse_pull_list(&nodes(json)).unwrap().unwrap().pull;
     assert_eq!(pull.state, wire::TaskPullState::Merged);
 }
 
@@ -196,7 +223,7 @@ fn checks_roll_up_failure_first_then_pending() {
         let json = format!(
             r#"[{{"number": 1, "title": "t", "url": "u", "state": "OPEN", "statusCheckRollup": {checks}}}]"#
         );
-        parse_pull_list(json.as_bytes())
+        parse_pull_list(&nodes(json.as_bytes()))
             .unwrap()
             .unwrap()
             .pull
@@ -243,7 +270,7 @@ fn failed_checks_carry_their_name_link_and_summary() {
             {"__typename": "StatusContext", "context": "deploy", "state": "ERROR",
              "targetUrl": "https://deploy", "description": "Build failed"}
         ]}]"#;
-    let listed = parse_pull_list(json).unwrap().unwrap();
+    let listed = parse_pull_list(&nodes(json)).unwrap().unwrap();
     assert_eq!(listed.updated_at, "2026-09-29T10:00:00Z");
     assert_eq!(listed.pull.author.as_deref(), Some("octocat"));
     assert_eq!(listed.pull.checks, Some(wire::PullChecks::Failing));

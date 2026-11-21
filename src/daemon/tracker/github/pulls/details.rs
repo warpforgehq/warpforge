@@ -1,16 +1,12 @@
 //! The detail body and the changes: file stats via GraphQL, the raw unified
 //! patch from the diff endpoint.
 
-#![allow(deprecated)]
-
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 
-use super::super::cli::{gh, github_owner_repo};
-use super::super::graphql::github_query;
-use super::super::{github_token, GITHUB_API};
+use super::super::http::{github_graphql, rest_text};
+use super::super::repo::github_owner_repo;
 use super::{actor_avatar, cap_patch};
-use crate::daemon::tracker::NETWORK_TIMEOUT;
 use warpforge_protocol as wire;
 
 /// The body-level fields of one pull request, in one round trip.
@@ -19,8 +15,7 @@ pub(crate) async fn github_pr_details(
     number: u64,
 ) -> Result<wire::PullRequestDetails> {
     let (owner, repo) = github_owner_repo(repo_dir).await?;
-    let payload = github_query(
-        repo_dir,
+    let payload = github_graphql(
         "query($owner: String!, $repo: String!, $number: Int!) { \
            repository(owner: $owner, name: $repo) { \
              pullRequest(number: $number) { \
@@ -138,14 +133,12 @@ struct RawDiffFile {
     deletions: u64,
 }
 
-/// File stats via GraphQL, the raw unified patch via the diff endpoint (the
-/// PAT asks for `application/vnd.github.diff`; `gh pr diff` does the same
-/// without one). The two are separate because the patch is the heavy part a
+/// File stats via GraphQL, the raw unified patch via the diff endpoint
+/// (`application/vnd.github.diff`). The two are separate because the patch is the heavy part a
 /// client re-fetches far less often than the stats.
 pub(crate) async fn github_pr_diff(repo_dir: &str, number: u64) -> Result<wire::PullRequestDiff> {
     let (owner, repo) = github_owner_repo(repo_dir).await?;
-    let meta_payload = github_query(
-        repo_dir,
+    let meta_payload = github_graphql(
         "query($owner: String!, $repo: String!, $number: Int!) { \
            repository(owner: $owner, name: $repo) { \
              pullRequest(number: $number) { \
@@ -162,7 +155,7 @@ pub(crate) async fn github_pr_diff(repo_dir: &str, number: u64) -> Result<wire::
     )
     .context("parsing pull request file stats")?;
 
-    let (patch, truncated) = cap_patch(fetch_pr_patch(repo_dir, &owner, &repo, number).await?);
+    let (patch, truncated) = cap_patch(fetch_pr_patch(&owner, &repo, number).await?);
     let (additions, deletions) = if meta.additions == 0 && meta.deletions == 0 {
         let additions = meta.files.nodes.iter().map(|file| file.additions).sum();
         let deletions = meta.files.nodes.iter().map(|file| file.deletions).sum();
@@ -188,29 +181,11 @@ pub(crate) async fn github_pr_diff(repo_dir: &str, number: u64) -> Result<wire::
     })
 }
 
-async fn fetch_pr_patch(repo_dir: &str, owner: &str, repo: &str, number: u64) -> Result<String> {
-    if let Some(token) = github_token() {
-        let client = reqwest::Client::new();
-        let resp = client
-            .get(format!("{GITHUB_API}/repos/{owner}/{repo}/pulls/{number}"))
-            .header("Accept", "application/vnd.github.diff")
-            .header("Authorization", format!("Bearer {token}"))
-            .header("User-Agent", "warpforge")
-            .timeout(NETWORK_TIMEOUT)
-            .send()
-            .await
-            .context("pull request diff request")?
-            .error_for_status()
-            .context("pull request diff request")?;
-        return resp.text().await.context("reading pull request diff");
-    }
-    let number = number.to_string();
-    let out = gh(Some(repo_dir), &["pr", "diff", &number]).await?;
-    if !out.status.success() {
-        bail!(
-            "pull request diff failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
-    Ok(String::from_utf8_lossy(&out.stdout).into_owned())
+async fn fetch_pr_patch(owner: &str, repo: &str, number: u64) -> Result<String> {
+    rest_text(
+        &format!("repos/{owner}/{repo}/pulls/{number}"),
+        "application/vnd.github.diff",
+    )
+    .await
+    .context("pull request diff request")
 }

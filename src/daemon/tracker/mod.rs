@@ -4,8 +4,9 @@
 //! macOS keychain, mirroring the Claude credential pattern in `claude_auth`),
 //! and the create/read network calls.
 //!
-//! GitHub prefers a PAT (`repo` + `read:project`) via keychain + reqwest;
-//! `gh` CLI is a deprecated fallback. Linear uses GraphQL over reqwest with a personal API key.
+//! GitHub uses one credential — a PAT (`repo` + `read:project`) when one is
+//! configured, else the `gh auth login` session's token — over reqwest.
+//! Linear uses GraphQL over reqwest with a personal API key.
 //!
 //! Directionality: warpforge creates issues in either tracker and *reads* their
 //! status back — for GitHub that means the Projects V2 board column, which is
@@ -27,14 +28,13 @@ mod import;
 mod linear;
 mod page;
 
-pub use github::github_login;
 pub use github::take_last_board_warning;
 pub(crate) use github::{
-    github_owner_repo, github_pr_checks, github_pr_comment, github_pr_commits,
-    github_pr_conversation, github_pr_details, github_pr_diff, github_pr_list,
-    github_pr_range_diff, github_pr_review, github_pr_review_comment,
+    forget_token, github_graphql, github_owner_repo, github_pr_checks, github_pr_comment,
+    github_pr_commits, github_pr_conversation, github_pr_details, github_pr_diff, github_pr_list,
+    github_pr_range_diff, github_pr_review, github_pr_review_comment, github_token, parse_checks,
 };
-pub use import::{adopt_imported, fetch_importable, fetch_links_status};
+pub use import::{adopt_imported, fetch_importable, fetch_links_status, resolve_missing};
 pub use linear::{keychain_read, linear_teams};
 pub use page::fetch_page;
 
@@ -66,6 +66,9 @@ pub struct RemoteIssue {
     /// than showing 1970.
     pub created_at: u64,
     pub updated_at: u64,
+    /// Closed on the tracker. A closed issue refreshes a row already on the
+    /// board but is never adopted as a new one.
+    pub closed: bool,
 }
 
 impl RemoteIssue {
@@ -176,20 +179,14 @@ pub async fn status() -> wire::TrackerStatus {
         email: None,
         organization: None,
     });
-    let github = if github::github_token().is_some() {
+    let github = if github::github_token().await.is_some() {
         Some(wire::TrackerGithubStatus {
             connected: true,
             login: github::github_login().await,
             warning: None,
         })
     } else {
-        github::github_login()
-            .await
-            .map(|login| wire::TrackerGithubStatus {
-                connected: true,
-                login: Some(login),
-                warning: None,
-            })
+        None
     };
     wire::TrackerStatus { linear, github }
 }
@@ -199,8 +196,7 @@ pub async fn connect_github(token: &str) -> Result<()> {
     if t.is_empty() {
         bail!("GitHub token is empty");
     }
-    let client = reqwest::Client::new();
-    let resp = client
+    let resp = reqwest::Client::new()
         .get("https://api.github.com/user")
         .header("Authorization", format!("Bearer {t}"))
         .header("User-Agent", "warpforge")
@@ -211,10 +207,14 @@ pub async fn connect_github(token: &str) -> Result<()> {
     if !resp.status().is_success() {
         bail!("GitHub token invalid: {}", resp.status());
     }
-    github::github_keychain_write(t)
+    github::github_keychain_write(t)?;
+    github::forget_token().await;
+    Ok(())
 }
 pub async fn disconnect_github() -> Result<()> {
-    github::github_keychain_delete()
+    github::github_keychain_delete()?;
+    github::forget_token().await;
+    Ok(())
 }
 
 /// Connect (or refresh) the Linear API key: validate it, then store it.
@@ -332,6 +332,7 @@ mod tests {
             assignee: None,
             created_at,
             updated_at,
+            closed: false,
         }
     }
 

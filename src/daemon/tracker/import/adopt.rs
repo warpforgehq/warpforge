@@ -114,6 +114,9 @@ pub fn adopt_imported(
             );
             if let Some(existing) = known.get(&key) {
                 let stored = load_item(&existing.item_id)?;
+                if stored.is_none() && issue.closed {
+                    continue;
+                }
                 if stored.is_none() {
                     let item = wire::BacklogItem {
                         id: existing.item_id.clone(),
@@ -181,6 +184,9 @@ pub fn adopt_imported(
                     url: link.url,
                     remote_status: link.remote_status,
                 });
+                continue;
+            }
+            if issue.closed {
                 continue;
             }
             let item_id = uuid::Uuid::new_v4().to_string();

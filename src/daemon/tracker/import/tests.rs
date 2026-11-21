@@ -26,6 +26,7 @@ fn missing_backlog_rows_can_be_recovered_from_tracker_links() {
         assignee: None,
         created_at: 1,
         updated_at: 1,
+        closed: false,
     };
     let (imported, _) = adopt_imported(
         &store,
@@ -55,6 +56,7 @@ fn imported_rows_carry_the_issue_creation_time_and_repair_older_rows() {
         assignee: None,
         created_at: 100,
         updated_at: 500,
+        closed: false,
     };
 
     let (imported, _) = adopt_imported(
@@ -110,6 +112,7 @@ fn a_row_imported_without_an_assignee_picks_one_up_on_the_next_sync() {
         assignee: assignee.map(str::to_string),
         created_at: 100,
         updated_at: 500,
+        closed: false,
     };
 
     // The listing that first adopted this issue did not ask for one.
@@ -172,6 +175,7 @@ fn imported_rows_are_recovered_into_yaml_backend_not_sqlite() {
         assignee: None,
         created_at: 1,
         updated_at: 1,
+        closed: false,
     };
     let (imported, _) = adopt_imported(
         &store,
@@ -308,6 +312,7 @@ fn import_dedupe_is_project_scoped() {
         assignee: None,
         created_at: 1,
         updated_at: 1,
+        closed: false,
     };
     let (imported, _) = adopt_imported(
         &store,
@@ -334,6 +339,7 @@ fn import_dedupe_is_project_scoped() {
         assignee: None,
         created_at: 1,
         updated_at: 1,
+        closed: false,
     };
     let (second, _) = adopt_imported(
         &store,
@@ -362,6 +368,7 @@ fn a_sync_keeps_the_status_of_an_item_the_factory_runs() {
         assignee: None,
         created_at: 1,
         updated_at,
+        closed: false,
     };
     let sync = |issue: RemoteIssue, keep: &std::collections::HashSet<String>| {
         adopt_imported(
@@ -393,4 +400,57 @@ fn a_sync_keeps_the_status_of_an_item_the_factory_runs() {
         after.status, "done",
         "normal sync resumes once the run ends"
     );
+}
+
+#[test]
+fn a_closed_issue_refreshes_its_row_but_is_never_adopted() {
+    let store = Store::open_at(std::path::Path::new(":memory:")).unwrap();
+    let closed = |id: &str| RemoteIssue {
+        external_id: id.into(),
+        title: "Closed".into(),
+        body: String::new(),
+        url: format!("https://github.com/demo/{id}"),
+        status: "done".into(),
+        remote_status: "CLOSED".into(),
+        assignee: None,
+        created_at: 1,
+        updated_at: 2,
+        closed: true,
+    };
+    let open = RemoteIssue {
+        status: "todo".into(),
+        remote_status: "OPEN".into(),
+        closed: false,
+        ..closed("#1")
+    };
+    let (first, _) = adopt_imported(
+        &store,
+        "demo",
+        None,
+        vec![("github".into(), vec![open])],
+        &Default::default(),
+    )
+    .unwrap();
+    let item_id = first[0].item_id.clone();
+
+    let (imported, synced) = adopt_imported(
+        &store,
+        "demo",
+        None,
+        vec![("github".into(), vec![closed("#1"), closed("#2")])],
+        &Default::default(),
+    )
+    .unwrap();
+    assert!(
+        imported.is_empty(),
+        "a closed issue nobody tracks is not backlog"
+    );
+    assert_eq!(
+        synced
+            .iter()
+            .map(|item| item.id.as_str())
+            .collect::<Vec<_>>(),
+        vec![item_id.as_str()]
+    );
+    assert_eq!(synced[0].status, "done");
 }

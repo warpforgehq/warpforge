@@ -78,14 +78,19 @@ impl DaemonHandle {
     pub async fn tracker_sync_inputs(
         &self,
         ids: Vec<String>,
+        project: Option<String>,
     ) -> (
         Vec<crate::daemon::store::TrackerLink>,
         std::collections::HashMap<String, String>,
         std::collections::HashMap<String, String>,
     ) {
         let (tx, rx) = oneshot::channel();
-        self.send(Command::TrackerSyncInputs { ids, reply: tx })
-            .await;
+        self.send(Command::TrackerSyncInputs {
+            ids,
+            project,
+            reply: tx,
+        })
+        .await;
         rx.await.unwrap_or_default()
     }
 

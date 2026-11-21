@@ -1,17 +1,15 @@
 //! Reading and writing GitHub issues: the board-aware listing, the search
 //! pager, and issue creation.
 
-#![allow(deprecated)]
-
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Result};
+use reqwest::Method;
 use std::sync::Mutex;
 
-use super::cli::{body_file, gh, github_owner_repo};
-use super::graphql::{github_query, project_issues_query};
-use super::{github_token, GITHUB_API};
-use crate::daemon::tracker::{
-    normalize_status, rfc3339_secs, RemoteIssue, IMPORT_LIMIT, NETWORK_TIMEOUT,
-};
+use super::auth::github_token;
+use super::graphql::project_issues_query;
+use super::http::{error_messages, graphql_partial, rest_get_query, rest_json, Partial};
+use super::repo::github_owner_repo;
+use crate::daemon::tracker::{normalize_status, rfc3339_secs, RemoteIssue, IMPORT_LIMIT};
 
 /// The normalized status of a GitHub issue.
 ///
@@ -41,9 +39,36 @@ fn is_missing_scope_error(msg: &str) -> bool {
 
 fn board_fallback_warning(original_error: &str) -> String {
     if is_missing_scope_error(original_error) {
-        "GitHub board statuses unavailable — your token lacks 'read:project' scope. Add it at https://github.com/settings/tokens and re-auth with `gh auth refresh -s read:project`. Falling back to open/closed.".to_string()
+        "GitHub board statuses unavailable — your token lacks the 'read:project' scope. Add it at https://github.com/settings/tokens, or run `gh auth refresh -s read:project`. Showing open/closed instead.".to_string()
     } else {
         format!("GitHub board statuses unavailable ({original_error}); using open/closed")
+    }
+}
+
+/// An error about the board half of a query: a missing scope, or a project
+/// the token may not read. The issues beside it are still good.
+fn is_board_error(error: &serde_json::Value) -> bool {
+    let on_board_path = error
+        .get("path")
+        .and_then(|path| path.as_array())
+        .is_some_and(|path| {
+            path.iter()
+                .any(|step| step.as_str() == Some("projectItems"))
+        });
+    let message = error.get("message").and_then(|m| m.as_str()).unwrap_or("");
+    on_board_path
+        || error.get("type").and_then(|t| t.as_str()) == Some("INSUFFICIENT_SCOPES")
+        || is_missing_scope_error(message)
+}
+
+/// The token last seen refusing `projectItems` outright. Asking it again would
+/// only cost a failed round trip before the board-less one.
+static NO_BOARD_TOKEN: Mutex<Option<String>> = Mutex::new(None);
+
+fn set_board_warning(warning: String) {
+    eprintln!("[tracker] {warning}");
+    if let Ok(mut guard) = LAST_BOARD_WARNING.lock() {
+        *guard = Some(warning);
     }
 }
 
@@ -53,82 +78,116 @@ pub fn take_last_board_warning() -> Option<String> {
     LAST_BOARD_WARNING.lock().ok()?.take()
 }
 
-/// List the repo's issues with the board column each one sits in.
+/// Run an issue query with the board column when the token can read boards,
+/// without it when it cannot. Errors beside data are judged here: board ones
+/// become the board warning, anything else is logged, and the data is kept.
+pub(super) async fn board_aware_query(
+    query: impl Fn(bool) -> String,
+    vars: serde_json::Value,
+) -> Result<Partial> {
+    let token = github_token().await;
+    let known_boardless = token.is_some()
+        && NO_BOARD_TOKEN
+            .lock()
+            .ok()
+            .is_some_and(|guard| *guard == token);
+    if known_boardless {
+        set_board_warning(board_fallback_warning("read:project"));
+    } else {
+        match graphql_partial(&query(true), vars.clone()).await {
+            Ok(partial) => {
+                let (board, other): (Vec<_>, Vec<_>) =
+                    partial.errors.iter().cloned().partition(is_board_error);
+                if !board.is_empty() {
+                    set_board_warning(board_fallback_warning(&error_messages(&board)));
+                }
+                if !other.is_empty() {
+                    eprintln!(
+                        "[tracker] GitHub partial answer: {}",
+                        error_messages(&other)
+                    );
+                }
+                return Ok(partial);
+            }
+            Err(e) if is_missing_scope_error(&format!("{e:#}")) => {
+                if let Ok(mut guard) = NO_BOARD_TOKEN.lock() {
+                    *guard = token;
+                }
+                set_board_warning(board_fallback_warning(&format!("{e:#}")));
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    graphql_partial(&query(false), vars).await
+}
+
+/// List the repo's recently updated issues, open and closed, with the board
+/// column each one sits in — one GraphQL round trip.
 ///
 /// GitHub's own status vocabulary is only open/closed; the status a team reads
 /// off a repo lives in a Projects V2 "Status" field, and only GraphQL can
-/// answer for it. A token without the `project` scope (or a host that has no
-/// projects) falls back to [`github_rest_issues`], which is the same listing
-/// with open/closed as the status.
-pub(crate) async fn github_list_issues(repo_dir: &str, state: &str) -> Result<Vec<RemoteIssue>> {
-    match github_project_issues(repo_dir, state).await {
-        Ok(issues) => Ok(issues),
-        Err(e) => {
-            let warn = board_fallback_warning(&format!("{e:#}"));
-            eprintln!("[tracker] {warn}");
-            let issues = github_rest_issues(repo_dir, state).await?;
-            if let Ok(mut g) = LAST_BOARD_WARNING.lock() {
-                *g = Some(warn);
-            }
-            Ok(issues)
-        }
-    }
-}
-
-/// The GraphQL listing: issues plus their Projects V2 "Status" field.
-async fn github_project_issues(repo_dir: &str, state: &str) -> Result<Vec<RemoteIssue>> {
+/// answer for it. A token without `read:project` gets the same listing with
+/// open/closed as the status and a board warning.
+pub(crate) async fn github_list_issues(repo_dir: &str) -> Result<Vec<RemoteIssue>> {
     let (owner, repo) = github_owner_repo(repo_dir).await?;
-    let payload = github_query(
-        repo_dir,
-        &project_issues_query(state),
+    let started = std::time::Instant::now();
+    let partial = board_aware_query(
+        project_issues_query,
         serde_json::json!({"owner": owner, "repo": repo, "first": IMPORT_LIMIT}),
     )
     .await?;
-    let nodes = payload
-        .pointer("/data/repository/issues/nodes")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| anyhow!("GitHub issue query returned no issues"))?;
-    Ok(nodes
+    let repository = partial
+        .data
+        .get("repository")
+        .filter(|node| !node.is_null())
+        .ok_or_else(|| anyhow!("GitHub has no repository {owner}/{repo} this account can read"))?;
+    let issues: Vec<RemoteIssue> = ["open", "closed"]
         .iter()
-        .filter_map(|issue| {
-            let number = issue.get("number")?.as_u64()?;
-            let text = |key: &str| {
-                issue
-                    .get(key)
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default()
-                    .to_string()
-            };
-            let state = issue
-                .get("state")
-                .and_then(|v| v.as_str())
-                .unwrap_or("OPEN");
-            let column = board_column(issue);
-            Some(RemoteIssue {
-                external_id: format!("#{number}"),
-                title: text("title"),
-                body: text("body"),
-                url: text("url"),
-                status: github_status(
-                    state,
-                    issue.get("stateReason").and_then(|v| v.as_str()),
-                    column.as_deref(),
-                ),
-                // The board column is what the team sees on GitHub, so that is
-                // the label to show; without one there is only open/closed.
-                remote_status: column.unwrap_or_else(|| state.to_string()),
-                assignee: issue
-                    .pointer("/assignees/nodes")
-                    .and_then(|v| v.as_array())
-                    .and_then(|nodes| nodes.first())
-                    .and_then(|node| node.get("login"))
-                    .and_then(|v| v.as_str())
-                    .map(str::to_string),
-                created_at: rfc3339_secs(&text("createdAt")),
-                updated_at: rfc3339_secs(&text("updatedAt")),
-            })
-        })
-        .collect())
+        .filter_map(|alias| repository.pointer(&format!("/{alias}/nodes"))?.as_array())
+        .flatten()
+        .filter_map(parse_issue)
+        .collect();
+    eprintln!(
+        "[tracker] github listing {owner}/{repo}: {} issues in {} ms",
+        issues.len(),
+        started.elapsed().as_millis()
+    );
+    Ok(issues)
+}
+
+/// One GraphQL issue node as a [`RemoteIssue`].
+pub(super) fn parse_issue(issue: &serde_json::Value) -> Option<RemoteIssue> {
+    let number = issue.get("number")?.as_u64()?;
+    let text = |key: &str| {
+        issue
+            .get(key)
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string()
+    };
+    let state = issue
+        .get("state")
+        .and_then(|v| v.as_str())
+        .unwrap_or("OPEN");
+    let column = board_column(issue);
+    Some(RemoteIssue {
+        external_id: format!("#{number}"),
+        title: text("title"),
+        body: text("body"),
+        url: text("url"),
+        status: github_status(
+            state,
+            issue.get("stateReason").and_then(|v| v.as_str()),
+            column.as_deref(),
+        ),
+        // The board column is what the team sees on GitHub, so that is the
+        // label to show; without one there is only open/closed.
+        remote_status: column.unwrap_or_else(|| state.to_string()),
+        assignee: assignee_login(issue.get("assignees").and_then(|a| a.get("nodes")), None),
+        created_at: rfc3339_secs(&text("createdAt")),
+        updated_at: rfc3339_secs(&text("updatedAt")),
+        closed: state.eq_ignore_ascii_case("closed"),
+    })
 }
 
 /// The issue's Projects V2 "Status" column. An issue can sit on several boards;
@@ -146,84 +205,8 @@ fn board_column(issue: &serde_json::Value) -> Option<String> {
         })
 }
 
-/// The `gh issue list` fallback. Pull requests are excluded: `gh issue list`
-/// already filters them out, unlike the REST issues endpoint.
-///
-/// `state` is `open` for import (a closed issue is not backlog) and `all` for
-/// sync (an item on the board may since have been closed).
-async fn github_rest_issues(repo_dir: &str, state: &str) -> Result<Vec<RemoteIssue>> {
-    let limit = IMPORT_LIMIT.to_string();
-    let out = gh(
-        Some(repo_dir),
-        &[
-            "issue",
-            "list",
-            "--state",
-            state,
-            "--limit",
-            &limit,
-            "--json",
-            "number,title,body,state,createdAt,updatedAt,url,assignees",
-        ],
-    )
-    .await?;
-    if !out.status.success() {
-        bail!(
-            "GitHub issue list failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
-    let parsed: Vec<serde_json::Value> =
-        serde_json::from_slice(&out.stdout).context("parsing GitHub issue list")?;
-    Ok(parsed
-        .into_iter()
-        .filter_map(|issue| {
-            let number = issue.get("number")?.as_u64()?;
-            let state = issue
-                .get("state")
-                .and_then(|s| s.as_str())
-                .unwrap_or("OPEN");
-            Some(RemoteIssue {
-                external_id: format!("#{number}"),
-                title: issue
-                    .get("title")
-                    .and_then(|t| t.as_str())
-                    .unwrap_or_default()
-                    .to_string(),
-                body: issue
-                    .get("body")
-                    .and_then(|b| b.as_str())
-                    .unwrap_or_default()
-                    .to_string(),
-                url: issue
-                    .get("url")
-                    .and_then(|u| u.as_str())
-                    .unwrap_or_default()
-                    .to_string(),
-                status: github_status(
-                    state,
-                    issue.get("stateReason").and_then(|v| v.as_str()),
-                    None,
-                ),
-                remote_status: state.to_string(),
-                assignee: assignee_login(issue.get("assignees"), issue.get("assignee")),
-                created_at: issue
-                    .get("createdAt")
-                    .and_then(|u| u.as_str())
-                    .map(rfc3339_secs)
-                    .unwrap_or(0),
-                updated_at: issue
-                    .get("updatedAt")
-                    .and_then(|u| u.as_str())
-                    .map(rfc3339_secs)
-                    .unwrap_or(0),
-            })
-        })
-        .collect())
-}
-
 /// First assignee login from a GitHub item. Prefers the plural `assignees`
-/// array (what `gh issue list --json assignees` and the Search API emit);
+/// array (what GraphQL and the Search API emit);
 /// falls back to the deprecated singular `assignee` object.
 fn assignee_login(
     assignees: Option<&serde_json::Value>,
@@ -242,8 +225,8 @@ fn assignee_login(
         .map(str::to_string)
 }
 
-/// Fetch one GitHub Search API page. Unlike `gh issue list --limit`, this asks
-/// GitHub for exactly one page and gives us `total_count` for the pager.
+/// Fetch one GitHub Search API page. It asks GitHub for exactly one page and
+/// gives us `total_count` for the pager.
 pub(crate) async fn github_search_issues_page(
     repo_dir: &str,
     page: u32,
@@ -259,49 +242,30 @@ pub(crate) async fn github_search_issues_page(
         Some("todo") => "open",
         _ => "all",
     };
-    let mut query = format!("repo:{owner}/{repo} is:issue state:{state}");
+    let mut query = format!("repo:{owner}/{repo} is:issue");
+    if state != "all" {
+        query.push_str(&format!(" state:{state}"));
+    }
     if !search.trim().is_empty() {
         query.push(' ');
         query.push_str(search.trim());
     }
-    let query_arg = format!("q={query}");
-    let page_arg = format!("page={}", page.saturating_add(1));
-    let per_page_arg = format!("per_page={}", page_size.min(100));
-    let sort_arg = format!(
-        "sort={}",
-        if matches!(sort_by, "title" | "number") {
-            "created"
-        } else {
-            "updated"
-        }
-    );
-    let direction_arg = format!("order={}", if sort_desc { "desc" } else { "asc" });
-    let endpoint = "search/issues";
-    let args = [
-        "api",
-        endpoint,
-        "-X",
-        "GET",
-        "-f",
-        &query_arg,
-        "-f",
-        &page_arg,
-        "-f",
-        &per_page_arg,
-        "-f",
-        &sort_arg,
-        "-f",
-        &direction_arg,
-    ];
-    let out = gh(Some(repo_dir), &args).await?;
-    if !out.status.success() {
-        bail!(
-            "GitHub issue search failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
-    let payload: serde_json::Value =
-        serde_json::from_slice(&out.stdout).context("parsing GitHub issue search")?;
+    let sort = if matches!(sort_by, "title" | "number") {
+        "created"
+    } else {
+        "updated"
+    };
+    let payload = rest_get_query(
+        "search/issues",
+        &[
+            ("q", query),
+            ("page", page.saturating_add(1).to_string()),
+            ("per_page", page_size.min(100).to_string()),
+            ("sort", sort.to_string()),
+            ("order", if sort_desc { "desc" } else { "asc" }.to_string()),
+        ],
+    )
+    .await?;
     let total = payload.get("total_count").and_then(|v| v.as_u64());
     let parsed = payload
         .get("items")
@@ -350,54 +314,11 @@ pub(crate) async fn github_search_issues_page(
                     .and_then(|v| v.as_str())
                     .map(rfc3339_secs)
                     .unwrap_or_default(),
+                closed: native_state.eq_ignore_ascii_case("closed"),
             })
         })
         .collect();
     Ok((issues, total))
-}
-
-pub(crate) async fn github_issue_exists(repo_dir: &str, external_id: &str) -> Option<bool> {
-    let num = external_id.trim_start_matches('#');
-    let n: u64 = num.parse().ok()?;
-    if let Some(tok) = github_token() {
-        if let Ok((owner, repo)) = github_owner_repo(repo_dir).await {
-            let client = reqwest::Client::new();
-            let resp = client
-                .get(format!("{GITHUB_API}/repos/{owner}/{repo}/issues/{n}"))
-                .header("Authorization", format!("Bearer {tok}"))
-                .header("User-Agent", "warpforge")
-                .timeout(NETWORK_TIMEOUT)
-                .send()
-                .await
-                .ok()?;
-            if resp.status().is_success() {
-                return Some(true);
-            }
-            if resp.status().as_u16() == 404 {
-                return Some(false);
-            }
-            // 410 Gone also means deleted
-            if resp.status().as_u16() == 410 {
-                return Some(false);
-            }
-            return None;
-        }
-    }
-    let out = gh(Some(repo_dir), &["issue", "view", num, "--json", "state"])
-        .await
-        .ok()?;
-    if out.status.success() {
-        return Some(true);
-    }
-    let err = String::from_utf8_lossy(&out.stderr).to_lowercase();
-    if err.contains("could not find")
-        || err.contains("could not resolve")
-        || err.contains("not found")
-        || err.contains("404")
-    {
-        return Some(false);
-    }
-    None
 }
 
 /// Create a GitHub issue in the repo at `repo_dir`. Returns (issue number,
@@ -408,39 +329,16 @@ pub async fn github_create_issue(
     body: &str,
 ) -> Result<(String, String)> {
     let (owner, repo) = github_owner_repo(repo_dir).await?;
-    let api_path = format!("repos/{owner}/{repo}/issues");
-    let title_arg = format!("title={title}");
-    let body = body.trim();
-    // The body travels in a file: an issue body is markdown of any length, and
-    // argv is neither long enough nor private.
-    let body = (!body.is_empty()).then(|| body_file(body)).transpose()?;
-    let body_arg = body
-        .as_ref()
-        .map(|file| format!("body=@{}", file.path().display()));
-    let mut args: Vec<String> = vec![
-        "api".into(),
-        "-X".into(),
-        "POST".into(),
-        api_path,
-        "--raw-field".into(),
-        title_arg,
-    ];
-    if let Some(body_arg) = body_arg {
-        // `--field`, not `--raw-field`: only the typed flag reads `@<path>` as a
-        // file, and a raw one would post the literal path.
-        args.push("--field".into());
-        args.push(body_arg);
+    let mut payload = serde_json::json!({ "title": title });
+    if !body.trim().is_empty() {
+        payload["body"] = body.trim().into();
     }
-    let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
-    let out = gh(Some(repo_dir), &args).await?;
-    if !out.status.success() {
-        bail!(
-            "GitHub issue creation failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
-    let parsed: serde_json::Value =
-        serde_json::from_slice(&out.stdout).context("parsing GitHub issue response")?;
+    let parsed = rest_json(
+        Method::POST,
+        &format!("repos/{owner}/{repo}/issues"),
+        Some(&payload),
+    )
+    .await?;
     let number = parsed
         .get("number")
         .and_then(|n| n.as_u64())
@@ -478,6 +376,44 @@ mod tests {
         // untouched work rather than a guess.
         assert_eq!(github_status("OPEN", None, None), "todo");
         assert_eq!(github_status("OPEN", None, Some("Icebox")), "todo");
+    }
+
+    #[test]
+    fn only_board_errors_are_read_as_a_missing_board() {
+        let scope = serde_json::json!({
+            "type": "INSUFFICIENT_SCOPES",
+            "message": "Your token has not been granted the required scopes"
+        });
+        let forbidden_board = serde_json::json!({
+            "type": "FORBIDDEN",
+            "path": ["repository", "open", "nodes", 0, "projectItems"],
+            "message": "Resource not accessible by personal access token"
+        });
+        let other = serde_json::json!({
+            "type": "FORBIDDEN",
+            "path": ["repository"],
+            "message": "x"
+        });
+        assert!(is_board_error(&scope));
+        assert!(is_board_error(&forbidden_board));
+        assert!(!is_board_error(&other));
+    }
+
+    #[test]
+    fn a_closed_issue_node_is_marked_closed_and_keeps_its_column() {
+        let issue = parse_issue(&serde_json::json!({
+            "number": 7, "title": "t", "url": "u", "state": "CLOSED",
+            "stateReason": "NOT_PLANNED", "createdAt": "2024-01-01T00:00:00Z",
+            "updatedAt": "2024-01-02T00:00:00Z",
+            "assignees": { "nodes": [{ "login": "octocat" }] },
+            "projectItems": null,
+        }))
+        .unwrap();
+        assert_eq!(issue.external_id, "#7");
+        assert!(issue.closed);
+        assert_eq!(issue.status, "cancelled");
+        assert_eq!(issue.assignee.as_deref(), Some("octocat"));
+        assert!(issue.body.is_empty());
     }
 
     #[test]

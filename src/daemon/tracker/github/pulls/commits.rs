@@ -7,16 +7,12 @@
 //! each commit's parent (`parent_oid`), the client names a range with two
 //! hashes, and this compares them.
 
-#![allow(deprecated)]
-
 use anyhow::{anyhow, bail, Context, Result};
 use serde::Deserialize;
 
-use super::super::cli::{gh, github_owner_repo};
-use super::super::graphql::github_query;
-use super::super::{github_token, GITHUB_API};
+use super::super::http::{github_graphql, rest_text};
+use super::super::repo::github_owner_repo;
 use super::{cap_patch, RawActor, RawNodes};
-use crate::daemon::tracker::NETWORK_TIMEOUT;
 use warpforge_protocol as wire;
 
 /// How many commits the picker can offer. GraphQL pages at 100, and `last`
@@ -87,8 +83,7 @@ pub(crate) async fn github_pr_commits(
     number: u64,
 ) -> Result<Vec<wire::PullCommit>> {
     let (owner, repo) = github_owner_repo(repo_dir).await?;
-    let payload = github_query(
-        repo_dir,
+    let payload = github_graphql(
         "query($owner: String!, $repo: String!, $number: Int!, $last: Int!) { \
            repository(owner: $owner, name: $repo) { \
              pullRequest(number: $number) { \
@@ -146,9 +141,15 @@ pub(crate) async fn github_pr_range_diff(
     let (owner, repo) = github_owner_repo(repo_dir).await?;
     let path = format!("repos/{owner}/{repo}/compare/{from_oid}...{to_oid}");
 
-    let meta: RawCompare = serde_json::from_value(github_get(repo_dir, &path, None).await?)
-        .context("parsing commit comparison")?;
-    let patch = github_get_text(repo_dir, &path, "application/vnd.github.diff").await?;
+    let meta: RawCompare = serde_json::from_str(
+        &rest_text(&path, "application/vnd.github+json")
+            .await
+            .context("commit comparison request")?,
+    )
+    .context("parsing commit comparison")?;
+    let patch = rest_text(&path, "application/vnd.github.diff")
+        .await
+        .context("commit comparison request")?;
     let (patch, truncated) = cap_patch(patch);
 
     Ok(wire::PullRequestDiff {
@@ -174,47 +175,6 @@ pub(crate) async fn github_pr_range_diff(
 fn is_oid(oid: &str) -> bool {
     let oid = oid.trim();
     (7..=40).contains(&oid.len()) && oid.chars().all(|c| c.is_ascii_hexdigit())
-}
-
-async fn github_get(repo_dir: &str, path: &str, accept: Option<&str>) -> Result<serde_json::Value> {
-    let text = github_get_text(
-        repo_dir,
-        path,
-        accept.unwrap_or("application/vnd.github+json"),
-    )
-    .await?;
-    serde_json::from_str(&text).context("parsing GitHub response")
-}
-
-/// One REST GET on either path: the PAT goes straight out over reqwest, and
-/// without one `gh api` answers with the same `Accept`.
-async fn github_get_text(repo_dir: &str, path: &str, accept: &str) -> Result<String> {
-    if let Some(token) = github_token() {
-        let resp = reqwest::Client::new()
-            .get(format!("{GITHUB_API}/{path}"))
-            .header("Accept", accept)
-            .header("Authorization", format!("Bearer {token}"))
-            .header("User-Agent", "warpforge")
-            .timeout(NETWORK_TIMEOUT)
-            .send()
-            .await
-            .context("commit comparison request")?
-            .error_for_status()
-            .context("commit comparison request")?;
-        return resp.text().await.context("reading commit comparison");
-    }
-    let out = gh(
-        Some(repo_dir),
-        &["api", path, "-H", &format!("Accept: {accept}")],
-    )
-    .await?;
-    if !out.status.success() {
-        bail!(
-            "commit comparison failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
-    Ok(String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
 #[cfg(test)]

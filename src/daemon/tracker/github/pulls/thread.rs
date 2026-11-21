@@ -1,13 +1,12 @@
 //! The conversation: comments, reviews and inline review threads, answered
 //! by one GraphQL query and folded into one time-ordered list.
 
-#![allow(deprecated)]
-
 use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 
-use super::super::cli::github_owner_repo;
-use super::super::graphql::{github_query, GITHUB_PR_THREAD_QUERY};
+use super::super::graphql::GITHUB_PR_THREAD_QUERY;
+use super::super::http::github_graphql;
+use super::super::repo::github_owner_repo;
 use super::{actor_avatar, RawActor, RawNodes};
 use warpforge_protocol as wire;
 
@@ -19,8 +18,7 @@ pub(crate) async fn github_pr_conversation(
     number: u64,
 ) -> Result<wire::PullThread> {
     let (owner, repo) = github_owner_repo(repo_dir).await?;
-    let payload = github_query(
-        repo_dir,
+    let payload = github_graphql(
         GITHUB_PR_THREAD_QUERY,
         serde_json::json!({"owner": owner, "repo": repo, "number": number}),
     )
