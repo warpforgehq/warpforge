@@ -36,6 +36,10 @@ impl Cached {
 
 static CACHE: Mutex<Option<Cached>> = Mutex::const_new(None);
 
+/// Tokens GitHub answered 401 for. Resolution skips them, so a revoked PAT
+/// falls through to the next source instead of being returned again.
+static REJECTED: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+
 fn security_bin() -> Option<PathBuf> {
     cfg!(target_os = "macos").then(|| PathBuf::from("/usr/bin/security"))
 }
@@ -46,25 +50,27 @@ fn non_empty(value: Option<String>) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
-/// The first non-empty source, asked in order: `GH_TOKEN`, `GITHUB_TOKEN`, the
+/// The first usable source, asked in order: `GH_TOKEN`, `GITHUB_TOKEN`, the
 /// keychain PAT, the `gh` session. A later source is never polled once an
 /// earlier one answered, so a PAT user never spawns `gh`.
 pub(super) async fn resolve_token<K, G>(
     env: impl Fn(&str) -> Option<String>,
     keychain: K,
     gh: G,
+    rejected: &[String],
 ) -> Option<String>
 where
     K: Future<Output = Option<String>>,
     G: Future<Output = Option<String>>,
 {
-    if let Some(token) = non_empty(env("GH_TOKEN")).or_else(|| non_empty(env("GITHUB_TOKEN"))) {
+    let usable = |value: Option<String>| non_empty(value).filter(|token| !rejected.contains(token));
+    if let Some(token) = usable(env("GH_TOKEN")).or_else(|| usable(env("GITHUB_TOKEN"))) {
         return Some(token);
     }
-    if let Some(token) = non_empty(keychain.await) {
+    if let Some(token) = usable(keychain.await) {
         return Some(token);
     }
-    non_empty(gh.await)
+    usable(gh.await)
 }
 
 /// The keychain PAT, read on a blocking thread: `security` is a subprocess.
@@ -125,10 +131,12 @@ pub async fn github_token() -> Option<String> {
     if let Some(entry) = guard.as_ref().filter(|entry| fresh(entry)) {
         return entry.token.clone();
     }
+    let rejected = REJECTED.lock().map(|list| list.clone()).unwrap_or_default();
     let token = resolve_token(
         |key| std::env::var(key).ok(),
         keychain_token(),
         gh_session_token(),
+        &rejected,
     )
     .await;
     *guard = Some(Cached {
@@ -142,6 +150,11 @@ pub async fn github_token() -> Option<String> {
 /// Forget `token` after GitHub rejected it. A different token cached since
 /// (another caller already re-resolved) is left alone.
 pub(super) async fn invalidate_token(token: &str) {
+    if let Ok(mut rejected) = REJECTED.lock() {
+        if !rejected.iter().any(|known| known == token) {
+            rejected.push(token.to_string());
+        }
+    }
     let mut guard = CACHE.lock().await;
     if guard.as_ref().is_some_and(|entry| entry.is_for(token)) {
         *guard = None;
@@ -150,6 +163,9 @@ pub(super) async fn invalidate_token(token: &str) {
 
 /// Forget whatever is cached: the user just connected or disconnected.
 pub(crate) async fn forget_token() {
+    if let Ok(mut rejected) = REJECTED.lock() {
+        rejected.clear();
+    }
     *CACHE.lock().await = None;
 }
 
@@ -251,6 +267,7 @@ mod tests {
                 asked.fetch_add(1, Ordering::SeqCst);
                 Some("gh".to_string())
             },
+            &[],
         )
         .await;
         assert_eq!(token.as_deref(), Some("env-gh"));
@@ -267,6 +284,7 @@ mod tests {
                 gh_asked.fetch_add(1, Ordering::SeqCst);
                 Some("gh".to_string())
             },
+            &[],
         )
         .await;
         assert_eq!(token.as_deref(), Some("keychain"));
@@ -275,15 +293,36 @@ mod tests {
 
     #[tokio::test]
     async fn the_gh_session_answers_when_there_is_no_pat() {
-        let token = resolve_token(env_of(&[]), async { None }, async {
-            Some("gho_session".to_string())
-        })
+        let token = resolve_token(
+            env_of(&[]),
+            async { None },
+            async { Some("gho_session".to_string()) },
+            &[],
+        )
         .await;
         assert_eq!(token.as_deref(), Some("gho_session"));
         assert_eq!(
-            resolve_token(env_of(&[]), async { None }, async { Some(String::new()) }).await,
+            resolve_token(
+                env_of(&[]),
+                async { None },
+                async { Some(String::new()) },
+                &[]
+            )
+            .await,
             None
         );
+    }
+
+    #[tokio::test]
+    async fn a_rejected_pat_falls_through_to_the_gh_session() {
+        let token = resolve_token(
+            env_of(&[("GH_TOKEN", "revoked-env")]),
+            async { Some("revoked-keychain".to_string()) },
+            async { Some("gho_session".to_string()) },
+            &["revoked-env".to_string(), "revoked-keychain".to_string()],
+        )
+        .await;
+        assert_eq!(token.as_deref(), Some("gho_session"));
     }
 
     #[tokio::test]
