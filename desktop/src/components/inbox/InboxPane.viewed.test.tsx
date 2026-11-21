@@ -22,6 +22,7 @@ const pr: PullRequestSummary = {
   headRefName: "widget",
   createdAt: 0,
   updatedAt: 0,
+  reviewRequested: true,
 };
 
 const diff: PullRequestDiff = {

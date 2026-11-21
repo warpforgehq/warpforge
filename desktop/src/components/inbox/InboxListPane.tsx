@@ -4,7 +4,7 @@ import * as React from "react";
 import { InboxToolbar, PullRequestList } from "@/components/inbox/PullRequestList";
 import { Button } from "@/components/ui/button";
 import { daemon } from "@/daemon";
-import { DEFAULT_INBOX_FILTERS, hasActiveInboxFilters } from "@/lib/inboxFilters";
+import { DEFAULT_INBOX_FILTERS, hasActiveInboxFilters, inboxScope } from "@/lib/inboxFilters";
 import {
   assistantUnseenKeysSnapshot,
   inboxItemKey,
@@ -92,6 +92,8 @@ export function InboxListPane({
       <InboxToolbar
         search={filters.search}
         onSearch={(search) => setFilters({ ...filters, search })}
+        scope={inboxScope(filters)}
+        onScopeChange={(scope) => setFilters({ ...filters, scope })}
         state={filters.state}
         onStateChange={(state) => setFilters({ ...filters, state })}
       >
@@ -130,7 +132,10 @@ export function InboxListPane({
           error={
             listing.isError ? `Could not load pull requests: ${listing.error?.message}` : undefined
           }
-          emptyHint={emptyHint}
+          emptyHint={
+            emptyHint ??
+            (inboxScope(filters) === "review" ? "Nothing waiting for your review" : undefined)
+          }
           onAddProject={projects.length === 0 ? onAddProject : undefined}
         />
       </div>

@@ -3,10 +3,12 @@ import { FolderGit2, GitPullRequest } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import type { InboxScope } from "@/lib/inboxFilters";
 import type { PrAssistantState } from "@/lib/taskOrigin";
 import { cn } from "@/lib/utils";
 import type { PullRequestSummary } from "@/protocol";
 
+import { InboxViewMenu } from "./InboxViewMenu";
 import { PullRequestRow, type PullRequestRowActions } from "./PullRequestRow";
 import { PullRequestRowSkeleton } from "./PullRequestRowSkeleton";
 
@@ -110,12 +112,16 @@ function Message({ children, tone }: { children: React.ReactNode; tone?: "error"
 export function InboxToolbar({
   search,
   onSearch,
+  scope,
+  onScopeChange,
   state,
   onStateChange,
   children,
 }: {
   search: string;
   onSearch: (value: string) => void;
+  scope: InboxScope;
+  onScopeChange: (scope: InboxScope) => void;
   state: "open" | "all";
   onStateChange: (state: "open" | "all") => void;
   children?: React.ReactNode;
@@ -133,29 +139,12 @@ export function InboxToolbar({
         spellCheck={false}
         className="h-7 min-w-0 flex-1 border-transparent bg-transparent px-2 text-[13px]! shadow-none focus-visible:border-border"
       />
-      <div
-        role="tablist"
-        aria-label="Pull request state"
-        className="flex shrink-0 items-center rounded-md bg-secondary/60 p-0.5"
-      >
-        {(["open", "all"] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={state === value}
-            onClick={() => onStateChange(value)}
-            className={cn(
-              "rounded px-2 py-0.5 text-[13px] capitalize transition-colors",
-              state === value
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {value}
-          </button>
-        ))}
-      </div>
+      <InboxViewMenu
+        scope={scope}
+        onScopeChange={onScopeChange}
+        state={state}
+        onStateChange={onStateChange}
+      />
       {children}
     </div>
   );

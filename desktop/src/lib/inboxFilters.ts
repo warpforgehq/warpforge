@@ -9,17 +9,48 @@ import type { PullRequestSummary } from "@/protocol";
 
 export type PullStateFilter = "open" | "all";
 
+/** Whose pull requests to list: review asked of me, opened by me, or all. */
+export type InboxScope = "review" | "mine" | "everyone";
+
 export interface InboxFilters {
   assignedToMe: boolean;
+  /** Absent in filters persisted before it existed; read via `inboxScope`. */
+  scope?: InboxScope;
   state: PullStateFilter;
   search: string;
 }
 
+export const DEFAULT_INBOX_SCOPE: InboxScope = "review";
+
 export const DEFAULT_INBOX_FILTERS: InboxFilters = {
   assignedToMe: false,
+  scope: DEFAULT_INBOX_SCOPE,
   state: "open",
   search: "",
 };
+
+/**
+ * The scope the filters ask for.
+ *
+ * @param filters The inbox filters, possibly persisted before `scope` existed.
+ * @returns The scope, defaulting to review requests.
+ */
+export function inboxScope(filters: Pick<InboxFilters, "scope">): InboxScope {
+  return filters.scope ?? DEFAULT_INBOX_SCOPE;
+}
+
+/**
+ * Whether a pull request belongs to a scope.
+ *
+ * @param pr The pull request.
+ * @param scope The scope to test against.
+ * @returns True when the pull request is listed under that scope.
+ */
+export function matchesInboxScope(pr: PullRequestSummary, scope: InboxScope): boolean {
+  if (scope === "review") return pr.reviewRequested === true;
+  if (scope === "mine") return pr.authoredByMe === true;
+  return true;
+}
 
 /** What the daemon fetch should ask for, given the user's filters. */
 export function inboxFetchState(filters: InboxFilters): PullStateFilter {
@@ -29,7 +60,10 @@ export function inboxFetchState(filters: InboxFilters): PullStateFilter {
 /** Whether anything narrows the listing — i.e. whether Reset earns its spot. */
 export function hasActiveInboxFilters(filters: InboxFilters): boolean {
   return (
-    filters.assignedToMe || filters.state !== DEFAULT_INBOX_FILTERS.state || filters.search !== ""
+    filters.assignedToMe ||
+    inboxScope(filters) !== DEFAULT_INBOX_SCOPE ||
+    filters.state !== DEFAULT_INBOX_FILTERS.state ||
+    filters.search !== ""
   );
 }
 
@@ -57,7 +91,9 @@ export function applyInboxFilters(
   items: readonly PullRequestSummary[],
   filters: InboxFilters,
 ): PullRequestSummary[] {
+  const scope = inboxScope(filters);
   return items.filter((pr) => {
+    if (!matchesInboxScope(pr, scope)) return false;
     if (filters.assignedToMe && pr.assignees.length === 0) return false;
     if (filters.state === "open" && pr.state !== "open") return false;
     return matchesPullQuery(pr, filters.search);

@@ -9,7 +9,13 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
 import { daemon } from "@/daemon";
-import { DEFAULT_INBOX_FILTERS, inboxFetchState, type InboxFilters } from "@/lib/inboxFilters";
+import {
+  DEFAULT_INBOX_FILTERS,
+  inboxFetchState,
+  inboxScope,
+  matchesInboxScope,
+  type InboxFilters,
+} from "@/lib/inboxFilters";
 import {
   inboxHasUnseenItems,
   inboxItemKey,
@@ -19,6 +25,7 @@ import {
   type InboxSeenEntry,
 } from "@/lib/inboxSeen";
 import type { PullRequestSummary } from "@/protocol";
+import { useUi } from "@/store/ui";
 
 /** The badge keeps its own cadence; the views reuse the same cache. */
 export const INBOX_POLL_MS = 30_000;
@@ -71,6 +78,12 @@ export function useInboxPulls(
   });
 }
 
+/** The listing narrowed to the scope the inbox shows, so the badge counts what the list lists. */
+function useScopedItems(data: PullRequestSummary[] | undefined): PullRequestSummary[] {
+  const scope = useUi((s) => inboxScope(s.inboxFilters));
+  return useMemo(() => (data ?? []).filter((pr) => matchesInboxScope(pr, scope)), [data, scope]);
+}
+
 function seenEntries(items: readonly PullRequestSummary[]): InboxSeenEntry[] {
   return items.map((pr) => ({ key: inboxItemKey(pr), updatedAt: pr.updatedAt }));
 }
@@ -83,7 +96,7 @@ function seenEntries(items: readonly PullRequestSummary[]): InboxSeenEntry[] {
 export function useInboxUnseen(projects: readonly string[]): boolean {
   const query = useInboxPulls(projects);
   const [unseen, setUnseen] = useState(false);
-  const items = useMemo(() => query.data ?? [], [query.data]);
+  const items = useScopedItems(query.data);
 
   useEffect(() => {
     const entries = seenEntries(items);
@@ -101,7 +114,7 @@ export function useInboxUnseen(projects: readonly string[]): boolean {
 export function useInboxUnseenCount(projects: readonly string[]): number {
   const query = useInboxPulls(projects);
   const [count, setCount] = useState(0);
-  const items = useMemo(() => query.data ?? [], [query.data]);
+  const items = useScopedItems(query.data);
 
   useEffect(() => {
     const entries = seenEntries(items);

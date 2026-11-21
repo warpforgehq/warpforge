@@ -23,7 +23,8 @@ pub(super) fn pulls_query(states: &str) -> String {
                  author {{ login }} \
                  baseRefName headRefName reviewDecision \
                  labels(first: 10) {{ nodes {{ name color }} }} \
-                 assignees(first: 5) {{ nodes {{ login }} }} }} }} }} }}"
+                 assignees(first: 5) {{ nodes {{ login }} }} \
+                 viewerDidAuthor viewerLatestReviewRequest {{ id }} }} }} }} }}"
     )
 }
 
@@ -62,6 +63,10 @@ pub(super) struct RawPull {
     deletions: u64,
     #[serde(default)]
     changed_files: u64,
+    #[serde(default)]
+    viewer_did_author: bool,
+    #[serde(default)]
+    viewer_latest_review_request: Option<serde_json::Value>,
 }
 
 impl RawPull {
@@ -98,6 +103,8 @@ impl RawPull {
             additions: self.additions,
             deletions: self.deletions,
             changed_files: self.changed_files,
+            review_requested: self.viewer_latest_review_request.is_some(),
+            authored_by_me: self.viewer_did_author,
         })
     }
 }

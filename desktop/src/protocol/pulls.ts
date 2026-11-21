@@ -38,6 +38,10 @@ export interface PullRequestSummary {
   additions?: number;
   deletions?: number;
   changedFiles?: number;
+  /** The signed-in user, or a team they are on, is asked to review it. */
+  reviewRequested?: boolean;
+  /** The signed-in user opened it. */
+  authoredByMe?: boolean;
 }
 
 /** Body-level fields of one pull request, for the detail pane. */
