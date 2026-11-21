@@ -51,8 +51,9 @@ it reaches a tracker, and it may never reach one.
 
 **The daemon owns credentials and network I/O.** The Linear API key goes
 straight from Settings into the OS keychain via the daemon (`security`
-CLI, mirroring `claude_auth`); GitHub reuses the `gh` CLI session that PR
-creation already needs. *Rejected:* a Linear SDK in the renderer — it would put
+CLI, mirroring `claude_auth`); GitHub uses a PAT when one is connected and
+otherwise the token of the `gh` CLI session that PR creation already needs
+(see the 2026-11-21 amendment below). *Rejected:* a Linear SDK in the renderer — it would put
 a long-lived key in webview-reachable storage.
 
 **Linear talks GraphQL with variables, never string interpolation.** Titles and
@@ -108,6 +109,36 @@ created from warpforge is never imported back as a second row. Running the two
 as separate fetches doubled the daemon's busy time on every project open for no
 extra information.
 
+*Amended 2026-11-21 — one credential, one listing, no gate.* Opening a board
+was slow for everyone and broken for some, and every cause was a second path:
+
+- **One credential path.** GitHub calls take a PAT (`GH_TOKEN`/`GITHUB_TOKEN`,
+  then the keychain) when there is one, else the token `gh auth token` prints —
+  resolved once, cached for ten minutes, dropped on a 401 and retried once. All
+  traffic then goes through one shared `reqwest` client. `gh` is a token
+  source, never spawned per request. *Rejected:* the PAT-or-`gh` branch in
+  every call, which drifted: a PAT user whose GraphQL query failed fell back to
+  `gh issue list` and broke when `gh` was absent, and a `gh` user paid a
+  subprocess per request.
+- **A partial GraphQL answer is kept.** A token without `read:project` (or
+  without access to one board) gets its issues with open/closed and the board
+  warning; the board-less query runs only when GitHub returned no data at all,
+  and that token is remembered so the next listing skips straight to it.
+- **One listing per project, on that project.** `workItem.importExternal` asks
+  for open and closed issues in one query (two aliases; the closed half
+  without bodies) — open ones are adopted, both refresh tracked rows. The board
+  no longer also calls `workItem.syncExternal` with no ids, which re-listed
+  every project the user ever opened. The Sync button refetches the same query,
+  so the "cannot race" rule above still holds.
+- **Tracked issues outside the listing are one batched lookup**, not one call
+  each: `i123: issue(number: 123)` aliases, fifty per query. A `null` alias with
+  a `NOT_FOUND` error is a deleted issue; a `null` for any other reason deletes
+  nothing.
+- **The local list is not gated on the pull.** It renders from disk at once
+  and is invalidated when the pull lands. *Rejected:* waiting so new rows
+  arrive in the first page — it held every board hostage to the slowest
+  tracker call.
+
 ## Invariants
 
 1. **No tracker network call may run inside the actor.** The actor loop is
@@ -123,8 +154,9 @@ extra information.
    `tokio::spawn(daemon.run(...))`, far from the real cause.
 3. **Status reads are per-listing, never per-item.** `github_issue_state` used
    to cost two `gh` spawns per row (resolve `owner/repo`, then read the issue),
-   so a twenty-item board meant forty sequential subprocesses. One
-   `gh issue list` / one Linear `team.issues` query covers the whole board.
+   so a twenty-item board meant forty sequential subprocesses. One GitHub
+   listing / one Linear `team.issues` query covers the whole board, and what it
+   misses is looked up in batches, never one issue per request.
 4. **Every tracker call is bounded** (`NETWORK_TIMEOUT`, `kill_on_drop`). It
    runs on the request path, so an unbounded call is a hung UI.
 5. **A failed external create rolls the local row back.** The drawer writes the
