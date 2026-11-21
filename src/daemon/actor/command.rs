@@ -692,17 +692,9 @@ pub enum Command {
         team_name: Option<String>,
         reply: oneshot::Sender<Result<wire::TrackerProjectSettings, String>>,
     },
-    TrackerSyncInputs {
-        ids: Vec<String>,
-        /// With no `ids`: only this project's links, or every link when `None`.
-        project: Option<String>,
-        /// Links, each github project's repo dir, each linear project's team id.
-        #[allow(clippy::type_complexity)]
-        reply: oneshot::Sender<(
-            Vec<crate::daemon::store::TrackerLink>,
-            std::collections::HashMap<String, String>,
-            std::collections::HashMap<String, String>,
-        )>,
+    TrackerProjectLinks {
+        project: String,
+        reply: oneshot::Sender<Vec<crate::daemon::store::TrackerLink>>,
     },
     TrackerPersistSynced {
         links: Vec<crate::daemon::store::TrackerLink>,

@@ -145,16 +145,6 @@ pub struct SyncedExternalItem {
     pub remote_status: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SyncExternalResult {
-    pub items: Vec<SyncedExternalItem>,
-    #[serde(default)]
-    pub warning: Option<String>,
-    #[serde(default)]
-    pub deleted_ids: Vec<String>,
-}
-
 /// An issue that existed in a tracker before warpforge knew about it. The
 /// daemon has already minted `item_id` and persisted the link, so the client
 /// only has to add the row to its board.

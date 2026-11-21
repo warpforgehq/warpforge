@@ -126,10 +126,14 @@ was slow for everyone and broken for some, and every cause was a second path:
   and that token is remembered so the next listing skips straight to it.
 - **One listing per project, on that project.** `workItem.importExternal` asks
   for open and closed issues in one query (two aliases; the closed half
-  without bodies) — open ones are adopted, both refresh tracked rows. The board
-  no longer also calls `workItem.syncExternal` with no ids, which re-listed
-  every project the user ever opened. The Sync button refetches the same query,
-  so the "cannot race" rule above still holds.
+  without bodies) — open ones are adopted, both refresh tracked rows.
+  `workItem.syncExternal` is removed: called with no ids it re-listed every
+  project the user ever opened, and as a second reconcile path it could drift
+  from import. The Sync button refetches the same query, so the "cannot race"
+  rule above still holds.
+- **A board warning is a return value, not shared state.** Imports run
+  concurrently, so a process-wide "last warning" slot could hand one project's
+  `read:project` warning to another.
 - **Tracked issues outside the listing are one batched lookup**, not one call
   each: `i123: issue(number: 123)` aliases, fifty per query. A `null` alias with
   a `NOT_FOUND` error is a deleted issue; a `null` for any other reason deletes

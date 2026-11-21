@@ -15,12 +15,11 @@ pub(super) use auth::{github_keychain_delete, github_keychain_write};
 pub use auth::{github_login, github_token};
 pub use batch::{github_issue_states, IssueState};
 pub(crate) use http::github_graphql;
-pub use issues::take_last_board_warning;
 pub(super) use issues::{github_create_issue, github_list_issues, github_search_issues_page};
 pub(crate) use pulls::{
     github_pr_checks, github_pr_comment, github_pr_commits, github_pr_conversation,
     github_pr_details, github_pr_diff, github_pr_list, github_pr_range_diff, github_pr_review,
-    github_pr_review_comment, parse_checks,
+    github_pr_review_comment, parse_checks, HEAD_CHECKS,
 };
 pub(crate) use repo::github_owner_repo;
 

@@ -243,7 +243,6 @@ pub(super) async fn dispatch(
         // The verdict write runs here on the request task like the other PR
         // network calls (ADR-0002 invariant 1).
         TrackerPullReview { project, number, event, body, } => tracker::tracker_pull_review(handle, project, number, event, body).await,
-        WorkItemSyncExternal { ids } => workitem::work_item_sync_external(handle, ids).await,
         WorkItemImportExternal { project, provider } => workitem::work_item_import_external(handle, project, provider).await,
         WorkItemList { project, provider, page, page_size, sort_by, sort_desc, search, status, } => workitem::work_item_list(handle, project, provider, page, page_size, sort_by, sort_desc, search, status).await,
         BacklogGetSettings {} => backlog::backlog_get_settings(handle).await,

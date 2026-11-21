@@ -83,51 +83,18 @@ impl Daemon {
                     });
                 let _ = reply.send(result);
             }
-            Command::TrackerSyncInputs {
-                ids,
-                project,
-                reply,
-            } => {
-                let links: Vec<crate::daemon::store::TrackerLink> = match &self.store {
-                    Some(store) if ids.is_empty() => {
+            Command::TrackerProjectLinks { project, reply } => {
+                let links = self
+                    .store
+                    .as_ref()
+                    .map(|store| {
                         let store = store.lock().unwrap_or_else(|e| e.into_inner());
                         let mut links = store.load_all_tracker_links().unwrap_or_default();
-                        if let Some(project) = &project {
-                            links.retain(|link| &link.project == project);
-                        }
+                        links.retain(|link| link.project == project);
                         links
-                    }
-                    Some(store) => {
-                        let store = store.lock().unwrap_or_else(|e| e.into_inner());
-                        ids.iter()
-                            .filter_map(|id| store.load_tracker_link(id).ok().flatten())
-                            .collect()
-                    }
-                    None => Vec::new(),
-                };
-                let mut repo_dirs = std::collections::HashMap::new();
-                let mut linear_teams = std::collections::HashMap::new();
-                for link in &links {
-                    if link.provider == "github" && !repo_dirs.contains_key(&link.project) {
-                        if let Some(path) = self.project_path(&link.project) {
-                            repo_dirs.insert(link.project.clone(), path);
-                        }
-                    }
-                    if link.provider == "linear" && !linear_teams.contains_key(&link.project) {
-                        if let Some(team) = self
-                            .store
-                            .as_ref()
-                            .and_then(|store| {
-                                let store = store.lock().unwrap_or_else(|e| e.into_inner());
-                                store.tracker_project_settings(&link.project).ok()
-                            })
-                            .and_then(|settings| settings.linear_team_id)
-                        {
-                            linear_teams.insert(link.project.clone(), team);
-                        }
-                    }
-                }
-                let _ = reply.send((links, repo_dirs, linear_teams));
+                    })
+                    .unwrap_or_default();
+                let _ = reply.send(links);
             }
             Command::TrackerPersistSynced { links, reply } => {
                 let active = self.runner_active_items();

@@ -69,49 +69,41 @@ fn is_board_error(error: &serde_json::Value) -> bool {
 /// only cost a failed round trip before the board-less one.
 static NO_BOARD_TOKEN: Mutex<Option<String>> = Mutex::new(None);
 
-fn set_board_warning(warning: String) {
+fn board_warning(warning: String) -> Option<String> {
     eprintln!("[tracker] {warning}");
-    if let Ok(mut guard) = LAST_BOARD_WARNING.lock() {
-        *guard = Some(warning);
-    }
-}
-
-static LAST_BOARD_WARNING: Mutex<Option<String>> = Mutex::new(None);
-
-pub fn take_last_board_warning() -> Option<String> {
-    LAST_BOARD_WARNING.lock().ok()?.take()
+    Some(warning)
 }
 
 /// Run an issue query with the board column when the token can read boards,
-/// without it when it cannot. Errors beside data are judged here: board ones
-/// become the board warning, anything else is logged, and the data is kept.
+/// without it when it cannot. Board errors become the returned warning, other
+/// errors beside data are logged, and the data is kept.
 pub(super) async fn board_aware_query(
     query: impl Fn(bool) -> String,
     vars: serde_json::Value,
-) -> Result<Partial> {
+) -> Result<(Partial, Option<String>)> {
     let token = github_token().await;
     let known_boardless = token.is_some()
         && NO_BOARD_TOKEN
             .lock()
             .ok()
             .is_some_and(|guard| *guard == token);
-    if known_boardless {
-        set_board_warning(missing_scope_warning());
+    let warning = if known_boardless {
+        board_warning(missing_scope_warning())
     } else {
         match graphql_partial(&query(true), vars.clone()).await {
             Ok(partial) => {
                 let (board, other): (Vec<_>, Vec<_>) =
                     partial.errors.iter().cloned().partition(is_board_error);
-                if !board.is_empty() {
-                    set_board_warning(board_fallback_warning(&error_messages(&board)));
-                }
+                let warning = (!board.is_empty())
+                    .then(|| board_warning(board_fallback_warning(&error_messages(&board))))
+                    .flatten();
                 if !other.is_empty() {
                     eprintln!(
                         "[tracker] GitHub partial answer: {}",
                         error_messages(&other)
                     );
                 }
-                return Ok(partial);
+                return Ok((partial, warning));
             }
             Err(e) => {
                 if !is_missing_scope_error(&format!("{e:#}")) {
@@ -120,20 +112,22 @@ pub(super) async fn board_aware_query(
                 if let Ok(mut guard) = NO_BOARD_TOKEN.lock() {
                     *guard = token;
                 }
-                set_board_warning(missing_scope_warning());
+                board_warning(missing_scope_warning())
             }
         }
-    }
-    graphql_partial(&query(false), vars).await
+    };
+    Ok((graphql_partial(&query(false), vars).await?, warning))
 }
 
 /// Recently updated issues, open and closed, with their board column. Teams
 /// track status in a Projects V2 "Status" field, which only GraphQL exposes;
-/// without `read:project` the status falls back to open/closed.
-pub(crate) async fn github_list_issues(repo_dir: &str) -> Result<Vec<RemoteIssue>> {
+/// without `read:project` the status falls back to open/closed, with a warning.
+pub(crate) async fn github_list_issues(
+    repo_dir: &str,
+) -> Result<(Vec<RemoteIssue>, Option<String>)> {
     let (owner, repo) = github_owner_repo(repo_dir).await?;
     let started = std::time::Instant::now();
-    let partial = board_aware_query(
+    let (partial, warning) = board_aware_query(
         project_issues_query,
         serde_json::json!({"owner": owner, "repo": repo, "first": IMPORT_LIMIT}),
     )
@@ -154,7 +148,7 @@ pub(crate) async fn github_list_issues(repo_dir: &str) -> Result<Vec<RemoteIssue
         issues.len(),
         started.elapsed().as_millis()
     );
-    Ok(issues)
+    Ok((issues, warning))
 }
 
 pub(super) fn parse_issue(issue: &serde_json::Value) -> Option<RemoteIssue> {

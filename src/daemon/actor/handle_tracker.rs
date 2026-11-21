@@ -71,26 +71,15 @@ impl DaemonHandle {
             .unwrap_or_else(|_| Err("daemon dropped the tracker-links request".into()))
     }
 
-    /// The links a sync should refresh, plus the git dir of every project they
-    /// belong to. Store read only — the caller does the network itself so the
-    /// actor loop never waits on a tracker.
-    #[allow(clippy::type_complexity)]
-    pub async fn tracker_sync_inputs(
+    /// A project's tracker links. Store read only — the caller does the
+    /// network itself so the actor loop never waits on a tracker.
+    pub async fn tracker_project_links(
         &self,
-        ids: Vec<String>,
-        project: Option<String>,
-    ) -> (
-        Vec<crate::daemon::store::TrackerLink>,
-        std::collections::HashMap<String, String>,
-        std::collections::HashMap<String, String>,
-    ) {
+        project: String,
+    ) -> Vec<crate::daemon::store::TrackerLink> {
         let (tx, rx) = oneshot::channel();
-        self.send(Command::TrackerSyncInputs {
-            ids,
-            project,
-            reply: tx,
-        })
-        .await;
+        self.send(Command::TrackerProjectLinks { project, reply: tx })
+            .await;
         rx.await.unwrap_or_default()
     }
 

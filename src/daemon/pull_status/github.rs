@@ -6,24 +6,22 @@ use warpforge_protocol as wire;
 
 use super::checks::rollup;
 use super::PullTarget;
-use crate::daemon::tracker::{github_graphql, github_owner_repo, parse_checks};
+use crate::daemon::tracker::{github_graphql, github_owner_repo, parse_checks, HEAD_CHECKS};
 
 /// Enough rows that an open pull request is not hidden behind older closed
 /// ones reusing the same branch name.
 const LIST_LIMIT: u64 = 10;
 
-const QUERY: &str = "query($owner: String!, $repo: String!, $head: String!, $first: Int!) { \
-   repository(owner: $owner, name: $repo) { \
-     pullRequests(headRefName: $head, first: $first, \
-       orderBy: {field: CREATED_AT, direction: DESC}) { nodes { \
-       number title url state isDraft headRefOid updatedAt author { login } \
-       commits(last: 1) { nodes { commit { statusCheckRollup { \
-         contexts(first: 100) { nodes { \
-           __typename \
-           ... on CheckRun { name status conclusion detailsUrl \
-             checkSuite { workflowRun { workflow { name } } } } \
-           ... on StatusContext { context state targetUrl description } \
-         } } } } } } } } } }";
+fn query() -> String {
+    format!(
+        "query($owner: String!, $repo: String!, $head: String!, $first: Int!) {{ \
+           repository(owner: $owner, name: $repo) {{ \
+             pullRequests(headRefName: $head, first: $first, \
+               orderBy: {{field: CREATED_AT, direction: DESC}}) {{ nodes {{ \
+               number title url state isDraft headRefOid updatedAt author {{ login }} \
+               {HEAD_CHECKS} }} }} }} }}"
+    )
+}
 
 /// A pull request as the listing reports it, plus the timestamp that says
 /// whether its conversation needs reading again.
@@ -49,7 +47,7 @@ pub(super) async fn fetch(target: PullTarget) -> Result<Option<Listed>> {
     }
     let (owner, repo) = github_owner_repo(&target.worktree).await?;
     let payload = github_graphql(
-        QUERY,
+        &query(),
         serde_json::json!({"owner": owner, "repo": repo, "head": branch, "first": LIST_LIMIT}),
     )
     .await?;

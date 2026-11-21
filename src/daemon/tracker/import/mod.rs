@@ -12,4 +12,4 @@ mod tests;
 
 pub use adopt::adopt_imported;
 pub use fetch::fetch_importable;
-pub use status::{fetch_links_status, resolve_missing, Refreshed};
+pub use status::resolve_missing;

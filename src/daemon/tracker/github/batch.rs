@@ -42,7 +42,7 @@ pub async fn github_issue_states(
     let (owner, repo) = github_owner_repo(repo_dir).await?;
     let started = std::time::Instant::now();
     for chunk in numbers.chunks(CHUNK) {
-        let partial = board_aware_query(
+        let (partial, _) = board_aware_query(
             |with_board| issues_by_number_query(chunk, with_board),
             serde_json::json!({"owner": owner, "repo": repo}),
         )

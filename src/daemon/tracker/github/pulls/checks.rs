@@ -10,16 +10,23 @@ use super::super::repo::github_owner_repo;
 use crate::daemon::pull_status::{check_name, check_state};
 use warpforge_protocol as wire;
 
-const CHECKS_QUERY: &str = "query($owner: String!, $repo: String!, $number: Int!) { \
-   repository(owner: $owner, name: $repo) { \
-     pullRequest(number: $number) { \
-       commits(last: 1) { nodes { commit { statusCheckRollup { \
-         contexts(first: 100) { nodes { \
-           __typename \
-           ... on CheckRun { name status conclusion detailsUrl \
-             checkSuite { workflowRun { workflow { name } } } } \
-           ... on StatusContext { context state targetUrl description } \
-         } } } } } } } } }";
+/// The head commit's checks in the shape [`parse_checks`] reads. Every query
+/// that feeds it selects this fragment, so the two cannot drift apart.
+pub(crate) const HEAD_CHECKS: &str = "commits(last: 1) { nodes { commit { statusCheckRollup { \
+     contexts(first: 100) { nodes { \
+       __typename \
+       ... on CheckRun { name status conclusion detailsUrl \
+         checkSuite { workflowRun { workflow { name } } } } \
+       ... on StatusContext { context state targetUrl description } \
+     } } } } } }";
+
+fn checks_query() -> String {
+    format!(
+        "query($owner: String!, $repo: String!, $number: Int!) {{ \
+           repository(owner: $owner, name: $repo) {{ \
+             pullRequest(number: $number) {{ {HEAD_CHECKS} }} }} }}"
+    )
+}
 
 /// Every check on the head commit, in GitHub's order.
 pub(crate) async fn github_pr_checks(
@@ -28,7 +35,7 @@ pub(crate) async fn github_pr_checks(
 ) -> Result<Vec<wire::PullCheckRun>> {
     let (owner, repo) = github_owner_repo(repo_dir).await?;
     let payload = github_graphql(
-        CHECKS_QUERY,
+        &checks_query(),
         serde_json::json!({"owner": owner, "repo": repo, "number": number}),
     )
     .await?;
