@@ -43,7 +43,7 @@ pub async fn resolve_missing(links: &[TrackerLink], repo_dir: Option<&str>) -> R
         .copied()
         .filter(|link| link.provider == "github")
         .collect();
-    if let (Some(dir), false) = (repo_dir, github_links.is_empty()) {
+    if let Some(dir) = repo_dir.filter(|_| !github_links.is_empty()) {
         let ids: Vec<String> = github_links
             .iter()
             .map(|link| link.external_id.clone())

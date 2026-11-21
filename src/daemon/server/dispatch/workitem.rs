@@ -49,9 +49,9 @@ pub(super) async fn work_item_create_external(
     })
 }
 
-/// Ceiling on a whole sync, on top of each call's own: a board must settle
-/// even when a tracker answers every call just inside its timeout.
-const SYNC_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+/// Ceiling on looking up unlisted issues, on top of each call's own: a board
+/// must settle even when a tracker answers every call just inside its timeout.
+const LOOKUP_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
 pub(super) async fn work_item_import_external(
     handle: &DaemonHandle,
@@ -98,7 +98,7 @@ pub(super) async fn work_item_import_external(
         .filter(|link| !listed.contains(&(link.provider.clone(), link.external_id.clone())))
         .collect();
     let (refreshed, deleted_ids) = tokio::time::timeout(
-        SYNC_TIMEOUT,
+        LOOKUP_TIMEOUT,
         tracker::resolve_missing(&missing, repo_dir.as_deref()),
     )
     .await
@@ -106,7 +106,7 @@ pub(super) async fn work_item_import_external(
         eprintln!(
             "[tracker] lookup of {} unlisted issues timed out after {}s",
             missing.len(),
-            SYNC_TIMEOUT.as_secs()
+            LOOKUP_TIMEOUT.as_secs()
         );
         (Vec::new(), Vec::new())
     });

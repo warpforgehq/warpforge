@@ -69,9 +69,9 @@ fn is_board_error(error: &serde_json::Value) -> bool {
 /// only cost a failed round trip before the board-less one.
 static NO_BOARD_TOKEN: Mutex<Option<String>> = Mutex::new(None);
 
-fn board_warning(warning: String) -> Option<String> {
+fn log_board_warning(warning: String) -> String {
     eprintln!("[tracker] {warning}");
-    Some(warning)
+    warning
 }
 
 /// Run an issue query with the board column when the token can read boards,
@@ -88,15 +88,14 @@ pub(super) async fn board_aware_query(
             .ok()
             .is_some_and(|guard| *guard == token);
     let warning = if known_boardless {
-        board_warning(missing_scope_warning())
+        Some(log_board_warning(missing_scope_warning()))
     } else {
         match graphql_partial(&query(true), vars.clone()).await {
             Ok(partial) => {
                 let (board, other): (Vec<_>, Vec<_>) =
                     partial.errors.iter().cloned().partition(is_board_error);
                 let warning = (!board.is_empty())
-                    .then(|| board_warning(board_fallback_warning(&error_messages(&board))))
-                    .flatten();
+                    .then(|| log_board_warning(board_fallback_warning(&error_messages(&board))));
                 if !other.is_empty() {
                     eprintln!(
                         "[tracker] GitHub partial answer: {}",
@@ -112,7 +111,7 @@ pub(super) async fn board_aware_query(
                 if let Ok(mut guard) = NO_BOARD_TOKEN.lock() {
                     *guard = token;
                 }
-                board_warning(missing_scope_warning())
+                Some(log_board_warning(missing_scope_warning()))
             }
         }
     };

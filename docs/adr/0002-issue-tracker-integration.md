@@ -207,7 +207,7 @@ was slow for everyone and broken for some, and every cause was a second path:
     wrapping block instead.
 14. **Nothing may import Linear issues into a project with no mapped team.**
     `fetch_importable` takes the team id and skips Linear without one; the same
-    id scopes `fetch_links_status`, one listing per team rather than per link.
+    id scopes the Linear listing, one per team rather than per link.
     An unscoped pull is not a smaller bug than a wrong one — it silently fills
     every project with the same rows.
 15. **Only `imported = 1` links may be purged.** A backlog item written here and
