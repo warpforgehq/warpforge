@@ -37,9 +37,13 @@ fn is_missing_scope_error(msg: &str) -> bool {
     msg.contains("read:project") || msg.contains("requires one of the following scopes")
 }
 
+fn missing_scope_warning() -> String {
+    "GitHub board statuses unavailable — your token lacks the 'read:project' scope. Add it at https://github.com/settings/tokens, or run `gh auth refresh -s read:project`. Showing open/closed instead.".to_string()
+}
+
 fn board_fallback_warning(original_error: &str) -> String {
     if is_missing_scope_error(original_error) {
-        "GitHub board statuses unavailable — your token lacks the 'read:project' scope. Add it at https://github.com/settings/tokens, or run `gh auth refresh -s read:project`. Showing open/closed instead.".to_string()
+        missing_scope_warning()
     } else {
         format!("GitHub board statuses unavailable ({original_error}); using open/closed")
     }
@@ -92,7 +96,7 @@ pub(super) async fn board_aware_query(
             .ok()
             .is_some_and(|guard| *guard == token);
     if known_boardless {
-        set_board_warning(board_fallback_warning("read:project"));
+        set_board_warning(missing_scope_warning());
     } else {
         match graphql_partial(&query(true), vars.clone()).await {
             Ok(partial) => {
@@ -109,25 +113,23 @@ pub(super) async fn board_aware_query(
                 }
                 return Ok(partial);
             }
-            Err(e) if is_missing_scope_error(&format!("{e:#}")) => {
+            Err(e) => {
+                if !is_missing_scope_error(&format!("{e:#}")) {
+                    return Err(e);
+                }
                 if let Ok(mut guard) = NO_BOARD_TOKEN.lock() {
                     *guard = token;
                 }
-                set_board_warning(board_fallback_warning(&format!("{e:#}")));
+                set_board_warning(missing_scope_warning());
             }
-            Err(e) => return Err(e),
         }
     }
     graphql_partial(&query(false), vars).await
 }
 
-/// List the repo's recently updated issues, open and closed, with the board
-/// column each one sits in — one GraphQL round trip.
-///
-/// GitHub's own status vocabulary is only open/closed; the status a team reads
-/// off a repo lives in a Projects V2 "Status" field, and only GraphQL can
-/// answer for it. A token without `read:project` gets the same listing with
-/// open/closed as the status and a board warning.
+/// Recently updated issues, open and closed, with their board column. Teams
+/// track status in a Projects V2 "Status" field, which only GraphQL exposes;
+/// without `read:project` the status falls back to open/closed.
 pub(crate) async fn github_list_issues(repo_dir: &str) -> Result<Vec<RemoteIssue>> {
     let (owner, repo) = github_owner_repo(repo_dir).await?;
     let started = std::time::Instant::now();
@@ -155,7 +157,6 @@ pub(crate) async fn github_list_issues(repo_dir: &str) -> Result<Vec<RemoteIssue
     Ok(issues)
 }
 
-/// One GraphQL issue node as a [`RemoteIssue`].
 pub(super) fn parse_issue(issue: &serde_json::Value) -> Option<RemoteIssue> {
     let number = issue.get("number")?.as_u64()?;
     let text = |key: &str| {

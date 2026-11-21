@@ -422,7 +422,10 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                     displayName={agent.displayName}
                     onDone={(error) => {
                       clearAgentState(agent.id);
-                      setNotes((prev) => ({ ...prev, [agent.id]: error ?? "Signed in with Google." }));
+                      setNotes((prev) => ({
+                        ...prev,
+                        [agent.id]: error ?? "Signed in with Google.",
+                      }));
                     }}
                   />
                 )}

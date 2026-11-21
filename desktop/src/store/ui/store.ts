@@ -17,8 +17,8 @@ export const useUi = create<UiState>()(
     }),
     {
       name: "wf-ui",
-      // Next persisted-shape change must bump this to 11.
-      version: 10,
+      // Next persisted-shape change must bump this to 12.
+      version: 11,
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
         if (version === 0 && state && "sidebarWidth" in state) {
@@ -91,6 +91,10 @@ export const useUi = create<UiState>()(
         if (version < 10 && state && "smithColors" in state) {
           const { smithColors: _smithColors, ...rest } = state;
           state = rest;
+        }
+        if (version < 11 && state?.inboxFilters) {
+          const filters = state.inboxFilters as Record<string, unknown>;
+          state = { ...state, inboxFilters: { ...filters, scope: "review" } };
         }
         return state;
       },

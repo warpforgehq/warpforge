@@ -16,7 +16,7 @@ fn client() -> &'static reqwest::Client {
             .user_agent("warpforge")
             .timeout(NETWORK_TIMEOUT)
             .build()
-            .unwrap_or_default()
+            .expect("GitHub HTTP client")
     })
 }
 
@@ -91,7 +91,7 @@ pub(super) async fn rest_json(
     path: &str,
     body: Option<&serde_json::Value>,
 ) -> Result<serde_json::Value> {
-    let url = format!("{GITHUB_API}/{}", path.trim_start_matches('/'));
+    let url = api_url(path);
     let resp = send(|client| {
         let request = client
             .request(method.clone(), &url)
@@ -110,7 +110,7 @@ pub(super) async fn rest_get_query(
     path: &str,
     query: &[(&str, String)],
 ) -> Result<serde_json::Value> {
-    let url = format!("{GITHUB_API}/{}", path.trim_start_matches('/'));
+    let url = api_url(path);
     let resp = send(|client| {
         client
             .get(&url)
@@ -123,9 +123,13 @@ pub(super) async fn rest_get_query(
 
 /// A REST GET answered as text, with the given `Accept` (a diff, say).
 pub(super) async fn rest_text(path: &str, accept: &str) -> Result<String> {
-    let url = format!("{GITHUB_API}/{}", path.trim_start_matches('/'));
+    let url = api_url(path);
     let resp = send(|client| client.get(&url).header("Accept", accept)).await?;
     resp.text().await.context("reading GitHub response")
+}
+
+fn api_url(path: &str) -> String {
+    format!("{GITHUB_API}/{}", path.trim_start_matches('/'))
 }
 
 /// A GraphQL envelope whose `data` may sit beside `errors`.

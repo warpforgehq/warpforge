@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { daemon } from "./index";
 import type { DaemonEvent } from "../protocol";
+import { daemon } from "./index";
 
 type Internals = {
   applyEvent: (event: DaemonEvent) => void;

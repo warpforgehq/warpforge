@@ -3,7 +3,7 @@ import { toast } from "sonner";
 
 import type { TaskMode } from "@/components/TaskComposeBar";
 import { useUi } from "@/store/ui";
-import type { FactorySeed } from "@/views/NewTaskDialog/useFactoryBatch";
+import type { FactorySeed } from "@/views/NewTaskDialog/FactoryItems";
 
 /** How New Task opens beyond its prompt: its mode, or several backlog items. */
 export interface NewTaskOptions {

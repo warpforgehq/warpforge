@@ -133,18 +133,6 @@ export function BacklogView({
   const refreshing = sync.isFetching || (list.isFetching && !list.isFetchingNextPage);
   const showSyncPill = refreshing && !list.isPending && hasTracker;
 
-  const [manualSyncing, setManualSyncing] = React.useState(false);
-  const syncNow = React.useCallback(async () => {
-    setManualSyncing(true);
-    try {
-      // The same query the mount ran, so a manual pull and the automatic one
-      // cannot race; it invalidates the list itself when it lands.
-      await queryClient.refetchQueries({ queryKey: ["backlog", project, "sync"] });
-    } finally {
-      setManualSyncing(false);
-    }
-  }, [project, queryClient]);
-
   const items = React.useMemo(
     () => (list.data?.pages ?? []).flatMap((page) => page.items.map(toWorkItem)),
     [list.data],
@@ -207,8 +195,10 @@ export function BacklogView({
         params={params}
         onChange={patch}
         onReset={reset}
-        onSync={() => void syncNow()}
-        isSyncing={sync.isFetching || manualSyncing}
+        // The same query the mount ran, so a manual pull and the automatic one
+        // cannot race; it invalidates the list itself when it lands.
+        onSync={() => void queryClient.refetchQueries({ queryKey: ["backlog", project, "sync"] })}
+        isSyncing={sync.isFetching}
         assignees={seenAssignees}
       />
       {onStartInFactory && selection.size > 0 && (

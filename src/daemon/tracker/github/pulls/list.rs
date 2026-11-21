@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use super::super::http::github_graphql;
 use super::super::repo::github_owner_repo;
-use super::{viewer_login, RawActor, RawLabel, RawNodes};
+use super::{RawActor, RawLabel, RawNodes};
 use crate::daemon::tracker::rfc3339_secs;
 use warpforge_protocol as wire;
 
@@ -136,7 +136,11 @@ pub(crate) async fn github_pr_list(
         .and_then(|value| value.as_array())
         .ok_or_else(|| anyhow!("GitHub pull request query returned no pull requests"))?;
     let viewer = if assigned_to_me {
-        Some(viewer_login().await?)
+        Some(
+            super::super::github_login()
+                .await
+                .ok_or_else(|| anyhow!("could not determine the GitHub login"))?,
+        )
     } else {
         None
     };

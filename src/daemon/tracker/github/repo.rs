@@ -66,7 +66,6 @@ async fn resolve_owner_repo(repo_dir: &str) -> Result<(String, String)> {
     }
 }
 
-/// What an `origin` URL names.
 #[derive(Debug, PartialEq)]
 pub(super) enum Remote {
     GitHub(String, String),

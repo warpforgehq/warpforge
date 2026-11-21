@@ -85,14 +85,17 @@ struct RawAuthor {
 /// Pick the branch's open pull request, else its most recent one. The query
 /// lists newest first.
 pub(super) fn parse_pull_list(nodes: &serde_json::Value) -> Result<Option<Listed>> {
-    let nodes = nodes.as_array().cloned().unwrap_or_default();
-    let chosen = nodes
-        .iter()
-        .position(|node| node.get("state").and_then(|s| s.as_str()) == Some("OPEN"))
-        .or((!nodes.is_empty()).then_some(0));
-    let Some(node) = chosen.and_then(|index| nodes.into_iter().nth(index)) else {
+    let Some(nodes) = nodes.as_array() else {
         return Ok(None);
     };
+    let Some(node) = nodes
+        .iter()
+        .find(|node| node.get("state").and_then(|s| s.as_str()) == Some("OPEN"))
+        .or_else(|| nodes.first())
+    else {
+        return Ok(None);
+    };
+    let node = node.clone();
     let runs = parse_checks(&node)?;
     let pull: RawPull = serde_json::from_value(node)?;
     let state = match pull.state.as_str() {

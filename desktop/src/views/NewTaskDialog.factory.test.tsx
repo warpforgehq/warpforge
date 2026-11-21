@@ -183,7 +183,7 @@ describe("NewTaskDialog in Factory mode", () => {
     const enqueue = vi.spyOn(daemon, "runnerEnqueue");
     const user = userEvent.setup();
     renderDialog({
-      factorySeed: { items: [item("b-5", "Five"), item("b-6", "Six")], kind: "items" },
+      factorySeed: { items: [item("b-5", "Five"), item("b-6", "Six")] },
     });
     expect(await screen.findByText("Five")).toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "Start 2 in Factory" }));
@@ -261,7 +261,7 @@ describe("NewTaskDialog Factory lead defaults", () => {
     const enqueue = vi.spyOn(daemon, "runnerEnqueue");
     const user = userEvent.setup();
     renderDialog({
-      factorySeed: { items: [item("b-5", "Five")], kind: "items" },
+      factorySeed: { items: [item("b-5", "Five")] },
       snapshot: withOpencode,
     });
     await screen.findByText("Five");

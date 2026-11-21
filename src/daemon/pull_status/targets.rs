@@ -7,7 +7,7 @@ use crate::daemon::task::Task;
 /// folder task with an owned branch and every Factory task that ran in its
 /// project checkout (`paths`, by project name).
 /// Archived tasks sit folded on the sidebar's done shelf and are not worth a
-/// `gh` call, except a Factory task, whose merge is what closes its backlog item.
+/// GitHub call, except a Factory task, whose merge is what closes its backlog item.
 pub(crate) fn targets(
     tasks: &[Task],
     paths: &HashMap<String, String>,

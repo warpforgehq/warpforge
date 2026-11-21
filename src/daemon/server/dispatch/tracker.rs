@@ -61,8 +61,7 @@ pub(super) async fn tracker_connect_github(
 }
 
 pub(super) async fn tracker_disconnect_github() -> Result<serde_json::Value, wire::RpcError> {
-    // GitHub rides on the `gh` CLI session; nothing daemon-owned to
-    // delete except links, which belong to backlog items (kept).
+    // A keychain PAT, if any, is left in place.
     serde_json::to_value(tracker::status().await).map_err(|e| wire::RpcError {
         code: wire::ErrorCode::Internal,
         message: e.to_string(),

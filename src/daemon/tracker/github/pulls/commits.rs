@@ -10,7 +10,7 @@
 use anyhow::{anyhow, bail, Context, Result};
 use serde::Deserialize;
 
-use super::super::http::{github_graphql, rest_text};
+use super::super::http::{github_graphql, rest_json, rest_text};
 use super::super::repo::github_owner_repo;
 use super::{cap_patch, RawActor, RawNodes};
 use warpforge_protocol as wire;
@@ -141,8 +141,8 @@ pub(crate) async fn github_pr_range_diff(
     let (owner, repo) = github_owner_repo(repo_dir).await?;
     let path = format!("repos/{owner}/{repo}/compare/{from_oid}...{to_oid}");
 
-    let meta: RawCompare = serde_json::from_str(
-        &rest_text(&path, "application/vnd.github+json")
+    let meta = serde_json::from_value::<RawCompare>(
+        rest_json(reqwest::Method::GET, &path, None)
             .await
             .context("commit comparison request")?,
     )

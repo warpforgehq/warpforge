@@ -23,12 +23,9 @@ fn issue_fields(with_body: bool, with_board: bool) -> String {
     fields
 }
 
-/// The board listing: the most recently updated open issues and, in the same
-/// round trip, the most recently updated closed ones. Open ones feed import;
-/// both refresh the status of issues already on the board (ADR-0002).
-///
-/// `with_board` drops `projectItems` for a token without `read:project`,
-/// which GitHub would otherwise refuse the whole query for.
+/// Open and closed issues in one round trip: open ones feed import, both
+/// refresh tracked rows. `with_board` drops `projectItems` for a token without
+/// `read:project`, which GitHub would otherwise refuse the whole query for.
 pub(super) fn project_issues_query(with_board: bool) -> String {
     let issues = |states: &str, with_body: bool| {
         format!(

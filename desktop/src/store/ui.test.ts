@@ -453,7 +453,12 @@ describe("inbox selection and filters", () => {
   });
 
   it("remembers the inbox filters, but not the search term", async () => {
-    useUi.getState().setInboxFilters({ assignedToMe: true, search: "races", state: "all" });
+    useUi.getState().setInboxFilters({
+      assignedToMe: true,
+      scope: "mine",
+      search: "races",
+      state: "all",
+    });
 
     const stored = localStorage.getItem("wf-ui");
     useUi.setState({ inboxFilters: DEFAULT_INBOX_FILTERS });
@@ -462,6 +467,7 @@ describe("inbox selection and filters", () => {
 
     expect(useUi.getState().inboxFilters).toEqual({
       assignedToMe: true,
+      scope: "mine",
       search: "",
       state: "all",
     });
@@ -530,6 +536,18 @@ describe("Smiths sidebar project", () => {
     );
     await useUi.persist.rehydrate();
     expect(useUi.getState()).not.toHaveProperty("smithColors");
+  });
+
+  it("opens a version 10 inbox on review requests, keeping its other filters", async () => {
+    localStorage.setItem(
+      "wf-ui",
+      JSON.stringify({
+        state: { inboxFilters: { assignedToMe: false, search: "", state: "all" } },
+        version: 10,
+      }),
+    );
+    await useUi.persist.rehydrate();
+    expect(useUi.getState().inboxFilters).toMatchObject({ scope: "review", state: "all" });
   });
 });
 

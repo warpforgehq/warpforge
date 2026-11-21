@@ -1,7 +1,5 @@
-//! The GitHub credential. One resolver answers for every GitHub call the daemon
-//! makes: a PAT from the environment or the keychain, else the token of the
-//! `gh auth login` session. The answer is cached so the keychain and `gh` are
-//! asked once per [`TOKEN_TTL`], not once per request.
+//! The one GitHub credential: a PAT if configured, else the `gh auth login`
+//! token, cached so the keychain and `gh` are not asked on every request.
 
 use anyhow::{anyhow, bail, Context, Result};
 use std::future::Future;
@@ -28,6 +26,12 @@ struct Cached {
     token: Option<String>,
     at: Instant,
     login: Option<String>,
+}
+
+impl Cached {
+    fn is_for(&self, token: &str) -> bool {
+        self.token.as_deref() == Some(token)
+    }
 }
 
 static CACHE: Mutex<Option<Cached>> = Mutex::const_new(None);
@@ -139,10 +143,7 @@ pub async fn github_token() -> Option<String> {
 /// (another caller already re-resolved) is left alone.
 pub(super) async fn invalidate_token(token: &str) {
     let mut guard = CACHE.lock().await;
-    if guard
-        .as_ref()
-        .is_some_and(|entry| entry.token.as_deref() == Some(token))
-    {
+    if guard.as_ref().is_some_and(|entry| entry.is_for(token)) {
         *guard = None;
     }
 }
@@ -159,7 +160,7 @@ pub async fn github_login() -> Option<String> {
         .lock()
         .await
         .as_ref()
-        .filter(|entry| entry.token.as_deref() == Some(token.as_str()))
+        .filter(|entry| entry.is_for(&token))
         .and_then(|entry| entry.login.clone())
     {
         return Some(login);
@@ -177,7 +178,7 @@ pub async fn github_login() -> Option<String> {
         .lock()
         .await
         .as_mut()
-        .filter(|entry| entry.token.as_deref() == Some(token.as_str()))
+        .filter(|entry| entry.is_for(&token))
     {
         entry.login = Some(login.clone());
     }

@@ -30,8 +30,12 @@ describe("session stream coalescing", () => {
   });
 
   it("replaces only the tail entry when a chunk extends the last one", () => {
-    const previous = Array.from({ length: 100 }, (_, index): SessionUpdate =>
-      index === 99 ? { kind: "agent_text", text: "tail" } : { kind: "user_message", text: `${index}` },
+    const previous = Array.from(
+      { length: 100 },
+      (_, index): SessionUpdate =>
+        index === 99
+          ? { kind: "agent_text", text: "tail" }
+          : { kind: "user_message", text: `${index}` },
     );
 
     const next = appendCoalescedUpdate(previous, { kind: "agent_text", text: "!" });
@@ -43,10 +47,13 @@ describe("session stream coalescing", () => {
   });
 
   it("keeps the 2000-entry cap and the surviving identities when a new kind starts a row", () => {
-    const previous = Array.from({ length: 2000 }, (_, index): SessionUpdate => ({
-      kind: "agent_text",
-      text: `${index}`,
-    }));
+    const previous = Array.from(
+      { length: 2000 },
+      (_, index): SessionUpdate => ({
+        kind: "agent_text",
+        text: `${index}`,
+      }),
+    );
 
     const appended = appendCoalescedUpdate(previous, { kind: "agent_thought", text: "thinking" });
     expect(appended).toHaveLength(2000);

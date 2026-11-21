@@ -212,9 +212,7 @@ pub async fn connect_github(token: &str) -> Result<()> {
     Ok(())
 }
 pub async fn disconnect_github() -> Result<()> {
-    github::github_keychain_delete()?;
-    github::forget_token().await;
-    Ok(())
+    github::github_keychain_delete()
 }
 
 /// Connect (or refresh) the Linear API key: validate it, then store it.

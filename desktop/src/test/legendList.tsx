@@ -1,18 +1,5 @@
 import * as React from "react";
 
-/**
- * Stand-in for `@legendapp/list/react` under jsdom.
- *
- * The real list measures its scroller to decide what to mount, and jsdom
- * reports every box as zero — it would render no rows at all. This renders the
- * whole `data` array and exposes `onEndReached` as a "scroll to end" button, so
- * a test can drive paging without a layout engine.
- *
- * Like the real list, a mounted row re-renders when its item or `extraData`
- * changes, not when `renderItem` does.
- *
- * Use as: `vi.mock("@legendapp/list/react", () => import("@/test/legendList"))`.
- */
 type RenderItem = (info: { item: unknown; index: number }) => React.ReactNode;
 
 const Row = React.memo(
@@ -32,6 +19,19 @@ const Row = React.memo(
     prev.item === next.item && prev.index === next.index && prev.extraData === next.extraData,
 );
 
+/**
+ * Stand-in for `@legendapp/list/react` under jsdom.
+ *
+ * The real list measures its scroller to decide what to mount, and jsdom
+ * reports every box as zero — it would render no rows at all. This renders the
+ * whole `data` array and exposes `onEndReached` as a "scroll to end" button, so
+ * a test can drive paging without a layout engine.
+ *
+ * Like the real list, a mounted row re-renders when its item or `extraData`
+ * changes, not when `renderItem` does.
+ *
+ * Use as: `vi.mock("@legendapp/list/react", () => import("@/test/legendList"))`.
+ */
 export function LegendList({
   data,
   renderItem,
