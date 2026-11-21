@@ -151,10 +151,21 @@ export function BacklogView({
     });
   }, [items]);
 
-  const { fetchNextPage, hasNextPage, isFetchingNextPage } = list;
-  const loadMore = React.useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+  const { fetchNextPage, hasNextPage, isFetching, isFetchingNextPage, isFetchNextPageError } = list;
+  // The list fires end-reached once per row count, and the pull's refetch
+  // cancels a next-page fetch in flight. A list too short to scroll would then
+  // never ask again, so the request stands until a page actually arrives.
+  const [moreWantedAt, setMoreWantedAt] = React.useState<number | null>(null);
+  const pageCount = list.data?.pages.length ?? 0;
+  const loadMore = React.useCallback(() => setMoreWantedAt(pageCount), [pageCount]);
+  React.useEffect(() => {
+    if (moreWantedAt === null || isFetching) return;
+    if (pageCount !== moreWantedAt || !hasNextPage || isFetchNextPageError) {
+      setMoreWantedAt(null);
+      return;
+    }
+    void fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchNextPageError, isFetching, moreWantedAt, pageCount]);
 
   const runner = useRunnerStatus(onStartInFactory ? project : "");
   const factory = React.useMemo(() => {
@@ -229,7 +240,7 @@ export function BacklogView({
           items={items}
           actions={actions}
           isLoading={list.isPending && !list.isError}
-          isFetchingNextPage={isFetchingNextPage}
+          isFetchingNextPage={isFetchingNextPage || moreWantedAt !== null}
           hasNextPage={hasNextPage}
           onEndReached={loadMore}
           error={list.isError ? `Could not load backlog: ${list.error.message}` : undefined}
