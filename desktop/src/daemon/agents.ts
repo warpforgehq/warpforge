@@ -122,6 +122,23 @@ export function AgentMethods<TBase extends Constructor<CoreClient>>(Base: TBase)
       return result;
     }
 
+    /** Start Antigravity's Google sign-in; resolves with the link to open. */
+    async startAgentSignIn(id: string): Promise<string> {
+      const result = (await this.request("agents.signInStart", { id })) as { url: string };
+      return result.url;
+    }
+
+    /** Pass the code the Antigravity page shows, then check the agent starts. */
+    async finishAgentSignIn(
+      id: string,
+      code: string,
+    ): Promise<{ verified: boolean; verifyError: string | null }> {
+      return (await this.request("agents.signInFinish", { id, code })) as {
+        verified: boolean;
+        verifyError: string | null;
+      };
+    }
+
     /** Detect the install/update state of every supported language server. */
     async detectLanguageServers(): Promise<DetectedLanguageServer[]> {
       const result = (await this.request("lsp.detect", {})) as DetectedLanguageServer[];

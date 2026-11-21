@@ -179,6 +179,8 @@ pub(super) async fn dispatch(
         AgentsDetect {} => agents::agents_detect(handle).await,
         AgentsUpdate { agents } => agents::agents_update(handle, agents).await,
         AgentsInstall { id, clean } => agents::agents_install(handle, id, clean).await,
+        AgentsSignInStart { id } => agents::agents_sign_in_start(handle, id).await,
+        AgentsSignInFinish { id, code } => agents::agents_sign_in_finish(handle, id, code).await,
         AgentsProbe { id } => agents::agents_probe(handle, id).await,
         AgentsList {} => agents::agents_list(handle).await,
         // ── Agent accounts ──

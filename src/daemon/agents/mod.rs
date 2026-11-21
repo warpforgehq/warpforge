@@ -12,7 +12,7 @@ mod antigravity;
 mod detect;
 mod manage;
 
-pub(crate) use antigravity::expose_managed_bin;
+pub(crate) use antigravity::{expose_managed_bin, finish_sign_in, start_sign_in};
 
 pub(crate) use detect::{
     compare_versions, first_version_token, latest_npm_version, npm_global_version,

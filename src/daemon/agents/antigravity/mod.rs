@@ -2,6 +2,7 @@
 //! Warpforge speaks to, and the copy Warpforge installs and updates itself.
 
 mod managed;
+mod sign_in;
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -11,6 +12,7 @@ use serde::Deserialize;
 use super::detect::compare_versions;
 
 pub(crate) use managed::{expose_managed_bin, install_script, is_managed, MANAGED_LABEL};
+pub(crate) use sign_in::{finish as finish_sign_in, start as start_sign_in};
 
 const MANIFEST_BASE: &str =
     "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests";

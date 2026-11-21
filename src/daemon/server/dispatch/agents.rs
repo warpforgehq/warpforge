@@ -59,6 +59,69 @@ pub(super) async fn agents_update(
     Ok(json!(null))
 }
 
+fn sign_in_error(message: String) -> wire::RpcError {
+    wire::RpcError {
+        code: wire::ErrorCode::Internal,
+        message,
+    }
+}
+
+async fn sign_in_context(
+    handle: &DaemonHandle,
+    id: &str,
+) -> Result<crate::daemon::actor::AgentProbeContext, wire::RpcError> {
+    if id != "antigravity" {
+        return Err(wire::RpcError {
+            code: wire::ErrorCode::InvalidRequest,
+            message: format!("agent '{id}' has no sign-in in Warpforge"),
+        });
+    }
+    handle
+        .agent_probe_context(id)
+        .await
+        .ok_or_else(|| wire::RpcError {
+            code: wire::ErrorCode::InvalidRequest,
+            message: format!("unknown agent '{id}'"),
+        })
+}
+
+pub(super) async fn agents_sign_in_start(
+    handle: &DaemonHandle,
+    id: String,
+) -> Result<serde_json::Value, wire::RpcError> {
+    let context = sign_in_context(handle, &id).await?;
+    let url =
+        crate::daemon::agents::start_sign_in(&context.acp_command, &context.cwd, &context.env)
+            .await
+            .map_err(sign_in_error)?;
+    Ok(json!({ "url": url }))
+}
+
+pub(super) async fn agents_sign_in_finish(
+    handle: &DaemonHandle,
+    id: String,
+    code: String,
+) -> Result<serde_json::Value, wire::RpcError> {
+    let context = sign_in_context(handle, &id).await?;
+    crate::daemon::agents::finish_sign_in(&code)
+        .await
+        .map_err(sign_in_error)?;
+    let verified = crate::daemon::agent_probe::probe_models(
+        &context.acp_command,
+        &context.cwd,
+        &context.env.set,
+        &context.env.remove,
+    )
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string());
+    handle.observe_agent_health(&id, verified.clone()).await;
+    Ok(json!({
+        "verified": verified.is_ok(),
+        "verifyError": verified.err(),
+    }))
+}
+
 pub(super) async fn agents_install(
     handle: &DaemonHandle,
     id: String,

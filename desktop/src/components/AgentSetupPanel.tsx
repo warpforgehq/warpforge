@@ -11,6 +11,7 @@ import { daemon } from "../daemon";
 import { DaemonRpcError } from "../daemon/rpcError";
 import type { AgentConfig, DetectedAgent } from "../protocol";
 import { AgentLogo } from "./AgentLogo";
+import { AgentSignIn } from "./AgentSignIn";
 import { SettingsListSkeleton } from "./SettingsListSkeleton";
 
 interface Props {
@@ -400,6 +401,16 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-1">
+                {agent.id === "antigravity" && agent.installed && (
+                  <AgentSignIn
+                    agentId={agent.id}
+                    displayName={agent.displayName}
+                    onDone={(error) => {
+                      clearAgentState(agent.id);
+                      if (error) setNotes((prev) => ({ ...prev, [agent.id]: error }));
+                    }}
+                  />
+                )}
                 {isBroken && brokenInfo.canReinstall && (
                   <Button
                     size="sm"

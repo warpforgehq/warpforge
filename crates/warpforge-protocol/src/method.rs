@@ -568,6 +568,14 @@ pub enum Method {
         #[serde(default)]
         clean: bool,
     },
+    /// Start Google sign-in for Antigravity. Returns `{ url }`: the link the
+    /// user opens; the page it ends on shows a code for `agents.signInFinish`.
+    #[serde(rename = "agents.signInStart")]
+    AgentsSignInStart { id: String },
+    /// Pass the Antigravity page's code to the running sign-in, then verify
+    /// the agent starts. Returns `{ verified, verifyError }`.
+    #[serde(rename = "agents.signInFinish")]
+    AgentsSignInFinish { id: String, code: String },
     /// Re-read an agent's model/selector list from the harness, replacing the
     /// cached one. Use after adding a provider or model outside Warpforge.
     /// Resolves once the probe finishes; the refreshed list arrives as

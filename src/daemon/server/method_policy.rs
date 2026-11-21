@@ -27,6 +27,8 @@ pub(super) fn method_runs_concurrently(method: &wire::Method) -> bool {
         AppQuitCheck {}
             | TextGenerate { .. }
             | AgentsInstall { .. }
+            | AgentsSignInStart { .. }
+            | AgentsSignInFinish { .. }
             | AgentsProbe { .. }
             | ChatCreateProject { .. }
             | SessionSetConfigOption { .. }
@@ -183,6 +185,8 @@ pub(super) fn method_is_user_only(method: &wire::Method) -> bool {
             | KeepersSetSwitch { .. }
             | KeepersCheckReady { .. }
             | KeepersSendFindings { .. }
+            | AgentsSignInStart { .. }
+            | AgentsSignInFinish { .. }
     )
 }
 

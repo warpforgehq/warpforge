@@ -66,6 +66,8 @@ export const SLOW_METHODS = new Set([
   "accounts.import",
   "agents.install",
   "agents.probe",
+  "agents.signInFinish",
+  "agents.signInStart",
   "bootstrap.finalize",
   "git.merge",
   "git.push",
