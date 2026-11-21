@@ -1360,13 +1360,6 @@ pub enum Method {
         #[serde(default)]
         status: Option<String>,
     },
-    /// Pull the latest status of external-tracker issues linked to backlog
-    /// items. `ids` empty = all. Returns `{ items: [{ id, url, status }] }`.
-    #[serde(rename = "workItem.syncExternal")]
-    WorkItemSyncExternal {
-        #[serde(default)]
-        ids: Vec<String>,
-    },
     /// Import open issues that exist in a tracker but have no backlog item yet.
     /// The daemon mints the item id and persists the link, so a client can
     /// insert the returned rows straight into its board.

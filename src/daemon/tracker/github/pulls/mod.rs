@@ -17,7 +17,7 @@ mod review;
 mod tests;
 mod thread;
 
-pub(crate) use checks::{github_pr_checks, parse_checks};
+pub(crate) use checks::{github_pr_checks, parse_checks, HEAD_CHECKS};
 pub(crate) use comment::{github_pr_comment, github_pr_review_comment};
 pub(crate) use commits::{github_pr_commits, github_pr_range_diff};
 pub(crate) use details::{github_pr_details, github_pr_diff};

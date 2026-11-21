@@ -101,7 +101,6 @@ pub(super) fn method_runs_concurrently(method: &wire::Method) -> bool {
             | BacklogList { .. }
             | WorkItemList { .. }
             | WorkItemImportExternal { .. }
-            | WorkItemSyncExternal { .. }
     )
 }
 

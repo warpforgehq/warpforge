@@ -53,65 +53,6 @@ pub(super) async fn work_item_create_external(
 /// even when a tracker answers every call just inside its timeout.
 const SYNC_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
-/// Run a tracker refresh under [`SYNC_TIMEOUT`]; a timeout refreshes nothing.
-async fn bounded(
-    what: &str,
-    work: impl std::future::Future<Output = tracker::Refreshed>,
-) -> tracker::Refreshed {
-    tokio::time::timeout(SYNC_TIMEOUT, work)
-        .await
-        .unwrap_or_else(|_| {
-            eprintln!(
-                "[tracker] {what} timed out after {}s",
-                SYNC_TIMEOUT.as_secs()
-            );
-            (Vec::new(), Vec::new())
-        })
-}
-
-/// Persist refreshed links and drop the items whose issue is gone. Returns the
-/// refreshed wire items and the deleted ids.
-async fn apply_refresh(
-    handle: &DaemonHandle,
-    (refreshed, deleted_ids): tracker::Refreshed,
-) -> (Vec<wire::SyncedExternalItem>, Vec<String>) {
-    let items = refreshed.iter().map(|(_, item)| item.clone()).collect();
-    handle
-        .tracker_persist_synced(refreshed.into_iter().map(|(link, _)| link).collect())
-        .await;
-    if !deleted_ids.is_empty() {
-        handle.tracker_delete_items(deleted_ids.clone()).await;
-    }
-    (items, deleted_ids)
-}
-
-pub(super) async fn work_item_sync_external(
-    handle: &DaemonHandle,
-    ids: Vec<String>,
-) -> Result<serde_json::Value, wire::RpcError> {
-    // Three phases, and the middle one deliberately runs here rather
-    // than in the actor: the actor loop is single-threaded and awaits
-    // its handlers inline, so a tracker call made inside it stalls
-    // every project until the network answers.
-    let (links, repo_dirs, linear_teams) = handle.tracker_sync_inputs(ids, None).await;
-    let refreshed = bounded(
-        "sync",
-        tracker::fetch_links_status(&links, &repo_dirs, &linear_teams),
-    )
-    .await;
-    let warning = tracker::take_last_board_warning();
-    let (items, deleted_ids) = apply_refresh(handle, refreshed).await;
-    serde_json::to_value(wire::SyncExternalResult {
-        items,
-        warning,
-        deleted_ids,
-    })
-    .map_err(|e| wire::RpcError {
-        code: wire::ErrorCode::Internal,
-        message: e.to_string(),
-    })
-}
-
 pub(super) async fn work_item_import_external(
     handle: &DaemonHandle,
     project: String,
@@ -127,7 +68,7 @@ pub(super) async fn work_item_import_external(
         .await
         .ok()
         .and_then(|settings| settings.linear_team_id);
-    let fetched = tracker::fetch_importable(
+    let (fetched, warning) = tracker::fetch_importable(
         provider.as_deref(),
         repo_dir.as_deref(),
         linear_team.as_deref(),
@@ -150,23 +91,33 @@ pub(super) async fn work_item_import_external(
         .await
         .map_err(rpc_err)?;
 
-    let (links, repo_dirs, _) = handle
-        .tracker_sync_inputs(Vec::new(), Some(project.clone()))
-        .await;
+    let links = handle.tracker_project_links(project.clone()).await;
     let missing: Vec<_> = links
         .into_iter()
         .filter(|link| listed_providers.contains(&link.provider))
         .filter(|link| !listed.contains(&(link.provider.clone(), link.external_id.clone())))
         .collect();
-    let refreshed = bounded(
-        &format!("lookup of {} unlisted issues", missing.len()),
-        tracker::resolve_missing(&missing, &repo_dirs),
+    let (refreshed, deleted_ids) = tokio::time::timeout(
+        SYNC_TIMEOUT,
+        tracker::resolve_missing(&missing, repo_dir.as_deref()),
     )
-    .await;
-    let (more, deleted_ids) = apply_refresh(handle, refreshed).await;
-    synced.extend(more);
+    .await
+    .unwrap_or_else(|_| {
+        eprintln!(
+            "[tracker] lookup of {} unlisted issues timed out after {}s",
+            missing.len(),
+            SYNC_TIMEOUT.as_secs()
+        );
+        (Vec::new(), Vec::new())
+    });
+    synced.extend(refreshed.iter().map(|(_, item)| item.clone()));
+    handle
+        .tracker_persist_synced(refreshed.into_iter().map(|(link, _)| link).collect())
+        .await;
+    if !deleted_ids.is_empty() {
+        handle.tracker_delete_items(deleted_ids.clone()).await;
+    }
 
-    let warning = tracker::take_last_board_warning();
     serde_json::to_value(wire::ImportExternalResult {
         items,
         synced,

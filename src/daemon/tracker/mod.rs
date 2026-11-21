@@ -28,15 +28,13 @@ mod import;
 mod linear;
 mod page;
 
-pub use github::take_last_board_warning;
 pub(crate) use github::{
     forget_token, github_graphql, github_owner_repo, github_pr_checks, github_pr_comment,
     github_pr_commits, github_pr_conversation, github_pr_details, github_pr_diff, github_pr_list,
     github_pr_range_diff, github_pr_review, github_pr_review_comment, github_token, parse_checks,
+    HEAD_CHECKS,
 };
-pub use import::{
-    adopt_imported, fetch_importable, fetch_links_status, resolve_missing, Refreshed,
-};
+pub use import::{adopt_imported, fetch_importable, resolve_missing};
 pub use linear::{keychain_read, linear_teams};
 pub use page::fetch_page;
 

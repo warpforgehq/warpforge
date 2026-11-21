@@ -11,20 +11,23 @@ use super::super::{github, linear, RemoteIssue};
 /// nothing to import: a Linear API key sees the whole account, so an unscoped
 /// pull adopts the same issues into *every* project the user opens. Skipped and
 /// logged, not an error — a GitHub-only project must still import (invariant 8).
+/// Returns the issues per provider and the GitHub board warning, if any.
 pub async fn fetch_importable(
     provider: Option<&str>,
     repo_dir: Option<&str>,
     linear_team_id: Option<&str>,
-) -> Result<Vec<(String, Vec<RemoteIssue>)>> {
+) -> Result<(Vec<(String, Vec<RemoteIssue>)>, Option<String>)> {
     let wants = |name: &str| provider.is_none_or(|p| p == name);
     let mut out = Vec::new();
+    let mut warning = None;
 
     if wants("github") {
         let dir =
             repo_dir.ok_or_else(|| anyhow!("GitHub import needs a registered git repository"))?;
-        let issues = github::github_list_issues(dir)
+        let (issues, board_warning) = github::github_list_issues(dir)
             .await
             .context("GitHub import failed")?;
+        warning = board_warning;
         out.push(("github".to_string(), issues));
     }
     if wants("linear") && linear::keychain_read().is_some() {
@@ -38,5 +41,5 @@ pub async fn fetch_importable(
             None => eprintln!("[tracker] skipping Linear import: no team mapped to project"),
         }
     }
-    Ok(out)
+    Ok((out, warning))
 }
