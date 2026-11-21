@@ -17,6 +17,9 @@ use warpforge_protocol as wire;
 ///   the slowest things the daemon does — a title spawns an agent process with
 ///   a two-minute ceiling, an install shells out to a package manager — and
 ///   they are what made starting a task feel like it stalled everything else.
+/// - Tracker pulls go to GitHub or Linear and can take seconds; held serial,
+///   they kept the local backlog page queued behind them. Adoption dedups on
+///   `(provider, external_id)` in the actor, so two pulls cannot double-import.
 /// - Ordered work stays serial. LSP is a streaming protocol, so dispatching
 ///   `LspSend` concurrently would reorder a language server's inbox, and git
 ///   writes mean what they mean only in sequence: commit, then push.
@@ -90,6 +93,15 @@ pub(super) fn method_runs_concurrently(method: &wire::Method) -> bool {
             | TrackerPullCommits { .. }
             | TrackerPullThread { .. }
             | TrackerPullChecks { .. }
+            | TrackerStatus { .. }
+            | TrackerProjectSources { .. }
+            | TrackerLinearTeams { .. }
+            | TrackerAttachment { .. }
+            | TrackerLinks { .. }
+            | BacklogList { .. }
+            | WorkItemList { .. }
+            | WorkItemImportExternal { .. }
+            | WorkItemSyncExternal { .. }
     )
 }
 
@@ -268,5 +280,15 @@ mod tests {
             assert!(!method_is_user_only(&method), "{method:?}");
             assert!(method_runs_concurrently(&method), "{method:?}");
         }
+    }
+
+    #[test]
+    fn a_tracker_pull_does_not_hold_up_the_local_backlog() {
+        let import = wire::Method::WorkItemImportExternal {
+            project: "demo".into(),
+            provider: None,
+        };
+        assert!(method_runs_concurrently(&import));
+        assert!(method_runs_concurrently(&wire::Method::TrackerStatus {}));
     }
 }
