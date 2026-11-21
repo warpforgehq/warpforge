@@ -49,13 +49,6 @@ describe("applyInboxFilters", () => {
     );
   });
 
-  it("reads filters persisted before the scope existed as review requests", () => {
-    const { scope: _scope, ...legacy } = DEFAULT_INBOX_FILTERS;
-    const items = [pr({ number: 1 }), pr({ number: 2, reviewRequested: false })];
-    expect(applyInboxFilters(items, legacy)).toHaveLength(1);
-    expect(hasActiveInboxFilters(legacy)).toBe(false);
-  });
-
   it("keeps everything under the all state", () => {
     const items = [pr(), pr({ number: 8, state: "closed" })];
     expect(applyInboxFilters(items, { ...DEFAULT_INBOX_FILTERS, state: "all" })).toHaveLength(2);

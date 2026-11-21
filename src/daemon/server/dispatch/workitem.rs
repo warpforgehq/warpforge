@@ -53,6 +53,40 @@ pub(super) async fn work_item_create_external(
 /// even when a tracker answers every call just inside its timeout.
 const SYNC_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
+type Refreshed = (
+    Vec<(crate::daemon::store::TrackerLink, wire::SyncedExternalItem)>,
+    Vec<String>,
+);
+
+/// Run a tracker refresh under [`SYNC_TIMEOUT`]; a timeout refreshes nothing.
+async fn bounded(what: &str, work: impl std::future::Future<Output = Refreshed>) -> Refreshed {
+    tokio::time::timeout(SYNC_TIMEOUT, work)
+        .await
+        .unwrap_or_else(|_| {
+            eprintln!(
+                "[tracker] {what} timed out after {}s",
+                SYNC_TIMEOUT.as_secs()
+            );
+            (Vec::new(), Vec::new())
+        })
+}
+
+/// Persist refreshed links and drop the items whose issue is gone. Returns the
+/// refreshed wire items and the deleted ids.
+async fn apply_refresh(
+    handle: &DaemonHandle,
+    (refreshed, deleted_ids): Refreshed,
+) -> (Vec<wire::SyncedExternalItem>, Vec<String>) {
+    let items = refreshed.iter().map(|(_, item)| item.clone()).collect();
+    handle
+        .tracker_persist_synced(refreshed.into_iter().map(|(link, _)| link).collect())
+        .await;
+    if !deleted_ids.is_empty() {
+        handle.tracker_delete_items(deleted_ids.clone()).await;
+    }
+    (items, deleted_ids)
+}
+
 pub(super) async fn work_item_sync_external(
     handle: &DaemonHandle,
     ids: Vec<String>,
@@ -62,24 +96,13 @@ pub(super) async fn work_item_sync_external(
     // its handlers inline, so a tracker call made inside it stalls
     // every project until the network answers.
     let (links, repo_dirs, linear_teams) = handle.tracker_sync_inputs(ids, None).await;
-    let (synced, deleted_ids) = tokio::time::timeout(
-        SYNC_TIMEOUT,
+    let refreshed = bounded(
+        "sync",
         tracker::fetch_links_status(&links, &repo_dirs, &linear_teams),
     )
-    .await
-    .unwrap_or_else(|_| {
-        eprintln!("[tracker] sync timed out after 30s");
-        (Vec::new(), Vec::new())
-    });
+    .await;
     let warning = tracker::take_last_board_warning();
-    let items: Vec<wire::SyncedExternalItem> =
-        synced.iter().map(|(_, item)| item.clone()).collect();
-    handle
-        .tracker_persist_synced(synced.into_iter().map(|(link, _)| link).collect())
-        .await;
-    if !deleted_ids.is_empty() {
-        handle.tracker_delete_items(deleted_ids.clone()).await;
-    }
+    let (items, deleted_ids) = apply_refresh(handle, refreshed).await;
     serde_json::to_value(wire::SyncExternalResult {
         items,
         warning,
@@ -137,23 +160,13 @@ pub(super) async fn work_item_import_external(
         .filter(|link| listed_providers.contains(&link.provider))
         .filter(|link| !listed.contains(&(link.provider.clone(), link.external_id.clone())))
         .collect();
-    let (refreshed, deleted_ids) =
-        tokio::time::timeout(SYNC_TIMEOUT, tracker::resolve_missing(&missing, &repo_dirs))
-            .await
-            .unwrap_or_else(|_| {
-                eprintln!(
-                    "[tracker] lookup of {} unlisted issues timed out",
-                    missing.len()
-                );
-                (Vec::new(), Vec::new())
-            });
-    synced.extend(refreshed.iter().map(|(_, item)| item.clone()));
-    handle
-        .tracker_persist_synced(refreshed.into_iter().map(|(link, _)| link).collect())
-        .await;
-    if !deleted_ids.is_empty() {
-        handle.tracker_delete_items(deleted_ids.clone()).await;
-    }
+    let refreshed = bounded(
+        &format!("lookup of {} unlisted issues", missing.len()),
+        tracker::resolve_missing(&missing, &repo_dirs),
+    )
+    .await;
+    let (more, deleted_ids) = apply_refresh(handle, refreshed).await;
+    synced.extend(more);
 
     let warning = tracker::take_last_board_warning();
     serde_json::to_value(wire::ImportExternalResult {

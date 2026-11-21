@@ -5,8 +5,7 @@
 //! credential `auth` resolved — a PAT or the `gh` session's token.
 //!
 //! Layout: `list` the inbox listing, `details` the body and the changes,
-//! `thread` the conversation, `comment` the writes; the actor shapes and the
-//! viewer login they all share live here.
+//! `thread` the conversation, `comment` the writes; shared actor shapes live here.
 
 mod checks;
 mod comment;
@@ -107,12 +106,4 @@ pub(super) fn github_avatar_url(login: &str) -> Option<String> {
     Some(format!(
         "https://avatars.githubusercontent.com/{encoded}?s=64"
     ))
-}
-
-/// The login the connected credentials act as. Assigned-to-me filtering
-/// happens daemon-side, so this is only for that filter.
-async fn viewer_login() -> anyhow::Result<String> {
-    super::github_login()
-        .await
-        .ok_or_else(|| anyhow::anyhow!("could not determine the GitHub login"))
 }

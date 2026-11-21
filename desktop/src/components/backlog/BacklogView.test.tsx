@@ -340,13 +340,11 @@ describe("BacklogView", () => {
   });
 
   it("syncs by rerunning the same pull, not a second request", async () => {
-    const syncSpy = vi.spyOn(daemon, "syncExternalWorkItems").mockResolvedValue([]);
     renderBacklog();
     await vi.waitFor(() => expect(daemon.importExternalWorkItems).toHaveBeenCalledTimes(1));
 
     await userEvent.click(screen.getByRole("button", { name: /sync/i }));
     await vi.waitFor(() => expect(daemon.importExternalWorkItems).toHaveBeenCalledTimes(2));
-    expect(syncSpy).not.toHaveBeenCalled();
   });
 
   it("does not re-import a project revisited within the staleness window", async () => {

@@ -20,18 +20,17 @@ import { AdvisorPicker } from "./AdvisorPicker";
 import { BasePicker } from "./BasePicker";
 import { ChipDivider, HarnessChip, SmithLockedChips, ToggleChip } from "./chips";
 import { ComposerHeading } from "./ComposerHeading";
-import { FactoryItems } from "./FactoryItems";
+import { FactoryItems, type FactorySeed } from "./FactoryItems";
 import { FactoryLocationNote, FactoryOptions } from "./FactoryOptions";
 import { ModeSelector } from "./ModeSelector";
 import { useAdvisorPick } from "./useAdvisorPick";
-import { type FactorySeed, useFactoryBatch } from "./useFactoryBatch";
 import { useFactoryOptions } from "./useFactoryOptions";
 import { useSmithStart } from "./useSmithStart";
 import { splitConfigPicks, useTaskCreation } from "./useTaskCreation";
 import { useTaskSelection } from "./useTaskSelection";
 import { CHAT_LINE, worktreeLine } from "./workspaceLine";
 
-export type { FactorySeed } from "./useFactoryBatch";
+export type { FactorySeed } from "./FactoryItems";
 
 interface Props {
   open: boolean;
@@ -112,7 +111,7 @@ export default function NewTaskDialog({
     settings: factorySettings,
     workflows,
   });
-  const batch = useFactoryBatch(factorySeed ?? { items: [], kind: "items" });
+  const factoryItems = factorySeed?.items ?? [];
   const startMany = useStartInFactory(project);
   const inFactory = mode === "factory";
 
@@ -190,7 +189,7 @@ export default function NewTaskDialog({
 
   const startBatch = async () => {
     if (!workflow) return;
-    const ids = await batch.resolveIds();
+    const ids = factoryItems.map((item) => item.id);
     const { model } = splitConfigPicks(agentOptions, configPicks);
     const result = await startMany(ids, {
       agent,
@@ -207,10 +206,10 @@ export default function NewTaskDialog({
       service.project === project && service.status === "running" && service.allocatedPort > 0,
   );
   const canStart = factorySeed
-    ? !!selectedWorkflow && batch.count > 0
+    ? !!selectedWorkflow && factoryItems.length > 0
     : !!prompt.trim() && (!!project || chat) && (!inFactory || !!selectedWorkflow);
   const startLabel = factorySeed
-    ? `Start ${batch.count} in Factory`
+    ? `Start ${factoryItems.length} in Factory`
     : inFactory
       ? "Start in Factory"
       : mode === "orchestrator"
@@ -353,7 +352,7 @@ export default function NewTaskDialog({
             {/* No `key` here on purpose: remounting the composer when the
                 project or harness changes threw away the prompt already typed. */}
             {factorySeed ? (
-              <FactoryItems batch={batch} toolbar={toolbar} />
+              <FactoryItems items={factoryItems} toolbar={toolbar} />
             ) : (
               <Composer
                 ref={composerRef}

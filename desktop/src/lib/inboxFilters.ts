@@ -14,8 +14,7 @@ export type InboxScope = "review" | "mine" | "everyone";
 
 export interface InboxFilters {
   assignedToMe: boolean;
-  /** Absent in filters persisted before it existed; read via `inboxScope`. */
-  scope?: InboxScope;
+  scope: InboxScope;
   state: PullStateFilter;
   search: string;
 }
@@ -28,16 +27,6 @@ export const DEFAULT_INBOX_FILTERS: InboxFilters = {
   state: "open",
   search: "",
 };
-
-/**
- * The scope the filters ask for.
- *
- * @param filters The inbox filters, possibly persisted before `scope` existed.
- * @returns The scope, defaulting to review requests.
- */
-export function inboxScope(filters: Pick<InboxFilters, "scope">): InboxScope {
-  return filters.scope ?? DEFAULT_INBOX_SCOPE;
-}
 
 /**
  * Whether a pull request belongs to a scope.
@@ -61,7 +50,7 @@ export function inboxFetchState(filters: InboxFilters): PullStateFilter {
 export function hasActiveInboxFilters(filters: InboxFilters): boolean {
   return (
     filters.assignedToMe ||
-    inboxScope(filters) !== DEFAULT_INBOX_SCOPE ||
+    filters.scope !== DEFAULT_INBOX_SCOPE ||
     filters.state !== DEFAULT_INBOX_FILTERS.state ||
     filters.search !== ""
   );
@@ -91,7 +80,7 @@ export function applyInboxFilters(
   items: readonly PullRequestSummary[],
   filters: InboxFilters,
 ): PullRequestSummary[] {
-  const scope = inboxScope(filters);
+  const scope = filters.scope;
   return items.filter((pr) => {
     if (!matchesInboxScope(pr, scope)) return false;
     if (filters.assignedToMe && pr.assignees.length === 0) return false;

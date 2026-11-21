@@ -179,7 +179,7 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
       if (!first) return;
       if (items.length > 1) {
         onNewTask(first.project, undefined, undefined, {
-          factory: { items, kind: "items" },
+          factory: { items },
           mode: "factory",
         });
         return;

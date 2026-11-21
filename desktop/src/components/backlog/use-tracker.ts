@@ -41,7 +41,7 @@ export function useProjectSources(project: string) {
   return useQuery({
     queryFn: () => daemon.trackerProjectSources(project),
     queryKey: [...TRACKER_PROJECT_SOURCES_KEY, project],
-    // Repo/team resolution costs daemon-side `gh` spawns; don't re-run on
+    // Repo/team resolution costs daemon-side git/ssh spawns; don't re-run on
     // every mount. Explicit invalidation covers connect/disconnect and
     // Linear-team changes.
     staleTime: 60_000,

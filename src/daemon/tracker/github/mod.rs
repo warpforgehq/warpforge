@@ -1,15 +1,6 @@
-//! GitHub over its HTTP API, with one credential for every call.
-//!
-//! The credential is a personal access token (environment or keychain) when
-//! one is configured, else the token of the `gh auth login` session. `gh` is a
-//! token source only: no request spawns it. Both credentials take the same
-//! path through one shared `reqwest` client, so a PAT user and a `gh` user see
-//! the same behaviour.
-//!
-//! Layout: `auth` resolves and caches the token, `http` is the client and the
-//! status handling, `repo` resolves `owner/repo` from a checkout, `graphql`
-//! holds the query texts, `issues` and `batch` the backlog reads and writes,
-//! `pulls` the pull request inbox.
+//! GitHub over its HTTP API. A PAT user and a `gh auth login` user take the
+//! same path: `gh` is only a token source and is never spawned per request
+//! (ADR-0002, 2026-11-21 amendment).
 
 mod auth;
 mod batch;

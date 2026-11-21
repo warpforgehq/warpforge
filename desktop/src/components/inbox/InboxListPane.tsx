@@ -4,7 +4,7 @@ import * as React from "react";
 import { InboxToolbar, PullRequestList } from "@/components/inbox/PullRequestList";
 import { Button } from "@/components/ui/button";
 import { daemon } from "@/daemon";
-import { DEFAULT_INBOX_FILTERS, hasActiveInboxFilters, inboxScope } from "@/lib/inboxFilters";
+import { DEFAULT_INBOX_FILTERS, hasActiveInboxFilters } from "@/lib/inboxFilters";
 import {
   assistantUnseenKeysSnapshot,
   inboxItemKey,
@@ -92,7 +92,7 @@ export function InboxListPane({
       <InboxToolbar
         search={filters.search}
         onSearch={(search) => setFilters({ ...filters, search })}
-        scope={inboxScope(filters)}
+        scope={filters.scope}
         onScopeChange={(scope) => setFilters({ ...filters, scope })}
         state={filters.state}
         onStateChange={(state) => setFilters({ ...filters, state })}
@@ -134,7 +134,7 @@ export function InboxListPane({
           }
           emptyHint={
             emptyHint ??
-            (inboxScope(filters) === "review" ? "Nothing waiting for your review" : undefined)
+            (filters.scope === "review" ? "Nothing waiting for your review" : undefined)
           }
           onAddProject={projects.length === 0 ? onAddProject : undefined}
         />

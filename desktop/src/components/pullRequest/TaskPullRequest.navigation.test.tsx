@@ -98,7 +98,9 @@ it("opens the glyph without selecting its parent row", () => {
 });
 it("opens the exact task PR without fetching the filtered inbox and marks it seen", async () => {
   setup();
-  useUi.setState({ inboxFilters: { assignedToMe: true, state: "open", search: "excluded-pr" } });
+  useUi.setState({
+    inboxFilters: { assignedToMe: true, scope: "review", state: "open", search: "excluded-pr" },
+  });
   const list = vi.spyOn(daemon, "listPulls");
   vi.spyOn(daemon, "pullDetails").mockResolvedValue({
     ...pr,

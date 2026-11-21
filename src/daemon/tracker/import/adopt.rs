@@ -114,10 +114,10 @@ pub fn adopt_imported(
             );
             if let Some(existing) = known.get(&key) {
                 let stored = load_item(&existing.item_id)?;
-                if stored.is_none() && issue.closed {
-                    continue;
-                }
                 if stored.is_none() {
+                    if issue.closed {
+                        continue;
+                    }
                     let item = wire::BacklogItem {
                         id: existing.item_id.clone(),
                         number: next_number,

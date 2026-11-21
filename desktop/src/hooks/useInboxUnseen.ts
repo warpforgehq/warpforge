@@ -12,7 +12,6 @@ import { daemon } from "@/daemon";
 import {
   DEFAULT_INBOX_FILTERS,
   inboxFetchState,
-  inboxScope,
   matchesInboxScope,
   type InboxFilters,
 } from "@/lib/inboxFilters";
@@ -80,7 +79,7 @@ export function useInboxPulls(
 
 /** The listing narrowed to the scope the inbox shows, so the badge counts what the list lists. */
 function useScopedItems(data: PullRequestSummary[] | undefined): PullRequestSummary[] {
-  const scope = useUi((s) => inboxScope(s.inboxFilters));
+  const scope = useUi((s) => s.inboxFilters.scope);
   return useMemo(() => (data ?? []).filter((pr) => matchesInboxScope(pr, scope)), [data, scope]);
 }
 

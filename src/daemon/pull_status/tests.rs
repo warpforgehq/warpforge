@@ -170,40 +170,20 @@ async fn forgetting_a_task_clears_its_badge() {
     assert_eq!(next_pull_event(&mut rx).await, ("t1".into(), None));
 }
 
-/// The listing nodes for `json`, written in the flat `statusCheckRollup: [...]`
-/// shape for readability and nested the way GraphQL answers.
-fn nodes(json: &[u8]) -> serde_json::Value {
-    let mut pulls: Vec<serde_json::Value> = serde_json::from_slice(json).unwrap();
-    for pull in &mut pulls {
-        let mut checks = pull
-            .as_object_mut()
-            .unwrap()
-            .remove("statusCheckRollup")
-            .unwrap_or_default();
-        for check in checks.as_array_mut().into_iter().flatten() {
-            if let Some(name) = check.as_object_mut().unwrap().remove("workflowName") {
-                let workflow = serde_json::json!({ "workflow": { "name": name } });
-                check["checkSuite"] = serde_json::json!({ "workflowRun": workflow });
-            }
-        }
-        let rollup = if checks.is_null() {
-            serde_json::Value::Null
-        } else {
-            serde_json::json!({ "contexts": { "nodes": checks } })
-        };
-        let commit = serde_json::json!({ "commit": { "statusCheckRollup": rollup } });
-        pull["commits"] = serde_json::json!({ "nodes": [commit] });
-    }
-    serde_json::Value::Array(pulls)
+/// A pull request's last commit with these check contexts, as GraphQL nests it.
+fn last_commit(contexts: serde_json::Value) -> serde_json::Value {
+    serde_json::json!({ "nodes": [{ "commit": { "statusCheckRollup": { "contexts": { "nodes": contexts } } } }] })
 }
 
 #[test]
 fn the_open_pull_request_wins_over_older_closed_ones() {
-    let json = br#"[
-        {"number": 9, "title": "Old", "url": "u9", "state": "CLOSED", "isDraft": false, "statusCheckRollup": []},
-        {"number": 12, "title": "New", "url": "u12", "state": "OPEN", "isDraft": true, "statusCheckRollup": []}
-    ]"#;
-    let pull = parse_pull_list(&nodes(json)).unwrap().unwrap().pull;
+    let nodes = serde_json::json!([
+        {"number": 9, "title": "Old", "url": "u9", "state": "CLOSED", "isDraft": false,
+         "commits": last_commit(serde_json::json!([]))},
+        {"number": 12, "title": "New", "url": "u12", "state": "OPEN", "isDraft": true,
+         "commits": last_commit(serde_json::json!([]))}
+    ]);
+    let pull = parse_pull_list(&nodes).unwrap().unwrap().pull;
     assert_eq!(pull.number, 12);
     assert_eq!(pull.state, wire::TaskPullState::Draft);
     assert_eq!(pull.checks, None);
@@ -211,66 +191,71 @@ fn the_open_pull_request_wins_over_older_closed_ones() {
 
 #[test]
 fn no_pull_request_reads_none_and_merged_reads_merged() {
-    assert_eq!(parse_pull_list(&nodes(b"[]")).unwrap(), None);
-    let json = br#"[{"number": 3, "title": "t", "url": "u", "state": "MERGED", "statusCheckRollup": null}]"#;
-    let pull = parse_pull_list(&nodes(json)).unwrap().unwrap().pull;
+    assert_eq!(parse_pull_list(&serde_json::json!([])).unwrap(), None);
+    let nodes = serde_json::json!([{
+        "number": 3, "title": "t", "url": "u", "state": "MERGED",
+        "commits": { "nodes": [{ "commit": { "statusCheckRollup": null } }] }
+    }]);
+    let pull = parse_pull_list(&nodes).unwrap().unwrap().pull;
     assert_eq!(pull.state, wire::TaskPullState::Merged);
 }
 
 #[test]
 fn checks_roll_up_failure_first_then_pending() {
-    let rollup = |checks: &str| {
-        let json = format!(
-            r#"[{{"number": 1, "title": "t", "url": "u", "state": "OPEN", "statusCheckRollup": {checks}}}]"#
-        );
-        parse_pull_list(&nodes(json.as_bytes()))
-            .unwrap()
-            .unwrap()
-            .pull
-            .checks
+    let rollup = |checks: serde_json::Value| {
+        let nodes = serde_json::json!([{
+            "number": 1, "title": "t", "url": "u", "state": "OPEN",
+            "commits": last_commit(checks)
+        }]);
+        parse_pull_list(&nodes).unwrap().unwrap().pull.checks
     };
-    let passed = r#"{"__typename": "CheckRun", "status": "COMPLETED", "conclusion": "SUCCESS"}"#;
-    let skipped = r#"{"__typename": "CheckRun", "status": "COMPLETED", "conclusion": "SKIPPED"}"#;
-    let running = r#"{"__typename": "CheckRun", "status": "IN_PROGRESS", "conclusion": ""}"#;
-    let failed = r#"{"__typename": "CheckRun", "status": "COMPLETED", "conclusion": "FAILURE"}"#;
-    let status_pending = r#"{"__typename": "StatusContext", "state": "PENDING"}"#;
-    let status_error = r#"{"__typename": "StatusContext", "state": "ERROR"}"#;
+    let passed = serde_json::json!({"__typename": "CheckRun", "status": "COMPLETED", "conclusion": "SUCCESS"});
+    let skipped = serde_json::json!({"__typename": "CheckRun", "status": "COMPLETED", "conclusion": "SKIPPED"});
+    let running =
+        serde_json::json!({"__typename": "CheckRun", "status": "IN_PROGRESS", "conclusion": ""});
+    let failed = serde_json::json!({"__typename": "CheckRun", "status": "COMPLETED", "conclusion": "FAILURE"});
+    let status_pending = serde_json::json!({"__typename": "StatusContext", "state": "PENDING"});
+    let status_error = serde_json::json!({"__typename": "StatusContext", "state": "ERROR"});
 
     assert_eq!(
-        rollup(&format!("[{passed},{skipped}]")),
+        rollup(serde_json::json!([passed, skipped])),
         Some(wire::PullChecks::Passing)
     );
     assert_eq!(
-        rollup(&format!("[{passed},{running}]")),
+        rollup(serde_json::json!([passed, running])),
         Some(wire::PullChecks::Pending)
     );
     assert_eq!(
-        rollup(&format!("[{running},{failed}]")),
+        rollup(serde_json::json!([running, failed])),
         Some(wire::PullChecks::Failing)
     );
     assert_eq!(
-        rollup(&format!("[{status_pending}]")),
+        rollup(serde_json::json!([status_pending])),
         Some(wire::PullChecks::Pending)
     );
     assert_eq!(
-        rollup(&format!("[{passed},{status_error}]")),
+        rollup(serde_json::json!([passed, status_error])),
         Some(wire::PullChecks::Failing)
     );
 }
 
 #[test]
 fn failed_checks_carry_their_name_link_and_summary() {
-    let json = br#"[{"number": 4, "title": "t", "url": "u", "state": "OPEN",
+    let nodes = serde_json::json!([{
+        "number": 4, "title": "t", "url": "u", "state": "OPEN",
         "author": {"login": "octocat"}, "updatedAt": "2026-09-29T10:00:00Z",
-        "statusCheckRollup": [
-            {"__typename": "CheckRun", "name": "test", "workflowName": "CI", "status": "COMPLETED",
-             "conclusion": "FAILURE", "detailsUrl": "https://github.com/a/b/actions/runs/1/job/2"},
-            {"__typename": "CheckRun", "name": "lint", "workflowName": "", "status": "COMPLETED",
-             "conclusion": "SUCCESS", "detailsUrl": "https://x"},
+        "commits": last_commit(serde_json::json!([
+            {"__typename": "CheckRun", "name": "test", "status": "COMPLETED",
+             "conclusion": "FAILURE", "detailsUrl": "https://github.com/a/b/actions/runs/1/job/2",
+             "checkSuite": {"workflowRun": {"workflow": {"name": "CI"}}}},
+            {"__typename": "CheckRun", "name": "lint", "status": "COMPLETED",
+             "conclusion": "SUCCESS", "detailsUrl": "https://x",
+             "checkSuite": {"workflowRun": {"workflow": {"name": ""}}}},
             {"__typename": "StatusContext", "context": "deploy", "state": "ERROR",
              "targetUrl": "https://deploy", "description": "Build failed"}
-        ]}]"#;
-    let listed = parse_pull_list(&nodes(json)).unwrap().unwrap();
+        ]))
+    }]);
+    let listed = parse_pull_list(&nodes).unwrap().unwrap();
     assert_eq!(listed.updated_at, "2026-09-29T10:00:00Z");
     assert_eq!(listed.pull.author.as_deref(), Some("octocat"));
     assert_eq!(listed.pull.checks, Some(wire::PullChecks::Failing));
