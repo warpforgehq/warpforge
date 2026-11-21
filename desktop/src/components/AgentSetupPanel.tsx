@@ -318,7 +318,9 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                 }
               : undefined;
           const brokenInfo = broken[agent.id] ?? healthBroken;
-          const signedOut = SIGNED_OUT.test(`${brokenInfo?.full ?? ""} ${notes[agent.id] ?? ""}`);
+          const signedOut =
+            agent.id === "antigravity" &&
+            SIGNED_OUT.test(`${brokenInfo?.full ?? ""} ${notes[agent.id] ?? ""}`);
           const isBroken = brokenInfo !== undefined && !signedOut;
           return (
             <div
@@ -414,7 +416,7 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                {agent.id === "antigravity" && agent.installed && signedOut && (
+                {agent.installed && signedOut && (
                   <AgentSignIn
                     agentId={agent.id}
                     displayName={agent.displayName}
