@@ -264,7 +264,8 @@ describe("AgentSetupPanel", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "Update" }));
 
-      expect(await screen.findByText(/Authentication required/)).toBeInTheDocument();
+      expect(await screen.findByText("signed out")).toBeInTheDocument();
+      expect(screen.getByText("Sign in before starting a task with this agent.")).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Reinstall" })).not.toBeInTheDocument();
       expect(screen.queryByText("needs reinstall")).not.toBeInTheDocument();
     });

@@ -21,6 +21,9 @@ interface Props {
   onSaved?: () => void;
 }
 
+/** How an ACP agent reports that it needs a login before it can start. */
+const SIGNED_OUT = /authentication required/i;
+
 /** Last non-empty line of command output, for a compact error hint. */
 function lastLine(output: string): string {
   const lines = output.trim().split("\n");
@@ -315,7 +318,8 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                 }
               : undefined;
           const brokenInfo = broken[agent.id] ?? healthBroken;
-          const isBroken = brokenInfo !== undefined;
+          const signedOut = SIGNED_OUT.test(`${brokenInfo?.full ?? ""} ${notes[agent.id] ?? ""}`);
+          const isBroken = brokenInfo !== undefined && !signedOut;
           return (
             <div
               key={agent.id}
@@ -346,7 +350,11 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                   <AgentLogo agentId={agent.id} displayName={agent.displayName} />
                   <span className="truncate">{agent.displayName}</span>
                   {agent.installed ? (
-                    isBroken ? (
+                    signedOut ? (
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[11px] font-medium text-warn">
+                        signed out
+                      </span>
+                    ) : isBroken ? (
                       <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[11px] font-medium text-warn">
                         {brokenInfo.canReinstall ? "needs reinstall" : "cannot start"}
                       </span>
@@ -391,23 +399,28 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                     {errors[agent.id]}
                   </p>
                 )}
-                {brokenInfo && (
+                {signedOut && (
+                  <p className="mt-0.5 text-[11px] text-warn" title={brokenInfo?.full}>
+                    Sign in before starting a task with this agent.
+                  </p>
+                )}
+                {brokenInfo && !signedOut && (
                   <p className="mt-0.5 text-[11px] text-warn" title={brokenInfo.full}>
                     {brokenInfo.summary}
                   </p>
                 )}
-                {notes[agent.id] && (
+                {notes[agent.id] && !signedOut && (
                   <p className="mt-0.5 text-[11px] text-muted-foreground">{notes[agent.id]}</p>
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                {agent.id === "antigravity" && agent.installed && (
+                {agent.id === "antigravity" && agent.installed && signedOut && (
                   <AgentSignIn
                     agentId={agent.id}
                     displayName={agent.displayName}
                     onDone={(error) => {
                       clearAgentState(agent.id);
-                      if (error) setNotes((prev) => ({ ...prev, [agent.id]: error }));
+                      setNotes((prev) => ({ ...prev, [agent.id]: error ?? "Signed in with Google." }));
                     }}
                   />
                 )}
