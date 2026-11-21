@@ -1,4 +1,4 @@
-import { ArrowDownNarrowWide, ArrowUpNarrowWide, Factory, RefreshCw, X } from "lucide-react";
+import { ArrowDownNarrowWide, ArrowUpNarrowWide, RefreshCw, X } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -42,8 +42,6 @@ interface BacklogToolbarProps {
   isSyncing: boolean;
   /** Assignees seen in the rows loaded so far, for the assignee filter. */
   assignees: string[];
-  /** Opens the Factory batch form over the backlog. */
-  onRunInFactory?: () => void;
 }
 
 export function BacklogToolbar({
@@ -54,7 +52,6 @@ export function BacklogToolbar({
   onSync,
   isSyncing,
   assignees,
-  onRunInFactory,
 }: BacklogToolbarProps) {
   // What this project can actually reach. A project without Linear or a repo
   // gets no source options for them — the filter never offers what would
@@ -118,19 +115,6 @@ export function BacklogToolbar({
           <RefreshCw className={cn("size-3.5", isSyncing && "animate-spin")} />
           Sync
         </Button>
-        {onRunInFactory && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 gap-1.5"
-            onClick={onRunInFactory}
-            title="Start Factory tasks for every backlog item that matches a filter"
-          >
-            <Factory className="size-3.5" />
-            Run in Factory…
-          </Button>
-        )}
       </div>
     </div>
   );

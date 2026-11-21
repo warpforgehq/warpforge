@@ -34,8 +34,6 @@ interface BacklogViewProps {
   onCreate?: () => void;
   /** Opens New Task in Factory mode for items; enables row selection. */
   onStartInFactory?: (items: WorkItem[]) => void;
-  /** Opens the Factory batch form, with the selected items offered. */
-  onRunInFactory?: (selected: WorkItem[]) => void;
 }
 
 export function BacklogView({
@@ -46,7 +44,6 @@ export function BacklogView({
   onOpenItem,
   onCreate,
   onStartInFactory,
-  onRunInFactory,
 }: BacklogViewProps) {
   const queryClient = useQueryClient();
   const [selection, setSelection] = React.useState<Map<string, WorkItem>>(() => new Map());
@@ -213,7 +210,6 @@ export function BacklogView({
         onSync={() => void syncNow()}
         isSyncing={sync.isFetching || manualSyncing}
         assignees={seenAssignees}
-        onRunInFactory={onRunInFactory && (() => onRunInFactory([...selection.values()]))}
       />
       {onStartInFactory && selection.size > 0 && (
         <div className="flex h-9 shrink-0 items-center gap-2 border-b border-rule bg-secondary/40 px-3 text-[12px]">

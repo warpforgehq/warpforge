@@ -198,27 +198,6 @@ describe("NewTaskDialog in Factory mode", () => {
       }),
     );
   });
-
-  it("batches every item a filter matches", async () => {
-    const enqueue = vi.spyOn(daemon, "runnerEnqueue");
-    const user = userEvent.setup();
-    renderDialog({ factorySeed: { kind: "batch", selected: [] } });
-    expect(await screen.findByText("2 items match")).toBeInTheDocument();
-    expect(screen.getByLabelText("Status")).toHaveValue("todo");
-    await user.click(screen.getByRole("button", { name: "Start 2 in Factory" }));
-
-    await waitFor(() =>
-      expect(enqueue).toHaveBeenCalledWith(
-        "warpforge",
-        ["b-1", "b-2"],
-        expect.objectContaining({ deliver: true, workflow: "review-loop" }),
-      ),
-    );
-    expect(daemon.request).toHaveBeenCalledWith(
-      "backlog.list",
-      expect.objectContaining({ status: "todo" }),
-    );
-  });
 });
 
 describe("NewTaskDialog Factory lead defaults", () => {

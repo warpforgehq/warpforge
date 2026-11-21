@@ -112,7 +112,7 @@ export default function NewTaskDialog({
     settings: factorySettings,
     workflows,
   });
-  const batch = useFactoryBatch(factorySeed ?? { items: [], kind: "items" }, project);
+  const batch = useFactoryBatch(factorySeed ?? { items: [], kind: "items" });
   const startMany = useStartInFactory(project);
   const inFactory = mode === "factory";
 
@@ -207,10 +207,10 @@ export default function NewTaskDialog({
       service.project === project && service.status === "running" && service.allocatedPort > 0,
   );
   const canStart = factorySeed
-    ? !!selectedWorkflow && (batch.count ?? 0) > 0
+    ? !!selectedWorkflow && batch.count > 0
     : !!prompt.trim() && (!!project || chat) && (!inFactory || !!selectedWorkflow);
   const startLabel = factorySeed
-    ? `Start ${batch.count ?? ""} in Factory`.replace("  ", " ")
+    ? `Start ${batch.count} in Factory`
     : inFactory
       ? "Start in Factory"
       : mode === "orchestrator"

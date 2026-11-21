@@ -193,14 +193,6 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
     },
     [onNewTask],
   );
-  const runBatchInFactory = useCallback(
-    (selected: WorkItem[]) =>
-      onNewTask(projectName, undefined, undefined, {
-        factory: { kind: "batch", selected },
-        mode: "factory",
-      }),
-    [onNewTask, projectName],
-  );
 
   const openTaskFromItem = useCallback(
     (taskId: string) => {
@@ -361,7 +353,6 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
               onOpenItem={setOpenItem}
               onStartTask={startTaskFromItem}
               onStartInFactory={(items) => void startInFactory(items)}
-              onRunInFactory={runBatchInFactory}
               onCreate={() => setBacklogOpen(true)}
             />
           </div>
