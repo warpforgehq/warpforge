@@ -4,6 +4,7 @@
  * in the inbox — the same review a person would open next.
  */
 import type { DaemonEvent, TaskPullRequest } from "@app/protocol";
+import { DEFAULT_INBOX_FILTERS } from "@app/lib/inboxFilters";
 
 import type { Beat } from "../types";
 import { failingCheck, PR_TASK_ID, REPO, taskPull, type timeline } from "./fixtures";
@@ -33,6 +34,7 @@ export function pullsScript(world: ReturnType<typeof timeline>): Beat[] {
     {
       after: 5200,
       ui: {
+        inboxFilters: { ...DEFAULT_INBOX_FILTERS, scope: "everyone" },
         inboxSelectedKey: `${REPO}#${world.summary.number}`,
         openTaskId: null,
         sidebarMode: "inbox",
