@@ -11,7 +11,9 @@ import { useUi } from "@/store/ui";
 import { BacklogList } from "./BacklogList";
 import type { BacklogRowActions } from "./BacklogRow";
 import { BacklogToolbar } from "./BacklogToolbar";
+import { TrackerSyncPill } from "./TrackerSyncPill";
 import { type BacklogParams, DEFAULT_BACKLOG_PARAMS, toWorkItem, type WorkItem } from "./types";
+import { useProjectSources } from "./use-tracker";
 
 /**
  * ADR-0002: opening a project pulls its trackers once, gated by a staleness
@@ -127,6 +129,13 @@ export function BacklogView({
     staleTime: 10_000,
   });
 
+  const sources = useProjectSources(project);
+  const hasTracker = !sources.data || sources.data.github || sources.data.linear;
+  // The pull's rows land through a list refetch, so the note stays until that
+  // refetch has painted them, not just until the pull itself answers.
+  const refreshing = sync.isFetching || (list.isFetching && !list.isFetchingNextPage);
+  const showSyncPill = refreshing && !list.isPending && hasTracker;
+
   const [manualSyncing, setManualSyncing] = React.useState(false);
   const syncNow = React.useCallback(async () => {
     setManualSyncing(true);
@@ -229,7 +238,7 @@ export function BacklogView({
           </Button>
         </div>
       )}
-      <div className="min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1">
         <BacklogList
           items={items}
           actions={actions}
@@ -240,6 +249,7 @@ export function BacklogView({
           error={list.isError ? `Could not load backlog: ${list.error.message}` : undefined}
           onCreate={onCreate}
         />
+        {showSyncPill && <TrackerSyncPill sources={sources.data} />}
       </div>
     </div>
   );
