@@ -329,12 +329,14 @@ describe("BacklogView", () => {
     renderBacklog();
     await vi.waitFor(() => expect(rowTitles()).toHaveLength(PAGE_SIZE));
     expect(daemon.importExternalWorkItems).toHaveBeenCalledWith("warpforge");
+    expect(await screen.findByRole("status")).toHaveTextContent("Loading GitHub and Linear…");
 
     const listed = vi.mocked(daemon.listBacklog).mock.calls.length;
     finish({ items: [], synced: [] });
     await vi.waitFor(() =>
       expect(vi.mocked(daemon.listBacklog).mock.calls.length).toBeGreaterThan(listed),
     );
+    await vi.waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
   });
 
   it("syncs by rerunning the same pull, not a second request", async () => {
