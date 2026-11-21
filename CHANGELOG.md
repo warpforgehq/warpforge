@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.31.0
+
+### Minor Changes
+
+- [`8cd3392`](https://github.com/warpforgehq/warpforge/commit/8cd3392a5bd8e97493082a62da98599f573a6130) Thanks [@ephor](https://github.com/ephor)! - Google Antigravity joins the supported coding agents. Install it with one click from the agent panel, then press Sign in to connect your Google account: Warpforge downloads Google's official CLI, verifies it, and tells you when an update is ready. Already have it installed? Warpforge picks up your copy and shows when a newer version is out.
+
 ## 0.30.0
 
 ### Minor Changes
