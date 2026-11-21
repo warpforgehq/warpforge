@@ -413,6 +413,9 @@ describe("BacklogView", () => {
     await user.click(screen.getByRole("checkbox", { name: "Select Issue 69" }));
     await user.click(screen.getByRole("checkbox", { name: "Select Issue 67" }));
     expect(screen.getByText("2 selected")).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "Select Issue 69" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Select Issue 67" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Select Issue 68" })).not.toBeChecked();
     await user.click(screen.getByRole("button", { name: "Run in Factory…" }));
     expect(onRunInFactory).toHaveBeenLastCalledWith([
       expect.objectContaining({ id: "b-69" }),
