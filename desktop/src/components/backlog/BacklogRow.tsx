@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import type { RunnerEntry } from "@/protocol";
 
 import { AssigneeIcon, useAssigneeLabel } from "./assignee";
-import { PRIORITY_LABEL, priorityTone, SOURCE_LABEL, SourceDot, STATUS_META } from "./labels";
+import { PRIORITY_LABEL, priorityTone, SOURCE_LABEL, STATUS_META } from "./labels";
 import type { WorkItem } from "./types";
 
 export interface BacklogRowActions {
@@ -97,7 +97,6 @@ export const BacklogRow = React.memo(function BacklogRow({
         title={item.title}
         className="flex h-full min-w-0 flex-1 items-center gap-3 pl-3 pr-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
-        <SourceDot source={item.source} />
         <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">{item.title}</span>
         {inFactory && (
           <span className="shrink-0 rounded-md bg-primary/10 px-1.5 py-px text-[11px] text-primary">
