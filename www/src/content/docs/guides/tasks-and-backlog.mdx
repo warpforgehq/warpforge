@@ -17,9 +17,12 @@ Every project has one, and it can be fed straight from where your team already t
 <Tabs syncKey="tracker">
 <TabItem label="GitHub">
 
-Create a **personal access token** (classic with `repo` + `read:project`, or fine-grained) at [github.com/settings/tokens](https://github.com/settings/tokens/new) and paste it in **Settings → Trackers → GitHub**. Stored in OS keychain.
+A token is optional. Pick whichever you already have — both work the same and are equally fast:
 
-> **Deprecated:** `gh` CLI session (`gh auth login`) still works as a fallback if no token is set, but it spawns a process per request, is flaky for bulk sync, and will be removed in a future version. Prefer a token.
+- **GitHub CLI.** If you've run `gh auth login`, Warpforge uses that sign-in. Nothing to paste.
+- **Personal access token.** Create one at [github.com/settings/tokens](https://github.com/settings/tokens/new) and paste it in **Settings → Trackers → GitHub**. It's stored in your OS keychain and used instead of the CLI sign-in.
+
+Board columns (In Progress, In Review, …) need the `read:project` scope on top of `repo`. Without it the board still loads, with issues shown as open or closed. To add the scope to a CLI sign-in, run `gh auth refresh -s read:project`.
 
 A project's open issues import when you open it, and refresh on **Sync**.
 

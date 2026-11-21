@@ -15,8 +15,12 @@ at once without costing a GitHub round trip per render.
 **The state lives in `daemon/pull_status`, beside the actor, not in it.**
 `PullWatch` hangs off `DaemonHandle`; it is a map from task id to the pull
 request of that task's worktree branch. Fetches are spawned tasks running one
-`gh pr list --head <branch> --state all --json …` (including `headRefOid`) in the worktree, at most four
-at once. The actor is only asked for the task list. *Rejected:* a field on
+GraphQL `pullRequests(headRefName: <branch>)` query (including `headRefOid`)
+against the worktree's `origin` repository, at most four at once — with the
+backlog's credential and client (ADR-0002, 2026-11-21 amendment), not a `gh`
+spawn. The lookup reads `origin` only, so a pull request from a fork against an
+`upstream` repository is not found (known limitation). The actor is only asked
+for the task list. *Rejected:* a field on
 `TaskInfo` — the value is derived from GitHub, not owned by the task, and
 routing it through the actor would persist and re-broadcast whole tasks for a
 checks flip.
@@ -32,7 +36,7 @@ three-minute loop that re-checks only entries whose pull request is open or a
 draft. A branch without one is looked at again only on focus or open; a merged
 or closed one never changes on its own.
 
-**A failed fetch keeps the last known state.** `gh` missing, signed out, no
+**A failed fetch keeps the last known state.** No GitHub credential, no
 GitHub remote or offline all read as "nothing to show" for a task never seen,
 and as "unchanged" for one that was. A badge that blinks off whenever the
 network does is worse than one a few minutes old.
@@ -53,11 +57,11 @@ After **Open pull request** the CI results and the review land on GitHub,
 and the agent that made the change never hears about them. The entry now
 carries what that agent would need, and the task offers to send it.
 
-**Failing checks ride the listing; remarks are a second read.** `gh pr list`
+**Failing checks ride the listing; remarks are a second read.** The listing
 already returns `statusCheckRollup`, so `failed_checks` (name, link, a
 status's description) costs nothing. It cannot return review threads, so an
 open pull request's conversation is one more GraphQL read — the inbox's own
-query (`tracker::github_pr_conversation`, PAT or `gh`) narrowed by
+query (`tracker::github_pr_conversation`) narrowed by
 `pull_status/comments`: unresolved inline threads with their replies, and each
 reviewer's latest verdict when it requests changes. Conversation comments are
 left out; bots fill them with previews and coverage reports.
@@ -108,7 +112,7 @@ quota gate.
 
 ## Invariants
 
-1. **No `gh` call on the actor loop** (ADR 0002). `PullWatch` never holds a
+1. **No GitHub call on the actor loop** (ADR 0002). `PullWatch` never holds a
    `DaemonHandle`; the poll loop keeps a weak command sender so a dropped
    daemon ends it.
 2. **Removal is refused while the agent is mid-turn, the checkout is dirty,
@@ -120,7 +124,7 @@ quota gate.
 3. **A reply must not undo a newer event.** The desktop stamps every
    `task.pullRequest` and a `task.pullRequests` reply leaves stamped entries
    alone (`daemon/tasks.ts`).
-4. **Test daemons never run `gh`.** `PullWatch::default()` fetches nothing
+4. **Test daemons never call GitHub.** `PullWatch::default()` fetches nothing
    under `cfg(test)`; tests inject a scripted fetcher and comments fetcher.
 5. **The remarks read has no timer of its own.** It rides a scheduled fetch,
    is skipped for merged and closed pull requests, and while `updatedAt`

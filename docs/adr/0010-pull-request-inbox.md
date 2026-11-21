@@ -245,10 +245,11 @@ the PR's own node id — resolved on the write path rather than threaded through
 the read types, so a listing does not carry an id only a mutation wants.
 Replies still ride `addPullRequestReviewThreadReply` with the thread's node id.
 
-**PR reads reuse the `github/` module's dual path.** PAT + reqwest is the
-primary path (no process spawn); the deprecated `gh` CLI answers when no token
-is stored. Both land in the same wire types (`warpforge_protocol::pulls`), so
-callers never learn which one ran. The thread is one GraphQL query for
+**PR reads reuse the `github/` module's credential and client.** Every read and
+write goes through the shared `reqwest` client with one token: a PAT when one
+is stored, else the `gh auth login` session's token (ADR-0002, 2026-11-21
+amendment). No inbox call spawns `gh`. *Amended 2026-11-21:* this used to be a
+PAT-or-`gh` branch per call, and the two drifted. The thread is one GraphQL query for
 comments + reviews + review threads (ADR heritage: the backlog's invariant 3,
 one round trip per listing).
 
@@ -391,8 +392,8 @@ the transcript's own config bar from then on.
 2. **One daemon fetch per (projects, state, assignedToMe).** Search narrows
    client-side; a keystroke must not cost a round trip, and the query key must
    not include what the fetch does not use.
-3. **A comment body travels in a file** (`--body-file`) on the `gh` path, and
-   as JSON on the PAT path — never inline in argv.
+3. **A comment body travels as JSON in the request body** — never inline in
+   argv or a URL.
 4. **The patch is capped at 2 MB** with a `truncated` flag. Rendering half a
    hunk is the client's problem to label, not the daemon's to hide.
 5. **A thread reply is addressed to the review thread's GraphQL node id**, and
@@ -404,11 +405,8 @@ the transcript's own config bar from then on.
    `<img>`; routing avatar bytes through the daemon is not worth it.
 7. **The review pane is one component for both inbox contexts.** A second
    detail view for the project tab is a behaviour fork waiting to happen.
-8. **A comment body never travels in argv.** The `gh` fallback writes the body
-   through a temp file (`--field body=@file`), including for the GraphQL
-   mutation, because `github_query` splices its variables into argv. Known gap:
-   the older `post_review_reply` path still passes its body through
-   `github_query`, so a reply body does land in argv on the `gh` path today.
+8. **A comment body never travels in argv.** With no `gh` spawn left on this
+   path that holds by construction; a future CLI fallback must not reopen it.
 9. **A range is selected by dragging the gutter**, the gesture GitHub taught
    everyone (shift-click does the same for a line reached by scrolling). The
    whole number column answers the drag, not just the button inside it — that
