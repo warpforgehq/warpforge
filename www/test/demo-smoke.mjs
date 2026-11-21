@@ -101,7 +101,7 @@ await must("the PR feedback reaches the task", () =>
   page.getByText("PR #12: 1 check failed · 1 new comment").first().waitFor({ timeout: RUN_MS }),
 );
 await must("the PR review groups its files", () =>
-  page.getByText("Migrations").first().waitFor({ timeout: RUN_MS }),
+  page.getByText("Migrations", { exact: true }).first().waitFor({ timeout: RUN_MS }),
 );
 await must("the PR review shows the failing check", () =>
   page.getByText("ci / test").first().waitFor({ timeout: RUN_MS }),
