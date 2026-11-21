@@ -34,7 +34,9 @@ pub(crate) use github::{
     github_pr_commits, github_pr_conversation, github_pr_details, github_pr_diff, github_pr_list,
     github_pr_range_diff, github_pr_review, github_pr_review_comment, github_token, parse_checks,
 };
-pub use import::{adopt_imported, fetch_importable, fetch_links_status, resolve_missing};
+pub use import::{
+    adopt_imported, fetch_importable, fetch_links_status, resolve_missing, Refreshed,
+};
 pub use linear::{keychain_read, linear_teams};
 pub use page::fetch_page;
 

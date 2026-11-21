@@ -9,7 +9,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { InboxScope, PullStateFilter } from "@/lib/inboxFilters";
+import {
+  INBOX_SCOPES,
+  type InboxScope,
+  PULL_STATE_FILTERS,
+  type PullStateFilter,
+} from "@/lib/inboxFilters";
 
 const SCOPE_LABEL: Record<InboxScope, string> = {
   review: "To review",
@@ -22,15 +27,8 @@ const STATE_LABEL: Record<PullStateFilter, string> = {
   all: "All",
 };
 
-const SCOPES = ["review", "mine", "everyone"] as const satisfies readonly InboxScope[];
-const STATES = ["open", "all"] as const satisfies readonly PullStateFilter[];
-
-function isScope(value: string): value is InboxScope {
-  return (SCOPES as readonly string[]).includes(value);
-}
-
-function isState(value: string): value is PullStateFilter {
-  return (STATES as readonly string[]).includes(value);
+function isOneOf<T extends string>(list: readonly T[], value: string): value is T {
+  return list.some((item) => item === value);
 }
 
 /**
@@ -70,10 +68,10 @@ export function InboxViewMenu({
         <DropdownMenuRadioGroup
           value={scope}
           onValueChange={(value) => {
-            if (isScope(value)) onScopeChange(value);
+            if (isOneOf(INBOX_SCOPES, value)) onScopeChange(value);
           }}
         >
-          {SCOPES.map((value) => (
+          {INBOX_SCOPES.map((value) => (
             <DropdownMenuRadioItem key={value} value={value}>
               {SCOPE_LABEL[value]}
             </DropdownMenuRadioItem>
@@ -84,10 +82,10 @@ export function InboxViewMenu({
         <DropdownMenuRadioGroup
           value={state}
           onValueChange={(value) => {
-            if (isState(value)) onStateChange(value);
+            if (isOneOf(PULL_STATE_FILTERS, value)) onStateChange(value);
           }}
         >
-          {STATES.map((value) => (
+          {PULL_STATE_FILTERS.map((value) => (
             <DropdownMenuRadioItem key={value} value={value}>
               {STATE_LABEL[value]}
             </DropdownMenuRadioItem>

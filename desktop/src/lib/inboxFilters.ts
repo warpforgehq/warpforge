@@ -7,10 +7,12 @@
 
 import type { PullRequestSummary } from "@/protocol";
 
-export type PullStateFilter = "open" | "all";
+export const PULL_STATE_FILTERS = ["open", "all"] as const;
+export type PullStateFilter = (typeof PULL_STATE_FILTERS)[number];
 
 /** Whose pull requests to list: review asked of me, opened by me, or all. */
-export type InboxScope = "review" | "mine" | "everyone";
+export const INBOX_SCOPES = ["review", "mine", "everyone"] as const;
+export type InboxScope = (typeof INBOX_SCOPES)[number];
 
 export interface InboxFilters {
   assignedToMe: boolean;

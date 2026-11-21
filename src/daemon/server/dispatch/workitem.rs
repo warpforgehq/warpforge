@@ -53,13 +53,11 @@ pub(super) async fn work_item_create_external(
 /// even when a tracker answers every call just inside its timeout.
 const SYNC_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
-type Refreshed = (
-    Vec<(crate::daemon::store::TrackerLink, wire::SyncedExternalItem)>,
-    Vec<String>,
-);
-
 /// Run a tracker refresh under [`SYNC_TIMEOUT`]; a timeout refreshes nothing.
-async fn bounded(what: &str, work: impl std::future::Future<Output = Refreshed>) -> Refreshed {
+async fn bounded(
+    what: &str,
+    work: impl std::future::Future<Output = tracker::Refreshed>,
+) -> tracker::Refreshed {
     tokio::time::timeout(SYNC_TIMEOUT, work)
         .await
         .unwrap_or_else(|_| {
@@ -75,7 +73,7 @@ async fn bounded(what: &str, work: impl std::future::Future<Output = Refreshed>)
 /// refreshed wire items and the deleted ids.
 async fn apply_refresh(
     handle: &DaemonHandle,
-    (refreshed, deleted_ids): Refreshed,
+    (refreshed, deleted_ids): tracker::Refreshed,
 ) -> (Vec<wire::SyncedExternalItem>, Vec<String>) {
     let items = refreshed.iter().map(|(_, item)| item.clone()).collect();
     handle
