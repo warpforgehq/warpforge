@@ -40,8 +40,16 @@ vi.mock("@/components/ui/dropdown-menu", async () => {
   function DropdownMenuSeparator() {
     return React.createElement("div", { role: "separator" });
   }
+  function DropdownMenuRadioGroup({ children }: { children: React.ReactNode }) {
+    return React.createElement("div", { role: "group" }, children);
+  }
+  function DropdownMenuRadioItem({ children }: { children: React.ReactNode }) {
+    return React.createElement("div", { role: "menuitemradio" }, children);
+  }
   return {
     DropdownMenu,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -1087,6 +1095,7 @@ describe("Sidebar inbox mode", () => {
     state: "open",
     title: "Add widget",
     updatedAt: 0,
+    reviewRequested: true,
     url: "https://github.test/pull/7",
   };
 

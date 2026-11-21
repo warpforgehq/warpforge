@@ -61,6 +61,35 @@ fn a_listing_without_diff_counts_reads_zero() {
 }
 
 #[test]
+fn the_viewer_flags_ride_the_listing() {
+    let pr = |extra: serde_json::Value| {
+        let mut node = summary_json();
+        node.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        serde_json::from_value::<RawPull>(node)
+            .unwrap()
+            .into_wire("acme/widgets")
+            .unwrap()
+    };
+    let asked = pr(serde_json::json!({
+        "viewerDidAuthor": false,
+        "viewerLatestReviewRequest": { "id": "RR_1" },
+    }));
+    assert!(asked.review_requested);
+    assert!(!asked.authored_by_me);
+    let mine = pr(serde_json::json!({
+        "viewerDidAuthor": true,
+        "viewerLatestReviewRequest": null,
+    }));
+    assert!(!mine.review_requested);
+    assert!(mine.authored_by_me);
+    let query = super::list::pulls_query("[OPEN]");
+    assert!(query.contains("viewerDidAuthor"));
+    assert!(query.contains("viewerLatestReviewRequest"));
+}
+
+#[test]
 fn the_listing_query_asks_for_the_diff_counts() {
     let query = super::list::pulls_query("[OPEN]");
     assert_eq!(

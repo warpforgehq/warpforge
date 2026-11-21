@@ -21,6 +21,7 @@ function pull(number: number, title: string): PullRequestSummary {
     title,
     updatedAt: number,
     url: `https://github.test/pull/${number}`,
+    reviewRequested: true,
   };
 }
 

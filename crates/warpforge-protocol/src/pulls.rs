@@ -67,6 +67,12 @@ pub struct PullRequestSummary {
     pub deletions: u64,
     #[serde(default)]
     pub changed_files: u64,
+    /// The signed-in user (or a team they are on) is asked to review it.
+    #[serde(default)]
+    pub review_requested: bool,
+    /// The signed-in user opened it.
+    #[serde(default)]
+    pub authored_by_me: bool,
 }
 
 /// The body-level fields of one pull request, for the detail pane.

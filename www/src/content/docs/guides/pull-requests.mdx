@@ -22,7 +22,7 @@ Both need a GitHub connection, the same one the backlog uses: either a `gh auth 
 The list polls every 30 seconds and sorts by last activity, newest first.
 
 - **Unread is "changed since you looked."** A new comment, a new review, a force-push — all of them move the pull request's timestamp, and the row lights up. Opening a row clears it; **Mark all as read** clears the rest. The very first listing after you connect is recorded silently, so a fresh install doesn't flag every pull request that ever existed.
-- **Filter** matches the title, repo, `#number`, author, either branch name, labels and assignees. **Open** or **All** switches state. **Reset** appears only when something is actually narrowing the list.
+- **Filter** matches the title, repo, `#number`, author, either branch name, labels and assignees. The menu beside it picks whose pull requests you see — **To review** (the default: someone asked you, or a team you are on, for a review), **Mine** (ones you opened) or **Everyone** — and whether to show **Open** ones or **All**. The sidebar badge counts what that view lists, so it lights up when someone is waiting on you. **Reset** appears only when something is actually narrowing the list.
 - **`j` / `k`** (or the arrow keys) walk the list without leaving the review — the next pull request loads into the pane you are already reading. **Hide the list** gives the review the whole window; the unread count stays visible on the collapsed edge.
 
 Each row reads across one line: repo and number, `+`/`−` and file count, when it last changed, then the title and its labels.

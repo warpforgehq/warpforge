@@ -26,6 +26,7 @@ function pr(overrides: Partial<PullRequestSummary> = {}): PullRequestSummary {
     headRefName: "widget",
     createdAt: 100,
     updatedAt: 100,
+    reviewRequested: true,
     ...overrides,
   };
 }
@@ -34,6 +35,25 @@ describe("applyInboxFilters", () => {
   it("drops closed PRs while the state filter reads open", () => {
     const items = [pr({ state: "open" }), pr({ number: 8, state: "closed" })];
     expect(applyInboxFilters(items, DEFAULT_INBOX_FILTERS)).toHaveLength(1);
+  });
+
+  it("lists review requests by default, my own under mine, everything under everyone", () => {
+    const asked = pr({ number: 1, reviewRequested: true });
+    const mine = pr({ number: 2, reviewRequested: false, authoredByMe: true });
+    const other = pr({ number: 3, reviewRequested: false });
+    const items = [asked, mine, other];
+    expect(applyInboxFilters(items, DEFAULT_INBOX_FILTERS)).toEqual([asked]);
+    expect(applyInboxFilters(items, { ...DEFAULT_INBOX_FILTERS, scope: "mine" })).toEqual([mine]);
+    expect(applyInboxFilters(items, { ...DEFAULT_INBOX_FILTERS, scope: "everyone" })).toHaveLength(
+      3,
+    );
+  });
+
+  it("reads filters persisted before the scope existed as review requests", () => {
+    const { scope: _scope, ...legacy } = DEFAULT_INBOX_FILTERS;
+    const items = [pr({ number: 1 }), pr({ number: 2, reviewRequested: false })];
+    expect(applyInboxFilters(items, legacy)).toHaveLength(1);
+    expect(hasActiveInboxFilters(legacy)).toBe(false);
   });
 
   it("keeps everything under the all state", () => {
@@ -84,6 +104,7 @@ describe("filter bookkeeping", () => {
     expect(hasActiveInboxFilters(DEFAULT_INBOX_FILTERS)).toBe(false);
     expect(hasActiveInboxFilters({ ...DEFAULT_INBOX_FILTERS, search: "x" })).toBe(true);
     expect(hasActiveInboxFilters({ ...DEFAULT_INBOX_FILTERS, state: "all" })).toBe(true);
+    expect(hasActiveInboxFilters({ ...DEFAULT_INBOX_FILTERS, scope: "everyone" })).toBe(true);
     expect(hasActiveInboxFilters({ ...DEFAULT_INBOX_FILTERS, assignedToMe: true })).toBe(true);
   });
 
