@@ -83,19 +83,17 @@ export function BacklogView({
   if (seen.project !== project) setSeen({ project, names: [] });
   const seenAssignees = seen.names;
 
+  // One pull per project: the same listing adopts new issues, refreshes the
+  // tracked ones and drops deleted ones. The local list renders without
+  // waiting for it and is invalidated when it lands.
   const sync = useQuery({
     queryKey: ["backlog", project, "sync"],
     queryFn: async () => {
-      // Run sync (status/deleted reconcile) in parallel with import; don't let a
-      // slow/hung sync block the board from rendering. Deleted reconciliations
-      // will be reflected after the next list invalidation.
-      const importPromise = daemon.importExternalWorkItems(project);
-      const syncPromise = daemon.syncExternalWorkItems().catch(() => []);
-      const [imported] = await Promise.all([importPromise, syncPromise]);
-      // If sync deleted something, reflect it.
-      void syncPromise.then(() => {
-        queryClient.invalidateQueries({ queryKey: ["backlog", project, "list"] });
-      });
+      const imported = await daemon.importExternalWorkItems(project);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["backlog", project, "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["backlog", project, "count"] }),
+      ]);
       return imported;
     },
     staleTime: SYNC_STALE_MS,
@@ -126,10 +124,6 @@ export function BacklogView({
     // The daemon reports whether more rows exist; trust that rather than
     // comparing counts, which a concurrent import would make wrong.
     getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.page + 1 : undefined),
-    // Wait for the pull to settle, so freshly imported rows are in the first
-    // page rather than arriving as a second flash. `isFetched` is true after a
-    // *failed* pull too: a dead tracker must not hide an existing backlog.
-    enabled: sync.isFetched,
     staleTime: 10_000,
   });
 
@@ -137,16 +131,9 @@ export function BacklogView({
   const syncNow = React.useCallback(async () => {
     setManualSyncing(true);
     try {
-      try {
-        await daemon.syncExternalWorkItems();
-      } catch {
-        /* toast handled */
-      }
+      // The same query the mount ran, so a manual pull and the automatic one
+      // cannot race; it invalidates the list itself when it lands.
       await queryClient.refetchQueries({ queryKey: ["backlog", project, "sync"] });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["backlog", project, "list"] }),
-        queryClient.invalidateQueries({ queryKey: ["backlog", project, "count"] }),
-      ]);
     } finally {
       setManualSyncing(false);
     }
