@@ -41,22 +41,23 @@ export function WorkItemMethods<TBase extends Constructor<CoreClient>>(Base: TBa
       const result = (await this.request("workItem.syncExternal", { ids })) as {
         items?: SyncedExternalItem[];
         warning?: string;
-        deleted_ids?: string[];
+        deletedIds?: string[];
       };
       if (result.warning) {
         const { toast: t } = await import("sonner");
         t.warning(result.warning, { duration: 8000 });
       }
-      if (result.deleted_ids?.length) {
+      if (result.deletedIds?.length) {
         const { toast: t } = await import("sonner");
-        t.info(`Removed ${result.deleted_ids.length} deleted issue(s) from backlog`);
+        t.info(`Removed ${result.deletedIds.length} deleted issue(s) from backlog`);
       }
       return result.items ?? [];
     }
 
     /** The project's one tracker pull. A single listing per provider answers
-     *  both questions: `items` are issues with no backlog row yet (ids minted and
-     *  linked daemon-side), `synced` are tracked ones whose status moved. */
+     *  every question: `items` are issues with no backlog row yet (ids minted and
+     *  linked daemon-side), `synced` are tracked ones whose status moved, and
+     *  `deletedIds` are rows dropped because their issue is gone. */
     async importExternalWorkItems(
       project: string,
       provider?: "github" | "linear",
@@ -64,10 +65,19 @@ export function WorkItemMethods<TBase extends Constructor<CoreClient>>(Base: TBa
       const result = (await this.request("workItem.importExternal", {
         project,
         provider,
-      })) as { items?: ImportedWorkItem[]; synced?: SyncedExternalItem[]; warning?: string };
+      })) as {
+        items?: ImportedWorkItem[];
+        synced?: SyncedExternalItem[];
+        warning?: string;
+        deletedIds?: string[];
+      };
       if (result.warning) {
         const { toast } = await import("sonner");
         toast.warning(result.warning, { duration: 8000 });
+      }
+      if (result.deletedIds?.length) {
+        const { toast } = await import("sonner");
+        toast.info(`Removed ${result.deletedIds.length} deleted issue(s) from backlog`);
       }
       return { items: result.items ?? [], synced: result.synced ?? [], warning: result.warning };
     }

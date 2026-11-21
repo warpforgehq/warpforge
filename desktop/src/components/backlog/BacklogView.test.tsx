@@ -320,26 +320,31 @@ describe("BacklogView", () => {
     expect(onOpenItem).toHaveBeenCalledWith(expect.objectContaining({ title: "Issue 70" }));
   });
 
-  it("runs import before the first backlog page", async () => {
-    const order: string[] = [];
-    vi.spyOn(daemon, "importExternalWorkItems").mockImplementation(async () => {
-      order.push("sync");
-      return { items: [], synced: [] };
-    });
-    vi.spyOn(daemon, "listBacklog").mockImplementation(async (input) => {
-      order.push("list");
-      return {
-        items: allItems.slice(input.page * input.pageSize, (input.page + 1) * input.pageSize),
-        page: input.page,
-        pageSize: input.pageSize,
-        total: allItems.length,
-        hasNextPage: true,
-      };
-    });
+  it("shows the local backlog before the tracker pull answers", async () => {
+    let finish: (value: { items: []; synced: [] }) => void = () => {};
+    vi.spyOn(daemon, "importExternalWorkItems").mockImplementation(
+      () => new Promise((resolve) => (finish = resolve)),
+    );
 
     renderBacklog();
     await vi.waitFor(() => expect(rowTitles()).toHaveLength(PAGE_SIZE));
-    expect(order.slice(0, 2)).toEqual(["sync", "list"]);
+    expect(daemon.importExternalWorkItems).toHaveBeenCalledWith("warpforge");
+
+    const listed = vi.mocked(daemon.listBacklog).mock.calls.length;
+    finish({ items: [], synced: [] });
+    await vi.waitFor(() =>
+      expect(vi.mocked(daemon.listBacklog).mock.calls.length).toBeGreaterThan(listed),
+    );
+  });
+
+  it("syncs by rerunning the same pull, not a second request", async () => {
+    const syncSpy = vi.spyOn(daemon, "syncExternalWorkItems").mockResolvedValue([]);
+    renderBacklog();
+    await vi.waitFor(() => expect(daemon.importExternalWorkItems).toHaveBeenCalledTimes(1));
+
+    await userEvent.click(screen.getByRole("button", { name: /sync/i }));
+    await vi.waitFor(() => expect(daemon.importExternalWorkItems).toHaveBeenCalledTimes(2));
+    expect(syncSpy).not.toHaveBeenCalled();
   });
 
   it("does not re-import a project revisited within the staleness window", async () => {
