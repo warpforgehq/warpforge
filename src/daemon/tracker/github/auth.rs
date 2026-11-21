@@ -2,6 +2,7 @@
 //! token, cached so the keychain and `gh` are not asked on every request.
 
 use anyhow::{anyhow, bail, Context, Result};
+use std::collections::BTreeSet;
 use std::future::Future;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -38,7 +39,7 @@ static CACHE: Mutex<Option<Cached>> = Mutex::const_new(None);
 
 /// Tokens GitHub answered 401 for. Resolution skips them, so a revoked PAT
 /// falls through to the next source instead of being returned again.
-static REJECTED: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+static REJECTED: std::sync::Mutex<BTreeSet<String>> = std::sync::Mutex::new(BTreeSet::new());
 
 fn security_bin() -> Option<PathBuf> {
     cfg!(target_os = "macos").then(|| PathBuf::from("/usr/bin/security"))
@@ -57,7 +58,7 @@ pub(super) async fn resolve_token<K, G>(
     env: impl Fn(&str) -> Option<String>,
     keychain: K,
     gh: G,
-    rejected: &[String],
+    rejected: &BTreeSet<String>,
 ) -> Option<String>
 where
     K: Future<Output = Option<String>>,
@@ -147,13 +148,11 @@ pub async fn github_token() -> Option<String> {
     token
 }
 
-/// Forget `token` after GitHub rejected it. A different token cached since
-/// (another caller already re-resolved) is left alone.
+/// Forget `token` after GitHub rejected it; later resolution skips it until
+/// [`forget_token`]. A different token cached since is left alone.
 pub(super) async fn invalidate_token(token: &str) {
     if let Ok(mut rejected) = REJECTED.lock() {
-        if !rejected.iter().any(|known| known == token) {
-            rejected.push(token.to_string());
-        }
+        rejected.insert(token.to_string());
     }
     let mut guard = CACHE.lock().await;
     if guard.as_ref().is_some_and(|entry| entry.is_for(token)) {
@@ -267,7 +266,7 @@ mod tests {
                 asked.fetch_add(1, Ordering::SeqCst);
                 Some("gh".to_string())
             },
-            &[],
+            &BTreeSet::new(),
         )
         .await;
         assert_eq!(token.as_deref(), Some("env-gh"));
@@ -284,7 +283,7 @@ mod tests {
                 gh_asked.fetch_add(1, Ordering::SeqCst);
                 Some("gh".to_string())
             },
-            &[],
+            &BTreeSet::new(),
         )
         .await;
         assert_eq!(token.as_deref(), Some("keychain"));
@@ -297,7 +296,7 @@ mod tests {
             env_of(&[]),
             async { None },
             async { Some("gho_session".to_string()) },
-            &[],
+            &BTreeSet::new(),
         )
         .await;
         assert_eq!(token.as_deref(), Some("gho_session"));
@@ -306,7 +305,7 @@ mod tests {
                 env_of(&[]),
                 async { None },
                 async { Some(String::new()) },
-                &[]
+                &BTreeSet::new()
             )
             .await,
             None
@@ -319,7 +318,7 @@ mod tests {
             env_of(&[("GH_TOKEN", "revoked-env")]),
             async { Some("revoked-keychain".to_string()) },
             async { Some("gho_session".to_string()) },
-            &["revoked-env".to_string(), "revoked-keychain".to_string()],
+            &BTreeSet::from(["revoked-env".to_string(), "revoked-keychain".to_string()]),
         )
         .await;
         assert_eq!(token.as_deref(), Some("gho_session"));
