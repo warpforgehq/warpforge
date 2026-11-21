@@ -193,6 +193,9 @@ pub struct ImportExternalResult {
     pub synced: Vec<SyncedExternalItem>,
     #[serde(default)]
     pub warning: Option<String>,
+    /// Backlog items removed because their issue was deleted on the tracker.
+    #[serde(default)]
+    pub deleted_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

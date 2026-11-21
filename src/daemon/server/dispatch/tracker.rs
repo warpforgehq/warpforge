@@ -44,10 +44,15 @@ pub(super) async fn tracker_connect_github(
         tracker::connect_github(&token)
             .await
             .map_err(|e| rpc_err(format!("{e:#}")))?;
-    } else if tracker::github_login().await.is_none() && tracker::status().await.github.is_none() {
-        return Err(rpc_err(
-            "GitHub CLI is not authenticated. Run `gh auth login` first.".to_string(),
-        ));
+    } else {
+        // The user may have just run `gh auth login`; a cached "no
+        // credential" must not answer for it.
+        tracker::forget_token().await;
+        if tracker::github_token().await.is_none() {
+            return Err(rpc_err(
+                "GitHub CLI is not authenticated. Run `gh auth login` first.".to_string(),
+            ));
+        }
     }
     serde_json::to_value(tracker::status().await).map_err(|e| wire::RpcError {
         code: wire::ErrorCode::Internal,
@@ -116,9 +121,9 @@ pub(super) async fn tracker_project_sources(
     // Same availability rules the import path enforces, surfaced so
     // the UI can hide what a project cannot use. Linear: connected key
     // plus a mapped team (an unscoped pull would adopt every project's
-    // issues). GitHub: `gh` session whose repo resolves from this
-    // project dir. Runs on the request task — the `gh` spawn must not
-    // stall the actor loop.
+    // issues). GitHub: a credential, and a project dir whose `origin`
+    // resolves to a GitHub repo. Runs on the request task — the `git`
+    // spawn must not stall the actor loop.
     let status = tracker::status().await;
     let linear = status.linear.as_ref().is_some_and(|l| l.connected)
         && handle

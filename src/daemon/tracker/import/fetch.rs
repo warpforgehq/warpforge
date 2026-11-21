@@ -22,7 +22,7 @@ pub async fn fetch_importable(
     if wants("github") {
         let dir =
             repo_dir.ok_or_else(|| anyhow!("GitHub import needs a registered git repository"))?;
-        let issues = github::github_list_issues(dir, "open")
+        let issues = github::github_list_issues(dir)
             .await
             .context("GitHub import failed")?;
         out.push(("github".to_string(), issues));

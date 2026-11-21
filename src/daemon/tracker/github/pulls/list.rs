@@ -1,21 +1,18 @@
 //! The inbox listing: one GraphQL round trip per repo, filters applied
 //! daemon-side.
 
-#![allow(deprecated)]
-
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
 
-use super::super::cli::github_owner_repo;
-use super::super::graphql::github_query;
+use super::super::http::github_graphql;
+use super::super::repo::github_owner_repo;
 use super::{viewer_login, RawActor, RawLabel, RawNodes};
 use crate::daemon::tracker::rfc3339_secs;
 use warpforge_protocol as wire;
 
 /// The PR listing query. `states` is interpolated rather than passed as a
-/// variable for the same reason the issue query interpolates its state list:
-/// `gh` sends every `-f` as a string and the field takes a list of enums.
-/// Both values are ours, not a caller's, so there is nothing to inject.
+/// variable; both values are ours, not a caller's, so there is nothing to
+/// inject.
 pub(super) fn pulls_query(states: &str) -> String {
     format!(
         "query($owner: String!, $repo: String!, $first: Int!) {{ \
@@ -122,8 +119,7 @@ pub(crate) async fn github_pr_list(
     } else {
         "[OPEN]"
     };
-    let payload = github_query(
-        repo_dir,
+    let payload = github_graphql(
         &pulls_query(states),
         serde_json::json!({"owner": owner, "repo": repo, "first": limit.clamp(1, 100)}),
     )
@@ -133,7 +129,7 @@ pub(crate) async fn github_pr_list(
         .and_then(|value| value.as_array())
         .ok_or_else(|| anyhow!("GitHub pull request query returned no pull requests"))?;
     let viewer = if assigned_to_me {
-        Some(viewer_login(repo_dir).await?)
+        Some(viewer_login().await?)
     } else {
         None
     };

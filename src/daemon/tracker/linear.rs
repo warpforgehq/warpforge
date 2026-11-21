@@ -362,6 +362,7 @@ pub(super) async fn linear_list_issues(team_id: &str) -> Result<Vec<RemoteIssue>
                 assignee: node.assignee.and_then(|a| a.display_name.or(a.name)),
                 created_at: node.created_at.as_deref().map(rfc3339_secs).unwrap_or(0),
                 updated_at: node.updated_at.as_deref().map(rfc3339_secs).unwrap_or(0),
+                closed: false,
             }
         })
         .collect())
@@ -407,6 +408,7 @@ pub(super) async fn linear_list_issues_page(
                     assignee: node.assignee.and_then(|a| a.display_name.or(a.name)),
                     created_at: node.created_at.as_deref().map(rfc3339_secs).unwrap_or(0),
                     updated_at: node.updated_at.as_deref().map(rfc3339_secs).unwrap_or(0),
+                    closed: false,
                 }
             })
             .collect();

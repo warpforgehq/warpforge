@@ -83,11 +83,19 @@ impl Daemon {
                     });
                 let _ = reply.send(result);
             }
-            Command::TrackerSyncInputs { ids, reply } => {
+            Command::TrackerSyncInputs {
+                ids,
+                project,
+                reply,
+            } => {
                 let links: Vec<crate::daemon::store::TrackerLink> = match &self.store {
                     Some(store) if ids.is_empty() => {
                         let store = store.lock().unwrap_or_else(|e| e.into_inner());
-                        store.load_all_tracker_links().unwrap_or_default()
+                        let mut links = store.load_all_tracker_links().unwrap_or_default();
+                        if let Some(project) = &project {
+                            links.retain(|link| &link.project == project);
+                        }
+                        links
                     }
                     Some(store) => {
                         let store = store.lock().unwrap_or_else(|e| e.into_inner());

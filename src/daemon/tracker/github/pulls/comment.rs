@@ -1,14 +1,11 @@
 //! The writes: post a conversation comment, reply on a review thread, or start
 //! a new inline review thread on a diff line.
 
-#![allow(deprecated)]
-
 use anyhow::{anyhow, bail, Context, Result};
+use reqwest::Method;
 
-use super::super::cli::{body_file, gh, github_owner_repo};
-use super::super::graphql::{github_graphql, github_query};
-use super::super::{github_token, GITHUB_API};
-use crate::daemon::tracker::NETWORK_TIMEOUT;
+use super::super::http::{github_graphql, rest_json};
+use super::super::repo::github_owner_repo;
 
 /// A review-thread node id is GraphQL's opaque identifier. Only its shape is
 /// stable, and only that shape is checked: anything else the API sent is not
@@ -36,49 +33,16 @@ pub(crate) async fn github_pr_comment(
     }
     let reply = in_reply_to.trim();
     if !reply.is_empty() {
-        return post_review_reply(repo_dir, reply, body).await;
+        return post_review_reply(reply, body).await;
     }
     let (owner, repo) = github_owner_repo(repo_dir).await?;
-    if let Some(token) = github_token() {
-        let client = reqwest::Client::new();
-        let resp = client
-            .post(format!(
-                "{GITHUB_API}/repos/{owner}/{repo}/issues/{number}/comments"
-            ))
-            .header("Authorization", format!("Bearer {token}"))
-            .header("User-Agent", "warpforge")
-            .timeout(NETWORK_TIMEOUT)
-            .json(&serde_json::json!({"body": body}))
-            .send()
-            .await
-            .context("posting comment")?
-            .error_for_status()
-            .context("posting comment")?;
-        let value: serde_json::Value = resp.json().await.context("parsing comment response")?;
-        return value
-            .get("html_url")
-            .and_then(|url| url.as_str())
-            .map(str::to_string)
-            .ok_or_else(|| anyhow!("GitHub did not return a comment URL"));
-    }
-    // The body travels in a file: a comment is markdown of any length, and
-    // argv is neither long enough nor private.
-    let file = body_file(body)?;
-    let body_arg = format!("body=@{}", file.path().display());
-    let api_path = format!("repos/{owner}/{repo}/issues/{number}/comments");
-    let out = gh(
-        Some(repo_dir),
-        &["api", "-X", "POST", &api_path, "--field", &body_arg],
+    let value = rest_json(
+        Method::POST,
+        &format!("repos/{owner}/{repo}/issues/{number}/comments"),
+        Some(&serde_json::json!({ "body": body })),
     )
-    .await?;
-    if !out.status.success() {
-        bail!(
-            "comment failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
-    let value: serde_json::Value =
-        serde_json::from_slice(&out.stdout).context("parsing comment response")?;
+    .await
+    .context("posting comment")?;
     value
         .get("html_url")
         .and_then(|url| url.as_str())
@@ -86,14 +50,12 @@ pub(crate) async fn github_pr_comment(
         .ok_or_else(|| anyhow!("GitHub did not return a comment URL"))
 }
 
-/// A reply rides the GraphQL mutation: the REST API has no thread endpoint,
-/// and `gh` has no reply subcommand.
-async fn post_review_reply(repo_dir: &str, thread_id: &str, body: &str) -> Result<String> {
+/// A reply rides the GraphQL mutation: the REST API has no thread endpoint.
+async fn post_review_reply(thread_id: &str, body: &str) -> Result<String> {
     if !valid_thread_id(thread_id) {
         bail!("invalid review thread id");
     }
-    let payload = github_query(
-        repo_dir,
+    let payload = github_graphql(
         "mutation($threadId: ID!, $body: String!) { \
            addPullRequestReviewThreadReply(input: \
              { pullRequestReviewThreadId: $threadId, body: $body }) { \
@@ -202,9 +164,7 @@ pub(super) fn review_comment_input(
 /// shapes — a second query string would be the same mutation twice, and drift.
 /// A single-line comment simply does not supply them: GraphQL treats a
 /// nullable variable that was not provided as absent, so `startLine`/
-/// `startSide` are left off the input rather than sent as null. That also
-/// keeps the `gh` fallback honest, which has no way to spell a JSON null
-/// beyond `-F key=null`'s magic-value conversion.
+/// `startSide` are left off the input rather than sent as null.
 const ADD_REVIEW_THREAD: &str = "mutation($pullRequestId: ID!, $path: String!, \
    $line: Int!, $side: DiffSide!, $startLine: Int, $startSide: DiffSide, $body: String!) { \
      addPullRequestReviewThread(input: \
@@ -229,7 +189,7 @@ pub(crate) async fn github_pr_review_comment(
 ) -> Result<String> {
     let input = review_comment_input(path, line, side, body, start_line, start_side)?;
     let pull_id = pull_request_node_id(repo_dir, number).await?;
-    let payload = add_review_thread(repo_dir, &pull_id, &input).await?;
+    let payload = add_review_thread(&pull_id, &input).await?;
     let url = payload
         .pointer("/data/addPullRequestReviewThread/thread/comments/nodes/0/url")
         .and_then(|url| url.as_str())
@@ -247,8 +207,7 @@ pub(crate) async fn github_pr_review_comment(
 /// every client to make this call possible.
 async fn pull_request_node_id(repo_dir: &str, number: u64) -> Result<String> {
     let (owner, repo) = github_owner_repo(repo_dir).await?;
-    let payload = github_query(
-        repo_dir,
+    let payload = github_graphql(
         "query($owner: String!, $repo: String!, $number: Int!) { \
            repository(owner: $owner, name: $repo) { \
              pullRequest(number: $number) { id } } }",
@@ -260,79 +219,24 @@ async fn pull_request_node_id(repo_dir: &str, number: u64) -> Result<String> {
         .and_then(|id| id.as_str())
         .unwrap_or_default()
         .trim();
-    // Same opaque node-id shape a thread reply is checked against, and for the
-    // same reason: on the `gh` path this value becomes an argv token.
+    // Same opaque node-id shape a thread reply is checked against.
     if !valid_thread_id(id) {
         bail!("could not resolve pull request #{number}");
     }
     Ok(id.to_string())
 }
 
-/// The mutation is *not* routed through `github_query`: on the `gh` fallback
-/// that helper splices every variable into argv as `-F key=value`, and a
-/// comment body must never travel in argv (ADR-0010 invariant 3). So the PAT
-/// path sends the body as JSON, and the `gh` path passes `--field body=@<file>`
-/// — the same temp-file transport `github_pr_comment` uses for its REST write.
-/// Only `body` needs it, but keeping the whole call here avoids widening
-/// `github_query` for every other caller.
-async fn add_review_thread(
-    repo_dir: &str,
-    pull_id: &str,
-    input: &ReviewCommentInput,
-) -> Result<serde_json::Value> {
-    if let Some(token) = github_token() {
-        let mut vars = serde_json::json!({
-            "pullRequestId": pull_id,
-            "path": input.path,
-            "line": input.line,
-            "side": input.side,
-            "body": input.body,
-        });
-        if let (Some(start_line), Some(start_side)) = (input.start_line, input.start_side.as_ref())
-        {
-            vars["startLine"] = start_line.into();
-            vars["startSide"] = start_side.clone().into();
-        }
-        return github_graphql(&token, ADD_REVIEW_THREAD, vars).await;
+async fn add_review_thread(pull_id: &str, input: &ReviewCommentInput) -> Result<serde_json::Value> {
+    let mut vars = serde_json::json!({
+        "pullRequestId": pull_id,
+        "path": input.path,
+        "line": input.line,
+        "side": input.side,
+        "body": input.body,
+    });
+    if let (Some(start_line), Some(start_side)) = (input.start_line, input.start_side.as_ref()) {
+        vars["startLine"] = start_line.into();
+        vars["startSide"] = start_side.clone().into();
     }
-    let file = body_file(&input.body)?;
-    let query_arg = format!("query={ADD_REVIEW_THREAD}");
-    let id_arg = format!("pullRequestId={pull_id}");
-    let path_arg = format!("path={}", input.path);
-    let side_arg = format!("side={}", input.side);
-    // `-f` keeps a value a string verbatim; `-F` types it, which `line` needs to
-    // satisfy `Int!` and which is also what reads `body` out of the file.
-    let line_arg = format!("line={}", input.line);
-    let body_arg = format!("body=@{}", file.path().display());
-    let start_line_arg = input.start_line.map(|start| format!("startLine={start}"));
-    let start_side_arg = input
-        .start_side
-        .as_ref()
-        .map(|start_side| format!("startSide={start_side}"));
-    let mut args: Vec<&str> = vec![
-        "api", "graphql", "-f", &query_arg, "-f", &id_arg, "-f", &path_arg, "-f", &side_arg, "-F",
-        &line_arg,
-    ];
-    if let Some(arg) = &start_line_arg {
-        args.extend(["-F", arg]);
-    }
-    if let Some(arg) = &start_side_arg {
-        args.extend(["-f", arg]);
-    }
-    // The body goes last and only its *path* is an argument: the bytes stay in
-    // the temp file (ADR-0010 invariant 8).
-    args.extend(["-F", &body_arg]);
-    let out = gh(Some(repo_dir), &args).await?;
-    if !out.status.success() {
-        bail!(
-            "review comment failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
-    }
-    let payload: serde_json::Value =
-        serde_json::from_slice(&out.stdout).context("parsing GitHub GraphQL response")?;
-    if let Some(errors) = payload.get("errors") {
-        bail!("GitHub GraphQL error: {errors}");
-    }
-    Ok(payload)
+    github_graphql(ADD_REVIEW_THREAD, vars).await
 }

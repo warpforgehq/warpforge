@@ -694,6 +694,8 @@ pub enum Command {
     },
     TrackerSyncInputs {
         ids: Vec<String>,
+        /// With no `ids`: only this project's links, or every link when `None`.
+        project: Option<String>,
         /// Links, each github project's repo dir, each linear project's team id.
         #[allow(clippy::type_complexity)]
         reply: oneshot::Sender<(

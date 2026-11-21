@@ -144,6 +144,7 @@ mod tests {
                 assignee: None,
                 created_at: 7,
                 updated_at: 7,
+                closed: false,
             },
             RemoteIssue {
                 external_id: "#8".into(),
@@ -155,6 +156,7 @@ mod tests {
                 assignee: None,
                 created_at: 8,
                 updated_at: 8,
+                closed: false,
             },
         ];
         let page = build_external_page(

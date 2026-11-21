@@ -1,10 +1,10 @@
 //! Pull-request state of branch-owning tasks, for the sidebar row and the task
-//! header. A cache refreshed through `gh` on spawned tasks, never on the actor
+//! header. A cache refreshed from GitHub on spawned tasks, never on the actor
 //! loop; changes go out as `task.pullRequest` (docs/adr/0020).
 
 mod checks;
 mod comments;
-mod gh;
+mod github;
 mod removal;
 mod targets;
 pub(crate) use targets::targets;
@@ -26,7 +26,7 @@ use crate::daemon::actor::{Command, DaemonHandle, Event};
 use crate::daemon::task::Task;
 
 pub(crate) use checks::{check_name, check_state};
-pub(crate) use gh::Listed;
+pub(crate) use github::Listed;
 pub(crate) use removal::removal_blocker;
 
 /// How often open pull requests are re-checked once a client has asked.
@@ -79,7 +79,7 @@ pub struct PullWatch {
 impl Default for PullWatch {
     fn default() -> Self {
         #[cfg(not(test))]
-        let fetch: Fetcher = Arc::new(|target| Box::pin(gh::fetch(target)));
+        let fetch: Fetcher = Arc::new(|target| Box::pin(github::fetch(target)));
         #[cfg(test)]
         let fetch: Fetcher = Arc::new(|_| Box::pin(async { Ok(None) }));
         #[cfg(not(test))]
@@ -256,7 +256,7 @@ impl PullWatch {
         }
     }
 
-    /// Record one fetch. A failure keeps the last known state: `gh` missing,
+    /// Record one fetch. A failure keeps the last known state: no credential,
     /// signed out or offline must not flap a badge. Returns whether a forced
     /// refresh arrived meanwhile and the fetch should run again.
     fn settle(

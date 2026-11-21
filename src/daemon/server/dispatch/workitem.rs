@@ -49,6 +49,10 @@ pub(super) async fn work_item_create_external(
     })
 }
 
+/// Ceiling on a whole sync, on top of each call's own: a board must settle
+/// even when a tracker answers every call just inside its timeout.
+const SYNC_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
 pub(super) async fn work_item_sync_external(
     handle: &DaemonHandle,
     ids: Vec<String>,
@@ -57,10 +61,9 @@ pub(super) async fn work_item_sync_external(
     // than in the actor: the actor loop is single-threaded and awaits
     // its handlers inline, so a tracker call made inside it stalls
     // every project until the network answers.
-    let (links, repo_dirs, linear_teams) = handle.tracker_sync_inputs(ids).await;
-    // Bound whole sync so a hung `gh` never blocks the daemon/RPC forever (user saw infinite spinner).
+    let (links, repo_dirs, linear_teams) = handle.tracker_sync_inputs(ids, None).await;
     let (synced, deleted_ids) = tokio::time::timeout(
-        std::time::Duration::from_secs(30),
+        SYNC_TIMEOUT,
         tracker::fetch_links_status(&links, &repo_dirs, &linear_teams),
     )
     .await
@@ -110,15 +113,54 @@ pub(super) async fn work_item_import_external(
     )
     .await
     .map_err(|e| rpc_err(format!("{e:#}")))?;
-    let (items, synced) = handle
+    // Tracked issues the listing did not cover are looked up after adoption,
+    // so a row adopted just now is never mistaken for a missing one.
+    let listed: std::collections::HashSet<(String, String)> = fetched
+        .iter()
+        .flat_map(|(provider, issues)| {
+            issues
+                .iter()
+                .map(move |issue| (provider.clone(), issue.external_id.clone()))
+        })
+        .collect();
+    let listed_providers: Vec<String> = fetched.iter().map(|(p, _)| p.clone()).collect();
+    let (items, mut synced) = handle
         .tracker_adopt_imported(&project, fetched)
         .await
         .map_err(rpc_err)?;
+
+    let (links, repo_dirs, _) = handle
+        .tracker_sync_inputs(Vec::new(), Some(project.clone()))
+        .await;
+    let missing: Vec<_> = links
+        .into_iter()
+        .filter(|link| listed_providers.contains(&link.provider))
+        .filter(|link| !listed.contains(&(link.provider.clone(), link.external_id.clone())))
+        .collect();
+    let (refreshed, deleted_ids) =
+        tokio::time::timeout(SYNC_TIMEOUT, tracker::resolve_missing(&missing, &repo_dirs))
+            .await
+            .unwrap_or_else(|_| {
+                eprintln!(
+                    "[tracker] lookup of {} unlisted issues timed out",
+                    missing.len()
+                );
+                (Vec::new(), Vec::new())
+            });
+    synced.extend(refreshed.iter().map(|(_, item)| item.clone()));
+    handle
+        .tracker_persist_synced(refreshed.into_iter().map(|(link, _)| link).collect())
+        .await;
+    if !deleted_ids.is_empty() {
+        handle.tracker_delete_items(deleted_ids.clone()).await;
+    }
+
     let warning = tracker::take_last_board_warning();
     serde_json::to_value(wire::ImportExternalResult {
         items,
         synced,
         warning,
+        deleted_ids,
     })
     .map_err(|e| wire::RpcError {
         code: wire::ErrorCode::Internal,
