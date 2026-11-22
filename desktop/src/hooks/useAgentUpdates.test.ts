@@ -3,10 +3,11 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type PropsWithChildren } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { DetectedAgent } from "@/protocol";
+import type { AgentConfig, DetectedAgent } from "@/protocol";
+import { useAgentUpdateDismissal } from "@/store/agentUpdates";
 
 const { daemonState, detectAgents } = vi.hoisted(() => ({
-  daemonState: { connection: "connected" },
+  daemonState: { connection: "connected", snapshot: {} as { agents?: AgentConfig[] } },
   detectAgents: vi.fn<() => Promise<DetectedAgent[]>>(),
 }));
 
@@ -18,7 +19,7 @@ vi.mock("@/daemon", () => ({
   },
 }));
 
-import { agentUpdateCount, useAgentUpdates, useAgentUpdatesCount } from "./useAgentUpdates";
+import { pendingAgentUpdates, useAgentUpdates, useAgentUpdatesCount } from "./useAgentUpdates";
 
 const agent = (id: string, status: string): DetectedAgent => ({
   canManage: true,
@@ -40,19 +41,51 @@ function wrapper() {
 beforeEach(() => {
   vi.clearAllMocks();
   daemonState.connection = "connected";
+  daemonState.snapshot = {};
+  useAgentUpdateDismissal.setState({ dismissed: [] });
 });
 
-describe("agentUpdateCount", () => {
-  it("counts only the agents the daemon reports as behind", () => {
-    expect(agentUpdateCount(undefined)).toBe(0);
+describe("pendingAgentUpdates", () => {
+  const behind = (id: string) => ({ ...agent(id, "behind"), latestVersion: "2.0.0" });
+  const config = (id: string, enabled: boolean) =>
+    ({ id, displayName: id, acpCommand: id, enabled, models: [] }) satisfies AgentConfig;
+
+  it("lists only the agents the daemon reports as behind", () => {
+    expect(pendingAgentUpdates(undefined, undefined)).toEqual([]);
     expect(
-      agentUpdateCount([
-        agent("claude", "behind"),
-        agent("codex", "current"),
-        agent("copilot", "behind"),
-        agent("gemini", "missing"),
-      ]),
-    ).toBe(2);
+      pendingAgentUpdates(
+        [
+          behind("claude"),
+          agent("codex", "current"),
+          behind("copilot"),
+          agent("gemini", "missing"),
+        ],
+        undefined,
+      ),
+    ).toEqual(["claude@2.0.0", "copilot@2.0.0"]);
+  });
+
+  it("skips agents that are not enabled", () => {
+    expect(
+      pendingAgentUpdates(
+        [behind("claude"), behind("qwen"), behind("goose")],
+        [config("claude", true), config("qwen", false)],
+      ),
+    ).toEqual(["claude@2.0.0"]);
+  });
+});
+
+describe("useAgentUpdatesCount", () => {
+  it("hides a dismissed update until a newer version ships", async () => {
+    detectAgents.mockResolvedValue([{ ...agent("claude", "behind"), latestVersion: "2.0.0" }]);
+    useAgentUpdateDismissal.setState({ dismissed: ["claude@2.0.0"] });
+    const { result } = renderHook(() => useAgentUpdatesCount(), { wrapper: wrapper() });
+    await waitFor(() => expect(detectAgents).toHaveBeenCalled());
+    expect(result.current).toBe(0);
+
+    detectAgents.mockResolvedValue([{ ...agent("claude", "behind"), latestVersion: "2.1.0" }]);
+    const next = renderHook(() => useAgentUpdatesCount(), { wrapper: wrapper() });
+    await waitFor(() => expect(next.result.current).toBe(1));
   });
 });
 

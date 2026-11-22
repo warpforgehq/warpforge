@@ -9,7 +9,8 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 
 import { daemon } from "@/daemon";
-import type { DetectedAgent } from "@/protocol";
+import type { AgentConfig, DetectedAgent } from "@/protocol";
+import { useAgentUpdateDismissal } from "@/store/agentUpdates";
 
 /** Twice a day — an agent release is worth noticing, not worth chasing. */
 export const AGENT_UPDATE_POLL_MS = 12 * 60 * 60 * 1000;
@@ -31,14 +32,36 @@ export function useAgentUpdates(): UseQueryResult<DetectedAgent[]> {
   });
 }
 
-/** How many installed agents the daemon reports as out of date. */
-export function agentUpdateCount(agents: DetectedAgent[] | undefined): number {
-  if (!agents) return 0;
-  return agents.reduce((count, agent) => (agent.status === "behind" ? count + 1 : count), 0);
+/**
+ * `id@latestVersion` for each out-of-date agent the user has enabled. With no
+ * saved agent config yet, every agent counts.
+ * @param agents Detected agents, or undefined before the first detection.
+ * @param configured Saved agent config from the daemon snapshot.
+ * @returns One key per pending update.
+ */
+export function pendingAgentUpdates(
+  agents: DetectedAgent[] | undefined,
+  configured: AgentConfig[] | undefined,
+): string[] {
+  if (!agents) return [];
+  const enabled = configured ? new Set(configured.filter((a) => a.enabled).map((a) => a.id)) : null;
+  return agents
+    .filter((agent) => agent.status === "behind" && (!enabled || enabled.has(agent.id)))
+    .map((agent) => `${agent.id}@${agent.latestVersion ?? ""}`);
 }
 
-/** The badge's number. Same query key as `useAgentUpdates`, so every extra
- *  caller reads the cache instead of starting a second poll. */
+const getConfiguredAgents = () => daemon.getState().snapshot.agents;
+
+/** Pending updates for enabled agents, minus the ones the user dismissed.
+ *  Same query key as `useAgentUpdates`, so every extra caller reads the cache. */
+export function useAgentUpdateKeys(): string[] {
+  const agents = useAgentUpdates().data;
+  const configured = useSyncExternalStore(daemon.subscribe, getConfiguredAgents);
+  const dismissed = useAgentUpdateDismissal((state) => state.dismissed);
+  return pendingAgentUpdates(agents, configured).filter((key) => !dismissed.includes(key));
+}
+
+/** The badge's number. */
 export function useAgentUpdatesCount(): number {
-  return agentUpdateCount(useAgentUpdates().data);
+  return useAgentUpdateKeys().length;
 }
