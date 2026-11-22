@@ -4,4 +4,4 @@ label { display: block; margin-top: 12px; }
 input, select, textarea { font: inherit; }
 button { font: inherit; padding: 6px 14px; cursor: pointer; }
 .signal { margin-top: 16px; padding: 12px; background: #e8f5e9; border: 1px solid #66bb6a; }
-.hidden { display: none; }
+.hidden { display: none !important; }

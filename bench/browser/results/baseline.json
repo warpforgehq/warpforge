@@ -1,0 +1,703 @@
+{
+  "label": "baseline",
+  "est_tokens_note": "chars / 4, an estimate",
+  "scenarios": {
+    "covered": {
+      "runs": [
+        {
+          "calls": 7,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 3
+          },
+          "chars": 3804,
+          "est_tokens": 951,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 144,
+          "tasks": [
+            "t_7dddb75f"
+          ],
+          "file": "covered-baseline-1.jsonl",
+          "cost_usd": 0.0082,
+          "peak_context": 47716,
+          "passed": true
+        },
+        {
+          "calls": 6,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_click": 3
+          },
+          "chars": 3116,
+          "est_tokens": 779,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 176,
+          "tasks": [
+            "t_39bedff1"
+          ],
+          "file": "covered-baseline-2.jsonl",
+          "cost_usd": 0.008,
+          "peak_context": 47490,
+          "passed": true
+        },
+        {
+          "calls": 7,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 3
+          },
+          "chars": 3804,
+          "est_tokens": 951,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 169,
+          "tasks": [
+            "t_0fd946f1"
+          ],
+          "file": "covered-baseline-3.jsonl",
+          "cost_usd": 0.0079,
+          "peak_context": 47611,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 7,
+        "chars": 3804,
+        "est_tokens": 951,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 169,
+        "cost_usd": 0.008,
+        "peak_context": 47611,
+        "per_tool": {
+          "browser_click": 3,
+          "browser_navigate": 1,
+          "browser_snapshot": 3
+        },
+        "passed": "3/3"
+      }
+    },
+    "delayed": {
+      "runs": [
+        {
+          "calls": 5,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 1
+          },
+          "chars": 2331,
+          "est_tokens": 582,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 117,
+          "tasks": [
+            "t_e01fc46f"
+          ],
+          "file": "delayed-baseline-1.jsonl",
+          "cost_usd": 0.0077,
+          "peak_context": 47180,
+          "passed": true
+        },
+        {
+          "calls": 5,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 1
+          },
+          "chars": 2331,
+          "est_tokens": 582,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 96,
+          "tasks": [
+            "t_f1786a25"
+          ],
+          "file": "delayed-baseline-2.jsonl",
+          "cost_usd": 0.0077,
+          "peak_context": 47105,
+          "passed": true
+        },
+        {
+          "calls": 5,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 1
+          },
+          "chars": 2331,
+          "est_tokens": 582,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 111,
+          "tasks": [
+            "t_4147f884"
+          ],
+          "file": "delayed-baseline-3.jsonl",
+          "cost_usd": 0.0077,
+          "peak_context": 47129,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 5,
+        "chars": 2331,
+        "est_tokens": 582,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 111,
+        "cost_usd": 0.0077,
+        "peak_context": 47129,
+        "per_tool": {
+          "browser_click": 1,
+          "browser_navigate": 1,
+          "browser_snapshot": 3
+        },
+        "passed": "3/3"
+      }
+    },
+    "form": {
+      "runs": [
+        {
+          "calls": 15,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_type": 6,
+            "browser_click": 4,
+            "browser_screenshot": 1
+          },
+          "chars": 8169,
+          "est_tokens": 2042,
+          "screenshots": 1,
+          "image_bytes": 214647,
+          "errors": 0,
+          "ms": 350,
+          "tasks": [
+            "t_66d935e2"
+          ],
+          "file": "form-baseline-1.jsonl",
+          "cost_usd": 0.0091,
+          "peak_context": 50637,
+          "passed": true
+        },
+        {
+          "calls": 15,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_type": 6,
+            "browser_click": 4,
+            "browser_screenshot": 1
+          },
+          "chars": 8169,
+          "est_tokens": 2042,
+          "screenshots": 1,
+          "image_bytes": 214647,
+          "errors": 0,
+          "ms": 341,
+          "tasks": [
+            "t_53f2845f"
+          ],
+          "file": "form-baseline-2.jsonl",
+          "cost_usd": 0.0102,
+          "peak_context": 50659,
+          "passed": true
+        },
+        {
+          "calls": 16,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_type": 6,
+            "browser_click": 4,
+            "browser_console": 1,
+            "browser_screenshot": 1
+          },
+          "chars": 8513,
+          "est_tokens": 2128,
+          "screenshots": 1,
+          "image_bytes": 214647,
+          "errors": 0,
+          "ms": 372,
+          "tasks": [
+            "t_3d432477"
+          ],
+          "file": "form-baseline-3.jsonl",
+          "cost_usd": 0.0158,
+          "peak_context": 50587,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 15,
+        "chars": 8169,
+        "est_tokens": 2042,
+        "screenshots": 1,
+        "image_bytes": 214647,
+        "errors": 0,
+        "ms": 350,
+        "cost_usd": 0.0102,
+        "peak_context": 50637,
+        "per_tool": {
+          "browser_click": 4,
+          "browser_console": 0,
+          "browser_navigate": 1,
+          "browser_screenshot": 1,
+          "browser_snapshot": 3,
+          "browser_type": 6
+        },
+        "passed": "3/3"
+      }
+    },
+    "github": {
+      "runs": [
+        {
+          "calls": 10,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 5,
+            "browser_click": 3,
+            "browser_type": 1
+          },
+          "chars": 72043,
+          "est_tokens": 18010,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 7067,
+          "tasks": [
+            "t_a452af64"
+          ],
+          "file": "github-baseline-1.jsonl",
+          "cost_usd": 0.0129,
+          "peak_context": 70580
+        },
+        {
+          "calls": 9,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 4,
+            "browser_click": 3,
+            "browser_screenshot": 1
+          },
+          "chars": 53827,
+          "est_tokens": 13456,
+          "screenshots": 1,
+          "image_bytes": 297478,
+          "errors": 0,
+          "ms": 4625,
+          "tasks": [
+            "t_33a2dc56"
+          ],
+          "file": "github-baseline-2.jsonl",
+          "cost_usd": 0.0115,
+          "peak_context": 65298
+        },
+        {
+          "calls": 8,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 4,
+            "browser_click": 3
+          },
+          "chars": 54114,
+          "est_tokens": 13528,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 4016,
+          "tasks": [
+            "t_cf023fba"
+          ],
+          "file": "github-baseline-3.jsonl",
+          "cost_usd": 0.0111,
+          "peak_context": 64310
+        }
+      ],
+      "median": {
+        "calls": 9,
+        "chars": 54114,
+        "est_tokens": 13528,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 4625,
+        "cost_usd": 0.0115,
+        "peak_context": 65298,
+        "per_tool": {
+          "browser_click": 3,
+          "browser_navigate": 1,
+          "browser_screenshot": 0,
+          "browser_snapshot": 4,
+          "browser_type": 0
+        }
+      }
+    },
+    "infinite": {
+      "runs": [
+        {
+          "calls": 21,
+          "per_tool": {
+            "browser_navigate": 8,
+            "browser_snapshot": 5,
+            "browser_screenshot": 5,
+            "browser_type": 1,
+            "browser_console": 1,
+            "browser_click": 1
+          },
+          "chars": 8215,
+          "est_tokens": 2053,
+          "screenshots": 5,
+          "image_bytes": 603321,
+          "errors": 3,
+          "ms": 16639,
+          "tasks": [
+            "t_f585eb64"
+          ],
+          "file": "infinite-baseline-1.jsonl",
+          "cost_usd": 0.0162,
+          "peak_context": 60011,
+          "passed": true
+        },
+        {
+          "calls": 40,
+          "per_tool": {
+            "browser_navigate": 18,
+            "browser_snapshot": 13,
+            "browser_screenshot": 3,
+            "browser_click": 3,
+            "browser_console": 2,
+            "browser_type": 1
+          },
+          "chars": 17162,
+          "est_tokens": 4290,
+          "screenshots": 3,
+          "image_bytes": 426591,
+          "errors": 5,
+          "ms": 33216,
+          "tasks": [
+            "t_3f78567b"
+          ],
+          "file": "infinite-baseline-2.jsonl",
+          "cost_usd": 0.032,
+          "peak_context": 77024,
+          "passed": false
+        },
+        {
+          "calls": 28,
+          "per_tool": {
+            "browser_navigate": 13,
+            "browser_snapshot": 3,
+            "browser_console": 1,
+            "browser_screenshot": 9,
+            "browser_click": 2
+          },
+          "chars": 9831,
+          "est_tokens": 2457,
+          "screenshots": 9,
+          "image_bytes": 1350146,
+          "errors": 3,
+          "ms": 36810,
+          "tasks": [
+            "t_092a80c7"
+          ],
+          "file": "infinite-baseline-3.jsonl",
+          "cost_usd": 0.0214,
+          "peak_context": 68849,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 28,
+        "chars": 9831,
+        "est_tokens": 2457,
+        "screenshots": 5,
+        "image_bytes": 603321,
+        "errors": 3,
+        "ms": 33216,
+        "cost_usd": 0.0214,
+        "peak_context": 68849,
+        "per_tool": {
+          "browser_click": 2,
+          "browser_console": 1,
+          "browser_navigate": 13,
+          "browser_screenshot": 5,
+          "browser_snapshot": 5,
+          "browser_type": 1
+        },
+        "passed": "2/3"
+      }
+    },
+    "long": {
+      "runs": [
+        {
+          "calls": 4,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_click": 1
+          },
+          "chars": 20330,
+          "est_tokens": 5082,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 102,
+          "tasks": [
+            "t_60d8eb0f"
+          ],
+          "file": "long-baseline-1.jsonl",
+          "cost_usd": 0.0084,
+          "peak_context": 51145,
+          "passed": true
+        },
+        {
+          "calls": 4,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_click": 1
+          },
+          "chars": 20330,
+          "est_tokens": 5082,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 115,
+          "tasks": [
+            "t_4db23f18"
+          ],
+          "file": "long-baseline-2.jsonl",
+          "cost_usd": 0.0082,
+          "peak_context": 51200,
+          "passed": true
+        },
+        {
+          "calls": 4,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_click": 1
+          },
+          "chars": 20330,
+          "est_tokens": 5082,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 107,
+          "tasks": [
+            "t_4d90cf60"
+          ],
+          "file": "long-baseline-3.jsonl",
+          "cost_usd": 0.0019,
+          "peak_context": 51456,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 4,
+        "chars": 20330,
+        "est_tokens": 5082,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 107,
+        "cost_usd": 0.0082,
+        "peak_context": 51200,
+        "per_tool": {
+          "browser_click": 1,
+          "browser_navigate": 1,
+          "browser_snapshot": 2
+        },
+        "passed": "3/3"
+      }
+    },
+    "modal": {
+      "runs": [
+        {
+          "calls": 12,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 5,
+            "browser_click": 3,
+            "browser_type": 3
+          },
+          "chars": 33549,
+          "est_tokens": 8387,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 258,
+          "tasks": [
+            "t_c48d2c8b"
+          ],
+          "file": "modal-baseline-1.jsonl",
+          "cost_usd": 0.0112,
+          "peak_context": 59115,
+          "passed": true
+        },
+        {
+          "calls": 11,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 4,
+            "browser_click": 3,
+            "browser_type": 3
+          },
+          "chars": 27110,
+          "est_tokens": 6777,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 268,
+          "tasks": [
+            "t_64c25297"
+          ],
+          "file": "modal-baseline-2.jsonl",
+          "cost_usd": 0.0103,
+          "peak_context": 56681,
+          "passed": true
+        },
+        {
+          "calls": 11,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 4,
+            "browser_click": 3,
+            "browser_type": 3
+          },
+          "chars": 27110,
+          "est_tokens": 6777,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 260,
+          "tasks": [
+            "t_0e97381c"
+          ],
+          "file": "modal-baseline-3.jsonl",
+          "cost_usd": 0.0104,
+          "peak_context": 56664,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 11,
+        "chars": 27110,
+        "est_tokens": 6777,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 260,
+        "cost_usd": 0.0104,
+        "peak_context": 56681,
+        "per_tool": {
+          "browser_click": 3,
+          "browser_navigate": 1,
+          "browser_snapshot": 4,
+          "browser_type": 3
+        },
+        "passed": "3/3"
+      }
+    },
+    "wikipedia": {
+      "runs": [
+        {
+          "calls": 4,
+          "per_tool": {
+            "browser_navigate": 2,
+            "browser_snapshot": 1,
+            "browser_screenshot": 1
+          },
+          "chars": 25376,
+          "est_tokens": 6344,
+          "screenshots": 1,
+          "image_bytes": 746964,
+          "errors": 0,
+          "ms": 8752,
+          "tasks": [
+            "t_7fc56bba"
+          ],
+          "file": "wikipedia-baseline-1.jsonl",
+          "cost_usd": 0.0092,
+          "peak_context": 54995,
+          "passed": true
+        },
+        {
+          "calls": 7,
+          "per_tool": {
+            "browser_navigate": 3,
+            "browser_snapshot": 3,
+            "browser_screenshot": 1
+          },
+          "chars": 74383,
+          "est_tokens": 18595,
+          "screenshots": 1,
+          "image_bytes": 746964,
+          "errors": 0,
+          "ms": 168137,
+          "tasks": [
+            "t_e0e2a74e"
+          ],
+          "file": "wikipedia-baseline-2.jsonl",
+          "cost_usd": 0.011,
+          "peak_context": 62955,
+          "passed": true
+        },
+        {
+          "calls": 5,
+          "per_tool": {
+            "browser_navigate": 2,
+            "browser_snapshot": 2,
+            "browser_screenshot": 1
+          },
+          "chars": 49748,
+          "est_tokens": 12437,
+          "screenshots": 1,
+          "image_bytes": 599609,
+          "errors": 0,
+          "ms": 14166,
+          "tasks": [
+            "t_51ca1f3a"
+          ],
+          "file": "wikipedia-baseline-3.jsonl",
+          "cost_usd": 0.0101,
+          "peak_context": 62271,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 5,
+        "chars": 49748,
+        "est_tokens": 12437,
+        "screenshots": 1,
+        "image_bytes": 746964,
+        "errors": 0,
+        "ms": 14166,
+        "cost_usd": 0.0101,
+        "peak_context": 62271,
+        "per_tool": {
+          "browser_navigate": 2,
+          "browser_screenshot": 1,
+          "browser_snapshot": 2
+        },
+        "passed": "3/3"
+      }
+    }
+  }
+}
