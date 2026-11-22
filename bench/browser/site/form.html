@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Create your account</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<nav><a href="index.html">Fixtures</a></nav>
+<h1>Create your account</h1>
+<form id="signup" novalidate>
+  <label>Full name <input name="name" autocomplete="name"></label>
+  <label>Email <input name="email" type="email" autocomplete="email"></label>
+  <label>Password <input name="password" type="password" autocomplete="new-password"></label>
+  <label>Phone <input name="phone" type="tel" autocomplete="tel"></label>
+  <label>Country
+    <select name="country">
+      <option value="">Choose a country</option>
+      <option value="CA">Canada</option>
+      <option value="DE">Germany</option>
+      <option value="IE">Ireland</option>
+      <option value="UA">Ukraine</option>
+      <option value="GB">United Kingdom</option>
+      <option value="US">United States</option>
+    </select>
+  </label>
+  <fieldset>
+    <legend>Plan</legend>
+    <label><input type="radio" name="plan" value="free" checked> Free</label>
+    <label><input type="radio" name="plan" value="pro"> Pro</label>
+    <label><input type="radio" name="plan" value="team"> Team</label>
+  </fieldset>
+  <label>About you <textarea name="bio" rows="3"></textarea></label>
+  <label><input type="checkbox" name="newsletter"> Send me the monthly newsletter</label>
+  <label><input type="checkbox" name="terms"> I accept the terms of service</label>
+  <p><button type="submit">Create account</button></p>
+</form>
+<div id="errors" role="alert"></div>
+<div id="confirmation" class="signal hidden" role="status"></div>
+<script>
+var FIELDS = ['name', 'email', 'phone', 'country', 'plan', 'bio', 'newsletter', 'terms'];
+
+function valueOf(form, name) {
+  var el = form.elements[name];
+  if (el.type === 'checkbox') return el.checked ? 'yes' : 'no';
+  return (el.value || '').trim();
+}
+
+function checksum(text) {
+  var h = 5381;
+  for (var i = 0; i < text.length; i++) h = (Math.imul(h, 33) + text.charCodeAt(i)) >>> 0;
+  return h.toString(36).toUpperCase();
+}
+
+document.getElementById('signup').addEventListener('submit', function (event) {
+  event.preventDefault();
+  var form = event.target;
+  var problems = [];
+  if (!valueOf(form, 'name')) problems.push('Full name is required.');
+  if (valueOf(form, 'email').indexOf('@') < 1) problems.push('Email must be a valid address.');
+  if (valueOf(form, 'password').length < 8) problems.push('Password must be at least 8 characters.');
+  if (!valueOf(form, 'country')) problems.push('Choose a country.');
+  if (valueOf(form, 'terms') !== 'yes') problems.push('You must accept the terms of service.');
+  document.getElementById('errors').textContent = problems.join(' ');
+  var out = document.getElementById('confirmation');
+  if (problems.length) { out.classList.add('hidden'); return; }
+  var values = FIELDS.map(function (f) { return valueOf(form, f).toLowerCase(); });
+  var lines = FIELDS.map(function (f) { return f + ': ' + valueOf(form, f); });
+  out.textContent = 'Account created. ' + lines.join('; ') + '. Confirmation code: SGN-' + checksum(values.join('|'));
+  out.classList.remove('hidden');
+});
+</script>
+</body>
+</html>

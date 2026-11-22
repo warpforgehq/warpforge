@@ -47,6 +47,7 @@ use tokio::io::BufReader;
 
 mod agents;
 mod automations;
+pub(crate) mod bench_log;
 pub(crate) mod chat;
 mod daemon_client;
 mod format;

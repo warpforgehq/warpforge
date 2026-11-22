@@ -47,7 +47,10 @@ pub(crate) async fn tool_content(
             .and_then(|p| p.get("arguments"))
             .cloned()
             .unwrap_or_else(|| json!({}));
-        return browser::dispatch(name, client, parent_task, project, &args).await;
+        let started = std::time::Instant::now();
+        let result = browser::dispatch(name, client, parent_task, project, &args).await;
+        super::bench_log::record(parent_task, name, &args, &result, started);
+        return result;
     }
     if html::is_html_tool(name) {
         let args = params

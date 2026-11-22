@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Spring sale</title><link rel="stylesheet" href="style.css">
+<style>
+#consent { position: fixed; inset: 0; background: rgba(20,20,20,.6); display: flex; align-items: flex-end; }
+#consent .panel { background: #fff; width: 100%; padding: 20px 24px; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">Fixtures</a></nav>
+<h1>Spring sale</h1>
+<p>Everything in the garden range is 20% off this week. Members get an extra coupon on top of the sale price.</p>
+<p><button id="reveal">Reveal coupon</button></p>
+<div id="coupon" class="signal hidden" role="status"></div>
+<h2>Garden range</h2>
+<ul>
+  <li>Folding chair, oiled acacia — €48</li>
+  <li>Raised planter, galvanised steel — €65</li>
+  <li>Hose reel with 25 m hose — €39</li>
+  <li>Solar path lights, set of six — €27</li>
+</ul>
+
+<div id="consent" role="dialog" aria-label="Cookie consent">
+  <div class="panel">
+    <p>We use cookies to remember your basket and to measure how the site is used. You can accept all cookies or keep only the essential ones.</p>
+    <button id="accept">Accept all</button>
+    <button id="essential">Essential only</button>
+  </div>
+</div>
+<script>
+function dismiss() { document.getElementById('consent').remove(); }
+document.getElementById('accept').addEventListener('click', dismiss);
+document.getElementById('essential').addEventListener('click', dismiss);
+document.getElementById('reveal').addEventListener('click', function (e) {
+  var r = e.currentTarget.getBoundingClientRect();
+  var hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  // A real pointer lands on whatever is on top; synthetic events skip hit-testing.
+  if (hit !== e.currentTarget) return;
+  var out = document.getElementById('coupon');
+  out.textContent = 'Your coupon: CVR-8810-LYNX';
+  out.classList.remove('hidden');
+});
+</script>
+</body>
+</html>
