@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Parts catalogue</title><link rel="stylesheet" href="style.css">
+<style>
+#list li { padding: 18px 0; border-bottom: 1px solid #eee; }
+#more { padding: 16px 0; color: #777; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">Fixtures</a></nav>
+<h1>Parts catalogue</h1>
+<p>Scroll to load more parts. 100 parts in total.</p>
+<ol id="list"></ol>
+<p id="more" role="status">Scroll down to load more…</p>
+<script>
+var TOTAL = 100, PAGE = 20, shown = 0, loading = false;
+var kinds = ['Hex bolt', 'Washer', 'Hinge', 'Bracket', 'Spring', 'Gasket', 'Bearing', 'Clamp'];
+function part(n) {
+  var li = document.createElement('li');
+  li.id = 'item-' + n;
+  var text = 'Part #' + n + ' — ' + kinds[n % kinds.length] + ', ' + (4 + n % 9) + ' mm';
+  if (n === 57) text += ' — stock code INF-0057-MARTEN';
+  li.textContent = text;
+  return li;
+}
+function loadMore() {
+  if (loading || shown >= TOTAL) return;
+  loading = true;
+  var list = document.getElementById('list');
+  for (var i = 0; i < PAGE; i++) list.appendChild(part(++shown));
+  document.getElementById('more').textContent = shown >= TOTAL ? 'All parts loaded.' : 'Scroll down to load more…';
+  loading = false;
+}
+loadMore();
+window.addEventListener('scroll', function () {
+  if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 50) loadMore();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Flight search</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<nav><a href="index.html">Fixtures</a></nav>
+<h1>Flight search</h1>
+<p>Lisbon (LIS) to Krakow (KRK), 14 March, 1 adult.</p>
+<button id="load">Load results</button>
+<p id="spinner" class="hidden" role="status" aria-live="polite">Loading results…</p>
+<ol id="results"></ol>
+<div id="code" class="signal hidden" role="status"></div>
+<script>
+document.getElementById('load').addEventListener('click', function () {
+  var spinner = document.getElementById('spinner');
+  spinner.classList.remove('hidden');
+  document.getElementById('results').innerHTML = '';
+  setTimeout(function () {
+    spinner.classList.add('hidden');
+    document.getElementById('results').innerHTML = [
+      'TP 1290 · 06:40 → 12:55 · 1 stop (FRA) · €182',
+      'LO 434 · 09:15 → 14:20 · direct · €214',
+      'FR 7121 · 11:05 → 16:10 · direct · €96',
+      'LH 1167 · 13:30 → 20:45 · 1 stop (MUC) · €241',
+      'W6 3384 · 18:50 → 23:55 · direct · €88',
+    ].map(function (r) { return '<li>' + r + '</li>'; }).join('');
+    var code = document.getElementById('code');
+    code.textContent = 'Cheapest fare: W6 3384 at €88. Result code: DLY-2291-OTTER';
+    code.classList.remove('hidden');
+  }, 2500);
+});
+</script>
+</body>
+</html>

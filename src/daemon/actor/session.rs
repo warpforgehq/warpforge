@@ -275,6 +275,7 @@ impl Daemon {
         let is_orchestrator = mode.is_orchestrator();
         let mut mcp_servers = mcp_servers(task_id, project, mode);
         bridge_env(&mut env, task_id, project, mode);
+        crate::mcp::bench_log::forward(&mut mcp_servers);
         self.chat_bridge(task_id, &mut env, &mut mcp_servers);
         self.smith_thread_env(task_id, agent, &mut env);
         // A resume keeps whatever mode the person chose; only a fresh start

@@ -13,6 +13,13 @@ services:
     #   url: http://localhost:${web.port}/api/health
     #   interval: 5s
 
+  # Static fixture pages for the agent browser benchmark (bench/browser/README.md).
+  browser-bench:
+    command: python3 -u -m http.server $PORT --bind 127.0.0.1 --directory bench/browser/site
+    port: 4390
+    portFallback: auto
+    readyPattern: Serving HTTP
+
 # agentTemplates:
 #   dev:
 #     command: claude

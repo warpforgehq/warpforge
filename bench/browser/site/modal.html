@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Your account — orders</title><link rel="stylesheet" href="style.css">
+<style>
+#backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
+#dialog { background: #fff; padding: 20px 24px; width: 420px; position: relative; }
+#close { position: absolute; top: 8px; right: 8px; padding: 2px 8px; }
+table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+td, th { border-bottom: 1px solid #ddd; padding: 4px 6px; text-align: left; }
+</style>
+</head>
+<body>
+<nav><a href="index.html">Fixtures</a></nav>
+<h1>Your account</h1>
+<p>Shipping address: <span id="address">12 Old Quay, Portsmouth, PO1 2AB, United Kingdom</span> <button id="edit">Edit shipping address</button></p>
+<div id="updated" class="signal hidden" role="status"></div>
+<h2>Order history</h2>
+<table><thead><tr><th>Order</th><th>Date</th><th>Item</th><th>Status</th><th></th></tr></thead><tbody id="orders"></tbody></table>
+<h2>Saved payment methods</h2>
+<ul id="cards"></ul>
+
+<div id="backdrop" class="hidden">
+  <div id="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <button id="close" aria-label="Close">×</button>
+    <h2 id="dialog-title">Edit shipping address</h2>
+    <form id="address-form" novalidate>
+      <label>Street <input name="street"></label>
+      <label>City <input name="city"></label>
+      <label>Postcode <input name="postcode"></label>
+      <label>Country
+        <select name="country">
+          <option>United Kingdom</option><option>Ireland</option><option>France</option><option>Netherlands</option>
+        </select>
+      </label>
+      <label><input type="checkbox" name="default"> Use as default address</label>
+      <p><button type="submit">Save address</button></p>
+    </form>
+    <div id="saved" role="status"></div>
+  </div>
+</div>
+<script>
+var items = ['Desk lamp', 'Notebook set', 'USB-C cable', 'Coffee grinder', 'Rain jacket', 'Bike light', 'Wool socks', 'Tea sampler', 'Phone stand', 'Backpack'];
+var statuses = ['Delivered', 'Delivered', 'Returned', 'Delivered', 'Refunded'];
+var rows = '';
+for (var i = 0; i < 40; i++) {
+  var day = String(1 + (i * 7) % 28).padStart(2, '0');
+  var month = String(1 + Math.floor(i / 4) % 12).padStart(2, '0');
+  rows += '<tr><td>#' + (48210 - i * 13) + '</td><td>2026-' + month + '-' + day + '</td><td>' + items[i % items.length] +
+    '</td><td>' + statuses[i % statuses.length] + '</td><td><a href="#order-' + i + '">View order</a> <button type="button">Buy again</button></td></tr>';
+}
+document.getElementById('orders').innerHTML = rows;
+document.getElementById('cards').innerHTML = ['Visa ending 4242', 'Mastercard ending 5100', 'Amex ending 0005']
+  .map(function (c) { return '<li>' + c + ' <button type="button">Remove</button></li>'; }).join('');
+
+var backdrop = document.getElementById('backdrop');
+var pending = null;
+function closeDialog() {
+  if (backdrop.classList.contains('hidden')) return;
+  backdrop.classList.add('hidden');
+  if (pending) {
+    document.getElementById('address').textContent = pending;
+    var out = document.getElementById('updated');
+    out.textContent = 'Shipping address updated to ' + pending + '. Reference: MOD-5170-HERON';
+    out.classList.remove('hidden');
+  }
+}
+document.getElementById('edit').addEventListener('click', function () {
+  pending = null;
+  document.getElementById('saved').textContent = '';
+  backdrop.classList.remove('hidden');
+});
+document.getElementById('close').addEventListener('click', closeDialog);
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDialog(); });
+document.getElementById('address-form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var f = e.target;
+  var parts = ['street', 'city', 'postcode'].map(function (n) { return f.elements[n].value.trim(); });
+  if (parts.some(function (p) { return !p; })) {
+    document.getElementById('saved').textContent = 'Street, city and postcode are required.';
+    return;
+  }
+  pending = parts.join(', ') + ', ' + f.elements.country.value;
+  document.getElementById('saved').textContent = 'Saved. Close this dialog to return to your account.';
+});
+</script>
+</body>
+</html>

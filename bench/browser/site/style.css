@@ -1,0 +1,7 @@
+body { font: 16px/1.5 system-ui, sans-serif; max-width: 760px; margin: 0 auto; padding: 24px; color: #222; }
+nav a { margin-right: 12px; }
+label { display: block; margin-top: 12px; }
+input, select, textarea { font: inherit; }
+button { font: inherit; padding: 6px 14px; cursor: pointer; }
+.signal { margin-top: 16px; padding: 12px; background: #e8f5e9; border: 1px solid #66bb6a; }
+.hidden { display: none; }

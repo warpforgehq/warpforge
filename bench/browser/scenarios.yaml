@@ -1,0 +1,86 @@
+# Agent browser benchmark scenarios. `{base}` is the browser-bench service URL
+# from list_runtime, e.g. http://127.0.0.1:4400. `expect.contains` scenarios pass
+# when the agent's final answer contains every listed string; `expect.check`
+# scenarios are graded by hand against the live site.
+
+- id: long
+  feature: interactive-only snapshot, paging/truncation
+  url: "{base}/long.html"
+  prompt: >-
+    Open {base}/long.html in the browser. Somewhere on the page there is a
+    button that prepares the downloadable report. Press it and report the
+    download code it shows.
+  expect:
+    contains: ["RPT-7731-KESTREL"]
+
+- id: form
+  feature: batch, diff-after-action
+  url: "{base}/form.html"
+  prompt: >-
+    Open {base}/form.html in the browser and create an account with: full name
+    "Ada Lovelace", email "ada@example.com", password "Analytical1843", phone
+    "+44 20 7946 0018", country United Kingdom, plan Team, about you "Writes
+    programs for the Analytical Engine.", subscribe to the newsletter, accept the
+    terms of service. Submit the form and report the confirmation code.
+  expect:
+    contains: ["SGN-V9BO62"]
+
+- id: modal
+  feature: scoped snapshot, press
+  url: "{base}/modal.html"
+  prompt: >-
+    Open {base}/modal.html in the browser. Change the shipping address to
+    221B Baker Street, London, NW1 6XE, United Kingdom, save it, close the
+    dialog, and report the reference number shown on the account page.
+  expect:
+    contains: ["MOD-5170-HERON"]
+
+- id: delayed
+  feature: wait
+  url: "{base}/delayed.html"
+  prompt: >-
+    Open {base}/delayed.html in the browser, load the flight results and report
+    the result code shown once they have loaded.
+  expect:
+    contains: ["DLY-2291-OTTER"]
+
+- id: covered
+  feature: honest click failure
+  url: "{base}/covered.html"
+  prompt: >-
+    Open {base}/covered.html in the browser, reveal the members' coupon and
+    report the coupon code.
+  expect:
+    contains: ["CVR-8810-LYNX"]
+
+- id: infinite
+  feature: scroll
+  url: "{base}/infinite.html"
+  prompt: >-
+    Open {base}/infinite.html in the browser and report the stock code of
+    part #57. The list loads more parts as you scroll.
+  expect:
+    contains: ["INF-0057-MARTEN"]
+
+- id: wikipedia
+  feature: long real page, read a section
+  url: "https://en.wikipedia.org/wiki/Rosetta_Stone"
+  prompt: >-
+    Open https://en.wikipedia.org/wiki/Rosetta_Stone in the browser. From the
+    "Rediscovery" section, report the full name of the French officer credited
+    with finding the stone.
+  expect:
+    contains: ["Bouchard"]
+
+- id: github
+  feature: real SPA, filter UI
+  url: "https://github.com/vercel-labs/agent-browser/issues"
+  prompt: >-
+    Open https://github.com/vercel-labs/agent-browser/issues in the browser,
+    filter the open issues by the label "area:snapshot" using the page's own
+    filter controls, and report the title of the newest matching issue.
+  expect:
+    check: >-
+      Title equals the first result of
+      https://github.com/vercel-labs/agent-browser/issues?q=is%3Aissue%20state%3Aopen%20label%3Aarea%3Asnapshot%20sort%3Acreated-desc
+      at the time of the run.
