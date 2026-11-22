@@ -45,7 +45,9 @@ does not land in `ms`.
 For each scenario, start a new task on the agent being measured, with `{base}`
 replaced in the scenario's `prompt`, and let it finish. Append to every prompt:
 "Use only the browser_* tools; do not read files, run shell commands or fetch
-URLs any other way." The answers are in `site/` in this repo, so a run with a
+URLs any other way. Stay on the page you were given and pages it links to. If you
+have not finished after 40 browser calls, stop and answer FAILED." A run that
+hits the cap counts as failed. The answers are in `site/` in this repo, so a run with a
 correct answer and almost no browser calls read them from disk — discard it.
 Use a fresh task per run
 so its log lines and its usage carry their own task id. Then cut that run out of
