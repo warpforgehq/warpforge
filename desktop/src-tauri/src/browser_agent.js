@@ -156,7 +156,7 @@
   }
   function textOf(el) {
     const inner = el.innerText;
-    return typeof inner === "string" ? inner : el.textContent;
+    return typeof inner === "string" ? inner : el.textContent ?? "";
   }
   function nameOf(el) {
     const label = labelText(el);
@@ -329,11 +329,8 @@
   function hasBlockChild(el) {
     return Array.from(el.children).some(isBlockish);
   }
-  function cellText(cell) {
-    return textOf(cell) ?? "";
-  }
   function rowText(row) {
-    return Array.from(row.children).filter((cell) => /^T[DH]$/.test(cell.tagName)).map(cellText).join(" | ");
+    return Array.from(row.children).filter((cell) => /^T[DH]$/.test(cell.tagName)).map(textOf).join(" | ");
   }
   function resolveScope(scope) {
     if (REF.test(scope))
@@ -682,7 +679,7 @@
     const input = el;
     if (el.tagName !== "INPUT" || !input.form)
       return;
-    if (["checkbox", "radio", "submit", "button", "reset"].includes(input.type))
+    if (isCheckable(el) || isButtonInput(input))
       return;
     const form = input.form;
     if (typeof form.requestSubmit === "function")
@@ -712,12 +709,8 @@
       keyEvent(target, "keypress", def);
     keyEvent(target, "keyup", def);
     let note = "";
-    if (proceed && name === "Tab") {
-      const focused = moveFocus(false);
-      if (focused)
-        note = `focus moved to [${refFor(focused)}]`;
-    } else if (proceed && name === "Shift+Tab") {
-      const focused = moveFocus(true);
+    if (proceed && (name === "Tab" || name === "Shift+Tab")) {
+      const focused = moveFocus(name === "Shift+Tab");
       if (focused)
         note = `focus moved to [${refFor(focused)}]`;
     } else if (proceed && name === "Enter") {
@@ -945,7 +938,7 @@
   }
   function liveWith(text) {
     for (const el of Array.from(document.querySelectorAll(LIVE_SELECTOR))) {
-      if (liveKind(el) && rendered(el) && (textOf(el) ?? "").includes(text))
+      if (liveKind(el) && rendered(el) && textOf(el).includes(text))
         return el;
     }
     return null;
@@ -989,7 +982,7 @@
     return shownText(body).includes(text) ? body : null;
   }
   function describe2(el) {
-    const raw = textOf(el) ?? "";
+    const raw = textOf(el);
     const cap = raw.length > LIVE_CAP ? LIVE_CAP : Infinity;
     return `${quote(clean(raw, cap))} [${refFor(el)}]`;
   }

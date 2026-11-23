@@ -1,6 +1,6 @@
 import { dispatch } from "./builtins";
 import { capturePage, markPage, pageChanges } from "./changes";
-import { hidden, isCheckable } from "./outline";
+import { hidden, isButtonInput, isCheckable } from "./outline";
 import { lookup, missing, refFor } from "./refs";
 
 interface KeyDef {
@@ -71,7 +71,7 @@ function moveFocus(back: boolean): HTMLElement | null {
 function submit(el: HTMLElement): void {
   const input = el as HTMLInputElement;
   if (el.tagName !== "INPUT" || !input.form) return;
-  if (["checkbox", "radio", "submit", "button", "reset"].includes(input.type)) return;
+  if (isCheckable(el) || isButtonInput(input)) return;
   const form = input.form;
   if (typeof form.requestSubmit === "function") form.requestSubmit();
   else form.submit();
@@ -98,11 +98,8 @@ export function press(
   if (def.key === "Enter" || def.key === " ") keyEvent(target, "keypress", def);
   keyEvent(target, "keyup", def);
   let note = "";
-  if (proceed && name === "Tab") {
-    const focused = moveFocus(false);
-    if (focused) note = `focus moved to [${refFor(focused)}]`;
-  } else if (proceed && name === "Shift+Tab") {
-    const focused = moveFocus(true);
+  if (proceed && (name === "Tab" || name === "Shift+Tab")) {
+    const focused = moveFocus(name === "Shift+Tab");
     if (focused) note = `focus moved to [${refFor(focused)}]`;
   } else if (proceed && name === "Enter") {
     submit(target);

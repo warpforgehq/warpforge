@@ -42,7 +42,11 @@ const GROUPS: Record<string, string> = {
 };
 const LIVE_ROLES = new Set(["status", "alert", "log"]);
 
-/** The word to print for a live region, or null when the element is not one. */
+/**
+ * The word to print for a live region.
+ * @param el - The element to classify.
+ * @returns The region kind, or null when the element is not a live region.
+ */
 export function liveKind(el: Element): string | null {
   const role = el.getAttribute("role");
   if (role && LIVE_ROLES.has(role)) return role;
@@ -71,7 +75,11 @@ export function hidden(el: Element): boolean {
   return style.display === "none" || style.visibility === "hidden";
 }
 
-/** Whether `el` is actually rendered, including hidden ancestors. */
+/**
+ * Whether `el` is actually rendered, including hidden ancestors.
+ * @param el - The element to test.
+ * @returns True when the element and its ancestors are displayed.
+ */
 export function rendered(el: Element): boolean {
   const maybe = el as Element & { checkVisibility?: () => boolean };
   if (typeof maybe.checkVisibility === "function") return maybe.checkVisibility();
@@ -106,10 +114,14 @@ export function labelText(el: Element): string {
   return "";
 }
 
-/** The rendered text of `el`, falling back to its textContent where innerText is missing. */
-export function textOf(el: Element): string | null {
+/**
+ * The rendered text of `el`, falling back to its textContent where innerText is missing.
+ * @param el - The element to read.
+ * @returns The text, empty when there is none.
+ */
+export function textOf(el: Element): string {
   const inner = (el as HTMLElement).innerText;
-  return typeof inner === "string" ? inner : el.textContent;
+  return typeof inner === "string" ? inner : (el.textContent ?? "");
 }
 
 export function nameOf(el: HTMLElement): string {
@@ -205,6 +217,6 @@ export function isCheckable(el: HTMLElement): boolean {
   return el.tagName === "INPUT" && (type === "checkbox" || type === "radio");
 }
 
-function isButtonInput(input: HTMLInputElement): boolean {
+export function isButtonInput(input: HTMLInputElement): boolean {
   return ["submit", "button", "reset"].includes(input.type);
 }

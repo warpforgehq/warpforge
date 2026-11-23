@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
 
-use crate::mcp::handle::browser::action::PRESS_KEYS;
+use crate::mcp::handle::PRESS_KEYS;
 
 const SCOPE: &str = "Acts in the project's in-app browser: the tab the user sees in \
     Warpforge, signed in as the user. The project's own services (list_runtime) are \
