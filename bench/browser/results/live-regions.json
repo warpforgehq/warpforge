@@ -1,0 +1,236 @@
+{
+  "label": "live-regions",
+  "est_tokens_note": "chars / 4, an estimate",
+  "scenarios": {
+    "form": {
+      "runs": [
+        {
+          "calls": 14,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_type": 6,
+            "browser_click": 4
+          },
+          "chars": 7541,
+          "est_tokens": 1885,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 10557,
+          "tasks": [
+            "t_807e821a"
+          ],
+          "file": "form-live-regions-1.jsonl"
+        },
+        {
+          "calls": 14,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_type": 6,
+            "browser_click": 4
+          },
+          "chars": 8015,
+          "est_tokens": 2003,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 324,
+          "tasks": [
+            "t_0e3605d3"
+          ],
+          "file": "form-live-regions-2.jsonl"
+        },
+        {
+          "calls": 14,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_type": 6,
+            "browser_click": 4
+          },
+          "chars": 7541,
+          "est_tokens": 1885,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 226,
+          "tasks": [
+            "t_c3f8d2c6"
+          ],
+          "file": "form-live-regions-3.jsonl"
+        }
+      ],
+      "median": {
+        "calls": 14,
+        "chars": 7541,
+        "est_tokens": 1885,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 324,
+        "cost_usd": null,
+        "peak_context": null,
+        "per_tool": {
+          "browser_click": 4,
+          "browser_navigate": 1,
+          "browser_snapshot": 3,
+          "browser_type": 6
+        }
+      }
+    },
+    "long": {
+      "runs": [
+        {
+          "calls": 4,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_click": 1
+          },
+          "chars": 5254,
+          "est_tokens": 1313,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 95,
+          "tasks": [
+            "t_c69e3dab"
+          ],
+          "file": "long-live-regions-1.jsonl"
+        },
+        {
+          "calls": 4,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_click": 1
+          },
+          "chars": 12898,
+          "est_tokens": 3224,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 99,
+          "tasks": [
+            "t_66546c00"
+          ],
+          "file": "long-live-regions-2.jsonl"
+        },
+        {
+          "calls": 4,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_click": 1
+          },
+          "chars": 12898,
+          "est_tokens": 3224,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 86,
+          "tasks": [
+            "t_11c5c2dd"
+          ],
+          "file": "long-live-regions-3.jsonl"
+        }
+      ],
+      "median": {
+        "calls": 4,
+        "chars": 12898,
+        "est_tokens": 3224,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 95,
+        "cost_usd": null,
+        "peak_context": null,
+        "per_tool": {
+          "browser_click": 1,
+          "browser_navigate": 1,
+          "browser_snapshot": 2
+        }
+      }
+    },
+    "modal": {
+      "runs": [
+        {
+          "calls": 15,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 7,
+            "browser_click": 3,
+            "browser_type": 4
+          },
+          "chars": 23247,
+          "est_tokens": 5811,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 410,
+          "tasks": [
+            "t_54942902"
+          ],
+          "file": "modal-live-regions-1.jsonl"
+        },
+        {
+          "calls": 12,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 5,
+            "browser_click": 3,
+            "browser_type": 3
+          },
+          "chars": 16464,
+          "est_tokens": 4116,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 4755,
+          "tasks": [
+            "t_465d5432"
+          ],
+          "file": "modal-live-regions-2.jsonl"
+        },
+        {
+          "calls": 12,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 5,
+            "browser_click": 3,
+            "browser_type": 3
+          },
+          "chars": 19340,
+          "est_tokens": 4835,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 238,
+          "tasks": [
+            "t_53aaecfd"
+          ],
+          "file": "modal-live-regions-3.jsonl"
+        }
+      ],
+      "median": {
+        "calls": 12,
+        "chars": 19340,
+        "est_tokens": 4835,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 410,
+        "cost_usd": null,
+        "peak_context": null,
+        "per_tool": {
+          "browser_click": 3,
+          "browser_navigate": 1,
+          "browser_snapshot": 5,
+          "browser_type": 3
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,709 @@
+{
+  "label": "snapshot-modes",
+  "est_tokens_note": "chars / 4, an estimate",
+  "scenarios": {
+    "covered": {
+      "runs": [
+        {
+          "calls": 7,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 3
+          },
+          "chars": 3854,
+          "est_tokens": 963,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 126,
+          "tasks": [
+            "t_19872153"
+          ],
+          "file": "covered-snapshot-modes-1.jsonl",
+          "cost_usd": 0.0085,
+          "peak_context": 47905,
+          "passed": true
+        },
+        {
+          "calls": 14,
+          "per_tool": {
+            "browser_navigate": 2,
+            "browser_snapshot": 7,
+            "browser_click": 5
+          },
+          "chars": 7507,
+          "est_tokens": 1876,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 416,
+          "tasks": [
+            "t_2edcdff2"
+          ],
+          "file": "covered-snapshot-modes-2.jsonl",
+          "cost_usd": 0.01,
+          "peak_context": 49860,
+          "passed": true
+        },
+        {
+          "calls": 6,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 2
+          },
+          "chars": 3425,
+          "est_tokens": 856,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 142,
+          "tasks": [
+            "t_72f32764"
+          ],
+          "file": "covered-snapshot-modes-3.jsonl",
+          "cost_usd": 0.0073,
+          "peak_context": 47810,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 7,
+        "chars": 3854,
+        "est_tokens": 963,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 142,
+        "cost_usd": 0.0085,
+        "peak_context": 47905,
+        "per_tool": {
+          "browser_click": 3,
+          "browser_navigate": 1,
+          "browser_snapshot": 3
+        },
+        "passed": "3/3"
+      }
+    },
+    "delayed": {
+      "runs": [
+        {
+          "calls": 4,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_click": 1
+          },
+          "chars": 1813,
+          "est_tokens": 453,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 88,
+          "tasks": [
+            "t_139e79d2"
+          ],
+          "file": "delayed-snapshot-modes-1.jsonl",
+          "cost_usd": 0.0075,
+          "peak_context": 47061,
+          "passed": true
+        },
+        {
+          "calls": 5,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 1
+          },
+          "chars": 2305,
+          "est_tokens": 576,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 97,
+          "tasks": [
+            "t_d3998f53"
+          ],
+          "file": "delayed-snapshot-modes-2.jsonl",
+          "cost_usd": 0.0078,
+          "peak_context": 47368,
+          "passed": true
+        },
+        {
+          "calls": 5,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 1
+          },
+          "chars": 2305,
+          "est_tokens": 576,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 125,
+          "tasks": [
+            "t_9360451f"
+          ],
+          "file": "delayed-snapshot-modes-3.jsonl",
+          "cost_usd": 0.0078,
+          "peak_context": 47312,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 5,
+        "chars": 2305,
+        "est_tokens": 576,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 97,
+        "cost_usd": 0.0078,
+        "peak_context": 47312,
+        "per_tool": {
+          "browser_click": 1,
+          "browser_navigate": 1,
+          "browser_snapshot": 3
+        },
+        "passed": "3/3"
+      }
+    },
+    "form": {
+      "runs": [
+        {
+          "calls": 35,
+          "per_tool": {
+            "browser_navigate": 3,
+            "browser_snapshot": 7,
+            "browser_type": 13,
+            "browser_click": 9,
+            "browser_screenshot": 2,
+            "browser_console": 1
+          },
+          "chars": 17664,
+          "est_tokens": 4416,
+          "screenshots": 2,
+          "image_bytes": 368568,
+          "errors": 0,
+          "ms": 739,
+          "tasks": [
+            "t_11d09954"
+          ],
+          "file": "form-snapshot-modes-1.jsonl",
+          "cost_usd": 0.0147,
+          "peak_context": 58655,
+          "passed": true
+        },
+        {
+          "calls": 15,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_type": 6,
+            "browser_click": 4,
+            "browser_screenshot": 1
+          },
+          "chars": 8131,
+          "est_tokens": 2032,
+          "screenshots": 1,
+          "image_bytes": 216483,
+          "errors": 0,
+          "ms": 327,
+          "tasks": [
+            "t_c7d7235d"
+          ],
+          "file": "form-snapshot-modes-2.jsonl",
+          "cost_usd": 0.0094,
+          "peak_context": 50837,
+          "passed": true
+        },
+        {
+          "calls": 37,
+          "per_tool": {
+            "browser_navigate": 6,
+            "browser_snapshot": 6,
+            "browser_type": 12,
+            "browser_click": 8,
+            "browser_screenshot": 4,
+            "browser_console": 1
+          },
+          "chars": 17408,
+          "est_tokens": 4352,
+          "screenshots": 4,
+          "image_bytes": 248665,
+          "errors": 1,
+          "ms": 8752,
+          "tasks": [
+            "t_359e9bac"
+          ],
+          "file": "form-snapshot-modes-3.jsonl",
+          "cost_usd": 0.0186,
+          "peak_context": 59939,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 35,
+        "chars": 17408,
+        "est_tokens": 4352,
+        "screenshots": 2,
+        "image_bytes": 248665,
+        "errors": 0,
+        "ms": 739,
+        "cost_usd": 0.0147,
+        "peak_context": 58655,
+        "per_tool": {
+          "browser_click": 8,
+          "browser_console": 1,
+          "browser_navigate": 3,
+          "browser_screenshot": 2,
+          "browser_snapshot": 6,
+          "browser_type": 12
+        },
+        "passed": "3/3"
+      }
+    },
+    "github": {
+      "runs": [
+        {
+          "calls": 7,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 4,
+            "browser_type": 1,
+            "browser_click": 1
+          },
+          "chars": 28410,
+          "est_tokens": 7102,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 4203,
+          "tasks": [
+            "t_3ac22e69"
+          ],
+          "file": "github-snapshot-modes-1.jsonl",
+          "cost_usd": 0.0102,
+          "peak_context": 56769
+        },
+        {
+          "calls": 15,
+          "per_tool": {
+            "browser_navigate": 2,
+            "browser_snapshot": 7,
+            "browser_click": 5,
+            "browser_screenshot": 1
+          },
+          "chars": 57610,
+          "est_tokens": 14402,
+          "screenshots": 1,
+          "image_bytes": 126083,
+          "errors": 0,
+          "ms": 38872,
+          "tasks": [
+            "t_9f235a34"
+          ],
+          "file": "github-snapshot-modes-2.jsonl",
+          "cost_usd": 0.0258,
+          "peak_context": 68368
+        },
+        {
+          "calls": 9,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 5,
+            "browser_click": 3
+          },
+          "chars": 52394,
+          "est_tokens": 13098,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 62035,
+          "tasks": [
+            "t_dc6eae48"
+          ],
+          "file": "github-snapshot-modes-3.jsonl",
+          "cost_usd": 0.011,
+          "peak_context": 64571
+        }
+      ],
+      "median": {
+        "calls": 9,
+        "chars": 52394,
+        "est_tokens": 13098,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 38872,
+        "cost_usd": 0.011,
+        "peak_context": 64571,
+        "per_tool": {
+          "browser_click": 3,
+          "browser_navigate": 1,
+          "browser_screenshot": 0,
+          "browser_snapshot": 5,
+          "browser_type": 0
+        }
+      }
+    },
+    "infinite": {
+      "runs": [
+        {
+          "calls": 34,
+          "per_tool": {
+            "browser_navigate": 14,
+            "browser_snapshot": 5,
+            "browser_screenshot": 13,
+            "browser_click": 1,
+            "browser_console": 1
+          },
+          "chars": 12369,
+          "est_tokens": 3092,
+          "screenshots": 13,
+          "image_bytes": 1925296,
+          "errors": 1,
+          "ms": 41505,
+          "tasks": [
+            "t_261c7a30"
+          ],
+          "file": "infinite-snapshot-modes-1.jsonl",
+          "cost_usd": 0.02,
+          "peak_context": 70093,
+          "passed": true
+        },
+        {
+          "calls": 41,
+          "per_tool": {
+            "browser_navigate": 15,
+            "browser_snapshot": 14,
+            "browser_screenshot": 7,
+            "browser_click": 3,
+            "browser_console": 1,
+            "browser_type": 1
+          },
+          "chars": 15351,
+          "est_tokens": 3837,
+          "screenshots": 7,
+          "image_bytes": 1017110,
+          "errors": 7,
+          "ms": 30879,
+          "tasks": [
+            "t_32be8589"
+          ],
+          "file": "infinite-snapshot-modes-2.jsonl",
+          "cost_usd": 0.0354,
+          "peak_context": 83733,
+          "passed": false
+        },
+        {
+          "calls": 23,
+          "per_tool": {
+            "browser_navigate": 11,
+            "browser_snapshot": 5,
+            "browser_screenshot": 5,
+            "browser_click": 1,
+            "browser_console": 1
+          },
+          "chars": 9173,
+          "est_tokens": 2293,
+          "screenshots": 5,
+          "image_bytes": 250532,
+          "errors": 1,
+          "ms": 16633,
+          "tasks": [
+            "t_150648d6"
+          ],
+          "file": "infinite-snapshot-modes-3.jsonl",
+          "cost_usd": 0.0187,
+          "peak_context": 61545,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 34,
+        "chars": 12369,
+        "est_tokens": 3092,
+        "screenshots": 7,
+        "image_bytes": 1017110,
+        "errors": 1,
+        "ms": 30879,
+        "cost_usd": 0.02,
+        "peak_context": 70093,
+        "per_tool": {
+          "browser_click": 1,
+          "browser_console": 1,
+          "browser_navigate": 14,
+          "browser_screenshot": 7,
+          "browser_snapshot": 5,
+          "browser_type": 0
+        },
+        "passed": "2/3"
+      }
+    },
+    "long": {
+      "runs": [
+        {
+          "calls": 4,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_click": 1
+          },
+          "chars": 3858,
+          "est_tokens": 964,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 171,
+          "tasks": [
+            "t_08d23df6"
+          ],
+          "file": "long-snapshot-modes-1.jsonl",
+          "cost_usd": 0.0077,
+          "peak_context": 47788,
+          "passed": true
+        },
+        {
+          "calls": 14,
+          "per_tool": {
+            "browser_navigate": 2,
+            "browser_snapshot": 7,
+            "browser_click": 2,
+            "browser_console": 1,
+            "browser_screenshot": 2
+          },
+          "chars": 23629,
+          "est_tokens": 5907,
+          "screenshots": 2,
+          "image_bytes": 1095332,
+          "errors": 1,
+          "ms": 21901,
+          "tasks": [
+            "t_a3cee3d0"
+          ],
+          "file": "long-snapshot-modes-2.jsonl",
+          "cost_usd": 0.0117,
+          "peak_context": 57098,
+          "passed": true
+        },
+        {
+          "calls": 4,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_click": 1
+          },
+          "chars": 3858,
+          "est_tokens": 964,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 2133,
+          "tasks": [
+            "t_eae24358"
+          ],
+          "file": "long-snapshot-modes-3.jsonl",
+          "cost_usd": 0.0077,
+          "peak_context": 47776,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 4,
+        "chars": 3858,
+        "est_tokens": 964,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 2133,
+        "cost_usd": 0.0077,
+        "peak_context": 47788,
+        "per_tool": {
+          "browser_click": 1,
+          "browser_console": 0,
+          "browser_navigate": 1,
+          "browser_screenshot": 0,
+          "browser_snapshot": 2
+        },
+        "passed": "3/3"
+      }
+    },
+    "modal": {
+      "runs": [
+        {
+          "calls": 13,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 4,
+            "browser_click": 3,
+            "browser_type": 3,
+            "browser_console": 1,
+            "browser_screenshot": 1
+          },
+          "chars": 18914,
+          "est_tokens": 4728,
+          "screenshots": 1,
+          "image_bytes": 251503,
+          "errors": 0,
+          "ms": 313,
+          "tasks": [
+            "t_1c65e33a"
+          ],
+          "file": "modal-snapshot-modes-1.jsonl",
+          "cost_usd": 0.0102,
+          "peak_context": 55141,
+          "passed": true
+        },
+        {
+          "calls": 15,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 7,
+            "browser_click": 3,
+            "browser_type": 4
+          },
+          "chars": 26850,
+          "est_tokens": 6712,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 309,
+          "tasks": [
+            "t_374b2277"
+          ],
+          "file": "modal-snapshot-modes-2.jsonl",
+          "cost_usd": 0.0113,
+          "peak_context": 57105,
+          "passed": true
+        },
+        {
+          "calls": 12,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 5,
+            "browser_click": 3,
+            "browser_type": 3
+          },
+          "chars": 21638,
+          "est_tokens": 5409,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 216,
+          "tasks": [
+            "t_69f75304"
+          ],
+          "file": "modal-snapshot-modes-3.jsonl",
+          "cost_usd": 0.0102,
+          "peak_context": 55160,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 13,
+        "chars": 21638,
+        "est_tokens": 5409,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 309,
+        "cost_usd": 0.0102,
+        "peak_context": 55160,
+        "per_tool": {
+          "browser_click": 3,
+          "browser_console": 0,
+          "browser_navigate": 1,
+          "browser_screenshot": 0,
+          "browser_snapshot": 5,
+          "browser_type": 3
+        },
+        "passed": "3/3"
+      }
+    },
+    "wikipedia": {
+      "runs": [
+        {
+          "calls": 3,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2
+          },
+          "chars": 24856,
+          "est_tokens": 6214,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 1,
+          "ms": 102965,
+          "tasks": [
+            "t_c8528d98"
+          ],
+          "file": "wikipedia-snapshot-modes-1.jsonl",
+          "cost_usd": 0.0085,
+          "peak_context": 54875,
+          "passed": true
+        },
+        {
+          "calls": 3,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2
+          },
+          "chars": 29989,
+          "est_tokens": 7497,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 2663,
+          "tasks": [
+            "t_a2660f7e"
+          ],
+          "file": "wikipedia-snapshot-modes-2.jsonl",
+          "cost_usd": 0.0156,
+          "peak_context": 56569,
+          "passed": true
+        },
+        {
+          "calls": 5,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 1
+          },
+          "chars": 54666,
+          "est_tokens": 13666,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 28233,
+          "tasks": [
+            "t_4e5c356a"
+          ],
+          "file": "wikipedia-snapshot-modes-3.jsonl",
+          "cost_usd": 0.0178,
+          "peak_context": 64346,
+          "passed": true
+        }
+      ],
+      "median": {
+        "calls": 3,
+        "chars": 29989,
+        "est_tokens": 7497,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 28233,
+        "cost_usd": 0.0156,
+        "peak_context": 56569,
+        "per_tool": {
+          "browser_click": 0,
+          "browser_navigate": 1,
+          "browser_snapshot": 2
+        },
+        "passed": "3/3"
+      }
+    }
+  }
+}

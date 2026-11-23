@@ -51,13 +51,31 @@ pub(crate) fn record(
 
 fn line(task: &str, tool: &str, args: &Value, result: &Result<Vec<Value>>) -> Value {
     let mut kept = serde_json::Map::new();
-    for key in ["ref", "url", "submit"] {
+    for key in [
+        "ref",
+        "url",
+        "submit",
+        "interactive",
+        "scope",
+        "headings",
+        "to",
+        "pages",
+        "key",
+        "gone",
+        "ref_gone",
+        "timeout_ms",
+    ] {
         if let Some(value) = args.get(key) {
             kept.insert(key.into(), value.clone());
         }
     }
+    // Typed input is secret; a wait's text is page content the agent asked for.
     if let Some(text) = args.get("text").and_then(Value::as_str) {
-        kept.insert("text_len".into(), json!(text.chars().count()));
+        if tool == "browser_type" {
+            kept.insert("text_len".into(), json!(text.chars().count()));
+        } else {
+            kept.insert("text".into(), json!(text));
+        }
     }
     let (chars, image_bytes) = match result {
         Ok(content) => content.iter().fold((0, 0), |(chars, bytes), item| {
@@ -69,14 +87,19 @@ fn line(task: &str, tool: &str, args: &Value, result: &Result<Vec<Value>>) -> Va
         }),
         Err(error) => (format!("Error: {error:#}").chars().count(), 0),
     };
-    json!({
+    let mut entry = json!({
         "task": task,
         "tool": tool,
         "args": kept,
         "ok": result.is_ok(),
         "chars": chars,
         "image_bytes": image_bytes,
-    })
+    });
+    if let Err(error) = result {
+        let message: String = format!("{error:#}").chars().take(300).collect();
+        entry["error"] = json!(message);
+    }
+    entry
 }
 
 #[cfg(test)]
@@ -118,5 +141,67 @@ mod tests {
         );
         assert_eq!(failed["ok"], false);
         assert_eq!(failed["chars"], "Error: nope".len());
+        assert_eq!(failed["error"], "nope");
+    }
+
+    #[test]
+    fn a_wait_line_keeps_page_text_and_its_condition_keys() {
+        let args = json!({ "text": "Saved", "timeout_ms": 3000 });
+        let entry = line("t_1", "browser_wait", &args, &Ok(vec![]));
+        assert_eq!(
+            entry["args"],
+            json!({ "text": "Saved", "timeout_ms": 3000 })
+        );
+
+        let gone = line(
+            "t_1",
+            "browser_wait",
+            &json!({ "gone": "Loading", "ref_gone": "e2" }),
+            &Ok(vec![]),
+        );
+        assert_eq!(gone["args"], json!({ "gone": "Loading", "ref_gone": "e2" }));
+    }
+
+    #[test]
+    fn scroll_press_and_headings_arguments_are_kept() {
+        let scroll = line(
+            "t_1",
+            "browser_scroll",
+            &json!({ "to": "bottom", "pages": -2 }),
+            &Ok(vec![]),
+        );
+        assert_eq!(scroll["args"], json!({ "to": "bottom", "pages": -2 }));
+
+        let press = line(
+            "t_1",
+            "browser_press",
+            &json!({ "key": "Escape", "ref": "e5" }),
+            &Ok(vec![]),
+        );
+        assert_eq!(press["args"], json!({ "key": "Escape", "ref": "e5" }));
+
+        let headings = line(
+            "t_1",
+            "browser_snapshot",
+            &json!({ "headings": true }),
+            &Ok(vec![]),
+        );
+        assert_eq!(headings["args"], json!({ "headings": true }));
+    }
+
+    #[test]
+    fn a_snapshot_line_keeps_interactive_and_scope_and_truncates_a_long_error() {
+        let args = json!({ "interactive": true, "scope": "e4" });
+        let entry = line("t_1", "browser_snapshot", &args, &Ok(vec![]));
+        assert_eq!(entry["args"], json!({ "interactive": true, "scope": "e4" }));
+
+        let long = "x".repeat(400);
+        let failed = line(
+            "t_1",
+            "browser_click",
+            &json!({ "ref": "e9" }),
+            &Err(anyhow!(long)),
+        );
+        assert_eq!(failed["error"].as_str().unwrap().chars().count(), 300);
     }
 }

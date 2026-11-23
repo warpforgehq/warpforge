@@ -1,0 +1,236 @@
+{
+  "label": "action-changes",
+  "est_tokens_note": "chars / 4, an estimate",
+  "scenarios": {
+    "form": {
+      "runs": [
+        {
+          "calls": 13,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_type": 6,
+            "browser_click": 4
+          },
+          "chars": 6444,
+          "est_tokens": 1611,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 258,
+          "tasks": [
+            "t_ff4f0b77"
+          ],
+          "file": "form-action-changes-1.jsonl"
+        },
+        {
+          "calls": 12,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 1,
+            "browser_type": 6,
+            "browser_click": 4
+          },
+          "chars": 4815,
+          "est_tokens": 1203,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 230,
+          "tasks": [
+            "t_990cd894"
+          ],
+          "file": "form-action-changes-2.jsonl"
+        },
+        {
+          "calls": 13,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_type": 6,
+            "browser_click": 4
+          },
+          "chars": 6444,
+          "est_tokens": 1611,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 205,
+          "tasks": [
+            "t_96a4688a"
+          ],
+          "file": "form-action-changes-3.jsonl"
+        }
+      ],
+      "median": {
+        "calls": 13,
+        "chars": 6444,
+        "est_tokens": 1611,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 230,
+        "cost_usd": null,
+        "peak_context": null,
+        "per_tool": {
+          "browser_click": 4,
+          "browser_navigate": 1,
+          "browser_snapshot": 2,
+          "browser_type": 6
+        }
+      }
+    },
+    "long": {
+      "runs": [
+        {
+          "calls": 3,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 1,
+            "browser_click": 1
+          },
+          "chars": 2989,
+          "est_tokens": 747,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 77,
+          "tasks": [
+            "t_ccd836cb"
+          ],
+          "file": "long-action-changes-1.jsonl"
+        },
+        {
+          "calls": 3,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 1,
+            "browser_click": 1
+          },
+          "chars": 2989,
+          "est_tokens": 747,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 82,
+          "tasks": [
+            "t_6845cf8b"
+          ],
+          "file": "long-action-changes-2.jsonl"
+        },
+        {
+          "calls": 3,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 1,
+            "browser_click": 1
+          },
+          "chars": 2989,
+          "est_tokens": 747,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 93,
+          "tasks": [
+            "t_45ca6d21"
+          ],
+          "file": "long-action-changes-3.jsonl"
+        }
+      ],
+      "median": {
+        "calls": 3,
+        "chars": 2989,
+        "est_tokens": 747,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 82,
+        "cost_usd": null,
+        "peak_context": null,
+        "per_tool": {
+          "browser_click": 1,
+          "browser_navigate": 1,
+          "browser_snapshot": 1
+        }
+      }
+    },
+    "modal": {
+      "runs": [
+        {
+          "calls": 9,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_click": 3,
+            "browser_type": 3
+          },
+          "chars": 7016,
+          "est_tokens": 1754,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 299,
+          "tasks": [
+            "t_10af8c6c"
+          ],
+          "file": "modal-action-changes-1.jsonl"
+        },
+        {
+          "calls": 10,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 3,
+            "browser_type": 3
+          },
+          "chars": 15760,
+          "est_tokens": 3940,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 229,
+          "tasks": [
+            "t_ec097521"
+          ],
+          "file": "modal-action-changes-2.jsonl"
+        },
+        {
+          "calls": 8,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 1,
+            "browser_click": 3,
+            "browser_type": 3
+          },
+          "chars": 8904,
+          "est_tokens": 2226,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 175,
+          "tasks": [
+            "t_75aab221"
+          ],
+          "file": "modal-action-changes-3.jsonl"
+        }
+      ],
+      "median": {
+        "calls": 9,
+        "chars": 8904,
+        "est_tokens": 2226,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 229,
+        "cost_usd": null,
+        "peak_context": null,
+        "per_tool": {
+          "browser_click": 3,
+          "browser_navigate": 1,
+          "browser_snapshot": 2,
+          "browser_type": 3
+        }
+      }
+    }
+  }
+}
