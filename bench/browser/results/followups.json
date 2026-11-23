@@ -1,0 +1,231 @@
+{
+  "label": "followups",
+  "est_tokens_note": "chars / 4, an estimate",
+  "scenarios": {
+    "github": {
+      "runs": [
+        {
+          "calls": 7,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 2,
+            "browser_press": 1
+          },
+          "chars": 34766,
+          "est_tokens": 8691,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 4971,
+          "tasks": [
+            "t_d5a8a560"
+          ],
+          "file": "github-followups-1.jsonl"
+        },
+        {
+          "calls": 9,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 4,
+            "browser_type": 2,
+            "browser_wait": 1,
+            "browser_click": 1
+          },
+          "chars": 27138,
+          "est_tokens": 6784,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 78084,
+          "tasks": [
+            "t_4a381282"
+          ],
+          "file": "github-followups-2.jsonl"
+        },
+        {
+          "calls": 7,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_click": 2,
+            "browser_press": 1
+          },
+          "chars": 40282,
+          "est_tokens": 10070,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 3285,
+          "tasks": [
+            "t_1a7deb4f"
+          ],
+          "file": "github-followups-3.jsonl"
+        }
+      ],
+      "median": {
+        "calls": 7,
+        "chars": 34766,
+        "est_tokens": 8691,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 4971,
+        "cost_usd": null,
+        "peak_context": null,
+        "per_tool": {
+          "browser_click": 2,
+          "browser_navigate": 1,
+          "browser_press": 1,
+          "browser_snapshot": 3,
+          "browser_type": 0,
+          "browser_wait": 0
+        }
+      }
+    },
+    "infinite": {
+      "runs": [
+        {
+          "calls": 7,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_scroll": 4
+          },
+          "chars": 6495,
+          "est_tokens": 1623,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 1842,
+          "tasks": [
+            "t_287a1492"
+          ],
+          "file": "infinite-followups-1.jsonl"
+        },
+        {
+          "calls": 8,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3,
+            "browser_scroll": 4
+          },
+          "chars": 8253,
+          "est_tokens": 2063,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 1813,
+          "tasks": [
+            "t_71ccea4b"
+          ],
+          "file": "infinite-followups-2.jsonl"
+        },
+        {
+          "calls": 7,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2,
+            "browser_scroll": 4
+          },
+          "chars": 6590,
+          "est_tokens": 1647,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 1821,
+          "tasks": [
+            "t_8a1e9c6c"
+          ],
+          "file": "infinite-followups-3.jsonl"
+        }
+      ],
+      "median": {
+        "calls": 7,
+        "chars": 6590,
+        "est_tokens": 1647,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 1821,
+        "cost_usd": null,
+        "peak_context": null,
+        "per_tool": {
+          "browser_navigate": 1,
+          "browser_scroll": 4,
+          "browser_snapshot": 2
+        }
+      }
+    },
+    "wikipedia": {
+      "runs": [
+        {
+          "calls": 4,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 3
+          },
+          "chars": 8779,
+          "est_tokens": 2194,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 135478,
+          "tasks": [
+            "t_9ced822b"
+          ],
+          "file": "wikipedia-followups-1.jsonl"
+        },
+        {
+          "calls": 3,
+          "per_tool": {
+            "browser_navigate": 1,
+            "browser_snapshot": 2
+          },
+          "chars": 7325,
+          "est_tokens": 1831,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 7258,
+          "tasks": [
+            "t_fc0b6d6e"
+          ],
+          "file": "wikipedia-followups-2.jsonl"
+        },
+        {
+          "calls": 4,
+          "per_tool": {
+            "browser_navigate": 2,
+            "browser_snapshot": 2
+          },
+          "chars": 6586,
+          "est_tokens": 1646,
+          "screenshots": 0,
+          "image_bytes": 0,
+          "errors": 0,
+          "ms": 83912,
+          "tasks": [
+            "t_a2c662bf"
+          ],
+          "file": "wikipedia-followups-3.jsonl"
+        }
+      ],
+      "median": {
+        "calls": 4,
+        "chars": 7325,
+        "est_tokens": 1831,
+        "screenshots": 0,
+        "image_bytes": 0,
+        "errors": 0,
+        "ms": 83912,
+        "cost_usd": null,
+        "peak_context": null,
+        "per_tool": {
+          "browser_navigate": 1,
+          "browser_snapshot": 2
+        }
+      }
+    }
+  }
+}
