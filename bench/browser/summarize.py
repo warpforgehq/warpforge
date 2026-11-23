@@ -49,9 +49,7 @@ def sum_of_run_peaks(values):
     for v in values:
         if peak is not None and v < peak:
             total += peak
-            peak = v
-        else:
-            peak = v if peak is None else max(peak, v)
+        peak = v
     return total + (peak or 0.0)
 
 

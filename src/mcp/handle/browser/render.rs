@@ -40,10 +40,6 @@ fn with_changed(report: &str, result: &Value) -> String {
     }
 }
 
-fn body(note: &str, result: &Value) -> String {
-    with_changed(note, result)
-}
-
 /// Turn the desktop's result into MCP content. Everything the page produced
 /// goes inside the untrusted block; only the tool's own verdict stays outside.
 pub(super) fn render(action: &Value, result: &Value) -> Vec<Value> {
@@ -62,6 +58,11 @@ fn render_page(action: &Value, result: &Value) -> Vec<Value> {
     let title = field(result, "title");
     let target = field(action, "ref");
     let page = |body: &str| browser_page(url, title, body);
+    let target_or_page = if target.is_empty() {
+        "the page"
+    } else {
+        target
+    };
     match field(action, "action") {
         "snapshot" => {
             let mut body = field(result, "tree").to_string();
@@ -72,7 +73,7 @@ fn render_page(action: &Value, result: &Value) -> Vec<Value> {
         }
         "click" => vec![text(format!(
             "Clicked {target}.\n{}",
-            page(&body(field(result, "note"), result))
+            page(&with_changed(field(result, "note"), result))
         ))],
         "type" => {
             let submitted = if action.get("submit").and_then(Value::as_bool) == Some(true) {
@@ -82,19 +83,14 @@ fn render_page(action: &Value, result: &Value) -> Vec<Value> {
             };
             vec![text(format!(
                 "Typed into {target}{submitted}.\n{}",
-                page(&body(field(result, "note"), result))
+                page(&with_changed(field(result, "note"), result))
             ))]
         }
         "press" => {
             let key = field(action, "key");
-            let target = if target.is_empty() {
-                "the page"
-            } else {
-                target
-            };
             vec![text(format!(
-                "Pressed {key} on {target}.\n{}",
-                page(&body(field(result, "note"), result))
+                "Pressed {key} on {target_or_page}.\n{}",
+                page(&with_changed(field(result, "note"), result))
             ))]
         }
         "scroll" => {
@@ -117,13 +113,8 @@ fn render_page(action: &Value, result: &Value) -> Vec<Value> {
                     ));
                 }
             }
-            let target = if target.is_empty() {
-                "the page"
-            } else {
-                target
-            };
             vec![text(format!(
-                "Scrolled {target}.\n{}",
+                "Scrolled {target_or_page}.\n{}",
                 page(&with_changed(&report, result))
             ))]
         }

@@ -77,6 +77,7 @@ fn line(task: &str, tool: &str, args: &Value, result: &Result<Vec<Value>>) -> Va
             kept.insert("text".into(), json!(text));
         }
     }
+    let error = result.as_ref().err().map(|error| format!("{error:#}"));
     let (chars, image_bytes) = match result {
         Ok(content) => content.iter().fold((0, 0), |(chars, bytes), item| {
             let text = item.get("text").and_then(Value::as_str).unwrap_or("");
@@ -85,7 +86,10 @@ fn line(task: &str, tool: &str, args: &Value, result: &Result<Vec<Value>>) -> Va
             let decoded = (data.len() / 4 * 3).saturating_sub(padding);
             (chars + text.chars().count(), bytes + decoded)
         }),
-        Err(error) => (format!("Error: {error:#}").chars().count(), 0),
+        Err(_) => (
+            "Error: ".len() + error.as_deref().unwrap_or("").chars().count(),
+            0,
+        ),
     };
     let mut entry = json!({
         "task": task,
@@ -95,9 +99,8 @@ fn line(task: &str, tool: &str, args: &Value, result: &Result<Vec<Value>>) -> Va
         "chars": chars,
         "image_bytes": image_bytes,
     });
-    if let Err(error) = result {
-        let message: String = format!("{error:#}").chars().take(300).collect();
-        entry["error"] = json!(message);
+    if let Some(error) = error {
+        entry["error"] = json!(error.chars().take(300).collect::<String>());
     }
     entry
 }

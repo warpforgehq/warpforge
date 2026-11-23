@@ -11,6 +11,14 @@ import { snapshot } from "./snapshot";
 import type { AgentCall, AgentResult } from "./types";
 import { checkWait } from "./wait";
 
+function str(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function num(value: unknown): number | undefined {
+  return typeof value === "number" ? value : undefined;
+}
+
 function run(call: AgentCall | null | undefined): string {
   const origin = loc.origin;
   if (!call || (call.action !== "origin" && !allowed(call.allowed, origin))) {
@@ -26,31 +34,24 @@ function run(call: AgentCall | null | undefined): string {
       case "snapshot":
         out = snapshot({
           interactive: Boolean(call.interactive),
-          scope: typeof call.scope === "string" ? call.scope : undefined,
+          scope: str(call.scope),
           headings: Boolean(call.headings),
         });
         break;
       case "click":
-        out = click(call.ref as string);
+        out = click(String(call.ref ?? ""));
         break;
       case "type":
-        out = type(call.ref as string, String(call.text ?? ""), Boolean(call.submit));
+        out = type(String(call.ref ?? ""), String(call.text ?? ""), Boolean(call.submit));
         break;
       case "console":
         out = { messages: consoleMessages ? consoleMessages() : [] };
         break;
       case "press":
-        out = press(
-          typeof call.ref === "string" ? call.ref : undefined,
-          String(call.key ?? ""),
-        );
+        out = press(str(call.ref), String(call.key ?? ""));
         break;
       case "scroll":
-        out = scroll({
-          ...(typeof call.ref === "string" ? { ref: call.ref } : {}),
-          ...(typeof call.to === "string" ? { to: call.to } : {}),
-          ...(typeof call.pages === "number" ? { pages: call.pages } : {}),
-        });
+        out = scroll({ ref: str(call.ref), to: str(call.to), pages: num(call.pages) });
         break;
       case "scroll_status":
         out = { scroll: scrollStatus() };
@@ -63,11 +64,11 @@ function run(call: AgentCall | null | undefined): string {
         out = { changes: takeChanges() };
         break;
       case "check_wait":
-        out = { ...checkWait({
-          ...(typeof call.text === "string" ? { text: call.text } : {}),
-          ...(typeof call.gone === "string" ? { gone: call.gone } : {}),
-          ...(typeof call.ref_gone === "string" ? { ref_gone: call.ref_gone } : {}),
-        }) };
+        out = checkWait({
+          text: str(call.text),
+          gone: str(call.gone),
+          ref_gone: str(call.ref_gone),
+        });
         break;
       default:
         out = { error: `unknown browser action ${call && call.action}` };

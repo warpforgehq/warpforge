@@ -1,6 +1,7 @@
 import { dispatch, inputValue, Pointer, textareaValue } from "./builtins";
 import { capturePage, markPage, pageChanges } from "./changes";
-import { quote } from "./outline";
+import { keyEvent, KEYS } from "./keys";
+import { isCheckable, quote } from "./outline";
 import { lookup, missing } from "./refs";
 
 type EventCtor = new (type: string, init?: EventInit) => Event;
@@ -65,25 +66,10 @@ export function click(ref: string): { note: string; changes: string[] } | { erro
   return { note, changes: pageChanges(before) };
 }
 
-// `keyCode` is not settable through KeyboardEventInit everywhere, and older
-// handlers still read it.
-function key(el: EventTarget, eventName: string): boolean {
-  const event = new KeyboardEvent(eventName, {
-    key: "Enter",
-    code: "Enter",
-    bubbles: true,
-    cancelable: true,
-    composed: true,
-  });
-  Object.defineProperty(event, "keyCode", { get: () => 13 });
-  Object.defineProperty(event, "which", { get: () => 13 });
-  return dispatch.call(el, event);
-}
-
 function pressEnter(el: HTMLElement): void {
-  const proceed = key(el, "keydown");
-  key(el, "keypress");
-  key(el, "keyup");
+  const proceed = keyEvent(el, "keydown", KEYS.Enter);
+  keyEvent(el, "keypress", KEYS.Enter);
+  keyEvent(el, "keyup", KEYS.Enter);
   if (proceed && el.tagName === "INPUT" && (el as HTMLInputElement).form) {
     // Enter in a single-line field submits its form; a synthetic key does not.
     const form = (el as HTMLInputElement).form!;
@@ -119,7 +105,7 @@ export function type(
       };
     }
     option.selected = true;
-  } else if (tag === "INPUT" && isCheckable(el as HTMLInputElement)) {
+  } else if (tag === "INPUT" && isCheckable(field)) {
     return {
       error: `${ref} is a ${(el as HTMLInputElement).type}; use browser_click to toggle it.`,
     };
@@ -149,8 +135,4 @@ export function type(
   }
   if (submit) pressEnter(field);
   return { note: "", changes: pageChanges(before) };
-}
-
-function isCheckable(input: HTMLInputElement): boolean {
-  return input.type === "checkbox" || input.type === "radio";
 }

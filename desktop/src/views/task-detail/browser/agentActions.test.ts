@@ -86,6 +86,26 @@ describe("settle after click, type and press", () => {
     expect(result.changes).toEqual(["navigated → http://localhost:4400/next"]);
   });
 
+  it("falls back to the immediate result when the settle call fails", async () => {
+    browser.agentCall.mockImplementation(async (_tab, call) => {
+      if (action(call) === "click") {
+        return { url: "http://localhost:4400/", origin: "http://localhost:4400", changes: ["a"] };
+      }
+      throw new Error("the page did not run the browser script");
+    });
+
+    const pending = runBrowserAction(
+      "t",
+      { action: "click", ref: "e1" },
+      allowed,
+      signal(),
+    );
+    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    const result = await pending;
+
+    expect(result.changes).toEqual(["a"]);
+  });
+
   it("does not settle a blocked action", async () => {
     browser.agentCall.mockResolvedValue({ blocked: "https://other.test" });
 
@@ -180,5 +200,30 @@ describe("wait polling", () => {
 
     expect(result.met).toBe(false);
     expect(result.elapsedMs).toBe(300);
+  });
+
+  it("keeps polling when a check fails mid-wait and can still meet the condition", async () => {
+    let checks = 0;
+    browser.agentCall.mockImplementation(async (_tab, call) => {
+      switch (action(call)) {
+        case "check_wait":
+          checks += 1;
+          if (checks === 1) throw new Error("did not answer within 10s");
+          return { url: "u", met: true, line: 'status "Saved" [e3]' };
+        case "changes":
+          throw new Error("the page did not run the browser script");
+        default:
+          return { url: "u", origin: "http://localhost:4400" };
+      }
+    });
+
+    const pending = runBrowserAction("t", { action: "wait", text: "Saved" }, allowed, signal());
+    await vi.advanceTimersByTimeAsync(WAIT_POLL_MS);
+    const result = await pending;
+
+    expect(checks).toBe(2);
+    expect(result.met).toBe(true);
+    expect(result.line).toBe('status "Saved" [e3]');
+    expect(result.changes).toBeUndefined();
   });
 });

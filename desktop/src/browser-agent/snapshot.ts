@@ -12,6 +12,7 @@ import {
   quote,
   rendered,
   styleOf,
+  textOf,
 } from "./outline";
 import { lookup, missing, refFor } from "./refs";
 
@@ -22,6 +23,10 @@ export interface SnapshotOptions {
 }
 
 export type SnapshotResult = { tree: string; truncated: boolean };
+
+type Push = (depth: number, line: string) => void;
+
+const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "SVG", "HEAD"]);
 
 const BLOCK = /^(block|flex|grid|list-item|table|table-row|table-cell|flow-root)$/;
 const ROW_GROUP = /^(table-row-group|table-header-group|table-footer-group)$/;
@@ -46,9 +51,34 @@ function children(node: Node): NodeListOf<ChildNode> | Node[] {
   return node.childNodes;
 }
 
+function makeLines(): { push: Push; full: () => boolean; result: () => SnapshotResult } {
+  const lines: string[] = [];
+  let chars = 0;
+  let truncated = false;
+  const push: Push = (depth, line) => {
+    if (truncated) return;
+    const text = "  ".repeat(Math.min(depth, 8)) + line;
+    if (lines.length >= MAX_LINES || chars + text.length > MAX_CHARS) {
+      truncated = true;
+      return;
+    }
+    lines.push(text);
+    chars += text.length + 1;
+  };
+  return {
+    push,
+    full: () => truncated,
+    result: () => ({ tree: lines.join("\n"), truncated }),
+  };
+}
+
+function pushGroup(push: Push, el: HTMLElement, group: string, depth: number): void {
+  const name = labelText(el).trim();
+  push(depth, `${group}${name ? ` ${quote(clean(name, NAME_CAP))}` : ""} [${refFor(el)}]:`);
+}
+
 function hasOtherHeading(parent: Element, anchor: Element): boolean {
-  const heads = parent.querySelectorAll("h1,h2,h3,h4,h5,h6");
-  return Array.from(heads, (h) => !anchor.contains(h)).some(Boolean);
+  return Array.from(parent.querySelectorAll("h1,h2,h3,h4,h5,h6")).some((h) => !anchor.contains(h));
 }
 
 function reachesLevel(el: Element, level: number): boolean {
@@ -58,9 +88,13 @@ function reachesLevel(el: Element, level: number): boolean {
   return Array.from(heads, (h) => headingLevel(h) ?? 9).some((l) => l <= level);
 }
 
-// A page may wrap a heading with its edit controls, so climb to the largest
-// wrapper that still holds only this heading; the section then runs to the next
-// heading of the same or a higher level, inside the same parent.
+/**
+ * A page may wrap a heading with its edit controls, so climb to the largest
+ * wrapper that still holds only this heading; the section then runs to the next
+ * heading of the same or a higher level, inside the same parent.
+ * @param heading - The heading element the section starts at.
+ * @returns The nodes that make up the section, the heading's wrapper first.
+ */
 export function sectionOf(heading: Element): Node[] {
   const level = headingLevel(heading) ?? 6;
   let anchor = heading;
@@ -92,8 +126,7 @@ function hasBlockChild(el: Element): boolean {
 }
 
 function cellText(cell: Element): string {
-  const inner = (cell as HTMLElement).innerText;
-  return typeof inner === "string" ? inner : cell.textContent || "";
+  return textOf(cell) ?? "";
 }
 
 function rowText(row: Element): string {
@@ -127,6 +160,11 @@ function resolveScope(scope: string): Element | { error: string } {
   };
 }
 
+/**
+ * Outline the page, or the scoped part of it, as indented lines for the agent.
+ * @param options - Interactive-only, headings-only and scope (ref, selector or heading text).
+ * @returns The outline and whether it was cut short, or an error for a scope that matches nothing.
+ */
 export function snapshot(options: SnapshotOptions = {}): SnapshotResult | { error: string } {
   const interactive = Boolean(options.interactive);
   const textCap = options.scope !== undefined ? SCOPED_TEXT_CAP : TEXT_CAP;
@@ -136,26 +174,13 @@ export function snapshot(options: SnapshotOptions = {}): SnapshotResult | { erro
     if ("error" in scoped) return scoped;
     roots = headingLevel(scoped) !== null ? sectionOf(scoped) : [scoped];
   }
-  if (roots.length === 0 && (document.body || document.documentElement)) {
-    roots = [document.body || document.documentElement];
-  }
+  const page = document.body || document.documentElement;
+  if (roots.length === 0 && page) roots = [page];
   if (options.headings) return outlineHeadings(roots);
 
-  const lines: string[] = [];
-  let chars = 0;
-  let truncated = false;
+  const { push, full, result } = makeLines();
   let pending = "";
   let textless = false;
-  const push = (depth: number, line: string) => {
-    if (truncated) return;
-    const text = "  ".repeat(Math.min(depth, 8)) + line;
-    if (lines.length >= MAX_LINES || chars + text.length > MAX_CHARS) {
-      truncated = true;
-      return;
-    }
-    lines.push(text);
-    chars += text.length + 1;
-  };
   const flush = (depth: number) => {
     if (interactive || textless) return;
     const text = clean(pending, textCap);
@@ -164,7 +189,7 @@ export function snapshot(options: SnapshotOptions = {}): SnapshotResult | { erro
   };
 
   function walk(node: Node, depth: number): void {
-    if (truncated) return;
+    if (full()) return;
     if (node.nodeType === Node.TEXT_NODE) {
       // Text nodes join as written: a space the page did not put between two
       // inline pieces is not added here.
@@ -177,13 +202,12 @@ export function snapshot(options: SnapshotOptions = {}): SnapshotResult | { erro
     }
     const el = node as HTMLElement;
     const tag = el.tagName;
-    if (["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "SVG", "HEAD"].includes(tag.toUpperCase())) return;
+    if (SKIP_TAGS.has(tag.toUpperCase())) return;
     if (hidden(el)) return;
     const live = textless ? null : liveKind(el);
     if (live) {
       flush(depth);
-      const raw = typeof el.innerText === "string" ? el.innerText : el.textContent;
-      const message = clean(raw, Infinity);
+      const message = clean(textOf(el), Infinity);
       // Some pages mark a whole content area live; outline it rather than flatten it.
       if (message.length > LIVE_CAP) {
         push(depth, `${live} [${refFor(el)}]:`);
@@ -236,8 +260,7 @@ export function snapshot(options: SnapshotOptions = {}): SnapshotResult | { erro
     let inner = depth;
     if (group) {
       flush(depth);
-      const name = labelText(el).trim();
-      push(depth, `${group}${name ? ` ${quote(clean(name, NAME_CAP))}` : ""} [${refFor(el)}]:`);
+      pushGroup(push, el, group, depth);
       inner = depth + 1;
     }
     const block = group || BLOCK.test(styleOf(el).display);
@@ -263,26 +286,14 @@ export function snapshot(options: SnapshotOptions = {}): SnapshotResult | { erro
 
   for (const root of roots) walk(root, 0);
   flush(0);
-  return { tree: lines.join("\n"), truncated };
+  return result();
 }
 
 /** Only headings and group lines, indented by heading level, to map a long page. */
 function outlineHeadings(roots: Node[]): SnapshotResult {
-  const lines: string[] = [];
-  let chars = 0;
-  let truncated = false;
-  const push = (depth: number, line: string) => {
-    if (truncated) return;
-    const text = "  ".repeat(Math.min(depth, 8)) + line;
-    if (lines.length >= MAX_LINES || chars + text.length > MAX_CHARS) {
-      truncated = true;
-      return;
-    }
-    lines.push(text);
-    chars += text.length + 1;
-  };
+  const { push, full, result } = makeLines();
   function walk(node: Node, depth: number): void {
-    if (truncated) return;
+    if (full()) return;
     if (node.nodeType !== Node.ELEMENT_NODE) {
       if (node.nodeType !== Node.TEXT_NODE) {
         for (const child of Array.from(children(node))) walk(child, depth);
@@ -291,13 +302,12 @@ function outlineHeadings(roots: Node[]): SnapshotResult {
     }
     const el = node as HTMLElement;
     const tag = el.tagName;
-    if (["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "SVG", "HEAD"].includes(tag.toUpperCase())) return;
+    if (SKIP_TAGS.has(tag.toUpperCase())) return;
     if (hidden(el)) return;
     const group = groupOf(el);
     let inner = depth;
     if (group) {
-      const name = labelText(el).trim();
-      push(depth, `${group}${name ? ` ${quote(clean(name, NAME_CAP))}` : ""} [${refFor(el)}]:`);
+      pushGroup(push, el, group, depth);
       inner = depth + 1;
     }
     const level = headingLevel(el);
@@ -307,5 +317,5 @@ function outlineHeadings(roots: Node[]): SnapshotResult {
     for (const child of Array.from(children(el))) walk(child, inner);
   }
   for (const root of roots) walk(root, 0);
-  return { tree: lines.join("\n"), truncated };
+  return result();
 }

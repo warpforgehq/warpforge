@@ -13,7 +13,7 @@
 <ol id="list"></ol>
 <p id="more" role="status">Scroll down to load more…</p>
 <script>
-var TOTAL = 100, PAGE = 20, shown = 0, loading = false;
+var TOTAL = 100, PAGE = 20, shown = 0;
 var kinds = ['Hex bolt', 'Washer', 'Hinge', 'Bracket', 'Spring', 'Gasket', 'Bearing', 'Clamp'];
 function part(n) {
   var li = document.createElement('li');
@@ -24,12 +24,10 @@ function part(n) {
   return li;
 }
 function loadMore() {
-  if (loading || shown >= TOTAL) return;
-  loading = true;
+  if (shown >= TOTAL) return;
   var list = document.getElementById('list');
   for (var i = 0; i < PAGE; i++) list.appendChild(part(++shown));
   document.getElementById('more').textContent = shown >= TOTAL ? 'All parts loaded.' : 'Scroll down to load more…';
-  loading = false;
 }
 loadMore();
 window.addEventListener('scroll', function () {

@@ -1,15 +1,15 @@
 import { loc } from "./builtins";
-import { INLINE_CAP, LIVE_CAP, MAX_CHANGES, NAME_CAP } from "./constants";
-import { clean, groupOf, labelText, liveKind, quote, rendered } from "./outline";
+import { INLINE_CAP, LIVE_CAP, LIVE_SELECTOR, MAX_CHANGES, NAME_CAP } from "./constants";
+import { clean, groupOf, labelText, liveKind, quote, rendered, textOf } from "./outline";
 import { refFor } from "./refs";
 import { snapshot } from "./snapshot";
 
-const LIVE_SELECTOR = "[role=status],[role=alert],[role=log],[aria-live],output";
 const DIALOG_SELECTOR = "dialog,[role=dialog],[role=alertdialog],[aria-modal=true]";
 const POPUP_SELECTOR = "[role=menu],[role=listbox]";
 
 interface LiveText {
   el: Element;
+  kind: string;
   text: string;
 }
 
@@ -40,9 +40,7 @@ export function takeChanges(): string[] {
 }
 
 function liveText(el: Element): string {
-  const inner = (el as HTMLElement).innerText;
-  const raw = typeof inner === "string" ? inner : el.textContent;
-  return clean(raw, Infinity);
+  return clean(textOf(el), Infinity);
 }
 
 function dialogOpen(el: Element): boolean {
@@ -58,11 +56,15 @@ function popupOf(el: Element): Popup | null {
   return null;
 }
 
-/** Record the visible live regions, dialogs and popups, and the URL, before an action. */
+/**
+ * Record the visible live regions, dialogs and popups, and the URL, before an action.
+ * @returns The page state `pageChanges` compares against.
+ */
 export function capturePage(): PageState {
   const live: LiveText[] = [];
   for (const el of Array.from(document.querySelectorAll(LIVE_SELECTOR))) {
-    if (liveKind(el) && rendered(el)) live.push({ el, text: liveText(el) });
+    const kind = liveKind(el);
+    if (kind && rendered(el)) live.push({ el, kind, text: liveText(el) });
   }
   const dialogs = Array.from(document.querySelectorAll(DIALOG_SELECTOR)).filter(dialogOpen);
   const popups = Array.from(document.querySelectorAll(POPUP_SELECTOR))
@@ -90,7 +92,11 @@ function inline(ref: string): string {
   return `${tree}\n… (take browser_snapshot with scope ${ref} for the rest)`;
 }
 
-/** What changed since `before`, as lines for the agent; capped at MAX_CHANGES. */
+/**
+ * What changed since `before`, as lines for the agent; capped at MAX_CHANGES.
+ * @param before - The state `capturePage` recorded before the action.
+ * @returns The change lines, empty when nothing changed.
+ */
 export function pageChanges(before: PageState): string[] {
   const after = capturePage();
   const out: string[] = [];
@@ -99,7 +105,7 @@ export function pageChanges(before: PageState): string[] {
     const was = before.live.find((s) => s.el === now.el);
     if (was && was.text === now.text) continue;
     if (!now.text) continue;
-    out.push(liveLine(liveKind(now.el) as string, now.text, now.el));
+    out.push(liveLine(now.kind, now.text, now.el));
   }
   for (const el of after.dialogs) {
     if (before.dialogs.includes(el)) continue;

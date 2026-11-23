@@ -17,7 +17,7 @@ let base: ScrollBase | null = null;
 
 function styleOverflow(el: Element): string {
   const style = el.ownerDocument.defaultView?.getComputedStyle(el);
-  return `${style?.overflowY ?? ""} ${style?.overflow ?? ""}`;
+  return style?.overflowY ?? "";
 }
 
 function scrollable(el: Element): boolean {

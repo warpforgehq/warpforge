@@ -1,9 +1,4 @@
-/**
- * The driver side of a browser action: settle windows and polling live here,
- * not in the page script, which stays synchronous and answers one call at a
- * time. A settle re-reads what changed after the action's own immediate
- * report; a wait polls the page every 150 ms.
- */
+/** Settle windows and polling live here so the page script stays synchronous. */
 import type { BrowserAction } from "../../../protocol";
 import { browser as nativeBrowser } from "./browserClient";
 
@@ -28,6 +23,10 @@ function merge(first: string[], second: string[]): string[] {
   const out = [...first];
   for (const line of second) if (!out.includes(line)) out.push(line);
   return out;
+}
+
+function str(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
 }
 
 function urlOf(result: Result): string {
@@ -60,6 +59,18 @@ async function call(
   return asObject(await nativeBrowser.agentCall(tabId, request, allowed));
 }
 
+async function tryCall(
+  tabId: string,
+  request: Record<string, unknown>,
+  allowed: string[],
+): Promise<Result | null> {
+  try {
+    return await call(tabId, request, allowed);
+  } catch {
+    return null;
+  }
+}
+
 /** Wait a settle window, then merge what changed since the action began. A
  *  page that navigated meanwhile has no state to compare, so say where it went. */
 async function settle(
@@ -70,8 +81,8 @@ async function settle(
   signal: AbortSignal,
 ): Promise<string[]> {
   await delay(SETTLE_MS, signal);
-  const after = await call(tabId, { action: "changes" }, allowed);
-  if (after.blocked) return immediate;
+  const after = await tryCall(tabId, { action: "changes" }, allowed);
+  if (!after || after.blocked) return immediate;
   if (urlOf(after) !== urlOf(acted)) {
     const title = typeof after.title === "string" && after.title ? ` ${JSON.stringify(after.title)}` : "";
     return merge(immediate, [`navigated → ${urlOf(after)}${title}`]);
@@ -88,13 +99,13 @@ async function runScroll(
   const result = await call(tabId, { ...action }, allowed);
   if (result.blocked) return result;
   await delay(SCROLL_SETTLE_MS, signal);
-  const status = await call(tabId, { action: "scroll_status" }, allowed);
-  const after = await call(tabId, { action: "changes" }, allowed);
-  const same = !status.blocked && urlOf(status) === urlOf(result);
+  const status = await tryCall(tabId, { action: "scroll_status" }, allowed);
+  const after = await tryCall(tabId, { action: "changes" }, allowed);
+  const same = status && !status.blocked && urlOf(status) === urlOf(result);
   const scroll = same ? asObject(status.scroll) : {};
   return {
     ...result,
-    changes: merge(lines(result, "changes"), same ? lines(after, "changes") : []),
+    changes: merge(lines(result, "changes"), same && after ? lines(after, "changes") : []),
     ...(Object.keys(scroll).length > 0 ? { scroll } : {}),
   };
 }
@@ -108,17 +119,13 @@ async function runWait(
   const timeout = Math.min(WAIT_MAX_MS, Math.max(0, action.timeout_ms ?? WAIT_DEFAULT_MS));
   const started = Date.now();
   await call(tabId, { action: "mark" }, allowed);
-  const condition = {
-    ...(action.text !== undefined ? { text: action.text } : {}),
-    ...(action.gone !== undefined ? { gone: action.gone } : {}),
-    ...(action.ref_gone !== undefined ? { ref_gone: action.ref_gone } : {}),
-  };
+  const condition = { text: action.text, gone: action.gone, ref_gone: action.ref_gone };
   let waited = 0;
   let met = false;
   let detail: Result = {};
   for (;;) {
-    const check = await call(tabId, { action: "check_wait", ...condition }, allowed);
-    if (check.met === true) {
+    const check = await tryCall(tabId, { action: "check_wait", ...condition }, allowed);
+    if (check?.met === true) {
       met = true;
       detail = check;
       break;
@@ -128,17 +135,24 @@ async function runWait(
     await delay(step, signal);
     waited += step;
   }
-  const after = await call(tabId, { action: "changes" }, allowed);
+  const after = await tryCall(tabId, { action: "changes" }, allowed);
   return {
     ...after,
     met,
     elapsedMs: Date.now() - started,
-    ...(typeof detail.line === "string" ? { line: detail.line } : {}),
-    ...(typeof detail.ref === "string" ? { ref: detail.ref } : {}),
+    line: str(detail.line),
+    ref: str(detail.ref),
   };
 }
 
-/** Run one non-navigate action, adding settle or polling where it needs time. */
+/**
+ * Run one non-navigate action, adding settle or polling where it needs time.
+ * @param tabId - The agent tab to act in.
+ * @param action - The action to run.
+ * @param allowed - Origins the page script may act on.
+ * @param signal - Aborts the settle and polling delays.
+ * @returns The page script's result with the changes merged in.
+ */
 export async function runBrowserAction(
   tabId: string,
   action: Exclude<BrowserAction, { action: "navigate" } | { action: "screenshot" }>,

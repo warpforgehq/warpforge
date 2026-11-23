@@ -106,13 +106,19 @@ export function labelText(el: Element): string {
   return "";
 }
 
+/** The rendered text of `el`, falling back to its textContent where innerText is missing. */
+export function textOf(el: Element): string | null {
+  const inner = (el as HTMLElement).innerText;
+  return typeof inner === "string" ? inner : el.textContent;
+}
+
 export function nameOf(el: HTMLElement): string {
   const label = labelText(el);
   if (label.trim()) return clean(label, NAME_CAP);
   const tag = el.tagName;
   if (tag === "INPUT") {
     const input = el as HTMLInputElement;
-    if (["submit", "button", "reset"].includes(input.type)) {
+    if (isButtonInput(input)) {
       return clean(input.value, NAME_CAP);
     }
     return clean(input.placeholder || input.title || input.name || "", NAME_CAP);
@@ -126,8 +132,7 @@ export function nameOf(el: HTMLElement): string {
     return clean(select.title || select.name || "", NAME_CAP);
   }
   if (tag === "IMG") return clean((el as HTMLImageElement).alt, NAME_CAP);
-  const text = el.innerText !== undefined ? el.innerText : el.textContent;
-  return clean(text || el.title || "", NAME_CAP);
+  return clean(textOf(el) || el.title || "", NAME_CAP);
 }
 
 const LEVEL = /^H([1-6])$/;
@@ -193,6 +198,11 @@ export function control(el: HTMLElement): string | null {
     return `clickable ${quote(nameOf(el))} [${refFor(el)}]`;
   }
   return null;
+}
+
+export function isCheckable(el: HTMLElement): boolean {
+  const type = (el as HTMLInputElement).type;
+  return el.tagName === "INPUT" && (type === "checkbox" || type === "radio");
 }
 
 function isButtonInput(input: HTMLInputElement): boolean {

@@ -6,3 +6,4 @@ export const LIVE_CAP = 600;
 export const NAME_CAP = 80;
 export const INLINE_CAP = 1500;
 export const MAX_CHANGES = 10;
+export const LIVE_SELECTOR = "[role=status],[role=alert],[role=log],[aria-live],output";

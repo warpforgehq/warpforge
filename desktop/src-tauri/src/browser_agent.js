@@ -28,6 +28,7 @@
   var NAME_CAP = 80;
   var INLINE_CAP = 1500;
   var MAX_CHANGES = 10;
+  var LIVE_SELECTOR = "[role=status],[role=alert],[role=log],[aria-live],output";
 
   // src/browser-agent/refs.ts
   var refs = new Map;
@@ -153,6 +154,10 @@
     }
     return "";
   }
+  function textOf(el) {
+    const inner = el.innerText;
+    return typeof inner === "string" ? inner : el.textContent;
+  }
   function nameOf(el) {
     const label = labelText(el);
     if (label.trim())
@@ -160,7 +165,7 @@
     const tag = el.tagName;
     if (tag === "INPUT") {
       const input = el;
-      if (["submit", "button", "reset"].includes(input.type)) {
+      if (isButtonInput(input)) {
         return clean(input.value, NAME_CAP);
       }
       return clean(input.placeholder || input.title || input.name || "", NAME_CAP);
@@ -175,8 +180,7 @@
     }
     if (tag === "IMG")
       return clean(el.alt, NAME_CAP);
-    const text = el.innerText !== undefined ? el.innerText : el.textContent;
-    return clean(text || el.title || "", NAME_CAP);
+    return clean(textOf(el) || el.title || "", NAME_CAP);
   }
   var LEVEL = /^H([1-6])$/;
   function headingLevel(el) {
@@ -237,11 +241,16 @@
     }
     return null;
   }
+  function isCheckable(el) {
+    const type = el.type;
+    return el.tagName === "INPUT" && (type === "checkbox" || type === "radio");
+  }
   function isButtonInput(input) {
     return ["submit", "button", "reset"].includes(input.type);
   }
 
   // src/browser-agent/snapshot.ts
+  var SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "SVG", "HEAD"]);
   var BLOCK = /^(block|flex|grid|list-item|table|table-row|table-cell|flow-root)$/;
   var ROW_GROUP = /^(table-row-group|table-header-group|table-footer-group)$/;
   var REF = /^e\d+$/;
@@ -263,9 +272,34 @@
     }
     return node.childNodes;
   }
+  function makeLines() {
+    const lines = [];
+    let chars = 0;
+    let truncated = false;
+    const push = (depth, line) => {
+      if (truncated)
+        return;
+      const text = "  ".repeat(Math.min(depth, 8)) + line;
+      if (lines.length >= MAX_LINES || chars + text.length > MAX_CHARS) {
+        truncated = true;
+        return;
+      }
+      lines.push(text);
+      chars += text.length + 1;
+    };
+    return {
+      push,
+      full: () => truncated,
+      result: () => ({ tree: lines.join(`
+`), truncated })
+    };
+  }
+  function pushGroup(push, el, group, depth) {
+    const name = labelText(el).trim();
+    push(depth, `${group}${name ? ` ${quote(clean(name, NAME_CAP))}` : ""} [${refFor(el)}]:`);
+  }
   function hasOtherHeading(parent, anchor) {
-    const heads = parent.querySelectorAll("h1,h2,h3,h4,h5,h6");
-    return Array.from(heads, (h) => !anchor.contains(h)).some(Boolean);
+    return Array.from(parent.querySelectorAll("h1,h2,h3,h4,h5,h6")).some((h) => !anchor.contains(h));
   }
   function reachesLevel(el, level) {
     const own = headingLevel(el);
@@ -296,8 +330,7 @@
     return Array.from(el.children).some(isBlockish);
   }
   function cellText(cell) {
-    const inner = cell.innerText;
-    return typeof inner === "string" ? inner : cell.textContent || "";
+    return textOf(cell) ?? "";
   }
   function rowText(row) {
     return Array.from(row.children).filter((cell) => /^T[DH]$/.test(cell.tagName)).map(cellText).join(" | ");
@@ -335,27 +368,14 @@
         return scoped;
       roots = headingLevel(scoped) !== null ? sectionOf(scoped) : [scoped];
     }
-    if (roots.length === 0 && (document.body || document.documentElement)) {
-      roots = [document.body || document.documentElement];
-    }
+    const page = document.body || document.documentElement;
+    if (roots.length === 0 && page)
+      roots = [page];
     if (options.headings)
       return outlineHeadings(roots);
-    const lines = [];
-    let chars = 0;
-    let truncated = false;
+    const { push, full, result } = makeLines();
     let pending = "";
     let textless = false;
-    const push = (depth, line) => {
-      if (truncated)
-        return;
-      const text = "  ".repeat(Math.min(depth, 8)) + line;
-      if (lines.length >= MAX_LINES || chars + text.length > MAX_CHARS) {
-        truncated = true;
-        return;
-      }
-      lines.push(text);
-      chars += text.length + 1;
-    };
     const flush = (depth) => {
       if (interactive || textless)
         return;
@@ -365,7 +385,7 @@
         push(depth, `text ${quote(text)}`);
     };
     function walk(node, depth) {
-      if (truncated)
+      if (full())
         return;
       if (node.nodeType === Node.TEXT_NODE) {
         if (!interactive && !textless)
@@ -379,15 +399,14 @@
       }
       const el = node;
       const tag = el.tagName;
-      if (["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "SVG", "HEAD"].includes(tag.toUpperCase()))
+      if (SKIP_TAGS.has(tag.toUpperCase()))
         return;
       if (hidden(el))
         return;
       const live = textless ? null : liveKind(el);
       if (live) {
         flush(depth);
-        const raw = typeof el.innerText === "string" ? el.innerText : el.textContent;
-        const message = clean(raw, Infinity);
+        const message = clean(textOf(el), Infinity);
         if (message.length > LIVE_CAP) {
           push(depth, `${live} [${refFor(el)}]:`);
           for (const child of Array.from(children(el)))
@@ -443,8 +462,7 @@
       let inner = depth;
       if (group) {
         flush(depth);
-        const name = labelText(el).trim();
-        push(depth, `${group}${name ? ` ${quote(clean(name, NAME_CAP))}` : ""} [${refFor(el)}]:`);
+        pushGroup(push, el, group, depth);
         inner = depth + 1;
       }
       const block = group || BLOCK.test(styleOf(el).display);
@@ -474,26 +492,12 @@
     for (const root of roots)
       walk(root, 0);
     flush(0);
-    return { tree: lines.join(`
-`), truncated };
+    return result();
   }
   function outlineHeadings(roots) {
-    const lines = [];
-    let chars = 0;
-    let truncated = false;
-    const push = (depth, line) => {
-      if (truncated)
-        return;
-      const text = "  ".repeat(Math.min(depth, 8)) + line;
-      if (lines.length >= MAX_LINES || chars + text.length > MAX_CHARS) {
-        truncated = true;
-        return;
-      }
-      lines.push(text);
-      chars += text.length + 1;
-    };
+    const { push, full, result } = makeLines();
     function walk(node, depth) {
-      if (truncated)
+      if (full())
         return;
       if (node.nodeType !== Node.ELEMENT_NODE) {
         if (node.nodeType !== Node.TEXT_NODE) {
@@ -504,15 +508,14 @@
       }
       const el = node;
       const tag = el.tagName;
-      if (["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "SVG", "HEAD"].includes(tag.toUpperCase()))
+      if (SKIP_TAGS.has(tag.toUpperCase()))
         return;
       if (hidden(el))
         return;
       const group = groupOf(el);
       let inner = depth;
       if (group) {
-        const name = labelText(el).trim();
-        push(depth, `${group}${name ? ` ${quote(clean(name, NAME_CAP))}` : ""} [${refFor(el)}]:`);
+        pushGroup(push, el, group, depth);
         inner = depth + 1;
       }
       const level = headingLevel(el);
@@ -524,12 +527,10 @@
     }
     for (const root of roots)
       walk(root, 0);
-    return { tree: lines.join(`
-`), truncated };
+    return result();
   }
 
   // src/browser-agent/changes.ts
-  var LIVE_SELECTOR = "[role=status],[role=alert],[role=log],[aria-live],output";
   var DIALOG_SELECTOR = "dialog,[role=dialog],[role=alertdialog],[aria-modal=true]";
   var POPUP_SELECTOR = "[role=menu],[role=listbox]";
   var pending = null;
@@ -542,9 +543,7 @@
     return before ? pageChanges(before) : [];
   }
   function liveText(el) {
-    const inner = el.innerText;
-    const raw = typeof inner === "string" ? inner : el.textContent;
-    return clean(raw, Infinity);
+    return clean(textOf(el), Infinity);
   }
   function dialogOpen(el) {
     if (el.tagName === "DIALOG" && !el.open)
@@ -561,8 +560,9 @@
   function capturePage() {
     const live = [];
     for (const el of Array.from(document.querySelectorAll(LIVE_SELECTOR))) {
-      if (liveKind(el) && rendered(el))
-        live.push({ el, text: liveText(el) });
+      const kind = liveKind(el);
+      if (kind && rendered(el))
+        live.push({ el, kind, text: liveText(el) });
     }
     const dialogs = Array.from(document.querySelectorAll(DIALOG_SELECTOR)).filter(dialogOpen);
     const popups = Array.from(document.querySelectorAll(POPUP_SELECTOR)).map(popupOf).filter((p) => p !== null && rendered(p.el));
@@ -595,7 +595,7 @@
         continue;
       if (!now.text)
         continue;
-      out.push(liveLine(liveKind(now.el), now.text, now.el));
+      out.push(liveLine(now.kind, now.text, now.el));
     }
     for (const el of after.dialogs) {
       if (before.dialogs.includes(el))
@@ -628,6 +628,104 @@
       return out;
     const extra = out.length - MAX_CHANGES;
     return [...out.slice(0, MAX_CHANGES), `… ${extra} more changes`];
+  }
+
+  // src/browser-agent/keys.ts
+  var KEYS = {
+    Enter: { key: "Enter", code: "Enter", keyCode: 13 },
+    Escape: { key: "Escape", code: "Escape", keyCode: 27 },
+    Tab: { key: "Tab", code: "Tab", keyCode: 9 },
+    "Shift+Tab": { key: "Tab", code: "Tab", keyCode: 9, shift: true },
+    ArrowUp: { key: "ArrowUp", code: "ArrowUp", keyCode: 38 },
+    ArrowDown: { key: "ArrowDown", code: "ArrowDown", keyCode: 40 },
+    ArrowLeft: { key: "ArrowLeft", code: "ArrowLeft", keyCode: 37 },
+    ArrowRight: { key: "ArrowRight", code: "ArrowRight", keyCode: 39 },
+    Space: { key: " ", code: "Space", keyCode: 32 },
+    PageUp: { key: "PageUp", code: "PageUp", keyCode: 33 },
+    PageDown: { key: "PageDown", code: "PageDown", keyCode: 34 },
+    Home: { key: "Home", code: "Home", keyCode: 36 },
+    End: { key: "End", code: "End", keyCode: 35 },
+    Backspace: { key: "Backspace", code: "Backspace", keyCode: 8 },
+    Delete: { key: "Delete", code: "Delete", keyCode: 46 }
+  };
+  var TABBABLE = 'a[href],button,input,select,textarea,summary,[tabindex],[contenteditable="true"],[role="button"],[role="tab"],[role="menuitem"]';
+  function keyEvent(target, eventName, def) {
+    const event = new KeyboardEvent(eventName, {
+      key: def.key,
+      code: def.code,
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      shiftKey: Boolean(def.shift)
+    });
+    Object.defineProperty(event, "keyCode", { get: () => def.keyCode });
+    Object.defineProperty(event, "which", { get: () => def.keyCode });
+    return dispatch.call(target, event);
+  }
+  function visible(el) {
+    return !hidden(el) && !el.disabled;
+  }
+  function tabbables() {
+    return Array.from(document.querySelectorAll(TABBABLE)).filter((el) => visible(el) && el.tabIndex >= 0);
+  }
+  function moveFocus(back) {
+    const list = tabbables();
+    if (list.length === 0)
+      return null;
+    const index = list.indexOf(document.activeElement);
+    const step = back ? -1 : 1;
+    const next = index < 0 ? back ? list.length - 1 : 0 : (index + step + list.length) % list.length;
+    list[next].focus();
+    return list[next];
+  }
+  function submit(el) {
+    const input = el;
+    if (el.tagName !== "INPUT" || !input.form)
+      return;
+    if (["checkbox", "radio", "submit", "button", "reset"].includes(input.type))
+      return;
+    const form = input.form;
+    if (typeof form.requestSubmit === "function")
+      form.requestSubmit();
+    else
+      form.submit();
+  }
+  function press(ref, name) {
+    const def = KEYS[name];
+    if (!def)
+      return { error: `unknown key ${name}` };
+    let target;
+    if (ref) {
+      const found = lookup(ref);
+      if (!found)
+        return missing(ref);
+      target = found;
+    } else {
+      target = document.activeElement ?? document.body;
+    }
+    const before = capturePage();
+    markPage(before);
+    if (ref)
+      target.focus({ preventScroll: true });
+    const proceed = keyEvent(target, "keydown", def);
+    if (def.key === "Enter" || def.key === " ")
+      keyEvent(target, "keypress", def);
+    keyEvent(target, "keyup", def);
+    let note = "";
+    if (proceed && name === "Tab") {
+      const focused = moveFocus(false);
+      if (focused)
+        note = `focus moved to [${refFor(focused)}]`;
+    } else if (proceed && name === "Shift+Tab") {
+      const focused = moveFocus(true);
+      if (focused)
+        note = `focus moved to [${refFor(focused)}]`;
+    } else if (proceed && name === "Enter") {
+      submit(target);
+    } else if (proceed && name === "Space" && (target.tagName === "BUTTON" || isCheckable(target))) {
+      target.click();
+    }
+    return { note, changes: pageChanges(before) };
   }
 
   // src/browser-agent/actions.ts
@@ -685,22 +783,10 @@
     }
     return { note, changes: pageChanges(before) };
   }
-  function key(el, eventName) {
-    const event = new KeyboardEvent(eventName, {
-      key: "Enter",
-      code: "Enter",
-      bubbles: true,
-      cancelable: true,
-      composed: true
-    });
-    Object.defineProperty(event, "keyCode", { get: () => 13 });
-    Object.defineProperty(event, "which", { get: () => 13 });
-    return dispatch.call(el, event);
-  }
   function pressEnter(el) {
-    const proceed = key(el, "keydown");
-    key(el, "keypress");
-    key(el, "keyup");
+    const proceed = keyEvent(el, "keydown", KEYS.Enter);
+    keyEvent(el, "keypress", KEYS.Enter);
+    keyEvent(el, "keyup", KEYS.Enter);
     if (proceed && el.tagName === "INPUT" && el.form) {
       const form = el.form;
       if (typeof form.requestSubmit === "function")
@@ -709,7 +795,7 @@
         form.submit();
     }
   }
-  function type(ref, text, submit) {
+  function type(ref, text, submit2) {
     const el = lookup(ref);
     if (!el)
       return missing(ref);
@@ -730,7 +816,7 @@
         };
       }
       option.selected = true;
-    } else if (tag === "INPUT" && isCheckable(el)) {
+    } else if (tag === "INPUT" && isCheckable(field)) {
       return {
         error: `${ref} is a ${el.type}; use browser_click to toggle it.`
       };
@@ -759,118 +845,9 @@
       });
       fire(field, Event, "change", { bubbles: true });
     }
-    if (submit)
+    if (submit2)
       pressEnter(field);
     return { note: "", changes: pageChanges(before) };
-  }
-  function isCheckable(input) {
-    return input.type === "checkbox" || input.type === "radio";
-  }
-
-  // src/browser-agent/keys.ts
-  var KEYS = {
-    Enter: { key: "Enter", code: "Enter", keyCode: 13 },
-    Escape: { key: "Escape", code: "Escape", keyCode: 27 },
-    Tab: { key: "Tab", code: "Tab", keyCode: 9 },
-    "Shift+Tab": { key: "Tab", code: "Tab", keyCode: 9, shift: true },
-    ArrowUp: { key: "ArrowUp", code: "ArrowUp", keyCode: 38 },
-    ArrowDown: { key: "ArrowDown", code: "ArrowDown", keyCode: 40 },
-    ArrowLeft: { key: "ArrowLeft", code: "ArrowLeft", keyCode: 37 },
-    ArrowRight: { key: "ArrowRight", code: "ArrowRight", keyCode: 39 },
-    Space: { key: " ", code: "Space", keyCode: 32 },
-    PageUp: { key: "PageUp", code: "PageUp", keyCode: 33 },
-    PageDown: { key: "PageDown", code: "PageDown", keyCode: 34 },
-    Home: { key: "Home", code: "Home", keyCode: 36 },
-    End: { key: "End", code: "End", keyCode: 35 },
-    Backspace: { key: "Backspace", code: "Backspace", keyCode: 8 },
-    Delete: { key: "Delete", code: "Delete", keyCode: 46 }
-  };
-  var TABBABLE = 'a[href],button,input,select,textarea,summary,[tabindex],[contenteditable="true"],[role="button"],[role="tab"],[role="menuitem"]';
-  function keyEvent(target, eventName, def) {
-    const event = new KeyboardEvent(eventName, {
-      key: def.key,
-      code: def.code,
-      bubbles: true,
-      cancelable: true,
-      composed: true,
-      shiftKey: Boolean(def.shift)
-    });
-    Object.defineProperty(event, "keyCode", { get: () => def.keyCode });
-    Object.defineProperty(event, "which", { get: () => def.keyCode });
-    return dispatch.call(target, event);
-  }
-  function visible(el) {
-    if (el.hidden || el.getAttribute("aria-hidden") === "true")
-      return false;
-    if (el.disabled)
-      return false;
-    const style = el.ownerDocument.defaultView?.getComputedStyle(el);
-    return !style || style.display !== "none" && style.visibility !== "hidden";
-  }
-  function tabbables() {
-    return Array.from(document.querySelectorAll(TABBABLE)).filter((el) => visible(el) && el.tabIndex >= 0);
-  }
-  function moveFocus(back) {
-    const list = tabbables();
-    if (list.length === 0)
-      return null;
-    const index = list.indexOf(document.activeElement);
-    const step = back ? -1 : 1;
-    const next = index < 0 ? back ? list.length - 1 : 0 : (index + step + list.length) % list.length;
-    list[next].focus();
-    return list[next];
-  }
-  function isCheckable2(el) {
-    return el.tagName === "INPUT" && (el.type === "checkbox" || el.type === "radio");
-  }
-  function submit(el) {
-    const input = el;
-    if (el.tagName !== "INPUT" || !input.form)
-      return;
-    if (["checkbox", "radio", "submit", "button", "reset"].includes(input.type))
-      return;
-    const form = input.form;
-    if (typeof form.requestSubmit === "function")
-      form.requestSubmit();
-    else
-      form.submit();
-  }
-  function press(ref, name) {
-    const def = KEYS[name];
-    if (!def)
-      return { error: `unknown key ${name}` };
-    let el = null;
-    if (ref) {
-      el = lookup(ref) ?? null;
-      if (!el)
-        return missing(ref);
-    } else {
-      el = document.activeElement ?? document.body;
-    }
-    const target = el;
-    const before = capturePage();
-    markPage(before);
-    if (ref)
-      target.focus({ preventScroll: true });
-    const proceed = keyEvent(target, "keydown", def);
-    if (def.key === "Enter" || def.key === " ")
-      keyEvent(target, "keypress", def);
-    keyEvent(target, "keyup", def);
-    let note = "";
-    if (proceed && name === "Tab") {
-      const focused = moveFocus(false);
-      if (focused)
-        note = `focus moved to [${refFor(focused)}]`;
-    } else if (proceed && name === "Shift+Tab") {
-      const focused = moveFocus(true);
-      if (focused)
-        note = `focus moved to [${refFor(focused)}]`;
-    } else if (proceed && name === "Enter") {
-      submit(target);
-    } else if (proceed && name === "Space" && (target.tagName === "BUTTON" || isCheckable2(target))) {
-      target.click();
-    }
-    return { note, changes: pageChanges(before) };
   }
 
   // src/browser-agent/origin.ts
@@ -888,7 +865,7 @@
   var base = null;
   function styleOverflow(el) {
     const style = el.ownerDocument.defaultView?.getComputedStyle(el);
-    return `${style?.overflowY ?? ""} ${style?.overflow ?? ""}`;
+    return style?.overflowY ?? "";
   }
   function scrollable(el) {
     return el.scrollHeight > el.clientHeight && /(auto|scroll|overlay)/.test(styleOverflow(el));
@@ -943,11 +920,6 @@
   }
 
   // src/browser-agent/wait.ts
-  var LIVE_SELECTOR2 = "[role=status],[role=alert],[role=log],[aria-live],output";
-  function textOf(el) {
-    const inner = el.innerText;
-    return typeof inner === "string" ? inner : el.textContent || "";
-  }
   function visibleText(node) {
     if (node.nodeType === Node.TEXT_NODE)
       return node.nodeValue ?? "";
@@ -972,8 +944,8 @@
     return typeof inner === "string" ? inner : visibleText(el);
   }
   function liveWith(text) {
-    for (const el of Array.from(document.querySelectorAll(LIVE_SELECTOR2))) {
-      if (liveKind(el) && rendered(el) && textOf(el).includes(text))
+    for (const el of Array.from(document.querySelectorAll(LIVE_SELECTOR))) {
+      if (liveKind(el) && rendered(el) && (textOf(el) ?? "").includes(text))
         return el;
     }
     return null;
@@ -1017,7 +989,7 @@
     return shownText(body).includes(text) ? body : null;
   }
   function describe2(el) {
-    const raw = textOf(el);
+    const raw = textOf(el) ?? "";
     const cap = raw.length > LIVE_CAP ? LIVE_CAP : Infinity;
     return `${quote(clean(raw, cap))} [${refFor(el)}]`;
   }
@@ -1036,8 +1008,6 @@
       if (!visible2)
         return { met: false };
       const base2 = found ?? smallestWith(cond.text) ?? document.body;
-      if (!base2)
-        return { met: false };
       let node = base2;
       while (node && !existingRef(node))
         node = node.parentElement;
@@ -1055,6 +1025,12 @@
   }
 
   // src/browser-agent/index.ts
+  function str(value) {
+    return typeof value === "string" ? value : undefined;
+  }
+  function num(value) {
+    return typeof value === "number" ? value : undefined;
+  }
   function run(call) {
     const origin = loc.origin;
     if (!call || call.action !== "origin" && !allowed(call.allowed, origin)) {
@@ -1070,28 +1046,24 @@
         case "snapshot":
           out = snapshot({
             interactive: Boolean(call.interactive),
-            scope: typeof call.scope === "string" ? call.scope : undefined,
+            scope: str(call.scope),
             headings: Boolean(call.headings)
           });
           break;
         case "click":
-          out = click(call.ref);
+          out = click(String(call.ref ?? ""));
           break;
         case "type":
-          out = type(call.ref, String(call.text ?? ""), Boolean(call.submit));
+          out = type(String(call.ref ?? ""), String(call.text ?? ""), Boolean(call.submit));
           break;
         case "console":
           out = { messages: consoleMessages ? consoleMessages() : [] };
           break;
         case "press":
-          out = press(typeof call.ref === "string" ? call.ref : undefined, String(call.key ?? ""));
+          out = press(str(call.ref), String(call.key ?? ""));
           break;
         case "scroll":
-          out = scroll({
-            ...typeof call.ref === "string" ? { ref: call.ref } : {},
-            ...typeof call.to === "string" ? { to: call.to } : {},
-            ...typeof call.pages === "number" ? { pages: call.pages } : {}
-          });
+          out = scroll({ ref: str(call.ref), to: str(call.to), pages: num(call.pages) });
           break;
         case "scroll_status":
           out = { scroll: scrollStatus() };
@@ -1104,11 +1076,11 @@
           out = { changes: takeChanges() };
           break;
         case "check_wait":
-          out = { ...checkWait({
-            ...typeof call.text === "string" ? { text: call.text } : {},
-            ...typeof call.gone === "string" ? { gone: call.gone } : {},
-            ...typeof call.ref_gone === "string" ? { ref_gone: call.ref_gone } : {}
-          }) };
+          out = checkWait({
+            text: str(call.text),
+            gone: str(call.gone),
+            ref_gone: str(call.ref_gone)
+          });
           break;
         default:
           out = { error: `unknown browser action ${call && call.action}` };

@@ -5,7 +5,7 @@ use serde_json::{json, Value};
 
 use crate::mcp::daemon_client::DaemonClient;
 
-mod action;
+pub(crate) mod action;
 mod render;
 #[cfg(test)]
 mod tests;
