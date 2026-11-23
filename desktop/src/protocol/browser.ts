@@ -5,9 +5,12 @@ export const BROWSER_CAPABILITY = "browser";
 
 /** What an agent asks the project's in-app browser to do. */
 export type BrowserAction =
-  | { action: "snapshot" }
+  | { action: "snapshot"; interactive?: boolean; scope?: string; headings?: boolean }
   | { action: "click"; ref: string }
   | { action: "type"; ref: string; text: string; submit: boolean }
+  | { action: "press"; key: string; ref?: string }
+  | { action: "scroll"; ref?: string; to?: "top" | "bottom"; pages?: number }
+  | { action: "wait"; text?: string; gone?: string; ref_gone?: string; timeout_ms?: number }
   | { action: "navigate"; url: string }
   | { action: "screenshot" }
   | { action: "console" };

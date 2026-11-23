@@ -113,7 +113,11 @@ async fn a_foreign_origin_is_asked_about_on_the_task_and_always_is_remembered() 
         &grants,
         "demo",
         &task_id,
-        wire::BrowserAction::Snapshot,
+        wire::BrowserAction::Snapshot {
+            interactive: false,
+            scope: None,
+            headings: false,
+        },
     );
     let desktop_and_user = async {
         let (first, _) = client_request(requests.recv().await.unwrap());
@@ -160,7 +164,11 @@ async fn a_result_from_an_unapproved_document_is_asked_about_and_never_returned_
         &grants,
         "demo",
         &task_id,
-        wire::BrowserAction::Snapshot,
+        wire::BrowserAction::Snapshot {
+            interactive: false,
+            scope: None,
+            headings: false,
+        },
     );
     let desktop_and_user = async {
         let (first, _) = client_request(requests.recv().await.unwrap());

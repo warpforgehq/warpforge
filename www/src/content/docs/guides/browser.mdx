@@ -71,14 +71,17 @@ Picking ends on its own after one element, and any navigation cancels it. Click 
 
 Pointing is for when you know what's wrong. When the agent should find out for itself — sign up with a test account, click through the checkout it just built, read the error the page throws — it can use the browser directly, in a tab of its own right next to yours.
 
-Ask for it in plain words: *"open the signup page, register a test user and tell me what breaks"*. The agent has six tools for it:
+Ask for it in plain words: *"open the signup page, register a test user and tell me what breaks"*. The agent has these tools for it:
 
 | Tool | What it does |
 | --- | --- |
 | `browser_navigate` | Opens an address in the project's tab and waits for it to load |
-| `browser_snapshot` | Reads the page as a compact outline — headings, text, and every link, button and field with a short reference |
+| `browser_snapshot` | Reads the page as a compact outline — headings, text, and every link, button and field with a short reference; can list only the actionable parts, or just one region |
 | `browser_click` | Clicks one of those elements |
 | `browser_type` | Fills a field or picks an option, and can press Enter to submit |
+| `browser_press` | Presses a key: Escape closes menus and dialogs, Enter submits, Tab moves focus, arrows move in lists |
+| `browser_scroll` | Scrolls a long page or list, including ones that load more as you go, and says when the bottom is reached |
+| `browser_wait` | Waits for text to appear or go, or for an element to leave, instead of snapshotting repeatedly |
 | `browser_screenshot` | Takes a picture of what the page shows |
 | `browser_console` | Reads the page's recent console messages and errors |
 

@@ -1,7 +1,8 @@
 # 0021 — Agents drive the in-app browser through a daemon → client request
 
 **Status:** accepted (2026-09-28); amended 2026-09-28 (the agent's own tab, the
-document-origin check)
+document-origin check), 2026-11-22 (TypeScript source, bundled page script,
+narrowed snapshots)
 
 ## Context
 
@@ -59,6 +60,46 @@ same `session.permission` answer, routed back to the daemon instead of to the
 agent. It carries `browser_origin`, so toasts and native banners offer only
 Review for it, never a one-click approve. It waits five minutes, then is
 withdrawn as cancelled.
+
+**The page script is TypeScript modules with a committed bundle.** Its source
+lives in `desktop/src/browser-agent/`, split by topic. `bun run
+build:agent-script` (`bun build … --format=iife --target=browser`) writes the
+unchanged path `desktop/src-tauri/src/browser_agent.js`, which stays committed
+and is what `include_str!` embeds. There is no build step in `tauri dev`, cargo
+or CI; a vitest drift test rebuilds with the same script and fails when the
+committed bundle is stale. Bun is the only tool added — no bundler dependency.
+The output is one IIFE, so the builtins it captures are still read before page
+scripts, and the entry point is still frozen and non-configurable. Hand-editing
+one 500-line script was the fragile part; a reviewed generated file is cheaper
+than concatenating modules by hand.
+
+**A snapshot can be narrowed.** `browser_snapshot` takes `interactive` (outline
+only controls, headings and group lines) and `scope` (a ref, outlining just that
+subtree). Refs come from the same `WeakMap`, so an element keeps its ref in every
+mode, and a scoped walk mints no refs outside the scope. A heading's ref scopes
+to its section: the heading and the siblings that follow it up to the next
+heading of the same or a higher level, climbing a wrapper that holds only that
+heading. The full outline stays the way to read page text. Status and alert
+messages (`role`, `aria-live`, `<output>`) are printed in every mode, and a
+scoped snapshot keeps text up to 1000 characters instead of 160, but neither
+changes any reference. `browser_click` and `browser_type` also report what
+changed synchronously — new or changed live regions, dialogs and menus opened
+or closed, the URL — and inlines the outline of a dialog or popup that opened,
+so an action rarely needs a snapshot to see its result; anything that arrives
+later is not in it.
+
+**Actions that need time are polled by the desktop driver.** The page script
+stays synchronous: `evaluateJavaScript` still answers with one value. `click`,
+`type` and `press` report their immediate changes, then the driver waits a
+300 ms settle window and asks the script for anything new since the action
+began, deduping lines already reported; if the page navigated meanwhile it
+keeps only the immediate report. `browser_scroll` settles for 400 ms so scroll
+events and lazy lists can run, then reads the position and a count of new
+interactive elements. `browser_wait` marks the page at the start and polls a
+`check_wait` script action every 150 ms for at most 30 seconds (5 seconds by
+default); a timeout is a normal result, and every poll is origin-gated like
+any other action. The script keeps one `pending` page state for `mark` and
+`changes`, so an action's own capture is what the settle compares against.
 
 **What the agent reads is wrapped as untrusted** (`mcp/untrusted.rs`): a
 `<browser_page>` block that says it is data, with a zero-width space after
