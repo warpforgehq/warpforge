@@ -6,11 +6,12 @@ use super::daemon_client::DaemonClient;
 
 pub(crate) use advisor::ask_advisor;
 pub(crate) use backlog::{PRIORITIES, STATUSES, TRACKERS};
+pub(crate) use browser::PRESS_KEYS;
 
 mod advisor;
 mod agents;
 mod backlog;
-pub(crate) mod browser;
+mod browser;
 mod html;
 mod memory;
 mod peers;

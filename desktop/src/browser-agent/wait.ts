@@ -39,7 +39,7 @@ function shownText(el: Element): string {
 
 function liveWith(text: string): Element | null {
   for (const el of Array.from(document.querySelectorAll(LIVE_SELECTOR))) {
-    if (liveKind(el) && rendered(el) && (textOf(el) ?? "").includes(text)) return el;
+    if (liveKind(el) && rendered(el) && textOf(el).includes(text)) return el;
   }
   return null;
 }
@@ -81,7 +81,7 @@ function smallestWith(text: string): Element | null {
 }
 
 function describe(el: Element): string {
-  const raw = textOf(el) ?? "";
+  const raw = textOf(el);
   const cap = raw.length > LIVE_CAP ? LIVE_CAP : Infinity;
   return `${quote(clean(raw, cap))} [${refFor(el)}]`;
 }

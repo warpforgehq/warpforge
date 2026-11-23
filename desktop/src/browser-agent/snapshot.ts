@@ -125,14 +125,10 @@ function hasBlockChild(el: Element): boolean {
   return Array.from(el.children).some(isBlockish);
 }
 
-function cellText(cell: Element): string {
-  return textOf(cell) ?? "";
-}
-
 function rowText(row: Element): string {
   return Array.from(row.children)
     .filter((cell) => /^T[DH]$/.test(cell.tagName))
-    .map(cellText)
+    .map(textOf)
     .join(" | ");
 }
 

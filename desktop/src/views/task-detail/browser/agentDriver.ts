@@ -11,12 +11,11 @@ import { IS_TAURI } from "@/lib/platform";
 import { BROWSER_CAPABILITY, type BrowserAction, type ClientRequestBody } from "../../../protocol";
 import {
   browser,
-  NO_TAB,
   onBrowserState,
   onBrowserTitle,
   type BrowserStateEvent,
 } from "./browserClient";
-import { runBrowserAction } from "./agentActions";
+import { isNoTab, runBrowserAction } from "./agentActions";
 import { recordTabPage, showAgentTab } from "./browserSession";
 import { runHtmlPreview } from "./htmlPreview";
 
@@ -34,10 +33,6 @@ const CLOSED =
 
 /** The agent's tab per project, for this app run. */
 const agentTabs = new Map<string, string>();
-
-function isNoTab(error: unknown): boolean {
-  return String(error instanceof Error ? error.message : error) === NO_TAB;
-}
 
 /** Whether the tab finished a load it started, watched from before it starts. */
 async function watchLoad(

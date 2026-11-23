@@ -1,6 +1,6 @@
 /** Settle windows and polling live here so the page script stays synchronous. */
 import type { BrowserAction } from "../../../protocol";
-import { browser as nativeBrowser } from "./browserClient";
+import { browser as nativeBrowser, NO_TAB } from "./browserClient";
 
 export const SETTLE_MS = 300;
 export const SCROLL_SETTLE_MS = 400;
@@ -59,6 +59,15 @@ async function call(
   return asObject(await nativeBrowser.agentCall(tabId, request, allowed));
 }
 
+/**
+ * Whether an error means the agent's tab no longer exists.
+ * @param error - Whatever a browser call rejected with.
+ * @returns True for the closed-tab error.
+ */
+export function isNoTab(error: unknown): boolean {
+  return String(error instanceof Error ? error.message : error) === NO_TAB;
+}
+
 async function tryCall(
   tabId: string,
   request: Record<string, unknown>,
@@ -66,7 +75,8 @@ async function tryCall(
 ): Promise<Result | null> {
   try {
     return await call(tabId, request, allowed);
-  } catch {
+  } catch (error) {
+    if (isNoTab(error)) throw error;
     return null;
   }
 }

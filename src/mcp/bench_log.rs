@@ -77,19 +77,21 @@ fn line(task: &str, tool: &str, args: &Value, result: &Result<Vec<Value>>) -> Va
             kept.insert("text".into(), json!(text));
         }
     }
-    let error = result.as_ref().err().map(|error| format!("{error:#}"));
-    let (chars, image_bytes) = match result {
-        Ok(content) => content.iter().fold((0, 0), |(chars, bytes), item| {
-            let text = item.get("text").and_then(Value::as_str).unwrap_or("");
-            let data = item.get("data").and_then(Value::as_str).unwrap_or("");
-            let padding = data.bytes().rev().take_while(|b| *b == b'=').count();
-            let decoded = (data.len() / 4 * 3).saturating_sub(padding);
-            (chars + text.chars().count(), bytes + decoded)
-        }),
-        Err(_) => (
-            "Error: ".len() + error.as_deref().unwrap_or("").chars().count(),
-            0,
-        ),
+    let (chars, image_bytes, error) = match result {
+        Ok(content) => {
+            let (chars, bytes) = content.iter().fold((0, 0), |(chars, bytes), item| {
+                let text = item.get("text").and_then(Value::as_str).unwrap_or("");
+                let data = item.get("data").and_then(Value::as_str).unwrap_or("");
+                let padding = data.bytes().rev().take_while(|b| *b == b'=').count();
+                let decoded = (data.len() / 4 * 3).saturating_sub(padding);
+                (chars + text.chars().count(), bytes + decoded)
+            });
+            (chars, bytes, None)
+        }
+        Err(e) => {
+            let message = format!("{e:#}");
+            ("Error: ".len() + message.chars().count(), 0, Some(message))
+        }
     };
     let mut entry = json!({
         "task": task,

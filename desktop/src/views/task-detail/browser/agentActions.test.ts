@@ -4,7 +4,7 @@ const browser = {
   agentCall: vi.fn<(tabId: string, call: unknown, allowed: string[]) => Promise<unknown>>(),
 };
 
-vi.mock("./browserClient", () => ({ browser }));
+vi.mock("./browserClient", () => ({ browser, NO_TAB: "no such browser tab" }));
 
 const {
   runBrowserAction,
@@ -225,5 +225,21 @@ describe("wait polling", () => {
     expect(result.met).toBe(true);
     expect(result.line).toBe('status "Saved" [e3]');
     expect(result.changes).toBeUndefined();
+  });
+
+  it("rejects with the no-tab error instead of polling to the timeout", async () => {
+    browser.agentCall.mockImplementation(async (_tab, call) => {
+      if (action(call) === "check_wait") throw new Error("no such browser tab");
+      return { url: "u", origin: "http://localhost:4400" };
+    });
+
+    const pending = runBrowserAction("t", { action: "wait", text: "Saved" }, allowed, signal());
+    const settled = pending.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(pending).rejects.toThrow("no such browser tab");
+    await settled;
+
+    const checks = browser.agentCall.mock.calls.filter(([, call]) => action(call) === "check_wait");
+    expect(checks).toHaveLength(1);
   });
 });

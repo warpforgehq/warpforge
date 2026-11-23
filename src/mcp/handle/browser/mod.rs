@@ -5,12 +5,13 @@ use serde_json::{json, Value};
 
 use crate::mcp::daemon_client::DaemonClient;
 
-pub(crate) mod action;
+mod action;
 mod render;
 #[cfg(test)]
 mod tests;
 
 use action::action_for;
+pub(crate) use action::PRESS_KEYS;
 use render::render;
 
 /// Long enough for the user to answer an approval prompt (the daemon gives
