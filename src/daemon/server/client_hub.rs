@@ -259,7 +259,11 @@ mod tests {
     fn body() -> wire::ClientRequestBody {
         wire::ClientRequestBody::Browser {
             project: "demo".into(),
-            action: wire::BrowserAction::Snapshot,
+            action: wire::BrowserAction::Snapshot {
+                interactive: false,
+                scope: None,
+                headings: false,
+            },
             allowed_origins: vec![],
         }
     }

@@ -16,6 +16,7 @@ import {
   onBrowserTitle,
   type BrowserStateEvent,
 } from "./browserClient";
+import { runBrowserAction } from "./agentActions";
 import { recordTabPage, showAgentTab } from "./browserSession";
 import { runHtmlPreview } from "./htmlPreview";
 
@@ -133,7 +134,7 @@ export async function runBrowserRequest(
   const run =
     call.action === "screenshot"
       ? browser.agentScreenshot(tabId, allowed)
-      : browser.agentCall(tabId, call, allowed);
+      : runBrowserAction(tabId, call, allowed, signal);
   return run.catch((error: unknown) => {
     if (!isNoTab(error)) throw error;
     agentTabs.delete(project);

@@ -9,6 +9,7 @@
     "lint": "oxlint src",
     "lint:fix": "oxlint --fix src",
     "format": "oxfmt --write src",
+    "build:agent-script": "bun scripts/build-agent-script.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "prepare": "git -C .. config core.hooksPath .githooks || true",

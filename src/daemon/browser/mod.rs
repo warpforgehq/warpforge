@@ -271,9 +271,12 @@ async fn approve(
 
 fn verb(action: &wire::BrowserAction) -> &'static str {
     match action {
-        wire::BrowserAction::Snapshot => "read the page",
+        wire::BrowserAction::Snapshot { .. } => "read the page",
         wire::BrowserAction::Click { .. } => "click",
         wire::BrowserAction::Type { .. } => "type",
+        wire::BrowserAction::Press { .. } => "press a key",
+        wire::BrowserAction::Scroll { .. } => "scroll",
+        wire::BrowserAction::Wait { .. } => "wait for the page",
         wire::BrowserAction::Navigate { .. } => "open a page",
         wire::BrowserAction::Screenshot => "take a screenshot",
         wire::BrowserAction::Console => "read the console",
@@ -337,6 +340,34 @@ mod tests {
             &allowed,
         );
         assert_eq!(home["title"], "Home");
+    }
+
+    #[test]
+    fn every_new_action_has_a_verb_for_the_approval_prompt() {
+        assert_eq!(
+            verb(&wire::BrowserAction::Press {
+                key: "Escape".into(),
+                target: None
+            }),
+            "press a key"
+        );
+        assert_eq!(
+            verb(&wire::BrowserAction::Scroll {
+                target: None,
+                to: None,
+                pages: Some(1.0)
+            }),
+            "scroll"
+        );
+        assert_eq!(
+            verb(&wire::BrowserAction::Wait {
+                text: Some("Saved".into()),
+                gone: None,
+                ref_gone: None,
+                timeout_ms: None
+            }),
+            "wait for the page"
+        );
     }
 
     #[test]

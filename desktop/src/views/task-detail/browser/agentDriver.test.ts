@@ -99,7 +99,7 @@ describe("runBrowserRequest", () => {
     );
     const acted = browser.agentCall.mock.calls.map(([tabId]) => tabId);
     expect(new Set(acted)).toEqual(new Set([nav.tab]));
-    expect(browser.agentCall).toHaveBeenLastCalledWith(nav.tab, { action: "click", ref: "e2" }, [
+    expect(browser.agentCall).toHaveBeenCalledWith(nav.tab, { action: "click", ref: "e2" }, [
       "http://localhost:4001",
     ]);
     expect(shown).toEqual([nav.tab]);

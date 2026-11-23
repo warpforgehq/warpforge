@@ -1,0 +1,8 @@
+export const MAX_LINES = 600;
+export const MAX_CHARS = 24000;
+export const TEXT_CAP = 160;
+export const SCOPED_TEXT_CAP = 1000;
+export const LIVE_CAP = 600;
+export const NAME_CAP = 80;
+export const INLINE_CAP = 1500;
+export const MAX_CHANGES = 10;

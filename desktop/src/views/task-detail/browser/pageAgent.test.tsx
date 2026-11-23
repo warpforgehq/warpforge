@@ -2,53 +2,10 @@ import { act, cleanup, render } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import script from "../../../../src-tauri/src/browser_agent.js?raw";
-import consoleScript from "../../../../src-tauri/src/browser_console.js?raw";
-
-interface Result {
-  blocked?: string;
-  origin?: string;
-  url: string;
-  title: string;
-  tree?: string;
-  truncated?: boolean;
-  note?: string;
-  error?: string;
-  messages?: { level: string; text: string }[];
-}
-
-type Agent = (call: Record<string, unknown>) => string;
-
-/** The entry point the script installs on the page's window. */
-const ENTRY = "__wfAgent";
-const page = window as unknown as Record<string, unknown>;
-
-/** Run a call as the host does; the page's own origin is allowed unless the
- *  call says otherwise. */
-function agent(call: Record<string, unknown>): Result {
-  const run = page[ENTRY] as Agent;
-  let out = "";
-  act(() => {
-    out = run({ allowed: [window.location.origin], ...call });
-  });
-  return JSON.parse(out) as Result;
-}
-
-/** The ref the outline gave the first line containing `label`. */
-function refOf(tree: string, label: string): string {
-  const line = tree.split("\n").find((l) => l.includes(label));
-  const ref = line?.match(/\[(e\d+)\]/)?.[1];
-  if (!ref) throw new Error(`no ref for ${label} in:\n${tree}`);
-  return ref;
-}
+import { ENTRY, agent, installPageAgent, page, refOf } from "./pageAgentHarness";
 
 beforeAll(() => {
-  // jsdom has no layout: give every element a box and make scrolling a no-op.
-  Element.prototype.getBoundingClientRect = () =>
-    ({ x: 0, y: 0, top: 0, left: 0, right: 20, bottom: 20, width: 20, height: 20 }) as DOMRect;
-  Element.prototype.scrollIntoView = () => {};
-  new Function(consoleScript)();
-  new Function(script)();
+  installPageAgent();
 });
 
 afterEach(cleanup);
@@ -289,5 +246,162 @@ describe("page agent", () => {
       // Strict-mode assignment to a read-only property throws.
     }
     expect(page[ENTRY]).toBe(original);
+  });
+
+  it("interactive snapshots keep controls and headings but drop page text", () => {
+    render(
+      <main>
+        <h1>Settings</h1>
+        <p>Read this paragraph</p>
+        <a href="/profile">Profile</a>
+        <button type="button">Save</button>
+        <label>
+          Email
+          <input />
+        </label>
+      </main>,
+    );
+    const tree = agent({ action: "snapshot", interactive: true }).tree ?? "";
+
+    expect(tree).toContain('heading "Settings" (h1)');
+    expect(tree).toMatch(/link "Profile" \[e\d+\]/);
+    expect(tree).toContain('button "Save"');
+    expect(tree).toContain('textbox "Email"');
+    expect(tree).not.toContain("Read this paragraph");
+    expect(tree).not.toContain('text "');
+  });
+
+  it("a scoped snapshot outlines one subtree only and refuses a stale ref", () => {
+    const { unmount } = render(
+      <main>
+        <h1>Account</h1>
+        <form aria-label="Login">
+          <label>
+            Email
+            <input />
+          </label>
+          <button type="submit">Sign in</button>
+        </form>
+      </main>,
+    );
+    const full = agent({ action: "snapshot" }).tree ?? "";
+    const scope = refOf(full, 'form "Login"');
+    const tree = agent({ action: "snapshot", scope }).tree ?? "";
+
+    expect(tree).toContain('form "Login"');
+    expect(tree).toContain('textbox "Email"');
+    expect(tree).toContain('button "Sign in"');
+    expect(tree).not.toContain("Account");
+
+    unmount();
+    expect(agent({ action: "snapshot", scope }).error).toContain("take a new browser_snapshot");
+  });
+
+  it("a scoped heading outlines its section down to the next heading of the same level", () => {
+    render(
+      <main>
+        <h2>A</h2>
+        <p>alpha</p>
+        <h3>A.1</h3>
+        <p>nested</p>
+        <h2>B</h2>
+        <p>beta</p>
+      </main>,
+    );
+    const full = agent({ action: "snapshot" }).tree ?? "";
+    const scope = refOf(full, 'heading "A"');
+    const tree = agent({ action: "snapshot", scope }).tree ?? "";
+
+    expect(tree).toContain('heading "A"');
+    expect(tree).toContain('text "alpha"');
+    expect(tree).toContain('heading "A.1"');
+    expect(tree).toContain('text "nested"');
+    expect(tree).not.toContain('heading "B"');
+    expect(tree).not.toContain('text "beta"');
+  });
+
+  it("climbs out of a heading wrapper so a Wikipedia section reads whole", () => {
+    render(
+      <main>
+        <div className="mw-heading mw-heading2">
+          <h2 id="Rediscovery">Rediscovery</h2>
+          <span className="mw-editsection">
+            <a href="/edit">edit</a>
+          </span>
+        </div>
+        <p>Rediscovery body text</p>
+        <div className="mw-heading mw-heading2">
+          <h2 id="Later">Later</h2>
+        </div>
+        <p>Later body text</p>
+      </main>,
+    );
+    const full = agent({ action: "snapshot" }).tree ?? "";
+    const scope = refOf(full, 'heading "Rediscovery"');
+    const tree = agent({ action: "snapshot", scope }).tree ?? "";
+
+    expect(tree).toContain('heading "Rediscovery"');
+    expect(tree).toContain('text "Rediscovery body text"');
+    expect(tree).not.toContain('heading "Later"');
+    expect(tree).not.toContain('text "Later body text"');
+  });
+
+  it("gives a heading the same ref in full, interactive and scoped snapshots", () => {
+    render(
+      <main>
+        <p>Some page text</p>
+        <h2>Section</h2>
+        <button type="button">Go</button>
+      </main>,
+    );
+    const full = agent({ action: "snapshot" }).tree ?? "";
+    const interactive = agent({ action: "snapshot", interactive: true }).tree ?? "";
+    const scope = refOf(full, 'heading "Section"');
+    const scoped = agent({ action: "snapshot", scope }).tree ?? "";
+
+    expect(refOf(interactive, 'heading "Section"')).toBe(scope);
+    expect(refOf(scoped, 'heading "Section"')).toBe(scope);
+  });
+
+  it("a stale heading ref is a missing-ref error", () => {
+    const { unmount } = render(
+      <main>
+        <h2>Gone section</h2>
+        <p>text</p>
+      </main>,
+    );
+    const ref = refOf(agent({ action: "snapshot" }).tree ?? "", 'heading "Gone section"');
+    unmount();
+    expect(agent({ action: "snapshot", scope: ref }).error).toContain("take a new browser_snapshot");
+  });
+
+  it("refs stay the same for the same element across snapshot modes", () => {
+    render(
+      <main>
+        <p>Some page text</p>
+        <a href="/next">Next</a>
+      </main>,
+    );
+    const full = agent({ action: "snapshot" }).tree ?? "";
+    const interactive = agent({ action: "snapshot", interactive: true }).tree ?? "";
+    const scope = refOf(full, '"Next"');
+    const scoped = agent({ action: "snapshot", scope }).tree ?? "";
+
+    expect(refOf(interactive, '"Next"')).toBe(refOf(full, '"Next"'));
+    expect(refOf(scoped, '"Next"')).toBe(refOf(full, '"Next"'));
+  });
+
+  it("truncates every snapshot mode at the same cap and says so", () => {
+    render(
+      <main>
+        {Array.from({ length: 650 }, (_, i) => (
+          <button type="button" key={i}>
+            Action {i}
+          </button>
+        ))}
+      </main>,
+    );
+    expect(agent({ action: "snapshot" }).truncated).toBe(true);
+    expect(agent({ action: "snapshot", interactive: true }).truncated).toBe(true);
   });
 });

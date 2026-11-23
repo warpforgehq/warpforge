@@ -14,7 +14,17 @@ pub const BROWSER_CAPABILITY: &str = "browser";
 #[serde(tag = "action", rename_all = "snake_case")]
 pub enum BrowserAction {
     /// A compact outline of the page, interactive elements tagged with refs.
-    Snapshot,
+    Snapshot {
+        /// Outline only actionable elements and the structure that places them.
+        #[serde(default, skip_serializing_if = "is_false")]
+        interactive: bool,
+        /// Outline only the subtree the ref in `scope` names.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        scope: Option<String>,
+        /// Print only the page's headings and group lines, to map a long page.
+        #[serde(default, skip_serializing_if = "is_false")]
+        headings: bool,
+    },
     /// Click the element a snapshot tagged `target`.
     Click {
         #[serde(rename = "ref")]
@@ -29,6 +39,33 @@ pub enum BrowserAction {
         #[serde(default)]
         submit: bool,
     },
+    /// Press `key` on the element `ref` names, the focused element, or the body.
+    Press {
+        key: String,
+        #[serde(rename = "ref", default, skip_serializing_if = "Option::is_none")]
+        target: Option<String>,
+    },
+    /// Scroll `ref` into view, to the top or bottom, or by whole pages.
+    Scroll {
+        #[serde(rename = "ref", default, skip_serializing_if = "Option::is_none")]
+        target: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        to: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pages: Option<f64>,
+    },
+    /// Wait for text to appear or go, or for the element `ref_gone` to be
+    /// removed or hidden.
+    Wait {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        text: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        gone: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ref_gone: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
+    },
     /// Load `url` in the project's active tab, opening one when there is none.
     Navigate { url: String },
     /// A picture of the visible part of the page.
@@ -37,14 +74,21 @@ pub enum BrowserAction {
     Console,
 }
 
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
 impl BrowserAction {
     /// The action's wire name.
     /// @returns the `action` tag, e.g. `click`
     pub fn name(&self) -> &'static str {
         match self {
-            BrowserAction::Snapshot => "snapshot",
+            BrowserAction::Snapshot { .. } => "snapshot",
             BrowserAction::Click { .. } => "click",
             BrowserAction::Type { .. } => "type",
+            BrowserAction::Press { .. } => "press",
+            BrowserAction::Scroll { .. } => "scroll",
+            BrowserAction::Wait { .. } => "wait",
             BrowserAction::Navigate { .. } => "navigate",
             BrowserAction::Screenshot => "screenshot",
             BrowserAction::Console => "console",
@@ -114,8 +158,119 @@ mod tests {
             }
         );
         assert_eq!(
-            serde_json::to_value(BrowserAction::Snapshot).unwrap(),
+            serde_json::to_value(BrowserAction::Snapshot {
+                interactive: false,
+                scope: None,
+                headings: false,
+            })
+            .unwrap(),
             json!({ "action": "snapshot" })
+        );
+        assert_eq!(
+            serde_json::to_value(BrowserAction::Snapshot {
+                interactive: true,
+                scope: Some("e3".into()),
+                headings: false,
+            })
+            .unwrap(),
+            json!({ "action": "snapshot", "interactive": true, "scope": "e3" })
+        );
+    }
+
+    #[test]
+    fn a_snapshot_without_modes_round_trips_and_accepts_them() {
+        let plain: BrowserAction = serde_json::from_value(json!({ "action": "snapshot" })).unwrap();
+        assert_eq!(
+            plain,
+            BrowserAction::Snapshot {
+                interactive: false,
+                scope: None,
+                headings: false,
+            }
+        );
+        let scoped: BrowserAction = serde_json::from_value(
+            json!({ "action": "snapshot", "interactive": true, "scope": "e7" }),
+        )
+        .unwrap();
+        assert_eq!(
+            scoped,
+            BrowserAction::Snapshot {
+                interactive: true,
+                scope: Some("e7".into()),
+                headings: false,
+            }
+        );
+        let headings: BrowserAction =
+            serde_json::from_value(json!({ "action": "snapshot", "headings": true })).unwrap();
+        assert_eq!(
+            headings,
+            BrowserAction::Snapshot {
+                interactive: false,
+                scope: None,
+                headings: true,
+            }
+        );
+        assert_eq!(
+            serde_json::to_value(BrowserAction::Snapshot {
+                interactive: false,
+                scope: None,
+                headings: true,
+            })
+            .unwrap(),
+            json!({ "action": "snapshot", "headings": true })
+        );
+    }
+
+    #[test]
+    fn press_scroll_and_wait_round_trip_with_their_optional_fields() {
+        let press: BrowserAction =
+            serde_json::from_value(json!({ "action": "press", "key": "Escape" })).unwrap();
+        assert_eq!(
+            press,
+            BrowserAction::Press {
+                key: "Escape".into(),
+                target: None
+            }
+        );
+        assert_eq!(
+            serde_json::to_value(BrowserAction::Press {
+                key: "Enter".into(),
+                target: Some("e2".into()),
+            })
+            .unwrap(),
+            json!({ "action": "press", "key": "Enter", "ref": "e2" })
+        );
+        let scroll: BrowserAction =
+            serde_json::from_value(json!({ "action": "scroll", "pages": 2 })).unwrap();
+        assert_eq!(
+            scroll,
+            BrowserAction::Scroll {
+                target: None,
+                to: None,
+                pages: Some(2.0)
+            }
+        );
+        assert_eq!(
+            serde_json::to_value(BrowserAction::Scroll {
+                target: Some("e4".into()),
+                to: None,
+                pages: None,
+            })
+            .unwrap(),
+            json!({ "action": "scroll", "ref": "e4" })
+        );
+        let wait: BrowserAction = serde_json::from_value(
+            json!({ "action": "wait", "text": "Saved", "timeout_ms": 3000 }),
+        )
+        .unwrap();
+        assert_eq!(
+            wait,
+            BrowserAction::Wait {
+                text: Some("Saved".into()),
+                gone: None,
+                ref_gone: None,
+                timeout_ms: Some(3000)
+            }
         );
     }
 

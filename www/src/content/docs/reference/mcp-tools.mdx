@@ -270,15 +270,39 @@ Opens `url` in the agent's tab and waits for it to load, returning the final add
 
 ### `browser_snapshot`
 
-Reads the agent tab's page as a compact outline: headings, text, and every link, button, field and option, each interactive one tagged with a reference like `[e12]`. A reference keeps pointing at the same element across snapshots until the page reloads. Long text is cut short and a large page is truncated, with a note saying so.
+Reads the agent tab's page as a compact outline: headings, text, and every link, button, field and option, each interactive one tagged with a reference like `[e12]`. A reference keeps pointing at the same element across snapshots until the page reloads. Long text is cut short and a large page is truncated, with a note saying so. Status and alert messages are always included, so to check an action's result an interactive snapshot is enough; a full snapshot is for reading page text.
+
+Two optional arguments narrow what comes back, without changing any reference:
+
+- `interactive: true` outlines only the controls, headings and group labels, leaving out paragraphs and inline text. This is the quickest way for an agent to find what it can act on.
+- `scope` outlines just one region — a dialog, form, navigation or main region, a control, or a heading's section — instead of the whole page. It takes a reference from an earlier snapshot (like `e12`), a CSS selector (`#main`, `form`), or a heading's text; the first rendered match wins, and a heading scopes to its section. Combine it with `interactive` to list only the controls in that region. A stale reference or a scope that matches nothing is reported as an error.
+- `headings: true` outlines only the headings, with refs and levels, plus the group lines — a map of a long article in about a thousand characters. Read it first, then `scope` to a section.
 
 ### `browser_click`
 
-Clicks the element `ref` names, with the pointer and mouse events a real click produces — links follow, checkboxes toggle, submit buttons submit. Take a new snapshot to see what changed.
+Clicks the element `ref` names, with the pointer and mouse events a real click produces — links follow, checkboxes toggle, submit buttons submit. The result lists what changed right away — new or changed status and alert messages, dialogs opened or closed, the URL — so take a snapshot only when you need more. Changes that arrive later, from a request that takes time, are not in it.
 
 ### `browser_type`
 
-Replaces the value of the text field, text area, editable element or select `ref` names with `text`, firing the input and change events frameworks listen for. For a select, `text` is an option's label or value. `submit: true` presses Enter afterwards, submitting the form.
+Replaces the value of the text field, text area, editable element or select `ref` names with `text`, firing the input and change events frameworks listen for. For a select, `text` is an option's label or value. `submit: true` presses Enter afterwards, submitting the form. Like a click, the result lists what changed right away — status and alert messages, dialogs, the URL — so take a snapshot only when you need more; changes that arrive later are not in it.
+
+### `browser_press`
+
+Presses `key` on the element `ref` names, or on the focused element when no `ref` is given. The keys are `Enter`, `Escape`, `Tab`, `Shift+Tab`, the four arrow keys, `Space`, `PageUp`, `PageDown`, `Home`, `End`, `Backspace` and `Delete`. `Escape` closes dialogs and menus, `Enter` submits a form, `Tab` and `Shift+Tab` move focus through the page in DOM order, and arrows move inside menus and lists. `Space` presses a button or toggles a checkbox. Like a click, the result lists what changed right away.
+
+### `browser_scroll`
+
+Scrolls the page or a scrollable list. Use it for long pages and lists that load more as you scroll, rather than snapshotting what is off screen. Give exactly one of:
+
+- `ref` scrolls that element into view, centred.
+- `to` is `"top"` or `"bottom"`.
+- `pages` scrolls by that many viewport heights; negative scrolls up.
+
+The result says where the page ended up — `scrolled to Y of H (N%)`, and whether the bottom was reached — and how many new interactive elements appeared, so you know whether to take another snapshot.
+
+### `browser_wait`
+
+Waits after an action whose result arrives later — a spinner, a request — instead of taking snapshots repeatedly. Give exactly one condition: `text` appears in the page's visible text or a live region, `gone` text disappears, or `ref_gone` names an element that is removed or hidden. `timeout_ms` defaults to 5000 and is capped at 30000. A timeout is a normal result, not an error. The result gives the elapsed time, what changed while it waited, and for `text` the line of the live region or nearest referenced ancestor that carries it.
 
 ### `browser_screenshot`
 
