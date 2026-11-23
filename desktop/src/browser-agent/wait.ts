@@ -1,8 +1,6 @@
-import { LIVE_CAP } from "./constants";
-import { clean, liveKind, quote, rendered } from "./outline";
+import { LIVE_CAP, LIVE_SELECTOR } from "./constants";
+import { clean, liveKind, quote, rendered, textOf } from "./outline";
 import { existingRef, lookup, refFor } from "./refs";
-
-const LIVE_SELECTOR = "[role=status],[role=alert],[role=log],[aria-live],output";
 
 export interface WaitCondition {
   text?: string;
@@ -10,16 +8,11 @@ export interface WaitCondition {
   ref_gone?: string;
 }
 
-export interface WaitCheck {
+export type WaitCheck = {
   met: boolean;
   line?: string;
   ref?: string;
-}
-
-function textOf(el: Element): string {
-  const inner = (el as HTMLElement).innerText;
-  return typeof inner === "string" ? inner : el.textContent || "";
-}
+};
 
 function visibleText(node: Node): string {
   if (node.nodeType === Node.TEXT_NODE) return node.nodeValue ?? "";
@@ -46,7 +39,7 @@ function shownText(el: Element): string {
 
 function liveWith(text: string): Element | null {
   for (const el of Array.from(document.querySelectorAll(LIVE_SELECTOR))) {
-    if (liveKind(el) && rendered(el) && textOf(el).includes(text)) return el;
+    if (liveKind(el) && rendered(el) && (textOf(el) ?? "").includes(text)) return el;
   }
   return null;
 }
@@ -88,7 +81,7 @@ function smallestWith(text: string): Element | null {
 }
 
 function describe(el: Element): string {
-  const raw = textOf(el);
+  const raw = textOf(el) ?? "";
   const cap = raw.length > LIVE_CAP ? LIVE_CAP : Infinity;
   return `${quote(clean(raw, cap))} [${refFor(el)}]`;
 }
@@ -107,7 +100,6 @@ export function checkWait(cond: WaitCondition): WaitCheck {
     const visible = found !== null || bodyText().includes(cond.text);
     if (!visible) return { met: false };
     const base = found ?? smallestWith(cond.text) ?? document.body;
-    if (!base) return { met: false };
     let node: Element | null = base;
     while (node && !existingRef(node)) node = node.parentElement;
     const anchor = node ?? base;

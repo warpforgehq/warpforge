@@ -1,12 +1,14 @@
 use anyhow::{anyhow, Result};
 use serde_json::{json, Value};
 
-// The order the enum in src/mcp/tools/browser.rs lists them in.
-fn text_arg<'a>(args: &'a Value, key: &str) -> Result<&'a str> {
+fn optional_text<'a>(args: &'a Value, key: &str) -> Option<&'a str> {
     args.get(key)
         .and_then(Value::as_str)
         .filter(|s| !s.trim().is_empty())
-        .ok_or_else(|| anyhow!("'{key}' is required"))
+}
+
+fn text_arg<'a>(args: &'a Value, key: &str) -> Result<&'a str> {
+    optional_text(args, key).ok_or_else(|| anyhow!("'{key}' is required"))
 }
 
 fn snapshot_action(args: &Value) -> Value {
@@ -17,17 +19,13 @@ fn snapshot_action(args: &Value) -> Value {
     if let Some(headings) = args.get("headings").and_then(Value::as_bool) {
         action["headings"] = json!(headings);
     }
-    if let Some(scope) = args
-        .get("scope")
-        .and_then(Value::as_str)
-        .filter(|s| !s.trim().is_empty())
-    {
+    if let Some(scope) = optional_text(args, "scope") {
         action["scope"] = json!(scope);
     }
     action
 }
 
-const PRESS_KEYS: &[&str] = &[
+pub(crate) const PRESS_KEYS: &[&str] = &[
     "Enter",
     "Escape",
     "Tab",
@@ -45,12 +43,6 @@ const PRESS_KEYS: &[&str] = &[
     "Delete",
 ];
 
-fn optional_text<'a>(args: &'a Value, key: &str) -> Option<&'a str> {
-    args.get(key)
-        .and_then(Value::as_str)
-        .filter(|s| !s.trim().is_empty())
-}
-
 fn press_action(args: &Value) -> Result<Value> {
     let key = text_arg(args, "key")?;
     if !PRESS_KEYS.contains(&key) {
@@ -66,10 +58,14 @@ fn press_action(args: &Value) -> Result<Value> {
 fn scroll_action(args: &Value) -> Result<Value> {
     let target = optional_text(args, "ref");
     let to = optional_text(args, "to");
-    let pages = args.get("pages").and_then(Value::as_f64);
-    if args.get("pages").is_some() && pages.is_none() {
-        return Err(anyhow!("'pages' must be a number"));
-    }
+    let pages = match args.get("pages") {
+        None => None,
+        Some(value) => Some(
+            value
+                .as_f64()
+                .ok_or_else(|| anyhow!("'pages' must be a number"))?,
+        ),
+    };
     let given =
         usize::from(target.is_some()) + usize::from(to.is_some()) + usize::from(pages.is_some());
     if given != 1 {
@@ -103,15 +99,13 @@ fn wait_action(args: &Value) -> Result<Value> {
     if given != 1 {
         return Err(anyhow!("give exactly one of 'text', 'gone' or 'ref_gone'"));
     }
-    if args.get("timeout_ms").is_some() && args.get("timeout_ms").and_then(Value::as_u64).is_none()
-    {
-        return Err(anyhow!("'timeout_ms' must be a whole number"));
+    let timeout = match args.get("timeout_ms") {
+        None => 5_000,
+        Some(value) => value
+            .as_u64()
+            .ok_or_else(|| anyhow!("'timeout_ms' must be a whole number"))?,
     }
-    let timeout = args
-        .get("timeout_ms")
-        .and_then(Value::as_u64)
-        .unwrap_or(5_000)
-        .clamp(1, 30_000);
+    .clamp(1, 30_000);
     let mut action = json!({ "action": "wait", "timeout_ms": timeout });
     if let Some(text) = text {
         action["text"] = json!(text);

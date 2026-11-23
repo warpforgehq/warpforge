@@ -36,7 +36,7 @@
 <script>
 var FIELDS = ['name', 'email', 'phone', 'country', 'plan', 'bio', 'newsletter', 'terms'];
 
-function valueOf(form, name) {
+function fieldValue(form, name) {
   var el = form.elements[name];
   if (el.type === 'checkbox') return el.checked ? 'yes' : 'no';
   return (el.value || '').trim();
@@ -52,16 +52,16 @@ document.getElementById('signup').addEventListener('submit', function (event) {
   event.preventDefault();
   var form = event.target;
   var problems = [];
-  if (!valueOf(form, 'name')) problems.push('Full name is required.');
-  if (valueOf(form, 'email').indexOf('@') < 1) problems.push('Email must be a valid address.');
-  if (valueOf(form, 'password').length < 8) problems.push('Password must be at least 8 characters.');
-  if (!valueOf(form, 'country')) problems.push('Choose a country.');
-  if (valueOf(form, 'terms') !== 'yes') problems.push('You must accept the terms of service.');
+  if (!fieldValue(form, 'name')) problems.push('Full name is required.');
+  if (fieldValue(form, 'email').indexOf('@') < 1) problems.push('Email must be a valid address.');
+  if (fieldValue(form, 'password').length < 8) problems.push('Password must be at least 8 characters.');
+  if (!fieldValue(form, 'country')) problems.push('Choose a country.');
+  if (fieldValue(form, 'terms') !== 'yes') problems.push('You must accept the terms of service.');
   document.getElementById('errors').textContent = problems.join(' ');
   var out = document.getElementById('confirmation');
   if (problems.length) { out.classList.add('hidden'); return; }
-  var values = FIELDS.map(function (f) { return valueOf(form, f).toLowerCase(); });
-  var lines = FIELDS.map(function (f) { return f + ': ' + valueOf(form, f); });
+  var values = FIELDS.map(function (f) { return fieldValue(form, f).toLowerCase(); });
+  var lines = FIELDS.map(function (f) { return f + ': ' + fieldValue(form, f); });
   out.textContent = 'Account created. ' + lines.join('; ') + '. Confirmation code: SGN-' + checksum(values.join('|'));
   out.classList.remove('hidden');
 });

@@ -1,5 +1,6 @@
 import { dispatch } from "./builtins";
 import { capturePage, markPage, pageChanges } from "./changes";
+import { hidden, isCheckable } from "./outline";
 import { lookup, missing, refFor } from "./refs";
 
 interface KeyDef {
@@ -9,7 +10,7 @@ interface KeyDef {
   shift?: boolean;
 }
 
-const KEYS: Record<string, KeyDef> = {
+export const KEYS: Record<string, KeyDef> = {
   Enter: { key: "Enter", code: "Enter", keyCode: 13 },
   Escape: { key: "Escape", code: "Escape", keyCode: 27 },
   Tab: { key: "Tab", code: "Tab", keyCode: 9 },
@@ -30,7 +31,9 @@ const KEYS: Record<string, KeyDef> = {
 const TABBABLE =
   'a[href],button,input,select,textarea,summary,[tabindex],[contenteditable="true"],[role="button"],[role="tab"],[role="menuitem"]';
 
-function keyEvent(target: EventTarget, eventName: string, def: KeyDef): boolean {
+// `keyCode` is not settable through KeyboardEventInit everywhere, and older
+// handlers still read it.
+export function keyEvent(target: EventTarget, eventName: string, def: KeyDef): boolean {
   const event = new KeyboardEvent(eventName, {
     key: def.key,
     code: def.code,
@@ -45,10 +48,7 @@ function keyEvent(target: EventTarget, eventName: string, def: KeyDef): boolean 
 }
 
 function visible(el: HTMLElement): boolean {
-  if (el.hidden || el.getAttribute("aria-hidden") === "true") return false;
-  if ((el as HTMLInputElement).disabled) return false;
-  const style = el.ownerDocument.defaultView?.getComputedStyle(el);
-  return !style || (style.display !== "none" && style.visibility !== "hidden");
+  return !hidden(el) && !(el as HTMLInputElement).disabled;
 }
 
 function tabbables(): HTMLElement[] {
@@ -68,13 +68,6 @@ function moveFocus(back: boolean): HTMLElement | null {
   return list[next];
 }
 
-function isCheckable(el: HTMLElement): boolean {
-  return (
-    el.tagName === "INPUT" &&
-    ((el as HTMLInputElement).type === "checkbox" || (el as HTMLInputElement).type === "radio")
-  );
-}
-
 function submit(el: HTMLElement): void {
   const input = el as HTMLInputElement;
   if (el.tagName !== "INPUT" || !input.form) return;
@@ -90,14 +83,14 @@ export function press(
 ): { note: string; changes: string[] } | { error: string } {
   const def = KEYS[name];
   if (!def) return { error: `unknown key ${name}` };
-  let el: HTMLElement | null = null;
+  let target: HTMLElement;
   if (ref) {
-    el = (lookup(ref) as HTMLElement | null) ?? null;
-    if (!el) return missing(ref);
+    const found = lookup(ref);
+    if (!found) return missing(ref);
+    target = found as HTMLElement;
   } else {
-    el = (document.activeElement as HTMLElement | null) ?? document.body;
+    target = (document.activeElement as HTMLElement | null) ?? document.body;
   }
-  const target = el as HTMLElement;
   const before = capturePage();
   markPage(before);
   if (ref) target.focus({ preventScroll: true });

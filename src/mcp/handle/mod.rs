@@ -10,7 +10,7 @@ pub(crate) use backlog::{PRIORITIES, STATUSES, TRACKERS};
 mod advisor;
 mod agents;
 mod backlog;
-mod browser;
+pub(crate) mod browser;
 mod html;
 mod memory;
 mod peers;
