@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.32.1
+
+### Patch Changes
+
+- [#65](https://github.com/warpforgehq/warpforge/pull/65) [`94d8aa8`](https://github.com/warpforgehq/warpforge/commit/94d8aa8113f00b948c1d4dae549656f96d709162) Thanks [@ephor](https://github.com/ephor)! - Keep typing while an agent works in the built-in browser. Your cursor now stays in the chat box or editor while the agent clicks and fills in fields, and your keystrokes no longer end up in the page the agent is using.
+
 ## 0.32.0
 
 ### Minor Changes
