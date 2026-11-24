@@ -127,7 +127,10 @@ pub async fn browser_agent_call(
     if let Some(object) = call.as_object_mut() {
         object.insert("allowed".into(), json!(allowed_origins));
     }
-    let value = run_script(&webview, &call).await?;
+    let focus = crate::focus_guard::hold(&webview);
+    let value = run_script(&webview, &call).await;
+    focus.restore(&webview);
+    let value = value?;
     if reporting {
         let mut value = value;
         if let Some(object) = value.as_object_mut() {

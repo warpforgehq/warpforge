@@ -12,6 +12,7 @@ mod browser_capture;
 mod context_menu;
 mod daemon;
 mod desktop_env;
+mod focus_guard;
 mod html_render;
 #[cfg(target_os = "macos")]
 mod macos;
