@@ -98,14 +98,16 @@ function Sidebar({
     <div className="flex h-full min-h-0 min-w-0">
       <Rail
         selection={selection}
-        openTaskId={openTaskId}
         collapsed={panelHidden}
         canExpand={canExpand}
+        state={state}
         connection={connection}
         connectionError={connectionError}
         agentUpdates={tree.agentUpdates}
-        liveLane={tree.liveLane}
-        modeCount={tree.modeCount}
+        attentionIds={tree.attentionIds}
+        nowSec={tree.nowSec}
+        inboxUnseen={tree.inboxUnseen}
+        teamUnread={tree.teamUnread}
         onToggleCollapsed={onToggleCollapsed}
         onSelectMode={onSelectMode}
         onNewTask={onNewTask}

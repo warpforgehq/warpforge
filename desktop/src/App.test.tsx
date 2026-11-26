@@ -56,11 +56,6 @@ vi.mock("./hooks/useTauriClose", () => ({ useTauriClose: vi.fn<() => void>() }))
 vi.mock("./hooks/usePullShortcut", () => ({ usePullShortcut: vi.fn<() => void>() }));
 vi.mock("./hooks/usePushShortcut", () => ({ usePushShortcut: vi.fn<() => void>() }));
 
-vi.mock("./views/MissionControl", () => ({
-  default: (props: { onOpenTask: (id: string) => void }) => (
-    <div data-testid="mission-control" onClick={() => props.onOpenTask("task-1")} />
-  ),
-}));
 vi.mock("./views/Projects", () => ({
   default: vi.fn<() => React.ReactNode>(() => <div data-testid="projects" />),
 }));
@@ -146,9 +141,8 @@ function setWide(wide: boolean) {
  * `findBy` timeout and leave the tree uncommitted — an assertion right after
  * `render` then flakes. Render, settle, then touch the DOM.
  */
-async function renderApp(view = "mission-control") {
+async function renderApp(view = "new-task-dialog") {
   const result = render(<App />);
-  fireEvent.click(await screen.findByRole("button", { name: "Create task" }, { timeout: 5_000 }));
   await screen.findByTestId(view, undefined, { timeout: 5_000 });
   return result;
 }
@@ -158,7 +152,7 @@ beforeEach(() => {
   useUi.setState({
     sidebarCollapsed: false,
     sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
-    view: "control",
+    view: "start",
     lastTaskId: null,
     openTaskId: null,
     selectedProjectId: null,
@@ -208,8 +202,7 @@ describe("App sidebar layout", () => {
     expect(screen.queryByTestId("sidebar-resize-handle")).not.toBeInTheDocument();
   });
 
-  it("launches on the new task composer, not the stored view", async () => {
-    useUi.setState({ view: "project", selectedProjectId: "warpforge" });
+  it("launches on the new task composer when no destination is selected", async () => {
     render(<App />);
 
     expect(
@@ -223,7 +216,6 @@ describe("App sidebar layout", () => {
   });
 
   it("leaves the composer when a store action navigates", async () => {
-    useUi.setState({ view: "team", sidebarMode: "team" });
     render(<App />);
     await screen.findByTestId("new-task-dialog", undefined, { timeout: 5_000 });
 
@@ -234,7 +226,8 @@ describe("App sidebar layout", () => {
   });
 
   it("⌘N reopens the new task composer", async () => {
-    await renderApp();
+    useUi.getState().setView("inbox");
+    await renderApp("inbox");
 
     expect(screen.queryByTestId("new-task-dialog")).not.toBeInTheDocument();
     fireEvent.keyDown(window, { key: "n", metaKey: true });
@@ -347,10 +340,10 @@ describe("App view branches", () => {
     rerender(<App />);
     expect(await screen.findByTestId("team", undefined, { timeout: 5_000 })).toBeInTheDocument();
 
-    act(() => useUi.setState({ view: "control" }));
+    act(() => useUi.setState({ view: "start" }));
     rerender(<App />);
     expect(
-      await screen.findByTestId("mission-control", undefined, { timeout: 5_000 }),
+      await screen.findByTestId("new-task-dialog", undefined, { timeout: 5_000 }),
     ).toBeInTheDocument();
   });
 });
@@ -366,19 +359,19 @@ describe("Sidebar modes", () => {
 
     expect(useUi.getState().openTaskId).toBeNull();
     expect(useUi.getState().lastTaskId).toBeNull();
-    expect(useUi.getState().view).toBe("control");
+    expect(useUi.getState().view).toBe("start");
     expect(useUi.getState().sidebarMode).toBe("tasks");
   });
 
   it("switches body and main area together when a mode is picked", async () => {
-    useUi.setState({ sidebarMode: "tasks", view: "control" });
+    useUi.setState({ sidebarMode: "tasks", view: "start" });
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: "Inbox mode" }));
     expect(useUi.getState()).toMatchObject({ sidebarMode: "inbox", view: "inbox" });
   });
 
   it("picks the modes with ⌥⌘ and the physical digit key", async () => {
-    useUi.setState({ sidebarMode: "tasks", view: "control" });
+    useUi.setState({ sidebarMode: "tasks", view: "start" });
     render(<App />);
     await screen.findByTestId("app-sidebar");
     fireEvent.keyDown(window, { altKey: true, code: "Digit3", key: "£", metaKey: true });
@@ -388,7 +381,7 @@ describe("Sidebar modes", () => {
     // Plain ⌘1 stays the task workspace's.
     fireEvent.keyDown(window, { code: "Digit1", key: "1", metaKey: true });
     expect(useUi.getState().sidebarMode).toBe("inbox");
-    fireEvent.keyDown(window, { altKey: true, code: "Digit5", key: "∞", metaKey: true });
+    fireEvent.keyDown(window, { altKey: true, code: "Digit4", key: "¢", metaKey: true });
     expect(useUi.getState()).toMatchObject({ sidebarMode: "automations", view: "automations" });
   });
 });
@@ -401,7 +394,7 @@ describe("Settings in place", () => {
     const settings = await screen.findByTestId("settings");
     // The sidebar panel carries the sections, so the page draws none of its own.
     expect(settings).not.toHaveAttribute("data-show-nav");
-    expect(screen.queryByTestId("mission-control")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("new-task-dialog")).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Inbox mode" }));

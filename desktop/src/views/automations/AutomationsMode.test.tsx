@@ -121,8 +121,8 @@ function renderWorkspace(collapsed = false) {
 
 beforeEach(() => {
   useUi.setState({
-    view: "control",
-    sidebarMode: "control",
+    view: "start",
+    sidebarMode: "tasks",
     settingsOpen: false,
     selectedAutomationId: null,
   });

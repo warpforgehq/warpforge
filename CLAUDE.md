@@ -62,12 +62,11 @@ query.ts              — React Query setup
 store/
   ui.ts               — Zustand store (UI state: view, panels, toggles)
 views/
-  MissionControl.tsx  — Main dashboard with session tiles
+  NewTaskDialog/      — New task composer, also the start view
   Projects.tsx        — Project list + surface tabs (backlog, runtime, files, PRs)
   TaskDetail.tsx      — Task detail: chat + changes rail + runtime panel
   Settings.tsx        — Settings view
 components/
-  AttentionRail.tsx   — "Needs you" sidebar
   ChangesRail.tsx     — Git staging tree + commit box
   ChatComposer.tsx    — Agent chat input
   ChatTranscript.tsx  — Agent conversation display
@@ -94,7 +93,7 @@ lib/                  — Utilities (38 files: sessionActivity, sessionTiming, e
 - **Task management:** create, archive, delete, title editing, session resume
 - **Agent chat:** conversation stream, composer with mentions/attachments, thinking blocks
 - **Changes rail:** staging tree with tri-state checkboxes, per-file diff counts, commit with amend
-- **Mission Control:** session tiles with live conversation preview, pinned tasks
+- **Navigation:** start on the New Task composer, browse the task tree, and pin tasks, projects, Smiths and channels to the rail
 - **Backlog:** per-project work item list — infinite scroll, filters, sort, priority edits, detail drawer
 - **Services/PF status:** runtime panel with live status/logs, start/stop/restart, and an interactive terminal
 - **Git operations:** commit, push (with force-with-lease), branch info

@@ -39,7 +39,7 @@ const ACTION_BUTTON =
  * also offers what its queue or its last run allows.
  * @param props.task The row's task.
  * @param props.state What the row shows the task as.
- * @param props.pinned Whether it is pinned to Mission Control.
+ * @param props.pinned Whether it is pinned to the rail.
  * @param props.factory Whether it is a Factory task.
  * @param props.onPin Toggles the pin.
  */
@@ -174,7 +174,7 @@ export function RowActions({
             {factory && <FactoryMenuItems task={task} />}
             <DropdownMenuItem onSelect={() => onPin(task.id)}>
               <Pin className="size-3.5 opacity-70" />
-              {pinned ? "Unpin from Mission Control" : "Pin to Mission Control"}
+              {pinned ? "Unpin from rail" : "Pin to rail"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled={actions.busy} onSelect={actions.archiveTask}>

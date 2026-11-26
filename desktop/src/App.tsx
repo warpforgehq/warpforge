@@ -67,7 +67,6 @@ export default function App() {
   const revealTask = useUi((s) => s.revealTask);
   const handleOpenTask = (id: string) => {
     setNewTaskOpen(false);
-    if (sidebarMode === "control") setSidebarMode("tasks");
     setOpenTaskId(id);
   };
   // The main area is outside the sidebar body: a task opened from it switches

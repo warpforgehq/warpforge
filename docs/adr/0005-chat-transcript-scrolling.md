@@ -1,5 +1,7 @@
 # 0005 — The virtualiser owns the chat scroll, and the transcript arrives whole
 
+> The desktop attention and dashboard presentation in this record was superseded by [0032](0032-permanent-rail.md#2026-11-27-update).
+
 **Status:** accepted (2026-08-30); amended twice on 2026-09-23 (see the end)
 
 Applies to `desktop/src/components/SessionChat.tsx`, `desktop/src/lib/chatScroll.ts`

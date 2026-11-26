@@ -87,7 +87,7 @@ Warpforge adds no model account or API-key layer. It looks for supported agent b
 
 ## Why Warpforge?
 
-AI-assisted development becomes a coordination problem long before it becomes a model problem: agents wait on each other, services collide on the same ports, logs hide in terminal tabs, and finished work scatters across chats, worktrees, and diffs. Warpforge turns that sprawl into one visible workflow — Mission Control for every session, a runtime that travels with the task, human review at the moments that matter, and an orchestrator for when a task outgrows one agent.
+AI-assisted development becomes a coordination problem long before it becomes a model problem: agents wait on each other, services collide on the same ports, logs hide in terminal tabs, and finished work scatters across chats, worktrees, and diffs. Warpforge turns that sprawl into one visible workflow — a sidebar for every project’s tasks, a runtime that travels with the task, human review at the moments that matter, and an orchestrator for when a task outgrows one agent.
 
 Read the full pitch in **[Why Warpforge?](https://warpforge.app/concepts/why-warpforge/)**
 

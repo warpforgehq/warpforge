@@ -17,7 +17,7 @@ const SEARCH_MIN_OPTIONS = 8;
  * Renders the agent's session selectors (model / effort / ...), keeping at
  * most one menu open. Used in two modes:
  *
- *  - **Post-start** (MissionControl composer toolbar): pass `taskId` and omit
+ *  - **Post-start** (task composer toolbar): pass `taskId` and omit
  *    `onSelect`. Each pick sends `session.setConfigOption` to the live session
  *    and the highlight follows `opt.currentValue` returned by the agent.
  *  - **Pre-start** (New Task view): pass `onSelect` together with `picks`

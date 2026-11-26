@@ -1,46 +1,6 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { DecisionRowActions } from "@/components/DecisionRowActions";
-import type { AttentionItem } from "@/lib/attentionRail";
-import type { PermissionUpdate } from "@/lib/sessionPermissions";
-
-import * as decisionActions from "./decisionActions";
-import { approvePermissionOption } from "./permissionApproval";
-import * as permissionToast from "./permissionToast";
-
-vi.mock("../daemon", () => ({
-  daemon: {
-    request: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
-    workflowDecide: vi.fn<(...args: unknown[]) => Promise<void>>(),
-    workflowReply: vi.fn<(...args: unknown[]) => Promise<void>>(),
-  },
-}));
-
-function perm(options: string[]): PermissionUpdate {
-  return { kind: "permission_request", options, request_id: "req-1", title: "Allow?" };
-}
-
-function item(options: string[]): AttentionItem {
-  return {
-    permission: perm(options),
-    priority: 0,
-    reason: "reason",
-    task: {
-      agent: "claude",
-      blockedReason: null,
-      createdAt: 1,
-      filesChanged: 0,
-      id: "t_1",
-      project: "warpforge",
-      prompt: "Do the work",
-      status: "running",
-      tags: [],
-      title: "Do the work",
-      updatedAt: 10,
-    },
-  };
-}
+import { approvePermissionOption, quickApproveOption } from "./permissionApproval";
 
 describe("approvePermissionOption", () => {
   it.each([
@@ -57,22 +17,8 @@ describe("approvePermissionOption", () => {
   });
 });
 
-describe("one approve rule for every caller", () => {
-  it("leaves no second approve rule behind", () => {
-    expect("permissionApproveOption" in decisionActions).toBe(false);
-    expect("permissionToastApproveOption" in permissionToast).toBe(false);
-  });
-
-  it("marks the same option as approve in the decision row", () => {
-    render(<DecisionRowActions item={item(["allow", "allow_always", "deny"])} />);
-
-    // `approvePermissionOption` says "allow"; the row styles it as the safe
-    // action and every other option as destructive.
-    expect(approvePermissionOption(["allow", "allow_always", "deny"])).toBe("allow");
-    expect(screen.getByRole("button", { name: "allow" }).className).not.toContain("bg-destructive");
-    expect(screen.getByRole("button", { name: "deny" }).className).toContain("bg-destructive");
-    expect(screen.getByRole("button", { name: "allow_always" }).className).toContain(
-      "bg-destructive",
-    );
-  });
+it("requires a browser origin grant to be reviewed in the task", () => {
+  const options = ["allow", "allow_always", "deny"];
+  expect(quickApproveOption({ options })).toBe("allow");
+  expect(quickApproveOption({ options, browser_origin: "https://example.com" })).toBeUndefined();
 });

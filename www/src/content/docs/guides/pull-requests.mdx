@@ -83,7 +83,7 @@ Both continue the *same* conversation, so you can ask follow-ups in plain langua
 The agent reads the change by fetching and diffing `origin` refs. It never switches or checks out a branch in your working tree — you are reading a pull request, not moving your own checkout onto it. Large patches are not pasted into the prompt either: past a few kilobytes the agent gets the file list and the commands to read them, so it reads each file once instead of twice.
 
 <Aside type="tip" title="These conversations stay inside the pull request">
-  The Assistant's thread never appears on your board, backlog or Mission Control — it belongs to the pane. It survives closing the app: reopen the pull request and the conversation is where you left it. It archives itself once the pull request is merged or closed, and after two weeks of silence. When you want the whole window for it, **Send to agent → Continue in a task** moves the conversation into a task of its own.
+  The Assistant’s thread lives in the pull request pane. It survives closing the app: reopen the pull request and the conversation is where you left it. It archives itself once the pull request is merged or closed, and after two weeks of silence. When you want the whole window for it, **Send to agent → Continue in a task** moves the conversation into a task of its own.
 </Aside>
 
 ## Hand the work to an agent

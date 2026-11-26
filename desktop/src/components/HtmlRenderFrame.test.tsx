@@ -76,8 +76,8 @@ describe("HtmlRenderFrame", () => {
     expect(reply).toHaveBeenCalledWith({ jsonrpc: "2.0", id: "wf-link-1", result: {} }, "*");
   });
 
-  it("is a one-line summary in a compact tile", () => {
-    render(<HtmlRenderFrame update={update} taskId="t_1" compact />);
+  it("shows a summary without a task id", () => {
+    render(<HtmlRenderFrame update={update} />);
     expect(screen.queryByTitle("Revenue")).toBeNull();
     expect(screen.getByText("Page · Revenue")).toBeInTheDocument();
   });

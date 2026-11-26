@@ -2,13 +2,14 @@ import { Bot, PanelLeftClose, PanelLeftOpen, Plus, Settings } from "lucide-react
 import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useRef, useState } from "react";
 
 import UpdateControl from "@/components/UpdateControl";
-import type { ConnectionState } from "@/daemon";
+import type { ConnectionState, DaemonState } from "@/daemon";
+import { pinKey, usePins } from "@/store/pins";
 import { useUi, type SidebarMode } from "@/store/ui";
 
 import { ConnectionDot } from "./ConnectionDot";
-import { LiveLane, type LiveLaneItem } from "./LiveLane";
 import { SIDEBAR_BODY_ID, SIDEBAR_MODES, type RailSelection } from "./modes";
 import { RailButton, type RailBadge } from "./RailButton";
+import { RailPins } from "./RailPins";
 import { WarpforgeMark } from "./WarpforgeMark";
 
 /** Rail width: a 36px target with 10px either side. */
@@ -16,15 +17,17 @@ export const RAIL_WIDTH = 56;
 
 export interface RailProps {
   selection: RailSelection;
-  openTaskId: string | null;
   collapsed: boolean;
   /** False where the window is too narrow for the panel: no toggle. */
   canExpand: boolean;
+  state: DaemonState;
   connection: ConnectionState;
   connectionError: string | null;
   agentUpdates: number;
-  liveLane: { tasks: LiveLaneItem[]; overflow: number };
-  modeCount: (mode: SidebarMode) => number;
+  attentionIds: ReadonlySet<string>;
+  nowSec: number;
+  inboxUnseen: number;
+  teamUnread: number;
   onToggleCollapsed: () => void;
   onSelectMode: (mode: SidebarMode) => void;
   onNewTask: () => void;
@@ -34,25 +37,26 @@ export interface RailProps {
 }
 
 function modeBadge(mode: SidebarMode, count: number): RailBadge | null {
-  if (count <= 0 || mode === "tasks") return null;
-  if (mode === "control") return { kind: "light" };
+  if (count <= 0) return null;
   return { hot: mode !== "team", kind: "count", value: count };
 }
 
 /**
- * The permanent rail: brand, New task, the modes, pins, live work, then
+ * The permanent rail: brand, New task, the modes, pins, then
  * update and Settings. One tab stop; arrows, Home and End move within it.
  */
 export function Rail({
   selection,
-  openTaskId,
   collapsed,
   canExpand,
+  state,
   connection,
   connectionError,
   agentUpdates,
-  liveLane,
-  modeCount,
+  attentionIds,
+  nowSec,
+  inboxUnseen,
+  teamUnread,
   onToggleCollapsed,
   onSelectMode,
   onNewTask,
@@ -62,12 +66,17 @@ export function Rail({
 }: RailProps) {
   const rootRef = useRef<HTMLElement>(null);
   const [tabbable, setTabbable] = useState("new-task");
+  const pinnedTabStop = usePins(
+    (store) =>
+      !tabbable.startsWith("pin:") || store.pins.some((pin) => `pin:${pinKey(pin)}` === tabbable),
+  );
+  const tabStop = pinnedTabStop ? tabbable : "new-task";
   const roving = useCallback(
     (key: string) => ({
       onFocus: () => setTabbable(key),
-      tabIndex: tabbable === key ? 0 : -1,
+      tabIndex: tabStop === key ? 0 : -1,
     }),
-    [tabbable],
+    [tabStop],
   );
 
   const onKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
@@ -136,7 +145,10 @@ export function Rail({
             tooltip={item.id === "team" ? "Smiths — AI teammates" : undefined}
             shortcut={`⌥⌘${item.key}`}
             active={selection === item.id}
-            badge={modeBadge(item.id, modeCount(item.id))}
+            badge={modeBadge(
+              item.id,
+              item.id === "inbox" ? inboxUnseen : item.id === "team" ? teamUnread : 0,
+            )}
             ariaControls={SIDEBAR_BODY_ID}
             onClick={() => onSelectMode(item.id)}
             {...roving(`mode:${item.id}`)}
@@ -148,16 +160,13 @@ export function Rail({
         role="group"
         aria-label="Pinned"
         data-rail-zone="pins"
-        className="flex shrink-0 flex-col items-center gap-1 empty:hidden"
-      />
-
-      <div className="flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto overflow-x-hidden pt-1 [scrollbar-width:none]">
-        {liveLane.tasks.length > 0 && <Rule />}
-        <LiveLane
-          lane={liveLane}
-          openTaskId={openTaskId}
+        className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto overflow-x-hidden pt-2 [scrollbar-width:none]"
+      >
+        <RailPins
+          state={state}
+          attentionIds={attentionIds}
+          nowSec={nowSec}
           onOpenTask={onOpenTask}
-          onOverflow={() => onSelectMode("control")}
           roving={roving}
         />
       </div>

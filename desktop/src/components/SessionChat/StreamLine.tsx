@@ -7,20 +7,16 @@ import { withOccurrenceKeys } from "@/lib/renderKeys";
 import { toolDisplayTitle } from "@/lib/toolDisplay";
 import { cn } from "@/lib/utils";
 
-import { AdvisorConsultationBlock } from "../../components/AdvisorConsultationBlock";
-import {
-  BrowserAnnotationCard,
-  hasAnnotation,
-  splitAnnotations,
-} from "../../components/BrowserAnnotationCard";
-import { HtmlRenderFrame } from "../../components/HtmlRenderFrame";
-import { KeeperRequestLine } from "../../components/KeeperRequestLine";
-import type { FileLinkResolver, FileOpenHandler } from "../../components/Markdown";
-import { BufferedMarkdown, CollapsibleMarkdown, Markdown } from "../../components/Markdown";
-import { PeerMessageLine } from "../../components/PeerMessageLine";
-import { ThinkingBlock } from "../../components/ThinkingBlock";
-import { WorkflowEventLine } from "../../components/WorkflowEventLine";
 import type { EditHunk, PromptAttachmentSummary, SessionUpdate } from "../../protocol";
+import { AdvisorConsultationBlock } from "../AdvisorConsultationBlock";
+import { BrowserAnnotationCard, hasAnnotation, splitAnnotations } from "../BrowserAnnotationCard";
+import { HtmlRenderFrame } from "../HtmlRenderFrame";
+import { KeeperRequestLine } from "../KeeperRequestLine";
+import type { FileLinkResolver, FileOpenHandler } from "../Markdown";
+import { BufferedMarkdown, CollapsibleMarkdown, Markdown } from "../Markdown";
+import { PeerMessageLine } from "../PeerMessageLine";
+import { ThinkingBlock } from "../ThinkingBlock";
+import { WorkflowEventLine } from "../WorkflowEventLine";
 
 const attachmentLabel = (attachment: PromptAttachmentSummary) => {
   switch (attachment.type) {
@@ -202,7 +198,6 @@ function PermissionLine({
 
 export function StreamLine({
   update,
-  compact,
   taskId,
   resolved,
   resolveFilePath,
@@ -214,7 +209,6 @@ export function StreamLine({
   textStreaming,
 }: {
   update: SessionUpdate;
-  compact?: boolean;
   /** When set, permission requests render inline allow/deny buttons. */
   taskId?: string;
   /** Request_id → recorded outcome, from persisted permission_resolved updates. */
@@ -234,32 +228,22 @@ export function StreamLine({
   switch (update.kind) {
     case "user_message":
       return (
-        <div
-          className={cn(
-            "rounded-md border border-primary/20 bg-primary/10 px-3.5 py-2.5 text-foreground shadow-sm my-3",
-            compact && "text-xs px-2.5 py-1.5",
-          )}
-        >
+        <div className="rounded-md border border-primary/20 bg-primary/10 px-3.5 py-2.5 text-foreground shadow-sm my-3">
           {hasAnnotation(update.text) ? (
-            splitAnnotations(update.text).map((part, i) =>
+            withOccurrenceKeys(
+              splitAnnotations(update.text),
+              (part) => `${part.kind}:${JSON.stringify(part.value)}`,
+            ).map(({ item: part, key }) =>
               part.kind === "annotation" ? (
-                <BrowserAnnotationCard key={i} annotation={part.value} />
+                <BrowserAnnotationCard key={key} annotation={part.value} />
               ) : (
                 part.value.trim() && (
-                  <Markdown key={i} resolveFilePath={resolveFilePath} onOpenFile={onOpenFile}>
+                  <Markdown key={key} resolveFilePath={resolveFilePath} onOpenFile={onOpenFile}>
                     {part.value}
                   </Markdown>
                 )
               ),
             )
-          ) : compact ? (
-            <Markdown
-              className="text-current"
-              resolveFilePath={resolveFilePath}
-              onOpenFile={onOpenFile}
-            >
-              {`› ${update.text}`}
-            </Markdown>
           ) : (
             <CollapsibleMarkdown resolveFilePath={resolveFilePath} onOpenFile={onOpenFile}>
               {update.text}
@@ -284,15 +268,7 @@ export function StreamLine({
         </div>
       );
     case "agent_text":
-      return compact ? (
-        <Markdown
-          className="text-current"
-          resolveFilePath={resolveFilePath}
-          onOpenFile={onOpenFile}
-        >
-          {update.text}
-        </Markdown>
-      ) : textStreaming ? (
+      return textStreaming ? (
         <BufferedMarkdown resolveFilePath={resolveFilePath} onOpenFile={onOpenFile}>
           {update.text}
         </BufferedMarkdown>
@@ -302,25 +278,17 @@ export function StreamLine({
         </Markdown>
       );
     case "workflow_event":
-      return <WorkflowEventLine update={update} compact={compact} onOpenTask={onOpenTask} />;
+      return <WorkflowEventLine update={update} onOpenTask={onOpenTask} />;
     case "keeper_request":
-      return <KeeperRequestLine update={update} compact={compact} />;
+      return <KeeperRequestLine update={update} />;
     case "peer_message":
-      return <PeerMessageLine update={update} compact={compact} onOpenTask={onOpenTask} />;
+      return <PeerMessageLine update={update} onOpenTask={onOpenTask} />;
     case "advisor_consultation":
-      return <AdvisorConsultationBlock update={update} compact={compact} onOpenTask={onOpenTask} />;
+      return <AdvisorConsultationBlock update={update} onOpenTask={onOpenTask} />;
     case "html_render":
-      return <HtmlRenderFrame update={update} taskId={taskId} compact={compact} />;
+      return <HtmlRenderFrame update={update} taskId={taskId} />;
     case "agent_thought":
-      return compact ? (
-        <Markdown
-          className="italic text-muted-foreground"
-          resolveFilePath={resolveFilePath}
-          onOpenFile={onOpenFile}
-        >
-          {update.text}
-        </Markdown>
-      ) : (
+      return (
         <ThinkingBlock
           text={update.text}
           streaming={Boolean(thinkingActive)}
@@ -329,23 +297,12 @@ export function StreamLine({
         />
       );
     case "tool_call": {
-      const title = toolDisplayTitle(update);
       const dot =
         update.status === "completed"
           ? "text-ok"
           : update.status === "failed"
             ? "text-destructive"
             : "text-warn";
-      if (compact) {
-        return (
-          <p className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-            <Wrench className={cn("size-3.5 shrink-0", dot)} />
-            <span className="min-w-0 truncate text-foreground" title={title}>
-              {title}
-            </span>
-          </p>
-        );
-      }
       return (
         <ToolCallLine
           update={update}
@@ -416,15 +373,6 @@ export function StreamLine({
       // Metadata only — folded into the permission_request row above.
       return null;
     case "plan":
-      if (compact) {
-        const done = update.entries.filter((e) => e.status === "completed").length;
-        return (
-          <p className="flex items-center gap-1.5 text-muted-foreground">
-            <ListTodo className="size-3.5 shrink-0" />
-            plan · {done}/{update.entries.length}
-          </p>
-        );
-      }
       return (
         <div className="rounded-md border bg-secondary/30 p-2.5">
           <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">

@@ -13,16 +13,13 @@ const CLAMP_CHARS = 240;
 /**
  * One message exchanged with another task's agent, as a compact attributed line.
  * @param update the transcript entry
- * @param compact render a single truncated line for mission-control tiles
  * @param onOpenTask opens the other task
  * @returns the message line
  */
 export function PeerMessageLine({
-  compact,
   onOpenTask,
   update,
 }: {
-  compact?: boolean;
   onOpenTask?: (id: string) => void;
   update: PeerMessage;
 }) {
@@ -36,16 +33,6 @@ export function PeerMessageLine({
         : Users;
   const clampable =
     update.text.length > CLAMP_CHARS || update.text.split("\n").length > CLAMP_LINES;
-
-  if (compact) {
-    return (
-      <p className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-        <Icon className="size-3.5 shrink-0 text-primary" />
-        <span className="shrink-0 text-foreground">{title}:</span>
-        <span className="min-w-0 truncate">{update.text}</span>
-      </p>
-    );
-  }
 
   return (
     <section

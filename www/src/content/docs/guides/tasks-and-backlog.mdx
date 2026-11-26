@@ -81,18 +81,9 @@ To preselect an agent and model for New Task, open **Settings → Agents & accou
 
 The distinction that matters: **Waiting** is an agent choosing to hand back, **Blocked** is an agent that can't proceed, and **Interrupted** is a run that was cut off. Three very different things that most tools show as one ambiguous "stopped."
 
-### Mission Control
+### Pin tasks to the rail
 
-Active work across every project lives in four tabs:
-
-| Tab | For |
-| --- | --- |
-| **Live** | What's running right now, with the conversation streaming in full-width rows |
-| **Needs you** | Everything waiting on a human — approvals, questions, review-ready work |
-| **Failed** | What broke, so it doesn't hide among the healthy runs |
-| **Pinned** | The handful you're personally tracking |
-
-Queue actions are inline on the row, and the tab you were last on is remembered. It's a triage screen: the point is answering *what needs me right now* without opening anything.
+Open the task’s action menu in the sidebar or workspace and choose **Pin to rail**. The pin shows the task’s agent and status. Click it to reopen the task or right-click it to unpin.
 
 **Notifications carry the answer.** When something needs approval while Warpforge is in the background, the macOS notification has working **Approve**, **Reject**, and **Review** buttons — you don't have to switch back to the app to unblock an agent. They stay quiet while Warpforge is focused. Answering in one place settles it everywhere: the first answer wins, so a second tap (in-app or from the banner) is refused rather than flipping the outcome, and the banner is withdrawn once the request is answered.
 
@@ -140,7 +131,7 @@ Warpforge refuses a base that cannot work, in the dialog, before the task exists
 
 **Set new worktrees up automatically.** A `worktree:` section in the [project config](/reference/configuration/#worktree) copies files such as `.env` into each new worktree and runs a setup command there. The project's **Worktrees** tab lists every worktree; see [Worktrees tab](/guides/projects-and-runtime/#the-worktrees-tab).
 
-If the worktree cannot be created — a full disk, say — the task does not quietly fall back to your checkout. It waits in **Needs you** with git's error; send a message to run it in the project checkout instead, or delete it. Deleting a task removes its worktree, including after Warpforge restarts or updates.
+If the worktree cannot be created — a full disk, say — the task does not quietly fall back to your checkout. The task appears as blocked in the sidebar and shows Git’s error. Send a message to run it in the project checkout instead, or delete it. Deleting a task removes its worktree, including after Warpforge restarts or updates.
 
 When the work is good, **Merge into &lt;base&gt;** in the task's branch menu brings it back. Warpforge fast-forwards the base when it has not moved, or writes a merge commit otherwise, and it never changes your own checkout unless the base branch is the one checked out there — and then only if that checkout is clean. A conflict leaves every branch untouched and tells you to update the task branch from the base first. By default the worktree and its branch are removed after a successful merge and the task is marked **Done**, because the merged work is finished; clear **Remove the worktree after merging** to keep both and leave the task as it is. Prefer a pull request? Push the branch and open one as usual. A task without a worktree just works in the project checkout, which is often what you want for a quick change.
 

@@ -86,13 +86,14 @@ vi.mock("@tanstack/react-virtual", () => ({
 }));
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { daemon } from "../daemon";
 import type { DaemonState } from "../daemon";
 import type { ProjectInfo, PullRequestSummary, TaskInfo } from "../protocol";
 import { useUi } from "../store/ui";
+import { usePins } from "../store/pins";
 import type { SidebarMode } from "../store/ui";
 import Sidebar from "./Sidebar";
 import {
@@ -177,7 +178,7 @@ function renderSidebar(
       <TooltipProvider delayDuration={300} skipDelayDuration={0}>
         <Sidebar
           state={state}
-          view="control"
+          view="start"
           mode="tasks"
           openTaskId={null}
           collapsed={false}
@@ -214,7 +215,8 @@ function openShelf() {
 
 beforeEach(() => {
   vi.spyOn(daemon, "request").mockImplementation(mockRequest);
-  useUi.setState({ attentionTargetId: null, attentionTargetNonce: 0, pinnedTaskIds: [] });
+  useUi.setState({ attentionTargetId: null, attentionTargetNonce: 0 });
+  usePins.setState({ pins: [] });
   mockRequest.mockReset();
   for (const handler of Object.values(handlers)) handler.mockReset();
 });
@@ -230,20 +232,16 @@ describe("Sidebar shell", () => {
     expect(screen.getByTestId("warpforge-mark")).toBeInTheDocument();
     expect(screen.queryByText("W")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /New task/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Mission Control/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
   });
 
   it("navigates to global destinations only — the tree is the projects section", () => {
     renderSidebar(makeState([]));
 
-    for (const label of [/^Mission Control/, /^Automations/]) {
-      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
-    }
     expect(screen.queryByRole("button", { name: /^Projects/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Memory/ })).not.toBeInTheDocument();
     const modes = screen.getByRole("navigation", { name: "Modes" });
-    for (const label of [/^Tasks/, /^Inbox/, /^Smiths/]) {
+    for (const label of [/^Tasks/, /^Inbox/, /^Smiths/, /^Automations/]) {
       expect(within(modes).getByRole("button", { name: label })).toBeInTheDocument();
     }
   });
@@ -289,14 +287,14 @@ describe("Sidebar shell", () => {
 
   it("lights exactly one rail item, with one primary edge-bar", () => {
     const { rerender } = renderSidebar(makeState([task("t1", { status: "running" })]), {
-      mode: "control",
+      mode: "tasks",
       openTaskId: "t1",
-      view: "control",
+      view: "start",
     });
     const rail = screen.getByRole("toolbar");
     const selected = () => rail.querySelectorAll('[aria-current="page"]');
     expect(selected()).toHaveLength(1);
-    expect(selected()[0]).toHaveAccessibleName("Mission Control");
+    expect(selected()[0]).toHaveAccessibleName("Tasks");
     expect(rail.querySelectorAll("[data-rail-indicator]")).toHaveLength(1);
 
     rerender(
@@ -304,8 +302,8 @@ describe("Sidebar shell", () => {
         <TooltipProvider>
           <Sidebar
             state={makeState([])}
-            view="control"
-            mode="control"
+            view="start"
+            mode="tasks"
             openTaskId={null}
             collapsed={false}
             settingsOpen
@@ -338,9 +336,9 @@ describe("Sidebar shell", () => {
     expect(screen.queryByTestId("sidebar-panel")).not.toBeInTheDocument();
     expect(screen.queryByText("Hidden when collapsed")).not.toBeInTheDocument();
     // Every rail control keeps an accessible name even without a visible label.
-    // The three modes are here too: the body is gone at this width, so the
+    // The modes are here too: the body is gone at this width, so the
     // rail is the only way to switch it.
-    for (const label of ["New task", "Tasks", "Inbox", "Smiths", "Mission Control", "Settings"]) {
+    for (const label of ["New task", "Tasks", "Inbox", "Smiths", "Automations", "Settings"]) {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
 
@@ -359,7 +357,7 @@ describe("Sidebar shell", () => {
           <TooltipProvider delayDuration={300} skipDelayDuration={0}>
             <Sidebar
               state={makeState([])}
-              view="control"
+              view="start"
               mode="tasks"
               openTaskId={null}
               collapsed={collapsed}
@@ -411,7 +409,7 @@ describe("Sidebar modes", () => {
   }
 
   it("marks the mode it is given on any other view", () => {
-    renderSidebar(makeState([]), { mode: "inbox", view: "control" });
+    renderSidebar(makeState([]), { mode: "inbox", view: "start" });
     expect(mode("Inbox")).toHaveAttribute("aria-current", "page");
     expect(mode("Tasks")).not.toHaveAttribute("aria-current");
   });
@@ -436,12 +434,13 @@ describe("Sidebar modes", () => {
     expect(taskRows("a")).toHaveLength(0);
   });
 
-  it("puts no count on Tasks; attention shows on Mission Control and in the tree", () => {
+  it("shows attention in the tree without a Tasks badge", () => {
     renderSidebar(
       makeState([
         task("blocked", { blockedReason: "no creds", prompt: "Blocked", status: "blocked" }),
       ]),
     );
+    expect(rowGlyph("blocked")).toBe("blocked");
     expect(mode("Tasks").querySelector("[data-rail-badge]")).toBeNull();
   });
 
@@ -449,7 +448,6 @@ describe("Sidebar modes", () => {
     renderSidebar(makeState([]), { mode: "inbox" });
 
     expect(screen.getByRole("button", { name: /New task/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Mission Control/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Automations/ })).toBeInTheDocument();
   });
 });
@@ -469,28 +467,6 @@ describe("Sidebar attention", () => {
     // …and no task is listed twice, once per section.
     expect(taskRows("review")).toHaveLength(1);
     expect(taskRows("blocked")).toHaveLength(1);
-  });
-
-  it("counts only genuinely blocking work on Mission Control, not the review pile", () => {
-    renderSidebar(
-      makeState([
-        task("r1", { status: "waiting", filesChanged: 1 }),
-        task("r2", { status: "waiting", filesChanged: 1 }),
-        task("r3", { status: "waiting", filesChanged: 1 }),
-        task("blocked", { status: "blocked" }),
-      ]),
-    );
-
-    // The attention queue holds all four; only the blocked one wants a human,
-    // and that lights Mission Control.
-    expect(
-      screen.getByRole("button", { name: "Mission Control" }).querySelector("[data-rail-badge]"),
-    ).toHaveAttribute("data-rail-badge", "light");
-    cleanup();
-    renderSidebar(makeState([task("r1", { status: "waiting", filesChanged: 1 })]));
-    expect(
-      screen.getByRole("button", { name: "Mission Control" }).querySelector("[data-rail-badge]"),
-    ).toBeNull();
   });
 
   it("treats a pending permission as needing you", () => {
@@ -1072,11 +1048,11 @@ describe("Sidebar row actions", () => {
     );
   });
 
-  it("pins and unpins the task group from the row menu", () => {
+  it("pins an individual task from the row menu", () => {
     renderSidebar(makeState([task("a", { prompt: "Pin me" })]));
 
-    fireEvent.click(screen.getAllByText("Pin to Mission Control")[0]);
-    expect(useUi.getState().pinnedTaskIds).toEqual(["a"]);
+    fireEvent.click(screen.getAllByText("Pin to rail")[0]);
+    expect(usePins.getState().pins).toEqual([{ id: "a", kind: "task" }]);
   });
 
   it("surfaces a daemon rejection as a toast without wedging the row", async () => {

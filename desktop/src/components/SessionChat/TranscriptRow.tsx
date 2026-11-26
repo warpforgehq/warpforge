@@ -4,8 +4,8 @@ import type { FileLinkResolver, FileOpenHandler } from "@/components/Markdown";
 
 import { useContextMenu } from "../../hooks/useContextMenu";
 import type { AgentConfig, EditHunk, SessionUpdate } from "../../protocol";
-import { StreamLine } from "../../views/mission-control/StreamLine";
 import { MessageActions } from "../MessageActions";
+import { StreamLine } from "./StreamLine";
 
 export interface TranscriptRowContextValue {
   agents: AgentConfig[];

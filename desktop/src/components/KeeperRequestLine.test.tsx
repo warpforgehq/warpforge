@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { StreamLine } from "@/views/mission-control/StreamLine";
+import { StreamLine } from "./SessionChat/StreamLine";
 
 const update = {
   kind: "keeper_request" as const,
@@ -21,10 +21,5 @@ describe("keeper_request in the transcript", () => {
 
     await user.click(screen.getByRole("button", { expanded: false }));
     expect(line).toHaveTextContent("src/a.rs:12 off by one");
-  });
-
-  it("fits one line on a Mission Control tile", () => {
-    render(<StreamLine update={update} compact />);
-    expect(screen.getByText("Keepers asked:")).toBeInTheDocument();
   });
 });

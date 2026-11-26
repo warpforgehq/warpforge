@@ -1,4 +1,4 @@
-import type { TaskInfo, TaskStatus } from "@/protocol";
+import type { TaskInfo } from "@/protocol";
 
 export interface TaskTree {
   task: TaskInfo;
@@ -125,77 +125,4 @@ export function buildTaskGroupIndex(tasks: TaskInfo[]): TaskGroupIndex {
     for (const task of flattenTaskTree(root)) rootByTaskId.set(task.id, root);
   }
   return { forest, rootByTaskId };
-}
-
-/** Resolve persisted pins to unique roots while preserving pin order. */
-export function resolvePinnedTaskGroups(index: TaskGroupIndex, pinnedIds: string[]): TaskTree[] {
-  const seen = new Set<string>();
-  const groups: TaskTree[] = [];
-  for (const id of pinnedIds) {
-    const root = index.rootByTaskId.get(id);
-    if (!root || seen.has(root.task.id)) continue;
-    seen.add(root.task.id);
-    groups.push(root);
-  }
-  return groups;
-}
-
-/** Whether any persisted pin resolves to the orchestration group containing taskId. */
-export function isTaskGroupPinned(
-  index: TaskGroupIndex,
-  pinnedIds: readonly string[],
-  taskId: string,
-): boolean {
-  const root = index.rootByTaskId.get(taskId);
-  if (!root) return false;
-  return pinnedIds.some((id) => index.rootByTaskId.get(id)?.task.id === root.task.id);
-}
-
-/**
- * Pin or unpin a whole orchestration group. New pins are root-normalized;
- * unpinning also clears legacy child/descendant pins for that group.
- */
-export function setTaskGroupPinned(
-  index: TaskGroupIndex,
-  pinnedIds: readonly string[],
-  taskId: string,
-  pinned: boolean,
-): string[] {
-  const root = index.rootByTaskId.get(taskId);
-  if (!root) return [...pinnedIds];
-
-  const memberIds = new Set(flattenTaskTree(root).map((task) => task.id));
-  const remaining = pinnedIds.filter((id) => !memberIds.has(id));
-  return pinned ? [...remaining, root.task.id] : remaining;
-}
-
-/** Keep the current tab unless an explicit attention target belongs to this group. */
-export function resolveGroupTaskId(
-  tree: TaskTree,
-  currentId: string | null,
-  attentionTargetId: string | null,
-): string {
-  const ids = new Set(flattenTaskTree(tree).map((task) => task.id));
-  if (attentionTargetId && ids.has(attentionTargetId)) return attentionTargetId;
-  if (currentId && ids.has(currentId)) return currentId;
-  return tree.task.id;
-}
-
-export type TaskGroupStatus = "blocked" | "permission" | "review" | "running" | TaskStatus;
-
-/** Human attention bubbles from descendants before ordinary activity. */
-export function taskGroupStatus(
-  tree: TaskTree,
-  permissionTaskIds?: ReadonlySet<string>,
-): TaskGroupStatus {
-  const tasks = flattenTaskTree(tree);
-  if (tasks.some((task) => task.status === "blocked" || task.status === "interrupted")) {
-    return "blocked";
-  }
-  if (permissionTaskIds && tasks.some((task) => permissionTaskIds.has(task.id))) {
-    return "permission";
-  }
-  if (tasks.some(awaitsReview)) return "review";
-  if (tasks.some((task) => task.status === "running" || task.status === "queued")) return "running";
-  return tree.task.status;
 }

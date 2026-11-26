@@ -172,7 +172,7 @@ How it fits the pipeline:
 
 - **Placement.** `implement → verify → review ⇄ fix`. A fix that follows a failed verification is always verified again. A fix that follows a review is verified again when it changed the code.
 - **A failure goes to the fixer, not the reviewers.** The failed steps become the fix stage's findings (`{{findings}}`), so reviewers only see work that passed.
-- **Out of attempts.** When verification has failed `max_attempts` times in a row, or could not run, the task moves to **Needs you** with three choices: try again (another fix, then another check), continue to review without a pass, or stop. Anything you type goes to the next attempt as guidance.
+- **Out of attempts.** When verification has failed `max_attempts` times in a row, or could not run, the task’s conversation offers three choices: try again (another fix, then another check), continue to review without a pass, or stop. Anything you type goes to the next attempt as guidance.
 - **Evidence.** Every screenshot the tester takes is kept with the pipeline and shown on its verify stage in the **Pipeline** view. The verdict, the checklist and the screenshots are part of the pipeline's final summary.
 
 <Aside type="caution">

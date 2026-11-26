@@ -79,7 +79,7 @@ it("updates the task rows when the mounted viewport is measured, resized, and sc
       <TooltipProvider>
         <Sidebar
           state={state}
-          view="control"
+          view="start"
           mode="tasks"
           openTaskId={null}
           collapsed={false}

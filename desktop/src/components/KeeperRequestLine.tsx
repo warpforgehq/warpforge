@@ -10,26 +10,10 @@ type KeeperRequest = Extract<SessionUpdate, { kind: "keeper_request" }>;
  * A fix prompt the task's keepers sent into the session: one attributed line
  * that expands to the prompt, so it never reads as the owner's message.
  * @param update The transcript entry.
- * @param compact Render a single truncated line for Mission Control tiles.
  * @returns The line.
  */
-export function KeeperRequestLine({
-  compact,
-  update,
-}: {
-  compact?: boolean;
-  update: KeeperRequest;
-}) {
+export function KeeperRequestLine({ update }: { update: KeeperRequest }) {
   const [open, setOpen] = useState(false);
-  if (compact) {
-    return (
-      <p className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-        <ShieldCheck aria-hidden className="size-3.5 shrink-0 text-primary" />
-        <span className="shrink-0 text-foreground">Keepers asked:</span>
-        <span className="min-w-0 truncate">{update.text}</span>
-      </p>
-    );
-  }
   return (
     <section
       aria-label="Keepers asked"

@@ -80,8 +80,8 @@ export interface NavState {
 
   setView: (v: GlobalView) => void;
   /** Land on the Tasks half of the sidebar: `validTaskId` if the caller found
-   *  it still in the daemon snapshot, else the selected project, else Mission
-   *  Control. A stale id is dropped rather than reopened. */
+   *  it still in the daemon snapshot, else the selected project, else the
+   *  composer. A stale id is dropped rather than reopened. */
   selectTasksSegment: (validTaskId: string | null) => void;
   openTask: (id: string | null) => void;
   /** Open a task and immediately surface a specific file/diff in its workspace. */
@@ -89,10 +89,8 @@ export interface NavState {
   clearOpenTaskNav: () => void;
   /** Make a project the subject the content column is showing. */
   openProject: (id: string) => void;
-  focusAttentionTask: (id: string) => void;
   /**
-   * Open a task from outside the sidebar body (a notification, toast, Mission
-   * Control, a link) and switch the sidebar to the mode that shows it: a
+   * Open a task from outside the sidebar body (a notification, toast or link) and switch the sidebar to the mode that shows it: a
    * Smith's thread opens that Smith in Smiths mode, any other task opens in
    * Tasks mode, revealed in the tree. Clicks inside the body use `openTask`.
    */
@@ -125,7 +123,7 @@ export interface NavState {
 }
 
 export const createNavSlice: UiSlice<NavState> = (set) => ({
-  view: "control",
+  view: "start",
   openTaskId: null,
   lastTaskId: null,
   selectedProjectId: null,
@@ -155,13 +153,13 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       openTaskId: null,
       openTaskNav: null,
       settingsOpen: false,
-      sidebarMode: view === "automations" ? view : s.sidebarMode,
+      sidebarMode: view === "start" ? "tasks" : view === "automations" ? view : s.sidebarMode,
       view,
     })),
   selectAutomation: (selectedAutomationId) => set({ selectedAutomationId }),
   selectTasksSegment: (validTaskId) =>
     set((s) => {
-      const view: View = s.selectedProjectId ? "project" : "control";
+      const view: View = s.selectedProjectId ? "project" : "start";
       if (!validTaskId)
         return { lastTaskId: null, openTaskId: null, openTaskNav: null, settingsOpen: false, view };
       return {
@@ -243,11 +241,6 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       sidebarMode: "tasks",
     }));
   },
-  focusAttentionTask: (attentionTargetId) =>
-    set((s) => ({
-      attentionTargetId,
-      attentionTargetNonce: s.attentionTargetNonce + 1,
-    })),
   setRepositoryOperation: (repositoryOperation) => set({ repositoryOperation }),
   // Chat + Center are the mutual pair — never let both close. Tree is a
   // Sub-panel of Center, so it toggles freely.
@@ -291,6 +284,10 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       // The browser's tabs and its native content views are project-scoped too.
       clearBrowserSession(project);
       void browser.closeProject(project);
-      return { backlogParamsByProject, projectSurfaceByProject };
+      return {
+        backlogParamsByProject,
+        projectSurfaceByProject,
+        selectedProjectId: s.selectedProjectId === project ? null : s.selectedProjectId,
+      };
     }),
 });

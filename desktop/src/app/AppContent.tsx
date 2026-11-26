@@ -1,10 +1,9 @@
 import { Loader2 } from "lucide-react";
-import { Suspense, lazy, useEffect, useSyncExternalStore } from "react";
+import { Suspense, lazy, useEffect } from "react";
 
 import AppHeader from "@/components/AppHeader";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { SplitLine } from "@/components/titlebar/SplitLine";
-import { daemon } from "@/daemon";
 import type { ConnectionState } from "@/daemon/types";
 import { useTaskKeepersSync } from "@/hooks/useTaskKeepers";
 import { useTaskPullRequestSync } from "@/hooks/useTaskPullRequest";
@@ -17,7 +16,7 @@ import {
   loadAutomations,
   loadInboxView,
   loadMemory,
-  loadMissionControl,
+  loadNewTaskComposer,
   loadProjects,
   loadSettings,
   loadTaskDetail,
@@ -28,23 +27,11 @@ import {
 const Automations = lazy(loadAutomations);
 const InboxView = lazy(loadInboxView);
 const Memory = lazy(loadMemory);
-const MissionControl = lazy(loadMissionControl);
-const NewTaskDialog = lazy(() => import("../views/NewTaskDialog"));
+const NewTaskComposer = lazy(loadNewTaskComposer);
 const Projects = lazy(loadProjects);
 const SettingsView = lazy(loadSettings);
 const TaskDetail = lazy(loadTaskDetail);
 const Team = lazy(loadTeam);
-
-function LiveMissionControl({
-  onOpenTask,
-  onNewTask,
-}: {
-  onOpenTask: (id: string) => void;
-  onNewTask: (project?: string, prompt?: string) => void;
-}) {
-  const state = useSyncExternalStore(daemon.subscribe, daemon.getState);
-  return <MissionControl state={state} onOpenTask={onOpenTask} onNewTask={onNewTask} />;
-}
 
 export interface AppContentProps {
   snapshot: Snapshot;
@@ -125,20 +112,30 @@ export function AppContent({
   const settingsOpen = useUi((state) => state.settingsOpen);
   const closeSettings = useUi((state) => state.closeSettings);
 
+  const composing = newTaskOpen || (view === "start" && !openTask);
+  const seededComposer =
+    newTaskOpen &&
+    Boolean(
+      newTaskProject ||
+      newTaskPrompt ||
+      newTaskBacklogItemId ||
+      newTaskOptions?.mode ||
+      newTaskOptions?.factory,
+    );
   const header = (
     <AppHeader
       view={view}
       openTask={openTask}
       snapshot={snapshot}
       windowButtonsInset={windowButtonsInset}
-      composing={newTaskOpen || (settingsOpen && !newTaskOpen)}
+      composing={composing || settingsOpen}
       onAddProject={onAddProject}
       onOpenTask={onOpenTask}
       onCloseTask={onCloseTask}
     />
   );
 
-  if (settingsOpen && !newTaskOpen) {
+  if (settingsOpen) {
     return (
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {header}
@@ -161,11 +158,11 @@ export function AppContent({
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
       {header}
-      {openTask && !newTaskOpen && <SplitLine />}
+      {openTask && !composing && <SplitLine />}
       <Card>
         <main
           className={
-            newTaskOpen || openTask
+            composing || openTask
               ? "min-h-0 flex-1 overflow-hidden"
               : "min-h-0 flex-1 overflow-hidden p-2"
           }
@@ -181,18 +178,19 @@ export function AppContent({
                       : "Connecting to daemon…"}
                   </span>
                 </div>
-              ) : newTaskOpen ? (
-                <NewTaskDialog
+              ) : composing ? (
+                <NewTaskComposer
+                  key={seededComposer ? "seeded" : "composer"}
                   open
                   onOpenChange={onNewTaskOpenChange}
                   snapshot={snapshot}
-                  defaultProject={newTaskProject}
-                  initialPrompt={newTaskPrompt}
-                  backlogItemId={newTaskBacklogItemId}
-                  initialMode={newTaskOptions?.mode}
-                  factorySeed={newTaskOptions?.factory}
-                  onCreated={newTaskOptions?.onCreated}
-                  noProjectRequest={newTaskOptions?.chat ? newTaskOptions : null}
+                  defaultProject={newTaskOpen ? newTaskProject : null}
+                  initialPrompt={newTaskOpen ? newTaskPrompt : undefined}
+                  backlogItemId={newTaskOpen ? newTaskBacklogItemId : null}
+                  initialMode={newTaskOpen ? newTaskOptions?.mode : undefined}
+                  factorySeed={newTaskOpen ? newTaskOptions?.factory : undefined}
+                  onCreated={newTaskOpen ? newTaskOptions?.onCreated : undefined}
+                  noProjectRequest={newTaskOpen && newTaskOptions?.chat ? newTaskOptions : null}
                   onAddProject={onAddProject}
                   addedProject={newTaskAddedProject}
                 />
@@ -226,10 +224,8 @@ export function AppContent({
                 />
               ) : view === "memory" ? (
                 <Memory snapshot={snapshot} onOpenTask={onOpenTask} />
-              ) : view === "team" ? (
-                <Team snapshot={snapshot} onOpenTask={onOpenTask} onNewTask={onNewTask} />
               ) : (
-                <LiveMissionControl onOpenTask={onOpenTask} onNewTask={onNewTask} />
+                <Team snapshot={snapshot} onOpenTask={onOpenTask} onNewTask={onNewTask} />
               )}
             </Suspense>
           </ErrorBoundary>

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { SessionUpdate } from "../protocol";
-import { StreamLine } from "../views/mission-control/StreamLine";
+import { StreamLine } from "./SessionChat/StreamLine";
 
 type PeerMessage = Extract<SessionUpdate, { kind: "peer_message" }>;
 

@@ -1,5 +1,7 @@
 # 0020 — A worktree task's pull request is a daemon cache, pushed as it changes
 
+> The desktop attention and dashboard presentation in this record was superseded by [0032](0032-permanent-rail.md#2026-11-27-update).
+
 **Status:** accepted (2026-09-28)
 
 ## Context

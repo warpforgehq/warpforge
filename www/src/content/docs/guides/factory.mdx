@@ -72,7 +72,7 @@ A backlog stored as YAML files lives inside the project folder, so with the draf
 #### What the Factory never does to your folder
 
 - It never stashes, resets, cleans or discards anything. It switches branches only when there are no uncommitted changes.
-- If a run ends with changes left uncommitted — a failed or stopped run, for example — the folder stays on the task branch with your changes in place, and the task shows in **Needs you** with **Try again** and **Open terminal**. Commit, stash or discard the changes, then press **Try again** to switch back. Until then, no new Factory task starts in that project. If you already switched branches yourself, Warpforge leaves your choice alone.
+- If a run ends with changes left uncommitted — a failed or stopped run, for example — the folder stays on the task branch with your changes in place, and the task appears as blocked in the sidebar. Open it to see **Try again** and **Open terminal** in the conversation. Commit, stash or discard the changes, then press **Try again** to switch back. Until then, no new Factory task starts in that project. If you already switched branches yourself, Warpforge leaves your choice alone.
 - It remembers where to return the folder across a restart of the app.
 
 ## With or without a draft pull request
@@ -133,7 +133,7 @@ A queued task's row menu has:
 
 ### When it needs you
 
-A Factory task waits in **Needs you** exactly as any workflow does: a question from a stage, the review round limit, a failed test in the running app, or a pause because an agent ran out of quota or quit. **Pause** and **Resume** work as usual.
+Open a Factory task to see why it is waiting and respond to a stage question, review limit, failed verification, or daemon pause. **Pause** and **Resume** work as usual.
 
 ### Stop, and run again
 

@@ -61,7 +61,7 @@ function startScene(scene: Scene, replay = false) {
     openTaskId: scene.openTaskId,
     sidebarMode: "tasks",
     teamSelection: null,
-    view: "control",
+    view: "start",
     ...scene.nav,
   } as const;
   if (replay) {
@@ -278,10 +278,14 @@ export default function AppDemo() {
           </aside>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <AppHeader
+              composing={false}
               onAddProject={noop}
               onCloseTask={noop}
+              onOpenTask={openTaskInDemo}
               openTask={openTask}
+              snapshot={live}
               view={view}
+              windowButtonsInset={false}
             />
             <main className="min-h-0 flex-1 overflow-hidden p-2">
               {openTask ? (

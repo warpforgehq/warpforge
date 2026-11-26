@@ -31,6 +31,7 @@ import { ChannelNameDialog } from "@/views/team/channels/ChannelNameDialog";
 import { labeller, shortLabel } from "@/views/team/labels";
 
 import { ProjectBadge } from "./ProjectBadge";
+import { usePinContextMenu } from "./RailPins";
 
 interface Props {
   projects: string[];
@@ -98,6 +99,7 @@ function SmithRow({
   active: boolean;
   onSelect: () => void;
 }) {
+  const pinMenu = usePinContextMenu();
   const status = smithStatus(smith, tasks);
   const unread = useSmithUnread(smith, tasks);
   // What it needs from you outranks what it says it is doing.
@@ -112,6 +114,7 @@ function SmithRow({
       type="button"
       aria-current={active ? "true" : undefined}
       onClick={onSelect}
+      onContextMenu={(event) => pinMenu(event, { kind: "smith", id: smith.id })}
       className={cn(ROW, active && "bg-accent", unread > 0 && "font-semibold")}
     >
       <SmithAvatar smith={smith} status={status} />
@@ -140,6 +143,7 @@ function SmithRow({
  * channels and the direct threads in it.
  */
 export function SmithsBody({ projects, tasks }: Props) {
+  const pinMenu = usePinContextMenu();
   const allSmiths = useSmiths();
   const smithsById = useSmithsStore((state) => state.smiths);
   const records = usePeersStore((state) => state.records);
@@ -252,6 +256,9 @@ export function SmithsBody({ projects, tasks }: Props) {
               type="button"
               aria-current={isConversation(channel.key) ? "true" : undefined}
               onClick={() => openTeam({ key: channel.key, kind: "conversation" })}
+              onContextMenu={(event) =>
+                pinMenu(event, { kind: "channel", id: channel.key, name: channel.name })
+              }
               className={cn(
                 ROW,
                 isConversation(channel.key) && "bg-accent",

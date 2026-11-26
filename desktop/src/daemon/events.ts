@@ -60,7 +60,7 @@ export class DaemonEvents extends DaemonStore {
         // snapshot means a fresh connection, so transcripts must be fetched
         // again for any chat opened from here on.
         this.historyLoads.clear();
-        this.setState({ snapshot: ev.data });
+        this.setState({ snapshot: ev.data, snapshotReady: true });
         break;
       }
       case "project.added":

@@ -1,9 +1,6 @@
-import { useMemo, useSyncExternalStore } from "react";
-
 import { TaskMenu } from "@/components/TaskMenu";
-import { daemon } from "@/daemon";
-import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
 import type { TaskInfo } from "@/protocol";
+import { usePins, type Pin } from "@/store/pins";
 import { useUi } from "@/store/ui";
 
 /**
@@ -12,20 +9,16 @@ import { useUi } from "@/store/ui";
  * @returns the menu trigger
  */
 export function TaskRailMenu({ task }: { task: TaskInfo }) {
-  const { snapshot } = useSyncExternalStore(daemon.subscribe, daemon.getState);
-  const pinnedTaskIds = useUi((s) => s.pinnedTaskIds);
-  const setPinnedTaskIds = useUi((s) => s.setPinnedTaskIds);
-  const closeTask = useUi((s) => s.openTask);
-  const index = useMemo(() => buildTaskGroupIndex(snapshot.tasks), [snapshot.tasks]);
-  const pinned = isTaskGroupPinned(index, pinnedTaskIds, task.id);
+  const pin: Pin = { id: task.id, kind: "task" };
+  const pinned = usePins((state) => state.has(pin));
+  const toggle = usePins((state) => state.toggle);
+  const closeTask = useUi((state) => state.openTask);
   return (
     <TaskMenu
       task={task}
       pinned={pinned}
       side="left"
-      onTogglePin={() =>
-        setPinnedTaskIds(setTaskGroupPinned(index, pinnedTaskIds, task.id, !pinned))
-      }
+      onTogglePin={() => toggle(pin)}
       onClose={() => closeTask(null)}
     />
   );

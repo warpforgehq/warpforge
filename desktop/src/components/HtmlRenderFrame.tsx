@@ -21,19 +21,10 @@ type HtmlRender = Extract<SessionUpdate, { kind: "html_render" }>;
  * holds the agent's height until the page reports its own, then fits it.
  * @param update the recorded render
  * @param taskId the task whose chat shows it
- * @param compact render a one-line summary for mission-control tiles
  * @returns the frame
  */
-export function HtmlRenderFrame({
-  update,
-  taskId,
-  compact,
-}: {
-  update: HtmlRender;
-  taskId?: string;
-  compact?: boolean;
-}) {
-  if (compact || !taskId) {
+export function HtmlRenderFrame({ update, taskId }: { update: HtmlRender; taskId?: string }) {
+  if (!taskId) {
     return (
       <p className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
         <PanelTop className="size-3.5 shrink-0 text-primary" />

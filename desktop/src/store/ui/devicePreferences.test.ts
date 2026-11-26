@@ -34,7 +34,7 @@ it("migrates version 11 settings and keeps the last section and theme", async ()
       customModels: {},
     },
   });
-  expect(JSON.parse(localStorage.getItem("wf-ui") ?? "{}")).toHaveProperty("version", 12);
+  expect(JSON.parse(localStorage.getItem("wf-ui") ?? "{}")).toHaveProperty("version", 13);
 });
 
 it("persists preferences without persisting a search target", async () => {

@@ -231,7 +231,7 @@ export function SurfaceRail({
         />
       ))}
       <span className="flex-1" />
-      {footer && <div className="pb-1.5">{footer}</div>}
+      {footer && <div className="pb-3">{footer}</div>}
     </nav>
   );
 }

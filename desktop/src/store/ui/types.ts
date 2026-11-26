@@ -4,7 +4,6 @@ import type { EditHunk } from "../../protocol";
 import type { DevicePreferences } from "./devicePreferences";
 import type { LayoutState } from "./layout";
 import type { NavState } from "./nav";
-import type { PinnedState } from "./pinned";
 import type { SettingsState } from "./settings";
 
 /**
@@ -13,10 +12,9 @@ import type { SettingsState } from "./settings";
  */
 
 /** A destination the nav can address. */
-export type GlobalView = "control" | "inbox" | "automations" | "memory" | "team";
-/** What the rail has picked. A mode sets the sidebar panel and the main area;
- *  Mission Control shows the task tree beside its dashboard. */
-export type SidebarMode = "tasks" | Exclude<GlobalView, "memory">;
+export type GlobalView = "start" | "inbox" | "automations" | "memory" | "team";
+/** What the rail has picked. Tasks also owns the sidebar for the start view. */
+export type SidebarMode = "tasks" | Exclude<GlobalView, "memory" | "start">;
 /** What the Smiths (Team) main area shows. */
 export type TeamSelection =
   | { kind: "conversation"; key: string }
@@ -59,13 +57,6 @@ export type TaskOpenNav =
   | { surface: "files"; path: string; line?: number; column?: number }
   | { surface: "diff"; path: string; hunks?: EditHunk[] };
 
-export interface PinnedTileLayout {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
 /** Glass tint of the chrome surfaces — 1 is opaque, below this the app is unreadable. */
 export const SIDEBAR_OPACITY_MIN = 0.6;
 export const SIDEBAR_OPACITY_MAX = 1;
@@ -85,7 +76,6 @@ export function clampSidebarWidth(v: unknown): number {
   return Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, Math.round(v)));
 }
 
-export interface UiState
-  extends NavState, LayoutState, SettingsState, PinnedState, DevicePreferences {}
+export interface UiState extends NavState, LayoutState, SettingsState, DevicePreferences {}
 
 export type UiSlice<T> = StateCreator<UiState, [["zustand/persist", unknown]], [], T>;

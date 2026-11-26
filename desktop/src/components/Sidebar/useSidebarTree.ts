@@ -8,29 +8,20 @@ import { usePeerAlertReasons, useTeamUnread } from "@/hooks/usePeerFeed";
 import { usePrFeedbackReasons } from "@/hooks/usePrFeedbackReasons";
 import { buildAttentionQueue } from "@/lib/attentionRail";
 import { keeperAttentionReasons } from "@/lib/keepers";
-import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
+import { buildTaskForest } from "@/lib/taskGroups";
 import { boardTasks } from "@/lib/taskOrigin";
 import { useUi } from "@/store/ui";
-import type { SidebarMode } from "@/store/ui";
 
 import {
   ancestorIds,
   buildSidebarRows,
-  isSettledTask,
-  needsHuman,
   projectNames,
-  resolveTaskState,
   rowHeight,
   sortProjectsByActivity,
   type SidebarRow,
 } from "./logic";
 
-/** Most chips the rail shows before folding the rest into `+N`. */
-export const LIVE_LANE_MAX = 6;
-
 export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
-  const pinned = useUi((store) => store.pinnedTaskIds);
-  const setPinnedTaskIds = useUi((store) => store.setPinnedTaskIds);
   const attentionTargetId = useUi((store) => store.attentionTargetId);
   const attentionTargetNonce = useUi((store) => store.attentionTargetNonce);
   const selectedProject = useUi((store) => store.selectedProjectId);
@@ -62,7 +53,8 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     () => buildAttentionQueue(tasks, state.sessionUpdates, prFeedback, peerAlerts, keeperAlerts),
     [keeperAlerts, peerAlerts, prFeedback, state.sessionUpdates, tasks],
   );
-  const taskGroupIndex = useMemo(() => buildTaskGroupIndex(tasks), [tasks]);
+  const forest = useMemo(() => buildTaskForest(tasks), [tasks]);
+  const attentionIds = useMemo(() => new Set(queue.map(({ task }) => task.id)), [queue]);
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
   // Recomputed on task-set changes only — deliberately not on `nowSec`, so the
   // order cannot shift under the pointer on a clock tick.
@@ -83,47 +75,12 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     [attentionTargetId, openTaskId],
   );
 
-  /**
-   * The rail's live lane: work in flight or waiting on a human,
-   * most-recent first. The rail's job is presence, so this is data the expanded
-   * tree already has — no separate daemon query.
-   */
-  const liveLane = useMemo(() => {
-    const attentionIds = new Set(queue.map((item) => item.task.id));
-    const live = tasks
-      .filter((task) => !isSettledTask(task))
-      .map((task) => {
-        const attention = attentionIds.has(task.id);
-        return { attention, state: resolveTaskState(task, { attention, nowSec }), task };
-      })
-      .filter(({ state: rowState }) => rowState === "working" || needsHuman(rowState))
-      .sort((a, b) => b.task.updatedAt - a.task.updatedAt || a.task.id.localeCompare(b.task.id));
-    return {
-      overflow: Math.max(0, live.length - LIVE_LANE_MAX),
-      tasks: live.slice(0, LIVE_LANE_MAX),
-    };
-  }, [nowSec, queue, tasks]);
-
   /** The open task plus every ancestor: the branch the row rails paint. */
   const activePathIds = useMemo(() => {
     const ids = new Set(ancestorIds(taskById, openTaskId));
     if (openTaskId) ids.add(openTaskId);
     return ids;
   }, [openTaskId, taskById]);
-
-  /**
-   * The badge counts what genuinely wants a human right now, not the whole
-   * attention queue: that queue also holds every finished task awaiting review,
-   * so it reads in the dozens and a permanent "23" is not a signal.
-   */
-  const blockingCount = useMemo(() => {
-    const attentionIds = new Set(queue.map((item) => item.task.id));
-    return tasks.filter(
-      (task) =>
-        !isSettledTask(task) &&
-        needsHuman(resolveTaskState(task, { attention: attentionIds.has(task.id), nowSec })),
-    ).length;
-  }, [nowSec, queue, tasks]);
 
   // A task the user was sent to (toast, wizard) must be reachable even when its
   // parent group or project is collapsed.
@@ -159,7 +116,7 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
         expandedShelves,
         expandedTaskIds,
         forceVisibleTaskIds,
-        forest: taskGroupIndex.forest,
+        forest,
         nowSec,
         projectOrder: names,
         queue,
@@ -176,7 +133,7 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
       nowSec,
       queue,
       selectedProject,
-      taskGroupIndex.forest,
+      forest,
       tasks,
     ],
   );
@@ -254,55 +211,19 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     });
   }, []);
 
-  const handlePin = useCallback(
-    (taskId: string) => {
-      setPinnedTaskIds(
-        setTaskGroupPinned(
-          taskGroupIndex,
-          pinned,
-          taskId,
-          !isTaskGroupPinned(taskGroupIndex, pinned, taskId),
-        ),
-      );
-    },
-    [pinned, setPinnedTaskIds, taskGroupIndex],
-  );
-
-  // The same count as Mission Control's "Needs you" tab: the attention queue
-  // without sessions lost to a restart.
-  const needsYouCount = useMemo(
-    () => queue.filter((item) => item.task.status !== "interrupted").length,
-    [queue],
-  );
-  const modeCount = useCallback(
-    (mode: SidebarMode) =>
-      mode === "tasks"
-        ? needsYouCount
-        : mode === "inbox"
-          ? inboxUnseen
-          : mode === "team"
-            ? teamUnread
-            : mode === "control"
-              ? blockingCount
-              : 0,
-    [blockingCount, inboxUnseen, needsYouCount, teamUnread],
-  );
-
   return {
     agentUpdates,
     deletingShelf,
-    handlePin,
-    liveLane,
-    modeCount,
+    attentionIds,
+    inboxUnseen,
+    teamUnread,
     nowSec,
-    pinned,
     projectNames: names,
     rows,
     scrollRef,
     setDeletingShelf,
     setSettlingProject,
     settleMarkedIds,
-    taskGroupIndex,
     totalSize,
     toggleProject,
     toggleShelf,

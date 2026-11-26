@@ -41,6 +41,9 @@ export interface AppDialogs {
 
 /** Dialog open/closed state for the shell, so `App` stays a composition root. */
 export function useAppDialogs(): AppDialogs {
+  const startVisible = useUi(
+    (state) => state.view === "start" && state.openTaskId === null && !state.settingsOpen,
+  );
   const openProject = useUi((s) => s.openProject);
   const [newTaskProject, setNewTaskProject] = useState<string | null>(null);
   const [newTaskPrompt, setNewTaskPrompt] = useState<string | undefined>(undefined);
@@ -48,8 +51,8 @@ export function useAppDialogs(): AppDialogs {
   // created task can be linked back to it.
   const [newTaskBacklogItemId, setNewTaskBacklogItemId] = useState<string | null>(null);
   const [newTaskOptions, setNewTaskOptions] = useState<NewTaskOptions>({});
-  // The app launches on the new-task composer.
-  const [newTaskOpen, setNewTaskOpen] = useState(true);
+  // Explicit requests can open the composer from any view.
+  const [newTaskOpen, setNewTaskOpen] = useState(false);
   const [newTaskAddedProject, setNewTaskAddedProject] = useState<string | null>(null);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   const [wizardProject, setWizardProject] = useState<string | null>(null);
@@ -90,7 +93,7 @@ export function useAppDialogs(): AppDialogs {
   const handleProjectAdded = useCallback(
     (name: string) => {
       // Added from the composer's project picker: pick it there, keep the draft.
-      if (newTaskOpen) setNewTaskAddedProject(name);
+      if (newTaskOpen || startVisible) setNewTaskAddedProject(name);
       else openProject(name);
       toast("Project added", {
         description: `Run the setup wizard for ${name}`,
@@ -101,7 +104,7 @@ export function useAppDialogs(): AppDialogs {
         },
       });
     },
-    [newTaskOpen, openProject],
+    [newTaskOpen, openProject, startVisible],
   );
 
   return {

@@ -40,7 +40,7 @@ describe("TaskMenu", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Task actions" }));
-    expect(await screen.findByText("Pin to Mission Control")).toBeInTheDocument();
+    expect(await screen.findByText("Pin to rail")).toBeInTheDocument();
   });
 
   // Picking Delete used to go straight through: the webview answers

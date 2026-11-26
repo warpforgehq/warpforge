@@ -214,7 +214,7 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
     // Nothing left to be the subject of this view, and no nav item to fall
     // back to: the app has to leave the project page entirely.
     if (next) openProject(next);
-    else setView("control");
+    else setView("start");
   }, [
     clearProjectState,
     openProject,

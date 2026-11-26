@@ -260,7 +260,7 @@ describe("Projects", () => {
     renderProjects();
     await removeSelectedProject();
 
-    await waitFor(() => expect(useUi.getState().view).toBe("control"));
+    await waitFor(() => expect(useUi.getState().view).toBe("start"));
   });
 
   it("opens the new work item drawer for the selected project", () => {

@@ -1,5 +1,7 @@
 # 0026 — Parallel sessions see each other in a directory and message as peers
 
+> The desktop attention and dashboard presentation in this record was superseded by [0032](0032-permanent-rail.md#2026-11-27-update).
+
 **Status:** proposed (2026-10-16) — draft
 
 ## Context

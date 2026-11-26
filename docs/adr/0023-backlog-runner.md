@@ -1,5 +1,7 @@
 # 0023 — The backlog runner: a daemon queue that turns ready items into pull requests
 
+> The desktop attention and dashboard presentation in this record was superseded by [0032](0032-permanent-rail.md#2026-11-27-update).
+
 **Status:** accepted (2026-09-29) · Phase 1 built; later phases proposed ·
 amended 2026-09-30: *Factory as a task mode* supersedes the Factory surface,
 Start/Pause and per-item queue editing described below

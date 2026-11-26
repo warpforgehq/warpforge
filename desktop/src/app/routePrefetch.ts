@@ -6,7 +6,7 @@
 export const loadAutomations = () => import("../views/Automations");
 export const loadInboxView = () => import("../views/InboxView");
 export const loadMemory = () => import("../views/Memory");
-export const loadMissionControl = () => import("../views/MissionControl");
+export const loadNewTaskComposer = () => import("../views/NewTaskDialog");
 export const loadProjects = () => import("../views/Projects");
 export const loadSettings = () => import("../views/settings");
 export const loadTaskDetail = () => import("../views/TaskDetail");
@@ -16,7 +16,7 @@ const ROUTE_LOADERS = [
   loadAutomations,
   loadInboxView,
   loadMemory,
-  loadMissionControl,
+  loadNewTaskComposer,
   loadProjects,
   loadSettings,
   loadTaskDetail,

@@ -47,7 +47,7 @@ function mockDaemon() {
 
 function renderHeader(
   openTask: TaskInfo | null,
-  view: "control" | "project" | "inbox" = "project",
+  view: "start" | "project" | "inbox" = "project",
 ) {
   const snapshot = {
     ...daemon.getState().snapshot,
@@ -74,7 +74,7 @@ afterEach(() => {
 describe("AppHeader without a task", () => {
   it("shows no account control on a view with no agent in focus", () => {
     mockDaemon();
-    renderHeader(null, "control");
+    renderHeader(null, "start");
 
     expect(screen.queryByRole("button", { name: /account$/ })).toBeNull();
     expect(screen.queryByText("Personal")).toBeNull();

@@ -14,8 +14,8 @@ vi.mock("../views/Memory", () => {
   loaded.push("memory");
   return { default: () => null };
 });
-vi.mock("../views/MissionControl", () => {
-  loaded.push("mission-control");
+vi.mock("../views/NewTaskDialog", () => {
+  loaded.push("new-task-composer");
   return { default: () => null };
 });
 vi.mock("../views/Projects", () => {
@@ -47,7 +47,7 @@ describe("prefetchRouteChunks", () => {
           "automations",
           "inbox",
           "memory",
-          "mission-control",
+          "new-task-composer",
           "projects",
           "settings",
           "task-detail",

@@ -68,7 +68,7 @@ Once a task's worktree branch or owned project-folder branch has a pull request,
 
 ### When the pull request comes back
 
-CI results and review comments land on GitHub, but the agent that opened the pull request is still sitting in its task. So when a check fails or a reviewer leaves a comment nobody has resolved, the task moves to **Needs you** and a notice above its conversation says what arrived — for example *PR #12: 2 checks failed · 3 new comments*.
+CI results and review comments land on GitHub, but the agent that opened the pull request is still sitting in its task. So when a check fails or a reviewer leaves a comment nobody has resolved, a notice above the task’s conversation says what arrived — for example *PR #12: 2 checks failed · 3 new comments*.
 
 **Send to agent** hands all of it to that agent as one message, in the same conversation: each failing check with its link and the command that prints the end of its log, then each comment with its file and line, the lines it points at, who wrote it and what it says. If the agent is busy, the message waits for its turn to end. **Dismiss** clears the notice without sending anything.
 

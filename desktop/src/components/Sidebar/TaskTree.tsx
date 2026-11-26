@@ -1,6 +1,6 @@
 import { SidebarTaskRow } from "@/components/SidebarTaskRow";
-import { isTaskGroupPinned } from "@/lib/taskGroups";
 import { cn } from "@/lib/utils";
+import { usePins } from "@/store/pins";
 
 import { SIDEBAR_BODY_ID } from "./modes";
 import { ChatsRow, EmptyRow, ProjectRow, ShelfRow } from "./rows";
@@ -8,7 +8,7 @@ import type { useSidebarTree } from "./useSidebarTree";
 
 type Tree = ReturnType<typeof useSidebarTree>;
 
-/** The virtualised project → task tree the Tasks and Mission Control modes show. */
+/** The virtualised project → task tree shown in Tasks. */
 export function TaskTree({
   tree,
   openTaskId,
@@ -25,21 +25,21 @@ export function TaskTree({
   onSettleFinishedTurns?: (ids: string[]) => void;
 }) {
   const {
-    handlePin,
     nowSec,
-    pinned,
     rows,
     scrollRef,
     setDeletingShelf,
     setSettlingProject,
     settleMarkedIds,
-    taskGroupIndex,
     totalSize,
     toggleProject,
     toggleShelf,
     toggleTask,
     virtualItems,
   } = tree;
+
+  const pins = usePins((state) => state.pins);
+  const togglePin = usePins((state) => state.toggle);
 
   return (
     <div
@@ -99,11 +99,11 @@ export function TaskTree({
                     active={openTaskId === row.task.id}
                     childCount={row.childCount}
                     expanded={row.expanded}
-                    pinned={isTaskGroupPinned(taskGroupIndex, pinned, row.task.id)}
+                    pinned={pins.some((pin) => pin.kind === "task" && pin.id === row.task.id)}
                     nowSec={nowSec}
                     onOpen={onOpenTask}
                     onToggle={toggleTask}
-                    onPin={handlePin}
+                    onPin={(id) => togglePin({ id, kind: "task" })}
                   />
                 </div>
               )}

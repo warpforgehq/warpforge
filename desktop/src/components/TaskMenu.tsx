@@ -63,7 +63,7 @@ export function TaskMenu({
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={onTogglePin}>
             {pinned ? <PinOff /> : <Pin />}
-            {pinned ? "Unpin from Mission Control" : "Pin to Mission Control"}
+            {pinned ? "Unpin from rail" : "Pin to rail"}
           </DropdownMenuItem>
           <DropdownMenuItem disabled={actions.busy} onSelect={actions.archiveTask}>
             <Archive />

@@ -1,10 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { usePins } from "@/store/pins";
+
 import { createDevicePreferences, devicePreferenceDefaults } from "./devicePreferences";
 import { createLayoutSlice } from "./layout";
 import { createNavSlice } from "./nav";
-import { createPinnedSlice } from "./pinned";
 import { createSettingsSlice } from "./settings";
 import { clampSidebarWidth, SIDEBAR_OPACITY_MIN, type UiState } from "./types";
 
@@ -15,11 +16,10 @@ export const useUi = create<UiState>()(
       ...createLayoutSlice(...args),
       ...createSettingsSlice(...args),
       ...createDevicePreferences(...args),
-      ...createPinnedSlice(...args),
     }),
     {
       name: "wf-ui",
-      version: 12,
+      version: 13,
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
         if (version === 0 && state && "sidebarWidth" in state) {
@@ -27,13 +27,10 @@ export const useUi = create<UiState>()(
             state = { ...state, sidebarWidth: clampSidebarWidth(state.sidebarWidth) };
           }
         }
-        if (version < 2 && state && !("pinnedLayout" in state)) {
-          state = { ...state, pinnedLayout: {} };
-        }
         // The Board view was removed. `view` is persisted, so without this a
         // session that ended there rehydrates a `view` no branch renders.
         if (version < 3 && state && state.view === "board") {
-          state = { ...state, view: "control" };
+          state = { ...state, view: "start" };
         }
         if (version < 4 && state) {
           // Glass defaults inverted (chrome may be glass, the work surface is
@@ -56,7 +53,7 @@ export const useUi = create<UiState>()(
         // project to show, and falling through to the first registered one
         // lands the user on a project they never picked.
         if (version < 5 && state && state.view === "projects") {
-          state = { ...state, view: state.selectedProjectId ? "project" : "control" };
+          state = { ...state, view: state.selectedProjectId ? "project" : "start" };
         }
         // The Tasks segment returns to the last task. An install upgrading from
         // 5 never stored one, and a task id from storage is only ever offered
@@ -99,6 +96,26 @@ export const useUi = create<UiState>()(
         }
         if (version < 12) {
           state = { ...devicePreferenceDefaults, ...state };
+        }
+        if (version < 13) {
+          const {
+            missionControlTab: _missionControlTab,
+            pinnedTaskIds,
+            pinnedLayout: _pinnedLayout,
+            ...rest
+          } = state;
+          if (Array.isArray(pinnedTaskIds)) {
+            usePins
+              .getState()
+              .migrateTaskPins(
+                pinnedTaskIds.filter((id): id is string => typeof id === "string" && id.length > 0),
+              );
+          }
+          state = {
+            ...rest,
+            ...(rest.view === "control" && { view: "start" }),
+            ...(rest.sidebarMode === "control" && { sidebarMode: "tasks" }),
+          };
         }
         return state;
       },

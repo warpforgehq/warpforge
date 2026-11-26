@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-/** Something kept on the rail: a project, a Smith, or a team channel. */
+/** Something kept on the rail: a task, project, Smith, or team channel. */
 export type Pin =
+  | { kind: "task"; id: string }
   | { kind: "project"; id: string }
   | { kind: "smith"; id: string }
   | { kind: "channel"; id: string; name: string };
@@ -14,6 +15,8 @@ export function pinKey(pin: Pin): string {
 
 export interface PinsState {
   pins: Pin[];
+  /** Append legacy dashboard pins without replacing existing rail pins. */
+  migrateTaskPins: (ids: readonly string[]) => void;
   /**
    * Whether `pin` is on the rail.
    * @param pin the pin to look for
@@ -42,6 +45,15 @@ export const usePins = create<PinsState>()(
   persist(
     (set, get) => ({
       pins: [],
+      migrateTaskPins: (ids) =>
+        set((state) => {
+          const taskIds = new Set(ids);
+          for (const pin of state.pins) {
+            if (pin.kind === "task") taskIds.delete(pin.id);
+          }
+          const additions = Array.from(taskIds, (id): Pin => ({ id, kind: "task" }));
+          return additions.length ? { pins: [...state.pins, ...additions] } : state;
+        }),
       has: (pin) => get().pins.some((candidate) => pinKey(candidate) === pinKey(pin)),
       toggle: (pin) => {
         const key = pinKey(pin);

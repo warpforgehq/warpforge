@@ -102,6 +102,7 @@ export class CoreClient extends DaemonDemo {
     this.handshake = null;
     this.setState({
       connection: "disconnected",
+      snapshotReady: false,
       ...(!this.state.connectionError && !this.reconnectSuspended
         ? { connectionError: "Daemon disconnected. Warpforge will keep retrying." }
         : {}),

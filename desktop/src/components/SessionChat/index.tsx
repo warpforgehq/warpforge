@@ -39,6 +39,7 @@ import type { ComposerHandle } from "../Composer";
 import { Composer } from "../Composer";
 import { FactoryStrip } from "../FactoryStrip";
 import { WorkflowControls } from "../WorkflowControls";
+import { CheckoutRecovery } from "./CheckoutRecovery";
 import {
   CHAT_DRAW_DISTANCE_PX,
   CHAT_ESTIMATED_ROW_PX,
@@ -370,6 +371,9 @@ export function SessionChat({
       )}
       {!readOnly && <QueuedPromptsBar taskId={task.id} queued={task.queuedPrompts ?? []} />}
       {isFactoryTask(task) && !readOnly && <FactoryStrip task={task} />}
+      {!readOnly && task.status === "blocked" && task.blockedKind === "checkout_held" && (
+        <CheckoutRecovery key={task.id} project={task.project} reason={task.blockedReason} />
+      )}
       {task.workflowRun && !readOnly && <WorkflowControls task={task} />}
       {!readOnly && (
         <div>

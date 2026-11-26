@@ -11,6 +11,7 @@ import {
   type SidebarRow,
 } from "./logic";
 import { ChatsBadge, ProjectBadge } from "./ProjectBadge";
+import { usePinContextMenu } from "./RailPins";
 
 /**
  * Closes a project group with the history it hides: "12 done". Settled work is
@@ -48,7 +49,7 @@ export function ShelfRow({
         } in ${row.project || "chats"}`}
         onClick={() => onToggle(row.project)}
         style={{ paddingLeft: sidebarContentLeft(0) }}
-        className="relative flex h-6 w-full items-center gap-1.5 rounded-md pr-7 text-left text-[0.6875rem] text-muted-foreground/45 transition-colors hover:bg-accent/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+        className="relative flex h-6 w-full items-center gap-1.5 rounded-md pr-7 text-left text-[0.75rem] text-muted-foreground/45 transition-colors hover:bg-accent/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <span
           aria-hidden
@@ -121,6 +122,7 @@ export function ProjectRow({
    *  tree can highlight exactly the rows it would settle. */
   onSettleHover?: (hovering: boolean) => void;
 }) {
+  const pinMenu = usePinContextMenu();
   const settle = row.settleIds.length > 0;
   const preview = row.settlePreview.some(Boolean) ? ` — ${row.settlePreview.join(", ")}` : "";
   const settleTitle = `Settle ${row.settleIds.length} finished turn${
@@ -136,13 +138,14 @@ export function ProjectRow({
         data-project={row.name}
         aria-label={`Open project ${row.name}`}
         onClick={() => onOpenProject(row.name)}
+        onContextMenu={(event) => pinMenu(event, { kind: "project", id: row.name })}
         style={{ paddingLeft: sidebarContentLeft(0) }}
         className="flex h-7 w-full min-w-0 items-center gap-2 rounded-md pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <ProjectBadge name={row.name} />
         <strong
           className={cn(
-            "min-w-0 flex-1 truncate text-[0.78125rem] font-semibold tracking-tight",
+            "min-w-0 flex-1 truncate text-[0.8125rem] font-semibold tracking-tight",
             row.selected ? "text-foreground" : "text-foreground/70",
           )}
         >
@@ -159,7 +162,7 @@ export function ProjectRow({
         )}
         <span
           title={`${row.count} active task${row.count === 1 ? "" : "s"}`}
-          className="shrink-0 font-mono text-[0.625rem] tabular-nums text-muted-foreground/45 transition-opacity group-hover/proj:opacity-0"
+          className="shrink-0 font-mono text-[0.6875rem] tabular-nums text-muted-foreground/45 transition-opacity group-hover/proj:opacity-0"
         >
           {row.count}
         </span>
@@ -234,7 +237,7 @@ export function ChatsRow({
           />
         </span>
         <ChatsBadge />
-        <strong className="min-w-0 flex-1 truncate text-[0.78125rem] font-semibold tracking-tight text-foreground/70">
+        <strong className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold tracking-tight text-foreground/70">
           Chats
         </strong>
         {row.attentionCount > 0 && (
@@ -242,7 +245,7 @@ export function ChatsRow({
         )}
         <span
           title={`${row.count} active chat${row.count === 1 ? "" : "s"}`}
-          className="shrink-0 font-mono text-[0.625rem] tabular-nums text-muted-foreground/45"
+          className="shrink-0 font-mono text-[0.6875rem] tabular-nums text-muted-foreground/45"
         >
           {row.count}
         </span>
