@@ -314,7 +314,7 @@ fn eval(app: &AppHandle, tab_id: &str, js: &str) -> Result<(), String> {
 fn reload_from_origin(webview: &Webview) -> Result<(), String> {
     webview
         .with_webview(|platform| {
-            if let Some(wk) = adopt_wk_webview(platform) {
+            if let Some(wk) = retain_wk_webview(platform) {
                 let _ = unsafe { wk.reloadFromOrigin() };
             }
         })
@@ -330,7 +330,7 @@ fn reload_from_origin(webview: &Webview) -> Result<(), String> {
 /// retains the view and must not release the others: an extra release
 /// deallocates the live NSWindow. Re-check `WithWebview` on a Tauri upgrade.
 #[cfg(target_os = "macos")]
-pub(crate) fn adopt_wk_webview(
+pub(crate) fn retain_wk_webview(
     platform: tauri::webview::PlatformWebview,
 ) -> Option<objc2::rc::Retained<objc2_web_kit::WKWebView>> {
     unsafe { objc2::rc::Retained::retain(platform.inner().cast()) }

@@ -34,7 +34,7 @@ pub fn capture_element(
     let app = app.clone();
     let (x, y, w, h) = rect;
     let _ = webview.with_webview(move |platform| unsafe {
-        let Some(wk) = crate::browser::adopt_wk_webview(platform) else {
+        let Some(wk) = crate::browser::retain_wk_webview(platform) else {
             return;
         };
 
@@ -109,7 +109,7 @@ pub fn capture_page(
     let (tx, rx) = std::sync::mpsc::channel();
     webview
         .with_webview(move |platform| unsafe {
-            let Some(wk) = crate::browser::adopt_wk_webview(platform) else {
+            let Some(wk) = crate::browser::retain_wk_webview(platform) else {
                 let _ = tx.send(Err("the tab has no native view".to_string()));
                 return;
             };
@@ -181,7 +181,7 @@ pub fn capture_png(
     let (tx, rx) = std::sync::mpsc::channel();
     webview
         .with_webview(move |platform| unsafe {
-            let Some(wk) = crate::browser::adopt_wk_webview(platform) else {
+            let Some(wk) = crate::browser::retain_wk_webview(platform) else {
                 let _ = tx.send(Err("the preview has no native view".to_string()));
                 return;
             };
