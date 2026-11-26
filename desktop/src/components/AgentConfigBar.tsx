@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import { SkeletonBar, SkeletonBlock } from "@/components/ui/skeleton";
 import { configRole } from "@/lib/configRole";
+import { usePickerOptions } from "@/lib/pickerPreferences";
 import { cn } from "@/lib/utils";
 
 import { daemon } from "../daemon";
@@ -28,12 +29,14 @@ const SEARCH_MIN_OPTIONS = 8;
  */
 export function AgentConfigBar({
   taskId,
-  options,
+  agentId,
+  options: reportedOptions,
   onSelect,
   picks,
   loading,
 }: {
   taskId?: string;
+  agentId?: string;
   options: ConfigOption[];
   /** Intercept a pick (pre-start). When omitted, a post-start pick is sent to
    *  the live session via `session.setConfigOption`. */
@@ -44,6 +47,7 @@ export function AgentConfigBar({
   /** Show a spinner instead of pickers while the daemon probes the agent. */
   loading?: boolean;
 }) {
+  const options = usePickerOptions(agentId, reportedOptions, false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement | null>(null);

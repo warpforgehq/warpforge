@@ -211,7 +211,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
     set((s) => ({ teamChannelSeenAt: { ...s.teamChannelSeenAt, [key]: at } })),
   markSmithSeen: (id, at) => set((s) => ({ teamSmithSeenAt: { ...s.teamSmithSeenAt, [id]: at } })),
   setSidebarMode: (sidebarMode) => set({ sidebarMode }),
-  openSettings: () => set({ settingsOpen: true }),
+  openSettings: () => set({ settingsOpen: true, settingsTarget: null }),
   closeSettings: () => set({ settingsOpen: false }),
   openTeam: (teamSelection) =>
     set({ openTaskId: null, openTaskNav: null, settingsOpen: false, teamSelection, view: "team" }),

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { createDevicePreferences, devicePreferenceDefaults } from "./devicePreferences";
 import { createLayoutSlice } from "./layout";
 import { createNavSlice } from "./nav";
 import { createPinnedSlice } from "./pinned";
@@ -13,12 +14,12 @@ export const useUi = create<UiState>()(
       ...createNavSlice(...args),
       ...createLayoutSlice(...args),
       ...createSettingsSlice(...args),
+      ...createDevicePreferences(...args),
       ...createPinnedSlice(...args),
     }),
     {
       name: "wf-ui",
-      // Next persisted-shape change must bump this to 12.
-      version: 11,
+      version: 12,
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
         if (version === 0 && state && "sidebarWidth" in state) {
@@ -96,6 +97,9 @@ export const useUi = create<UiState>()(
           const filters = state.inboxFilters as Record<string, unknown>;
           state = { ...state, inboxFilters: { ...filters, scope: "review" } };
         }
+        if (version < 12) {
+          state = { ...devicePreferenceDefaults, ...state };
+        }
         return state;
       },
       // OpenTaskId is session-only — a reload shouldn't force-open a stale task.
@@ -117,6 +121,7 @@ export const useUi = create<UiState>()(
         selectedAutomationId: _selectedAutomationId,
         newSmithOpen: _newSmithOpen,
         settingsOpen: _settingsOpen,
+        settingsTarget: _settingsTarget,
         inboxFilters,
         backlogParamsByProject,
         ...rest

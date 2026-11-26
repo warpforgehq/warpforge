@@ -25,6 +25,7 @@ export default function AdvancedPage() {
   return (
     <Section title="Advanced">
       <SettingRow
+        id="backlog-storage"
         title="Backlog storage"
         description="Where backlog items are kept."
         hint="Owned by the daemon either way. YAML lives in .warpforge/backlog and is committable; SQLite stays in Warpforge's own data directory."
@@ -34,7 +35,7 @@ export default function AdvancedPage() {
             value={backlogSettings.data?.mode ?? "sqlite"}
             disabled={backlogSettings.isLoading || backlogStorage.isPending}
             onChange={(event) => backlogStorage.mutate(event.target.value as "sqlite" | "yaml")}
-            className="h-7 rounded-md border bg-background px-2 text-[13px]"
+            className="h-7 rounded-md border bg-background px-2 text-[0.8125rem]"
           >
             <option value="sqlite">SQLite</option>
             <option value="yaml">YAML files</option>
@@ -42,6 +43,7 @@ export default function AdvancedPage() {
         }
       />
       <SettingRow
+        id="dream-now"
         title="Dream now"
         description="Sweep memory for duplicates, contradictions and stale facts."
         hint="Findings land as pending proposals; a follow-up task verifies them against the code before anything is applied. Dry run reports what it would propose without writing."
@@ -51,7 +53,7 @@ export default function AdvancedPage() {
               aria-label="Dream project"
               value={dreamProject}
               onChange={(e) => setDreamProject(e.target.value)}
-              className="h-7 rounded-md border bg-background px-2 text-[13px]"
+              className="h-7 rounded-md border bg-background px-2 text-[0.8125rem]"
             >
               <option value="">global</option>
               {(state.snapshot.projects ?? []).map((p: any) => (
@@ -64,7 +66,7 @@ export default function AdvancedPage() {
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 text-[13px]"
+              className="h-7 text-[0.8125rem]"
               onClick={async () => {
                 const pid = effectiveDreamProject || state.snapshot.projects[0]?.name || "global";
                 const agent =
@@ -97,7 +99,7 @@ export default function AdvancedPage() {
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 text-[13px]"
+              className="h-7 text-[0.8125rem]"
               onClick={async () => {
                 const pid = effectiveDreamProject || state.snapshot.projects[0]?.name || "global";
                 const res: any = await (daemon as any).request("memory.dream", {

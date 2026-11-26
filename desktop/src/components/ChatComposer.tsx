@@ -57,7 +57,7 @@ export const ChatComposer = memo(
         placeholder={workflow.placeholder}
         toolbar={
           task.configOptions && task.configOptions.length > 0 ? (
-            <AgentConfigBar taskId={task.id} options={task.configOptions} />
+            <AgentConfigBar taskId={task.id} agentId={task.agent} options={task.configOptions} />
           ) : undefined
         }
       />

@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 
 /** Shared building blocks for the Settings pages. */
 
+export const settingsSelect =
+  "min-h-7 max-w-full rounded-md border bg-background px-2 text-[0.8125rem] outline-none focus:ring-1 focus:ring-ring disabled:opacity-50";
+
 export function hsl(triplet: string): string {
   return `hsl(${triplet})`;
 }
@@ -17,21 +20,23 @@ export function hsl(triplet: string): string {
  * passes `padded`.
  */
 export function Section({
+  id,
   title,
   padded,
   children,
 }: {
+  id?: string;
   title: string;
   padded?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-3">
-      <h2 className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground/50">
+    <section id={id} tabIndex={id ? -1 : undefined} className="space-y-2 rounded-xl">
+      <h2 className="px-1 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-foreground/50">
         <span className="mr-2 inline-block h-px w-3 bg-rule" aria-hidden />
         {title}
       </h2>
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="overflow-hidden rounded-xl border border-border bg-foreground/[0.02]">
         {padded ? <div className="p-4">{children}</div> : children}
       </div>
     </section>
@@ -49,12 +54,14 @@ export function Section({
  * shares one right edge instead of ragging by label length.
  */
 export function SettingRow({
+  id,
   title,
   description,
   hint,
   control,
   resetAction,
 }: {
+  id?: string;
   title: string;
   description: string;
   hint?: string;
@@ -62,27 +69,35 @@ export function SettingRow({
   resetAction?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-t border-rule px-4 py-3 first:border-t-0">
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <div className="flex min-h-5 items-center gap-1.5">
-          <h3 className="text-[13px] font-semibold text-foreground">{title}</h3>
+    <div
+      id={id}
+      tabIndex={id ? -1 : undefined}
+      className="flex min-h-7 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-rule px-3 py-0.5 first:border-t-0"
+    >
+      <div className="flex min-w-36 flex-1 flex-wrap items-baseline gap-x-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <h3 className="min-w-0 break-words text-[0.8125rem] font-semibold text-foreground">
+            {title}
+          </h3>
           {resetAction}
         </div>
-        <p className="flex items-center gap-1 text-[13px] text-muted-foreground/80">
-          {description}
-          {hint && (
-            <span
-              role="img"
-              aria-label={hint}
-              title={hint}
-              className="inline-flex shrink-0 cursor-help text-muted-foreground/60"
-            >
-              <Info className="size-3" aria-hidden />
-            </span>
-          )}
-        </p>
+        {(description || hint) && (
+          <p className="min-w-0 break-words text-[0.75rem] text-muted-foreground">
+            {description}
+            {hint && (
+              <span
+                role="img"
+                aria-label={hint}
+                title={hint}
+                className="ml-1 inline-flex shrink-0 cursor-help align-text-bottom text-muted-foreground/60"
+              >
+                <Info className="size-3" aria-hidden />
+              </span>
+            )}
+          </p>
+        )}
       </div>
-      <div className="flex min-w-52 shrink-0 items-center justify-end gap-2">{control}</div>
+      <div className="ml-auto flex max-w-full items-center justify-end gap-2">{control}</div>
     </div>
   );
 }
@@ -103,7 +118,11 @@ export function StatusStrip({
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-rule px-4 py-2.5">
       {items.map((item) => (
-        <span key={item.label} className="flex items-center gap-1.5 text-[11px]" title={item.title}>
+        <span
+          key={item.label}
+          className="flex items-center gap-1.5 text-[0.6875rem]"
+          title={item.title}
+        >
           <span className="text-muted-foreground/70">{item.label}</span>
           <span className="tabular-nums text-foreground/80">{item.value}</span>
         </span>
@@ -115,7 +134,7 @@ export function StatusStrip({
 /** A sentence at the foot of a section, tying its rows together. */
 export function SectionNote({ children }: { children: React.ReactNode }) {
   return (
-    <p className="border-t border-rule px-4 py-2.5 text-[11px] text-muted-foreground/70">
+    <p className="border-t border-rule px-4 py-2.5 text-[0.6875rem] text-muted-foreground/70">
       {children}
     </p>
   );
@@ -138,7 +157,7 @@ export function NumberInput({
         type="button"
         size="sm"
         variant="outline"
-        className="h-7 w-7 p-0 text-[13px]"
+        className="h-7 w-7 p-0 text-[0.8125rem]"
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
       >
@@ -149,7 +168,7 @@ export function NumberInput({
         type="button"
         size="sm"
         variant="outline"
-        className="h-7 w-7 p-0 text-[13px]"
+        className="h-7 w-7 p-0 text-[0.8125rem]"
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
       >
@@ -192,7 +211,7 @@ export function Slider({
         onChange={(e) => onChange(Number(e.target.value))}
         className="h-1 w-32 cursor-pointer appearance-none rounded-full bg-muted-foreground/30 accent-primary disabled:cursor-not-allowed disabled:opacity-50"
       />
-      <span className="w-10 text-right text-[11px] tabular-nums text-muted-foreground">
+      <span className="w-10 text-right text-[0.6875rem] tabular-nums text-muted-foreground">
         {display}
       </span>
     </div>
@@ -202,11 +221,13 @@ export function Slider({
 /** A toggle switch styled as a settings row control. */
 export function Toggle({
   id,
+  label,
   checked,
   disabled,
   onChange,
 }: {
   id: string;
+  label?: string;
   checked: boolean;
   disabled?: boolean;
   onChange: (v: boolean) => void;
@@ -222,12 +243,13 @@ export function Toggle({
         id={id}
         type="checkbox"
         role="switch"
+        aria-label={label}
         className="peer sr-only"
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
       />
-      <div className="h-5 w-9 rounded-full bg-muted-foreground/30 transition-colors peer-checked:bg-foreground/80 after:absolute after:left-0.5 after:top-0.5 after:size-4 after:rounded-full after:bg-background after:transition-transform peer-checked:after:translate-x-4" />
+      <div className="h-5 w-9 rounded-full bg-muted-foreground/30 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-checked:bg-foreground/80 after:absolute after:left-0.5 after:top-0.5 after:size-4 after:rounded-full after:bg-background after:transition-transform peer-checked:after:translate-x-4" />
     </label>
   );
 }

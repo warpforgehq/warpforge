@@ -55,7 +55,7 @@ export function HarnessChip({
   onSmith?: (id: string) => void;
 }) {
   const current = agents.find((candidate) => candidate.id === agent);
-  const currentName = agentDisplayName(agent, current?.displayName);
+  const currentName = agent ? agentDisplayName(agent, current?.displayName) : "No visible agents";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

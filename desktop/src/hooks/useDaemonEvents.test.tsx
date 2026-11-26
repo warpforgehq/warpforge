@@ -1,7 +1,13 @@
-import { renderHook } from "@testing-library/react";
+import { act, render, renderHook, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const invoke = vi.fn<(...args: unknown[]) => Promise<void>>(async () => {});
+vi.mock("@tauri-apps/api/window", () => ({
+  getCurrentWindow: () => ({ isFocused: async () => false }),
+}));
+
 const request = vi.fn<(method: string, params: unknown) => Promise<unknown>>(async () => null);
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -19,13 +25,14 @@ vi.mock("@tauri-apps/api/event", () => ({
 }));
 
 let emit: ((event: unknown) => void) | null = null;
+let tasks: TaskInfo[] = [];
 let sessionUpdates: Record<string, unknown[]> = {};
 vi.mock("@/daemon", async () => {
   const actual = await vi.importActual<typeof import("@/daemon")>("@/daemon");
   return {
     DaemonRpcError: actual.DaemonRpcError,
     daemon: {
-      getState: () => ({ sessionUpdates, snapshot: { tasks: [] } }),
+      getState: () => ({ sessionUpdates, snapshot: { tasks } }),
       request: (...args: unknown[]) => request(...(args as [string, unknown])),
       subscribeEvents: (cb: (event: unknown) => void) => {
         emit = cb;
@@ -36,7 +43,10 @@ vi.mock("@/daemon", async () => {
 });
 
 import { DaemonRpcError } from "@/daemon";
+import type { DaemonEvent, TaskInfo } from "@/protocol";
 import { useUi } from "@/store/ui";
+import { notificationDefaults } from "@/store/ui/devicePreferences";
+import NotificationsPage from "@/views/settings/pages/Notifications";
 
 import { useDaemonEvents } from "./useDaemonEvents";
 
@@ -120,5 +130,114 @@ describe("useDaemonEvents native notification lifecycle", () => {
     expect(revealTask).toHaveBeenCalledWith("t_1");
     expect(request).not.toHaveBeenCalled();
     revealTask.mockRestore();
+  });
+});
+
+const task: TaskInfo = {
+  id: "t_1",
+  agent: "codex",
+  project: "warpforge",
+  status: "running",
+  prompt: "Improve search",
+  title: "",
+  tags: [],
+  filesChanged: 0,
+  createdAt: 1,
+  updatedAt: 1,
+  blockedReason: null,
+};
+
+const completion: DaemonEvent = {
+  event: "session.update",
+  data: { task_id: task.id, update: { kind: "turn_ended", stop_reason: "end_turn" } },
+};
+
+describe("notification settings", () => {
+  beforeEach(() => {
+    invoke.mockClear();
+    tasks = [task];
+    useUi.setState({ notifications: notificationDefaults });
+    vi.stubGlobal("__TAURI_INTERNALS__", {});
+    renderHook(() => useDaemonEvents());
+    render(<NotificationsPage />);
+  });
+
+  afterEach(() => {
+    tasks = [];
+    act(() => useUi.setState({ notifications: notificationDefaults }));
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("shows the task-finished toast only when enabled", async () => {
+    const custom = vi.spyOn(toast, "custom");
+    emit?.(completion);
+    expect(custom).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("switch", { name: "Task-finished toast" }));
+    emit?.(completion);
+    expect(custom).toHaveBeenCalledTimes(1);
+    expect(custom).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ id: "finished:t_1" }),
+    );
+  });
+
+  it("gates the needs-you toast while preserving the native attention banner", async () => {
+    const custom = vi.spyOn(toast, "custom");
+    const blocked = { event: "task.updated", data: { ...task, status: "blocked" } };
+    emit?.(blocked);
+    expect(custom).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(screen.getByRole("switch", { name: "Needs-you toast" }));
+    custom.mockClear();
+    invoke.mockClear();
+    emit?.(blocked);
+    expect(custom).not.toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith(
+        "notify_attention",
+        expect.objectContaining({
+          payload: expect.objectContaining({ kind: "review" }),
+        }),
+      ),
+    );
+  });
+
+  it("gates each new permission toast", async () => {
+    const custom = vi.spyOn(toast, "custom");
+    const permission = (request_id: string) => ({
+      event: "session.update",
+      data: {
+        task_id: task.id,
+        update: { kind: "permission_request", request_id, options: ["allow"], title: "Run tests" },
+      },
+    });
+    emit?.(permission("req-1"));
+    expect(custom).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole("switch", { name: "Permission toast" }));
+    custom.mockClear();
+    emit?.(permission("req-2"));
+    expect(custom).not.toHaveBeenCalled();
+  });
+
+  it("sends the native finish notification independently from the in-app toast", async () => {
+    const custom = vi.spyOn(toast, "custom");
+    emit?.(completion);
+    await userEvent.click(
+      screen.getByRole("switch", { name: "macOS notification on task finish" }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
+
+    emit?.(completion);
+    await vi.waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith(
+        "notify_attention",
+        expect.objectContaining({
+          payload: expect.objectContaining({ kind: "finish", task_id: task.id }),
+        }),
+      ),
+    );
+    expect(custom).not.toHaveBeenCalled();
   });
 });

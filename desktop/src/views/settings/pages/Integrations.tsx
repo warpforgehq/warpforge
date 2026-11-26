@@ -6,7 +6,7 @@ import { Section } from "../primitives";
 export default function IntegrationsPage() {
   return (
     <div className="flex flex-col gap-8">
-      <Section title="Language servers">
+      <Section id="language-servers" title="Language servers">
         <LanguageServersPanel />
       </Section>
 

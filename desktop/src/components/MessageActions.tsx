@@ -10,6 +10,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePickerAgents } from "@/lib/pickerPreferences";
 import { cn } from "@/lib/utils";
 import type { AgentConfig } from "@/protocol";
 
@@ -26,6 +27,7 @@ export const MessageActions = memo(function MessageActions({
   onContinue: (agent: string) => Promise<void>;
   text: string;
 }) {
+  const choices = usePickerAgents(agents);
   const [copied, setCopied] = useState(false);
   const [startingAgent, setStartingAgent] = useState<string | null>(null);
 
@@ -81,7 +83,7 @@ export const MessageActions = memo(function MessageActions({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            disabled={startingAgent !== null}
+            disabled={startingAgent !== null || !choices.length}
             className="rounded p-1 hover:bg-secondary hover:text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
             aria-label="Continue with another agent"
             title="Continue with…"
@@ -92,7 +94,7 @@ export const MessageActions = memo(function MessageActions({
         <DropdownMenuPortal>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Continue with…</DropdownMenuLabel>
-            {agents.map((agent) => (
+            {choices.map((agent) => (
               <DropdownMenuItem
                 key={agent.id}
                 disabled={startingAgent !== null}

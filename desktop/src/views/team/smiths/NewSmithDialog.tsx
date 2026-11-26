@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { daemon } from "@/daemon";
 import { useSmiths } from "@/hooks/useSmiths";
+import { usePickerAgents } from "@/lib/pickerPreferences";
 import { type ProjectSelection } from "@/lib/projectSelection";
 import { defaultSmithColor } from "@/lib/smithColors";
 import { smithNameError } from "@/lib/smiths";
@@ -66,7 +67,12 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
   const smiths = useSmiths();
   const defaults = useSmithDefaults();
   const openTeam = useUi((state) => state.openTeam);
-  const agents = (snapshot.agents ?? []).filter((agent) => agent.enabled);
+  const agents = usePickerAgents(snapshot.agents);
+  const hiddenAgents = useUi((state) => state.pickers.hiddenAgents);
+  const fallback =
+    !snapshot.agents?.some((agent) => agent.enabled) && !hiddenAgents.includes("claude")
+      ? "claude"
+      : "";
   const projects = snapshot.projects.map((p) => p.name);
 
   const [name, setName] = useState("");
@@ -78,7 +84,9 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
   });
   const [whereError, setWhereError] = useState<string | null>(null);
   const home = where.home;
-  const [agent, setAgent] = useState(agents[0]?.id ?? "claude");
+  const [selectedAgent, setAgent] = useState("");
+  const agent =
+    agents.find((candidate) => candidate.id === selectedAgent)?.id ?? agents[0]?.id ?? fallback;
   const [model, setModel] = useState<string | null>(null);
   const [customizing, setCustomizing] = useState(false);
   const [editedSoul, setEditedSoul] = useState<string | null>(null);
@@ -104,7 +112,7 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
     setNameError(error);
     const noProject = home ? null : "Pick at least one project.";
     setWhereError(noProject);
-    if (error || noProject || !home || !defaults.data) return;
+    if (error || noProject || !home || !agent || !defaults.data) return;
     setBusy(true);
     try {
       const detail = await daemon.createSmith({
@@ -294,7 +302,7 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={busy || !defaults.data}>
+            <Button type="submit" size="sm" disabled={busy || !agent || !defaults.data}>
               Create {name.trim() || "smith"}
             </Button>
           </DialogFooter>

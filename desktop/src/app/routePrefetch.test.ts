@@ -22,6 +22,10 @@ vi.mock("../views/Projects", () => {
   loaded.push("projects");
   return { default: () => null };
 });
+vi.mock("../views/settings", () => {
+  loaded.push("settings");
+  return { default: () => null };
+});
 vi.mock("../views/TaskDetail", () => {
   loaded.push("task-detail");
   return { default: () => null };
@@ -45,11 +49,12 @@ describe("prefetchRouteChunks", () => {
           "memory",
           "mission-control",
           "projects",
+          "settings",
           "task-detail",
           "team",
         ]),
       );
     });
-    expect(loaded).toHaveLength(7);
+    expect(loaded).toHaveLength(8);
   });
 });

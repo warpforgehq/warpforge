@@ -4,12 +4,21 @@ import { toast } from "sonner";
 
 import { useRunnerStatus } from "@/hooks/useRunner";
 import { useSmiths } from "@/hooks/useSmiths";
+import { usePickerAgents, usePickerOptions } from "@/lib/pickerPreferences";
 import { useUi } from "@/store/ui";
 
 import type { TaskMode } from "../../components/TaskComposeBar";
 import { daemon } from "../../daemon";
 import type { AgentConfig, RunnerSettings, Snapshot, WorkflowMeta } from "../../protocol";
 import { modelOption } from "./useTaskCreation";
+
+const fallbackAgent: AgentConfig = {
+  acpCommand: "claude",
+  displayName: "Claude",
+  enabled: true,
+  id: "claude",
+  models: [],
+};
 
 /**
  * The New Task dialog's project, harness, mode and workflow template, with
@@ -31,10 +40,18 @@ export function useTaskSelection({
   const queryClient = useQueryClient();
 
   const firstProjectName = snapshot.projects[0]?.name ?? "";
-  const enabledAgents = useMemo(
-    () => snapshot.agents?.filter((candidate) => candidate.enabled) ?? [],
-    [snapshot.agents],
+  const enabledAgents = usePickerAgents(snapshot.agents);
+  const { defaultAgent, defaultModel, hiddenAgents } = useUi((state) => state.pickers);
+  const allowFallback =
+    !snapshot.agents?.some((candidate) => candidate.enabled) &&
+    !hiddenAgents.includes(fallbackAgent.id);
+  const fallbackOptions = usePickerOptions(
+    allowFallback ? fallbackAgent.id : null,
+    fallbackAgent.models,
   );
+  const agentChoices = allowFallback
+    ? [{ ...fallbackAgent, models: fallbackOptions }]
+    : enabledAgents;
   // Unset picks fall back to the snapshot on every render: the launch composer
   // mounts before the daemon's first snapshot arrives.
   const [pickedProject, setProject] = useState<string | null>(defaultProject);
@@ -45,7 +62,7 @@ export function useTaskSelection({
   /** Whether the person picked the harness; Factory defaults never override that. */
   const [agentPicked, setAgentPicked] = useState(false);
   const [defaultsApplied, setDefaultsApplied] = useState<string | null>(null);
-  const [configPicks, setConfigPicks] = useState<Record<string, string | undefined>>({});
+  const [manualPicks, setConfigPicks] = useState<Record<string, string | undefined>>({});
   const [mode, setMode] = useState<TaskMode>(initialMode);
   const [workflow, setWorkflow] = useState<string | null>(null);
   const smiths = useSmiths();
@@ -62,13 +79,21 @@ export function useTaskSelection({
       ? undefined
       : projectSmiths.find((candidate) => candidate.id === storedSmith);
 
-  const agent =
-    enabledAgents.find((candidate) => candidate.id === selectedAgent)?.id ??
-    enabledAgents[0]?.id ??
-    "claude";
-  const currentAgent = (snapshot.agents ?? []).find((candidate) => candidate.id === agent);
+  const currentAgent =
+    agentChoices.find((candidate) => candidate.id === (selectedAgent ?? defaultAgent)) ??
+    agentChoices[0];
+  const agent = currentAgent?.id ?? "";
   const agentOptions = currentAgent?.models ?? [];
-  const probeLoading = !!currentAgent && currentAgent.enabled && agentOptions.length === 0;
+  const probeLoading = !!currentAgent && !allowFallback && agentOptions.length === 0;
+  const selectedModelOption = modelOption(agentOptions);
+  const configPicks =
+    mode !== "factory" &&
+    !agentPicked &&
+    agent === defaultAgent &&
+    defaultModel &&
+    selectedModelOption?.options.some((choice) => choice.value === defaultModel)
+      ? { [selectedModelOption.id]: defaultModel, ...manualPicks }
+      : manualPicks;
 
   const workflowsQuery = useQuery({
     enabled: !!project,
@@ -169,10 +194,6 @@ export function useTaskSelection({
     }
   };
 
-  const agentChoices: AgentConfig[] =
-    enabledAgents.length > 0
-      ? enabledAgents
-      : [{ acpCommand: "claude", displayName: "Claude", enabled: true, id: "claude", models: [] }];
   const hasValidWorkflows = workflows.some((candidate) => candidate.valid);
 
   return {

@@ -77,7 +77,9 @@ export default function MemoryPage() {
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <label
-          className="flex items-center gap-2 text-[12px] text-muted-foreground"
+          id="embedding-mode"
+          tabIndex={-1}
+          className="flex items-center gap-2 text-[0.75rem] text-muted-foreground"
           title={
             hybrid
               ? "Hybrid: keywords plus meaning. Falls back to keywords offline."
@@ -100,7 +102,7 @@ export default function MemoryPage() {
               }
               void applyEmbeddingMode(mode);
             }}
-            className="h-7 rounded-md border bg-background px-2 text-[12px] text-foreground"
+            className="h-7 rounded-md border bg-background px-2 text-[0.75rem] text-foreground"
           >
             <option value="none">Keywords</option>
             <option value="fastembed">Hybrid (~80 MB)</option>
@@ -110,7 +112,7 @@ export default function MemoryPage() {
           <span
             key={fact.label}
             title={fact.title}
-            className="flex items-center gap-1.5 font-mono text-[11px]"
+            className="flex items-center gap-1.5 font-mono text-[0.6875rem]"
           >
             <span className="text-muted-foreground/60">{fact.label}</span>
             <span className="tabular-nums text-foreground/80">{fact.value}</span>
@@ -119,7 +121,7 @@ export default function MemoryPage() {
       </div>
 
       {stats?.embeddingUnavailable && (
-        <p className="text-[11px] text-warn">
+        <p className="text-[0.6875rem] text-warn">
           Last attempt at hybrid search failed: {stats.embeddingUnavailable}. On macOS,{" "}
           <span className="font-mono">brew install onnxruntime</span>, then pick Hybrid again.
         </p>

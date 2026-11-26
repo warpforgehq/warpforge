@@ -348,35 +348,35 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                 {on && <div className="size-2 rounded-sm bg-primary-foreground" />}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-2 text-[15px] font-medium">
+                <div className="flex min-w-0 items-center gap-2 text-[0.9375rem] font-medium">
                   <AgentLogo agentId={agent.id} displayName={agent.displayName} />
                   <span className="truncate">{agent.displayName}</span>
                   {agent.installed ? (
                     signedOut ? (
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[11px] font-medium text-warn">
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-warn">
                         signed out
                       </span>
                     ) : isBroken ? (
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[11px] font-medium text-warn">
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-warn">
                         {brokenInfo.canReinstall ? "needs reinstall" : "cannot start"}
                       </span>
                     ) : behind ? (
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[11px] font-medium text-warn">
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-warn">
                         update available
                       </span>
                     ) : (
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-ok/15 px-1.5 py-0.5 text-[11px] font-medium text-ok">
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-ok/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-ok">
                         {agent.version ? `v${agent.version}` : "installed"}
                       </span>
                     )
                   ) : (
-                    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-muted px-1.5 py-0.5 text-[0.6875rem] text-muted-foreground">
                       <Download className="size-2.5" />
                       not found
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                <p className="mt-0.5 font-mono text-[0.6875rem] text-muted-foreground">
                   {agent.defaultAcpCommand}
                   {isProbing ? (
                     <span className="font-sans"> · reloading models…</span>
@@ -387,32 +387,32 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                   )}
                 </p>
                 {behind && agent.latestVersion && (
-                  <p className="mt-0.5 text-[11px] text-warn">
+                  <p className="mt-0.5 text-[0.6875rem] text-warn">
                     v{agent.version} → v{agent.latestVersion}
                   </p>
                 )}
                 {!agent.installed && !agent.canManage && (
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
                     Install: <span className="font-mono">{agent.installHint}</span>
                   </p>
                 )}
                 {errors[agent.id] && (
-                  <p className="mt-0.5 font-mono text-[11px] text-destructive">
+                  <p className="mt-0.5 font-mono text-[0.6875rem] text-destructive">
                     {errors[agent.id]}
                   </p>
                 )}
                 {signedOut && (
-                  <p className="mt-0.5 text-[11px] text-warn" title={brokenInfo?.full}>
+                  <p className="mt-0.5 text-[0.6875rem] text-warn" title={brokenInfo?.full}>
                     Sign in before starting a task with this agent.
                   </p>
                 )}
                 {brokenInfo && !signedOut && (
-                  <p className="mt-0.5 text-[11px] text-warn" title={brokenInfo.full}>
+                  <p className="mt-0.5 text-[0.6875rem] text-warn" title={brokenInfo.full}>
                     {brokenInfo.summary}
                   </p>
                 )}
                 {notes[agent.id] && !signedOut && (
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">{notes[agent.id]}</p>
+                  <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">{notes[agent.id]}</p>
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-1">
@@ -433,7 +433,7 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                   <Button
                     size="sm"
                     variant="default"
-                    className="h-7 whitespace-nowrap px-2 text-[13px]"
+                    className="h-7 whitespace-nowrap px-2 text-[0.8125rem]"
                     disabled={isBusy}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -448,7 +448,7 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                   <Button
                     size="sm"
                     variant={behind ? "default" : "secondary"}
-                    className="h-7 whitespace-nowrap px-2 text-[13px]"
+                    className="h-7 whitespace-nowrap px-2 text-[0.8125rem]"
                     disabled={isBusy}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -465,21 +465,21 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
         })}
       </div>
       <div className="flex items-center justify-end gap-3 border-t border-rule px-4 py-2.5">
-        <span className="mr-auto text-[11px] text-muted-foreground">
+        <span className="mr-auto text-[0.6875rem] text-muted-foreground">
           Enable the agents you want available for new tasks, then Save.
         </span>
         {refreshing && (
-          <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
             <Loader2 className="size-3 animate-spin" />
             Checking versions…
           </span>
         )}
         {loadError && !refreshing && (
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-[0.6875rem] text-muted-foreground">
             Version check failed: {loadError}
           </span>
         )}
-        {saveError && <span className="text-[11px] text-destructive">{saveError}</span>}
+        {saveError && <span className="text-[0.6875rem] text-destructive">{saveError}</span>}
         {/* One button for the whole list. Per-agent buttons repeated the same
             label down the column for no gain: you reload because something
             changed outside Warpforge, and you rarely know which harness saw it. */}

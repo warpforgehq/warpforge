@@ -1,8 +1,8 @@
 import { X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
+import { SettingsNav } from "@/components/Sidebar/SettingsNav";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import type { Snapshot } from "@/protocol";
 import { useUi, type SettingsPage } from "@/store/ui";
 import MemoryBrowserView from "@/views/Memory";
@@ -13,10 +13,14 @@ import AgentsPage from "./pages/Agents";
 import AppearancePage from "./pages/Appearance";
 import IntegrationsPage from "./pages/Integrations";
 import MemoryPage from "./pages/Memory";
+import ModelsPage from "./pages/Models";
+import NotificationsPage from "./pages/Notifications";
 import TasksPage from "./pages/Tasks";
 
 const PAGES: Record<SettingsPage, () => React.ReactElement> = {
   appearance: AppearancePage,
+  notifications: NotificationsPage,
+  models: ModelsPage,
   agents: AgentsPage,
   integrations: IntegrationsPage,
   tasks: TasksPage,
@@ -45,7 +49,18 @@ function escapeBelongsElsewhere(): boolean {
  */
 export default function SettingsView({ showNav, snapshot, onOpenTask, onClose }: Props) {
   const page = useUi((s) => s.settingsPage);
-  const setPage = useUi((s) => s.setSettingsPage);
+  const target = useUi((s) => s.settingsTarget);
+  const content = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!target) return;
+    const row = document.getElementById(target.id);
+    if (!row || !content.current?.contains(row)) return;
+    row.setAttribute("data-highlighted", "");
+    row.focus({ preventScroll: true });
+    row.scrollIntoView?.({ block: "center" });
+    return () => row.removeAttribute("data-highlighted");
+  }, [page, target]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -61,7 +76,11 @@ export default function SettingsView({ showNav, snapshot, onOpenTask, onClose }:
   const label = SETTINGS_PAGES.find((item) => item.id === page)?.label ?? "Appearance";
 
   return (
-    <div data-testid="settings-view" className="flex min-h-0 min-w-0 flex-1 flex-col">
+    <div
+      data-testid="settings-view"
+      ref={content}
+      className="flex min-h-0 min-w-0 flex-1 flex-col [&_[data-highlighted]]:bg-primary/10 [&_[data-highlighted]]:outline-none [&_[data-highlighted]]:ring-1 [&_[data-highlighted]]:ring-inset [&_[data-highlighted]]:ring-primary"
+    >
       <header
         data-tauri-drag-region="deep"
         className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-card px-2.5"
@@ -70,11 +89,11 @@ export default function SettingsView({ showNav, snapshot, onOpenTask, onClose }:
           aria-label="Breadcrumb"
           className="flex min-w-0 flex-1 items-center gap-2 text-muted-foreground"
         >
-          <span className="text-[13px]">Settings</span>
-          <span aria-hidden className="text-[13px] text-muted-foreground/60">
+          <span className="text-[0.8125rem]">Settings</span>
+          <span aria-hidden className="text-[0.8125rem] text-muted-foreground/60">
             /
           </span>
-          <strong className="min-w-0 truncate text-[15px] font-medium text-foreground">
+          <strong className="min-w-0 truncate text-[0.9375rem] font-medium text-foreground">
             {label}
           </strong>
         </nav>
@@ -90,30 +109,7 @@ export default function SettingsView({ showNav, snapshot, onOpenTask, onClose }:
           <X className="size-4" />
         </Button>
       </header>
-      {showNav && (
-        <nav
-          aria-label="Settings sections"
-          className="flex shrink-0 gap-1 overflow-x-auto border-b border-rule px-2.5 py-1.5"
-        >
-          {SETTINGS_PAGES.map(({ id, label: itemLabel, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              aria-current={id === page ? "page" : undefined}
-              onClick={() => setPage(id)}
-              className={cn(
-                "flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[12px] transition-colors",
-                id === page
-                  ? "bg-accent/60 font-medium text-foreground"
-                  : "text-muted-foreground hover:bg-accent/40 hover:text-foreground",
-              )}
-            >
-              <Icon className="size-3.5 shrink-0" aria-hidden />
-              {itemLabel}
-            </button>
-          ))}
-        </nav>
-      )}
+      {showNav && <SettingsNav inline />}
       {page === "memory" ? (
         <main className="flex min-h-0 flex-1 flex-col px-5 pt-2">
           <MemoryBrowserView snapshot={snapshot} onOpenTask={onOpenTask} header={<Page />} />

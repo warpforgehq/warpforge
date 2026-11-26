@@ -1,6 +1,6 @@
 ---
 title: Settings
-description: Every setting Warpforge exposes — themes, fonts, agents and accounts, language servers, trackers, memory, dreaming, generated text, and each project's Factory settings.
+description: Find settings for appearance, notifications, agent and model pickers, task confirmations, integrations, memory, and each project’s Factory setup.
 sidebar:
   order: 5
   label: Settings
@@ -8,7 +8,9 @@ sidebar:
 
 Everything Warpforge lets you change, in the order Settings presents it — plus the [Factory settings](#factory-settings-per-project) each project keeps in its own menu.
 
-Open Settings from the gear at the bottom of the rail. The sidebar panel switches to the list of sections and the page fills the main area; press <kbd>Esc</kbd>, the back arrow in the panel, or anything in the rail to return to your work. With the panel folded away (<kbd>{"⌘\\"}</kbd>) the sections appear as tabs above the page instead.
+Open Settings from the gear at the bottom of the rail. The sidebar panel switches to the list of sections and the page fills the main area; press <kbd>Esc</kbd>, the back arrow in the panel, or anything in the rail to return to your work. With the panel folded away (<kbd>{"⌘\\"}</kbd>), the sections appear above the page.
+
+Sections are grouped under **Personal**, **Agents**, **Workspace**, and **System**. Type a setting or keyword into **Search settings**, then choose a result to open its section and highlight the setting.
 
 ## Appearance
 
@@ -41,19 +43,72 @@ Two independent scales:
 
 Everything is sized in relative units, so these are true zoom controls rather than a handful of preset sizes. **Reset font sizes** puts both back. From the keyboard: <kbd>⌘+</kbd>, <kbd>⌘-</kbd>, <kbd>⌘0</kbd>.
 
-## Agents
+## Notifications
+
+- **Task-finished toast** shows an in-app alert when an agent finishes a turn or a pipeline completes. Off by default.
+- **Needs-you toast** shows an in-app alert when a task needs review, encounters a blocker, is interrupted, or reaches a pipeline question or review limit. On by default.
+- **Permission toast** shows an in-app alert when an agent requests permission. On by default. You can still answer requests from the task when the toast is off.
+- **macOS notification on task finish** shows a system notification when work finishes while the installed app is in the background. Off by default. It requires macOS notification permission.
+
+## Agents & accounts
 
 Which coding agents are enabled, whether each is installed, what version, and whether a newer one exists — with one-click install or update. See [Bring your own agents](/concepts/agents/) for the supported list.
 
 Each agent row also has a **refresh** button for its model list, showing how many models Warpforge currently knows about. Add a provider or model in the agent's own config and it appears after a restart, or immediately via that button.
 
-## Accounts
+### New Task defaults
+
+Pick a **Default agent** and **Default model** to preselect them when New Task opens. You can change either for an individual task. Factory uses its project defaults, and a Smith uses its own agent and model.
+
+Use **Agents in pickers** to hide agents you rarely choose. Hiding an agent leaves it enabled and leaves existing tasks and saved configurations in place.
+
+### Accounts
 
 Several logins for the same agent — personal and work, or two seats — for **Claude Code** and **Codex**. Import the login you're currently signed in as under a name, then switch which one new sessions use.
 
 Covered in full under [Several logins for one agent](/concepts/agents/#several-logins-for-one-agent).
 
-## Language servers
+## Models
+
+Choose an agent in **Model list by agent**. Under **Custom model IDs**, enter an exact ID, such as `provider/model`, and select **Add** to make it available in that agent’s model pickers. The agent must support the ID. Use **Remove** to delete a custom entry or switch off a model under **Models in pickers** to hide it from new selections.
+
+## Tasks
+
+### Confirmations
+
+- **Confirm before deleting a task** is on by default. For projectless chats, the confirmation also lets you choose whether to delete a folder that contains files. With confirmation off, deletion keeps folders that contain files.
+- **Confirm before archiving a task** is off by default. **Archive and remove worktree** always asks before removing files.
+- **Confirm before closing a terminal tab** is on by default.
+
+### Text generation
+
+Which agent writes the prose Warpforge drafts for you — [task titles, commit messages, PR descriptions](/guides/working-in-a-task/#text-you-dont-have-to-write):
+
+- **Auto-name tasks** is on by default. Turn it off to name tasks yourself.
+- **Agent for git text** and **Model for git text** choose the agent and model to do the drafting.
+
+### Task history
+
+Over time Warpforge collects a lot of finished work. Every agent turn ends as a task waiting for you, and keeping every chat forever made the app slower to start. History now cleans itself up in visible, reversible steps — you choose how long to keep things.
+
+```
+Waiting  ──(2 weeks, no changes)──▶  Closed  ──(30 days)──▶  chat removed
+   ▲                                     │
+   └────── tasks with changes never move on their own ─────┘
+                                         └─(90 days untouched)──▶  deleted
+```
+
+- **Keep transcripts for** — how long a closed task keeps its chat. After this the title, prompt, file changes and commits stay, but the chat disappears. Set to Forever to keep everything.
+- **Settle ignored tasks after** — a finished turn with no changes that nobody touched for this long moves to Closed on its own. Tasks with changes never move on their own. Set to Off to disable.
+- **Delete closed tasks after** — a closed task you have not touched for this long is deleted entirely. Commits are already in git, so they are not affected. Tasks that still have unmerged changes are kept. Set to Forever to keep them.
+
+Every cleanup shows a small notice. Nothing is deleted silently.
+
+Cleanups run when the app starts, once a day, and right after you change a setting.
+
+## Integrations
+
+### Language servers
 
 Warpforge knows how to install and run eight language servers. Each row shows its status — installed, available, or update available — with a one-click install.
 
@@ -74,30 +129,11 @@ A server powers go-to-definition, find references, rename, hover docs, completio
   Syntax highlighting also covers Markdown, MDX, and JSX/TSX variants, which have no language server here. You get colour everywhere; the intelligence follows the table above.
 </Aside>
 
-## Issue trackers
+### Issue trackers
 
 Connect **GitHub** (the `gh auth login` sign-in you already have, or a personal access token with `repo` and `read:project`) or **Linear** (a personal API key, kept in your OS keychain). A Linear key is account-wide, so each project picks the team it reads from.
 
 See [Connect a tracker](/guides/tasks-and-backlog/#connect-a-tracker).
-
-## Task history
-
-Over time Warpforge collects a lot of finished work. Every agent turn ends as a task waiting for you, and keeping every chat forever made the app slower to start. History now cleans itself up in visible, reversible steps — you choose how long to keep things.
-
-```
-Waiting  ──(2 weeks, no changes)──▶  Closed  ──(30 days)──▶  chat removed
-   ▲                                     │
-   └────── tasks with changes never move on their own ─────┘
-                                         └─(90 days untouched)──▶  deleted
-```
-
-- **Keep transcripts for** — how long a closed task keeps its chat. After this the title, prompt, file changes and commits stay, but the chat disappears. Set to Forever to keep everything.
-- **Settle ignored tasks after** — a finished turn with no changes that nobody touched for this long moves to Closed on its own. Tasks with changes never move on their own. Set to Off to disable.
-- **Delete closed tasks after** — a closed task you have not touched for this long is deleted entirely. Commits are already in git, so they are not affected. Tasks that still have unmerged changes are kept. Set to Forever to keep them.
-
-Every cleanup shows a small notice. Nothing is deleted silently.
-
-Cleanups run when the app starts, once a day, and right after you change a setting.
 
 ## Backlog storage
 
@@ -128,13 +164,6 @@ The [compaction pass](/concepts/memory/#dreaming) that reviews memories against 
 - **Dream now** — run it on demand.
 
 Review the resulting proposals in the [Memory screen](/concepts/memory/#reviewing-proposals) (Settings → Memory); the pass never changes a memory itself, and each proposal says what approving it will do.
-
-## Text generation
-
-Which agent writes the prose Warpforge drafts for you — [task titles, commit messages, PR descriptions](/guides/working-in-a-task/#text-you-dont-have-to-write):
-
-- **Auto-name tasks** — on by default. Turn it off to name tasks yourself.
-- **Agent for git text** and **Model** — which harness and model do the drafting. Worth pointing at something small and fast; this work doesn't need your best model.
 
 ## Factory settings (per project)
 

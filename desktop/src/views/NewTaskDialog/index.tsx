@@ -205,9 +205,11 @@ export default function NewTaskDialog({
     (service) =>
       service.project === project && service.status === "running" && service.allocatedPort > 0,
   );
-  const canStart = factorySeed
-    ? !!selectedWorkflow && factoryItems.length > 0
-    : !!prompt.trim() && (!!project || chat) && (!inFactory || !!selectedWorkflow);
+  const canStart =
+    Boolean(agent || smith) &&
+    (factorySeed
+      ? !!selectedWorkflow && factoryItems.length > 0
+      : !!prompt.trim() && (!!project || chat) && (!inFactory || !!selectedWorkflow));
   const startLabel = factorySeed
     ? `Start ${factoryItems.length} in Factory`
     : inFactory
@@ -269,7 +271,11 @@ export default function NewTaskDialog({
       {!factorySeed && !smith && (
         <>
           <ChipDivider />
-          <AdvisorPicker agents={agentChoices} available={mode === "single"} state={advisor} />
+          <AdvisorPicker
+            agents={agentChoices}
+            available={mode === "single" && !!agent}
+            state={advisor}
+          />
         </>
       )}
       <ChipDivider />
@@ -407,7 +413,11 @@ export default function NewTaskDialog({
                         <span aria-hidden>·</span>
                       </>
                     )}
-                    <span className="truncate">{workspaceLine}</span>
+                    <span className="truncate">
+                      {agent || smith
+                        ? workspaceLine
+                        : "Show an agent in Settings to start a task."}
+                    </span>
                   </>
                 )}
               </p>

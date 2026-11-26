@@ -4,10 +4,12 @@ import { toast } from "sonner";
 
 import { daemon } from "@/daemon";
 import { configRole } from "@/lib/configRole";
+import { usePickerAgents, usePickerOptions } from "@/lib/pickerPreferences";
 import type { HistorySettings } from "@/protocol";
 import { useUi } from "@/store/ui";
 
 import { Section, SectionNote, SettingRow, Toggle } from "../primitives";
+import { Confirmations } from "./Confirmations";
 
 /** The three retention windows as one sentence, so the chain they form is
  *  readable without holding three rows in your head. */
@@ -31,12 +33,11 @@ export default function TasksPage() {
   const textGenModel = useUi((s) => s.textGenModel);
   const setTextGenModel = useUi((s) => s.setTextGenModel);
 
-  const enabledAgents = (state.snapshot.agents ?? []).filter((a) => a.enabled);
-  // The daemon caches an agent's config options after probing it over ACP; the
-  // model list is empty until that probe has happened at least once.
-  const modelOption = enabledAgents
-    .find((a) => a.id === textGenAgentId)
-    ?.models.find((o) => configRole(o) === "model");
+  const enabledAgents = usePickerAgents(state.snapshot.agents);
+  const configuredAgent = state.snapshot.agents?.find((agent) => agent.id === textGenAgentId);
+  const modelOption = usePickerOptions(textGenAgentId, configuredAgent?.models).find(
+    (o) => configRole(o) === "model",
+  );
 
   const historySettings = useQuery({
     queryKey: ["history", "settings"],
@@ -59,27 +60,41 @@ export default function TasksPage() {
   });
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
+      <Confirmations />
       <Section title="Text generation">
         <SettingRow
+          id="auto-name-tasks"
           title="Auto-name tasks"
           description="Give a new task a short title, written by the agent below."
           hint="Runs once, right after the task is created. Uses the agent and model picked below."
           control={
-            <Toggle id="auto-name-tasks" checked={autoNameTasks} onChange={setAutoNameTasks} />
+            <Toggle
+              id="auto-name-tasks-switch"
+              label="Auto-name tasks"
+              checked={autoNameTasks}
+              onChange={setAutoNameTasks}
+            />
           }
         />
         <SettingRow
+          id="text-gen-agent"
           title="Agent for git text"
           description="Drafts commit messages and PR descriptions from the diff."
           hint="On demand, never automatically. The same agent is used for both."
           control={
             <select
+              aria-label="Agent for git text"
               value={textGenAgentId ?? ""}
               onChange={(e) => setTextGenAgentId(e.target.value || null)}
-              className="bg-deep-surface h-7 rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring"
+              className="bg-deep-surface h-7 rounded-md border px-2 text-[0.8125rem] outline-none focus:ring-1 focus:ring-ring"
             >
               <option value="">None</option>
+              {textGenAgentId && !enabledAgents.some((agent) => agent.id === textGenAgentId) && (
+                <option disabled value={textGenAgentId}>
+                  {configuredAgent?.displayName ?? textGenAgentId}
+                </option>
+              )}
               {enabledAgents.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.displayName}
@@ -88,40 +103,37 @@ export default function TasksPage() {
             </select>
           }
         />
-        {textGenAgentId && (
-          <SettingRow
-            title="Model"
-            description={
-              modelOption
-                ? "Which model that agent uses for this."
-                : "Start the agent once to load its model list."
-            }
-            hint={
-              modelOption
-                ? "Agent default when unset."
-                : "Warpforge reads an agent's options the first time it runs, so the list is empty until then."
-            }
-            control={
-              <select
-                value={textGenModel ?? ""}
-                onChange={(e) => setTextGenModel(e.target.value || null)}
-                disabled={!modelOption}
-                className="bg-deep-surface h-7 max-w-56 rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-              >
-                <option value="">Agent default</option>
-                {modelOption?.options.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            }
-          />
-        )}
+        <SettingRow
+          id="text-gen-model"
+          title="Model for git text"
+          description="Choose the model that drafts task titles and git text."
+          control={
+            <select
+              aria-label="Model for git text"
+              value={textGenModel ?? ""}
+              onChange={(e) => setTextGenModel(e.target.value || null)}
+              disabled={!modelOption && !textGenModel}
+              className="bg-deep-surface h-7 max-w-56 rounded-md border px-2 text-[0.8125rem] outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+            >
+              <option value="">Agent default</option>
+              {textGenModel && !modelOption?.options.some((o) => o.value === textGenModel) && (
+                <option disabled value={textGenModel}>
+                  {textGenModel}
+                </option>
+              )}
+              {modelOption?.options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          }
+        />
       </Section>
 
       <Section title="Task history">
         <SettingRow
+          id="transcript-retention"
           title="Keep transcripts for"
           description="How long a closed task keeps its conversation."
           hint="Afterwards the task still shows its title, prompt and diff — only the chat is gone. Pruning runs at startup, once a day, and right after you change this, with a notice each time it deletes something."
@@ -133,7 +145,7 @@ export default function TasksPage() {
               onChange={(event) =>
                 applyRetention.mutate({ retentionDays: Number(event.target.value) })
               }
-              className="h-7 rounded-md border bg-background px-2 text-[13px]"
+              className="h-7 rounded-md border bg-background px-2 text-[0.8125rem]"
             >
               <option value={15}>15 days</option>
               <option value={30}>30 days</option>
@@ -143,6 +155,7 @@ export default function TasksPage() {
           }
         />
         <SettingRow
+          id="auto-settle"
           title="Settle ignored tasks after"
           description="An untouched finished turn closes itself."
           hint="Only turns that produced no changes. A task with changes is never settled automatically. Off disables it."
@@ -154,7 +167,7 @@ export default function TasksPage() {
               onChange={(event) =>
                 applyRetention.mutate({ settleIgnoredAfterDays: Number(event.target.value) })
               }
-              className="h-7 rounded-md border bg-background px-2 text-[13px]"
+              className="h-7 rounded-md border bg-background px-2 text-[0.8125rem]"
             >
               <option value={7}>7 days</option>
               <option value={14}>14 days</option>
@@ -164,6 +177,7 @@ export default function TasksPage() {
           }
         />
         <SettingRow
+          id="closed-task-expiry"
           title="Delete closed tasks after"
           description="Removes the task, its chat and its worktree."
           hint="Commits stay in git. A task with unmerged changes is kept regardless. Forever disables it."
@@ -175,7 +189,7 @@ export default function TasksPage() {
               onChange={(event) =>
                 applyRetention.mutate({ deleteClosedAfterDays: Number(event.target.value) })
               }
-              className="h-7 rounded-md border bg-background px-2 text-[13px]"
+              className="h-7 rounded-md border bg-background px-2 text-[0.8125rem]"
             >
               <option value={60}>60 days</option>
               <option value={90}>90 days</option>

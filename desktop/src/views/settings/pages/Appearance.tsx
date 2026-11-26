@@ -37,7 +37,7 @@ export default function AppearancePage() {
 
   return (
     <Section title="Appearance">
-      <div className="grid grid-cols-4 gap-2 p-4">
+      <div id="theme" tabIndex={-1} className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-4">
         {THEMES.map((t) => {
           const active = t.id === theme;
           const swatch = (key: keyof typeof t.colors) => hsl(t.colors[key]);
@@ -69,12 +69,13 @@ export default function AppearancePage() {
                   style={{ background: swatch("accent") }}
                 />
               </span>
-              <span className="text-[13px] font-medium text-foreground">{t.name}</span>
+              <span className="text-[0.8125rem] font-medium text-foreground">{t.name}</span>
             </button>
           );
         })}
       </div>
       <SettingRow
+        id="ui-font-size"
         title="UI font size"
         description="Labels, chat, buttons — all general chrome."
         hint="Cmd/Ctrl +/− to change, Cmd/Ctrl 0 to reset. Default 14px."
@@ -85,7 +86,7 @@ export default function AppearancePage() {
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="h-7 text-[13px] text-muted-foreground"
+                className="h-7 text-[0.8125rem] text-muted-foreground"
                 onClick={resetFontSizes}
               >
                 Reset
@@ -96,18 +97,21 @@ export default function AppearancePage() {
         }
       />
       <SettingRow
+        id="mono-font-size"
         title="Mono font size"
         description="Code editor, diffs, terminal. Scales on its own."
         hint="Independent of the UI font. Default 13px."
         control={<NumberInput value={monoFontSize} min={9} max={22} onChange={setMonoFontSize} />}
       />
       <SettingRow
+        id="transparent-window"
         title="Transparent window"
         description="Blur the desktop behind the app chrome."
         hint="macOS and Windows only; Linux stays opaque. Takes effect immediately."
         control={
           <Toggle
-            id="transparent-window"
+            id="transparent-window-switch"
+            label="Transparent window"
             checked={transparentWindow}
             onChange={setTransparentWindow}
             disabled={!HAS_NATIVE_GLASS}
@@ -115,6 +119,7 @@ export default function AppearancePage() {
         }
       />
       <SettingRow
+        id="glass-opacity"
         title="Glass opacity"
         description="How much of the desktop shows through the app."
         hint="The conversation is the most transparent surface; the sidebar and panels sit halfway between it and solid. Default 85%."
@@ -131,12 +136,13 @@ export default function AppearancePage() {
         }
       />
       <SettingRow
+        id="blur-radius"
         title="Blur radius"
         description="Background blur behind the window."
         hint="Higher values cost more to composite. Default 24. macOS only — Windows Acrylic has a fixed radius."
         control={
           <Slider
-            id="blur-radius"
+            id="blur-radius-slider"
             value={blurRadius}
             display={String(blurRadius)}
             min={BLUR_RADIUS_MIN}
@@ -147,18 +153,26 @@ export default function AppearancePage() {
         }
       />
       <SettingRow
+        id="main-pane-glass"
         title="Main pane glass"
         description="Extend the translucent treatment to the work surface."
         hint="Off keeps diffs, editors and the task pane solid while the chrome stays glass."
         control={
-          <Toggle id="body-glass" checked={bodyGlass} onChange={setBodyGlass} disabled={glassOff} />
+          <Toggle
+            id="body-glass"
+            label="Main pane glass"
+            checked={bodyGlass}
+            onChange={setBodyGlass}
+            disabled={glassOff}
+          />
         }
       />
       <SettingRow
+        id="theomod"
         title="TheoMod"
         description="Blurs email addresses everywhere, for screen sharing."
         hint="Hover a blurred address to peek. Copying still works."
-        control={<Toggle id="theo-mod" checked={theoMod} onChange={setTheoMod} />}
+        control={<Toggle id="theo-mod" label="TheoMod" checked={theoMod} onChange={setTheoMod} />}
       />
     </Section>
   );

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { runnerStatusKey } from "@/hooks/useRunner";
+import { configRole } from "@/lib/configRole";
 
 import type { TaskMode } from "../../components/TaskComposeBar";
 import { daemon } from "../../daemon";
@@ -22,9 +23,7 @@ import type { FactoryOptions } from "./useFactoryOptions";
  * @returns The model option, when the harness has one.
  */
 export function modelOption(agentOptions: ConfigOption[]): ConfigOption | undefined {
-  return agentOptions.find((option) =>
-    ((option.category ?? "") + " " + option.id + " " + option.name).toLowerCase().includes("model"),
-  );
+  return agentOptions.find((option) => configRole(option) === "model");
 }
 
 /**
@@ -93,7 +92,7 @@ export function useTaskCreation({
   const [shareContext, setShareContext] = useState(true);
 
   const create = async (submission: PromptSubmission) => {
-    if (!submission.text.trim() || (!project && !chat)) return;
+    if (!agent || !submission.text.trim() || (!project && !chat)) return;
     const userTags = tags
       .split(",")
       .map((tag) => tag.trim())

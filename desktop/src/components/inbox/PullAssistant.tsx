@@ -10,6 +10,7 @@ import { IntentButton, PickerMenu } from "@/components/inbox/PullAssistantContro
 import { daemon } from "@/daemon";
 import { useTaskSessionUpdates } from "@/hooks/useTaskSessionUpdates";
 import { configRole } from "@/lib/configRole";
+import { usePickerAgents } from "@/lib/pickerPreferences";
 import { prAssistantPrompt, type PrAssistantIntent } from "@/lib/prAssistantPrompt";
 import { sessionActivity } from "@/lib/sessionActivity";
 import { findPrAssistantTask, PR_REVIEW_ORIGIN, prTaskTag } from "@/lib/taskOrigin";
@@ -75,14 +76,11 @@ export function PullAssistant({
   // only the default. Auto-picking with no control is what shipped first.
   const pickedAgentId = useUi((s) => s.prAssistantAgentId);
   const setPickedAgentId = useUi((s) => s.setPrAssistantAgentId);
-  const usable = React.useMemo(
-    () => agents.filter((candidate) => candidate.enabled !== false),
-    [agents],
-  );
+  const usable = usePickerAgents(agents);
   const agentConfig = React.useMemo(() => {
     const picked = usable.find((candidate) => candidate.id === pickedAgentId);
-    return picked ?? usable[0] ?? agents[0] ?? null;
-  }, [agents, pickedAgentId, usable]);
+    return picked ?? usable[0] ?? null;
+  }, [pickedAgentId, usable]);
   const agent = agentConfig?.id ?? null;
   const agentLabel = agentConfig?.displayName || agent || "no agent";
 

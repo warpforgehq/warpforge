@@ -11,8 +11,8 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
 import { ArchiveMergedTaskDialog } from "@/components/pullRequest/ArchiveMergedTaskDialog";
+import { useTaskActions } from "@/components/TaskActionDialogs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,7 +58,7 @@ export function RowActions({
 }) {
   const [busy, setBusy] = useState(false);
   const [snoozeOpen, setSnoozeOpen] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const actions = useTaskActions(task);
   const [confirmingArchive, setConfirmingArchive] = useState(false);
   const pr = useTaskPullRequest(task.id);
   const mergedWorktree = pr?.state === "merged" && task.worktree ? pr : null;
@@ -177,7 +177,7 @@ export function RowActions({
               {pinned ? "Unpin from Mission Control" : "Pin to Mission Control"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => void daemon.archiveTask(task.id)}>
+            <DropdownMenuItem disabled={actions.busy} onSelect={actions.archiveTask}>
               <Archive className="size-3.5 opacity-70" />
               Archive task
             </DropdownMenuItem>
@@ -190,7 +190,8 @@ export function RowActions({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onSelect={() => setConfirmingDelete(true)}
+              disabled={actions.busy}
+              onSelect={actions.deleteTask}
             >
               <Trash2 className="size-3.5 opacity-70" />
               Delete task
@@ -207,13 +208,7 @@ export function RowActions({
           onOpenChange={setConfirmingArchive}
         />
       )}
-      <DeleteTaskDialog
-        task={task}
-        label={label}
-        open={confirmingDelete}
-        onCancel={() => setConfirmingDelete(false)}
-        onDeleted={() => setConfirmingDelete(false)}
-      />
+      {actions.dialogs}
     </div>
   );
 }

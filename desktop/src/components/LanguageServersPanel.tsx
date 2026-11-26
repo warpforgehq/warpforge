@@ -95,37 +95,39 @@ export default function LanguageServersPanel() {
             className="flex items-center justify-between gap-4 border-t border-rule px-4 py-2.5 first:border-t-0"
           >
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 text-[15px] font-medium">
+              <div className="flex items-center gap-2 text-[0.9375rem] font-medium">
                 {server.language}
                 {server.installed ? (
                   behind ? (
-                    <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[11px] font-medium text-warn">
+                    <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-warn">
                       update available
                     </span>
                   ) : (
-                    <span className="rounded-full bg-ok/15 px-1.5 py-0.5 text-[11px] font-medium text-ok">
+                    <span className="rounded-full bg-ok/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-ok">
                       {server.version ? `v${server.version}` : "installed"}
                     </span>
                   )
                 ) : (
-                  <span className="flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[0.6875rem] text-muted-foreground">
                     <Download className="size-2.5" />
                     not found
                   </span>
                 )}
               </div>
               {behind && server.latestVersion && server.version && (
-                <p className="mt-0.5 text-[11px] text-warn">
+                <p className="mt-0.5 text-[0.6875rem] text-warn">
                   v{server.version} → v{server.latestVersion}
                 </p>
               )}
               {!server.installed && !server.canManage && (
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
                   Install: <span className="font-mono">{server.installHint}</span>
                 </p>
               )}
               {errors[server.id] && (
-                <p className="mt-0.5 font-mono text-[11px] text-destructive">{errors[server.id]}</p>
+                <p className="mt-0.5 font-mono text-[0.6875rem] text-destructive">
+                  {errors[server.id]}
+                </p>
               )}
             </div>
             {server.canManage && (!server.installed || behind) && (
@@ -147,7 +149,7 @@ export default function LanguageServersPanel() {
           type="button"
           size="sm"
           variant="outline"
-          className="h-7 gap-1.5 text-[13px]"
+          className="h-7 gap-1.5 text-[0.8125rem]"
           onClick={() => void refetch()}
           disabled={isFetching}
         >

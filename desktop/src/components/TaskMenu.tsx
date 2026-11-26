@@ -7,9 +7,8 @@ import {
   Trash2,
   WandSparkles,
 } from "lucide-react";
-import { useState } from "react";
 
-import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
+import { useTaskActions } from "@/components/TaskActionDialogs";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,10 +17,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { taskLabel } from "@/lib/taskLabel";
 import { regenerateTaskTitle } from "@/lib/taskTitle";
 
-import { daemon } from "../daemon";
 import type { TaskInfo } from "../protocol";
 
 export function TaskMenu({
@@ -38,7 +35,7 @@ export function TaskMenu({
   /** Where the menu opens; below its trigger by default. */
   side?: "left" | "bottom";
 }) {
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const actions = useTaskActions(task, onClose);
   return (
     <>
       <DropdownMenu>
@@ -68,19 +65,15 @@ export function TaskMenu({
             {pinned ? <PinOff /> : <Pin />}
             {pinned ? "Unpin from Mission Control" : "Pin to Mission Control"}
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={() => {
-              void daemon.archiveTask(task.id);
-              onClose();
-            }}
-          >
+          <DropdownMenuItem disabled={actions.busy} onSelect={actions.archiveTask}>
             <Archive />
             Archive task
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
-            onSelect={() => setConfirmingDelete(true)}
+            disabled={actions.busy}
+            onSelect={actions.deleteTask}
           >
             <Trash2 />
             Delete task
@@ -88,16 +81,7 @@ export function TaskMenu({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DeleteTaskDialog
-        task={task}
-        label={taskLabel(task)}
-        open={confirmingDelete}
-        onCancel={() => setConfirmingDelete(false)}
-        onDeleted={() => {
-          setConfirmingDelete(false);
-          onClose();
-        }}
-      />
+      {actions.dialogs}
     </>
   );
 }

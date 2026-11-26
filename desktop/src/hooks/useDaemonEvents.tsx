@@ -67,7 +67,7 @@ async function appBackgrounded(): Promise<boolean> {
  *  only when inside Tauri, the app is backgrounded, and the feature is wired. */
 async function fireNativeNotification(opts: {
   body: string;
-  kind: "permission" | "review";
+  kind: "permission" | "review" | "finish";
   request_id?: string;
   subtitle: string;
   task_id: string;
@@ -149,15 +149,19 @@ export function useDaemonEvents() {
     const openInChat = (taskId: string) => {
       useUi.getState().revealTask(taskId);
     };
-    const notifyWorkflowWaiting = (task: TaskInfo, kind: "question" | "limit") => {
-      const toastId = `attention:workflow:${task.id}:${kind}`;
-      const question = task.workflowRun?.waiting?.question;
+    const showTaskToast = (
+      task: TaskInfo,
+      id: string,
+      title: string,
+      identity: string,
+      summary: string,
+    ) => {
       toast.custom(
         (sonnerId) => (
           <AttentionToast
-            title={workflowToastTitle(kind)}
-            identity={`${task.project} · ${task.workflowRun?.workflowName ?? "workflow"}`}
-            summary={attentionToastSummary(question || task.prompt)}
+            title={title}
+            identity={identity}
+            summary={summary}
             onDismiss={() => toast.dismiss(sonnerId)}
             onOpen={() => {
               openInChat(task.id);
@@ -171,52 +175,66 @@ export function useDaemonEvents() {
           description: null,
           duration: 10_000,
           icon: null,
-          id: toastId,
+          id,
           richColors: false,
           unstyled: true,
         },
       );
+    };
+    const notifyWorkflowWaiting = (task: TaskInfo, kind: "question" | "limit") => {
+      const title = workflowToastTitle(kind);
+      const identity = `${task.project} · ${task.workflowRun?.workflowName ?? "workflow"}`;
+      const summary = attentionToastSummary(task.workflowRun?.waiting?.question || task.prompt);
+      if (useUi.getState().notifications.attentionToast) {
+        showTaskToast(task, `attention:workflow:${task.id}:${kind}`, title, identity, summary);
+      }
       void fireNativeNotification({
-        body: attentionToastSummary(question || task.prompt),
+        body: summary,
         kind: "review",
-        subtitle: `${task.project} · ${task.workflowRun?.workflowName ?? "workflow"}`,
+        subtitle: identity,
         task_id: task.id,
-        title: workflowToastTitle(kind),
+        title,
       });
     };
     const notifyTask = (task: TaskInfo) => {
-      const toastId = `attention:${task.id}:${task.status}`;
-      toast.custom(
-        (sonnerId) => (
-          <AttentionToast
-            title={taskLabel(task)}
-            identity={`${task.project} · ${agentDisplayName(task.agent)}`}
-            summary={attentionToastSummary(task.prompt)}
-            onDismiss={() => toast.dismiss(sonnerId)}
-            onOpen={() => {
-              openInChat(task.id);
-              toast.dismiss(sonnerId);
-            }}
-          />
-        ),
-        {
-          action: null,
-          cancel: null,
-          description: null,
-          duration: 10_000,
-          icon: null,
-          id: toastId,
-          richColors: false,
-          unstyled: true,
-        },
-      );
+      const identity = `${task.project} · ${agentDisplayName(task.agent)}`;
+      const summary = attentionToastSummary(task.prompt);
+      if (useUi.getState().notifications.attentionToast) {
+        showTaskToast(
+          task,
+          `attention:${task.id}:${task.status}`,
+          taskLabel(task),
+          identity,
+          summary,
+        );
+      }
       void fireNativeNotification({
-        body: attentionToastSummary(task.prompt),
+        body: summary,
         kind: "review",
-        subtitle: `${task.project} · ${agentDisplayName(task.agent)}`,
+        subtitle: identity,
         task_id: task.id,
         title: attentionToastTitle(task),
       });
+    };
+    const notifyFinished = (task: TaskInfo) => {
+      if (isSurfaceOwnedTask(task) || task.parentTaskId) return;
+      const { taskFinishedToast, nativeTaskFinished } = useUi.getState().notifications;
+      if (!taskFinishedToast && !nativeTaskFinished) return;
+      const title = "Task finished";
+      const identity = [task.project, agentDisplayName(task.agent)].filter(Boolean).join(" · ");
+      const summary = taskLabel(task);
+      if (taskFinishedToast) {
+        showTaskToast(task, `finished:${task.id}`, title, identity, summary);
+      }
+      if (nativeTaskFinished) {
+        void fireNativeNotification({
+          body: summary,
+          kind: "finish",
+          subtitle: identity,
+          task_id: task.id,
+          title,
+        });
+      }
     };
 
     return daemon.subscribeEvents((event: DaemonEvent) => {
@@ -242,47 +260,51 @@ export function useDaemonEvents() {
           );
           const approveOption = quickApproveOption(update);
           const toastId = `attention:permission:${update.request_id}`;
-          toast.custom(
-            (sonnerId) => (
-              <PermissionToast
-                context={context}
-                identity={task ? `${task.project} · ${agentDisplayName(task.agent)}` : undefined}
-                onApprove={
-                  approveOption
-                    ? async () => {
-                        try {
-                          await daemon.request("session.permission", {
-                            outcome: approveOption,
-                            request_id: update.request_id,
-                            task_id: taskId,
-                          });
-                          toast.dismiss(sonnerId);
-                        } catch (error) {
-                          toast.error(
-                            error instanceof Error ? error.message : "Could not approve permission",
-                          );
+          if (useUi.getState().notifications.permissionToast) {
+            toast.custom(
+              (sonnerId) => (
+                <PermissionToast
+                  context={context}
+                  identity={task ? `${task.project} · ${agentDisplayName(task.agent)}` : undefined}
+                  onApprove={
+                    approveOption
+                      ? async () => {
+                          try {
+                            await daemon.request("session.permission", {
+                              outcome: approveOption,
+                              request_id: update.request_id,
+                              task_id: taskId,
+                            });
+                            toast.dismiss(sonnerId);
+                          } catch (error) {
+                            toast.error(
+                              error instanceof Error
+                                ? error.message
+                                : "Could not approve permission",
+                            );
+                          }
                         }
-                      }
-                    : undefined
-                }
-                onDismiss={() => toast.dismiss(sonnerId)}
-                onReview={() => {
-                  openInChat(taskId);
-                  toast.dismiss(sonnerId);
-                }}
-              />
-            ),
-            {
-              action: null,
-              cancel: null,
-              description: null,
-              id: toastId,
-              duration: Number.POSITIVE_INFINITY,
-              icon: null,
-              richColors: false,
-              unstyled: true,
-            },
-          );
+                      : undefined
+                  }
+                  onDismiss={() => toast.dismiss(sonnerId)}
+                  onReview={() => {
+                    openInChat(taskId);
+                    toast.dismiss(sonnerId);
+                  }}
+                />
+              ),
+              {
+                action: null,
+                cancel: null,
+                description: null,
+                id: toastId,
+                duration: Number.POSITIVE_INFINITY,
+                icon: null,
+                richColors: false,
+                unstyled: true,
+              },
+            );
+          }
           void fireNativeNotification({
             body: context,
             kind: "permission",
@@ -291,6 +313,11 @@ export function useDaemonEvents() {
             task_id: taskId,
             title: "Permission needed",
           });
+        } else if (update.kind === "turn_ended" && update.stop_reason === "end_turn") {
+          const task = daemon.getState().snapshot.tasks.find((item) => item.id === taskId);
+          if (task?.status === "running" && !task.queuedPrompts?.length && !task.workflowRun) {
+            notifyFinished(task);
+          }
         } else if (update.kind === "permission_resolved") {
           toast.dismiss(`attention:permission:${update.request_id}`);
           void withdrawNativeNotification({
@@ -307,6 +334,13 @@ export function useDaemonEvents() {
           .getState()
           .snapshot.tasks.find((task) => task.id === event.data.id);
         const previous = previousTask?.status;
+        if (
+          previousTask?.workflowRun &&
+          previousTask.workflowRun.stage !== "done" &&
+          event.data.workflowRun?.stage === "done"
+        ) {
+          notifyFinished(event.data);
+        }
         // A pipeline parking on the user is an attention state the coarse task
         // status cannot express (it stays Waiting), so it needs its own toast.
         const wasWaiting = previousTask ? waitingKind(previousTask) : null;
@@ -330,6 +364,7 @@ export function useDaemonEvents() {
       } else if (event.event === "task.created" && attentionStatusOf(event.data)) {
         notifyTask(event.data);
       } else if (event.event === "task.removed") {
+        toast.dismiss(`finished:${event.data.id}`);
         for (const status of ATTENTION_STATUS) {
           toast.dismiss(`attention:${event.data.id}:${status}`);
         }
@@ -426,7 +461,10 @@ export function useDaemonEvents() {
               });
             return;
           }
-          if (payload.action === "review") {
+          if (
+            payload.action === "review" ||
+            (payload.kind === "finish" && payload.action === "default")
+          ) {
             useUi.getState().revealTask(taskId);
             void focusWindow();
           }

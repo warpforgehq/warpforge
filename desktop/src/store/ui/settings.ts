@@ -72,7 +72,8 @@ export interface SettingsState {
   setBodyGlass: (v: boolean) => void;
   /** Last Settings page the user was on — reopening lands where they left. */
   settingsPage: SettingsPage;
-  setSettingsPage: (page: SettingsPage) => void;
+  settingsTarget: { id: string } | null;
+  setSettingsPage: (page: SettingsPage, rowId?: string) => void;
   /**
    * Whether New Task starts in an isolated git worktree. Persisted so the
    * choice survives across task creations instead of resetting every time.
@@ -124,6 +125,7 @@ export const createSettingsSlice: UiSlice<SettingsState> = (set) => ({
   bodyGlass: true,
   lspEnabled: true,
   settingsPage: "appearance",
+  settingsTarget: null,
 
   // ── Font size settings ──
   setFontSize: (fontSize) => set({ fontSize: clampFontSize(fontSize) }),
@@ -160,6 +162,7 @@ export const createSettingsSlice: UiSlice<SettingsState> = (set) => ({
       blurRadius: Math.min(BLUR_RADIUS_MAX, Math.max(BLUR_RADIUS_MIN, Math.round(v))),
     }),
   setBodyGlass: (bodyGlass) => set({ bodyGlass }),
-  setSettingsPage: (settingsPage) => set({ settingsPage }),
+  setSettingsPage: (settingsPage, rowId) =>
+    set({ settingsPage, settingsTarget: rowId ? { id: rowId } : null }),
   toggleLsp: () => set((s) => ({ lspEnabled: !s.lspEnabled })),
 });

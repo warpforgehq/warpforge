@@ -1,6 +1,7 @@
 import type { StateCreator } from "zustand";
 
 import type { EditHunk } from "../../protocol";
+import type { DevicePreferences } from "./devicePreferences";
 import type { LayoutState } from "./layout";
 import type { NavState } from "./nav";
 import type { PinnedState } from "./pinned";
@@ -26,7 +27,9 @@ export type View = GlobalView | "project";
 /** Page shown in Settings; the sidebar panel lists them while Settings are open. */
 export type SettingsPage =
   | "appearance"
+  | "notifications"
   | "agents"
+  | "models"
   | "integrations"
   | "tasks"
   | "memory"
@@ -82,6 +85,7 @@ export function clampSidebarWidth(v: unknown): number {
   return Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, Math.round(v)));
 }
 
-export interface UiState extends NavState, LayoutState, SettingsState, PinnedState {}
+export interface UiState
+  extends NavState, LayoutState, SettingsState, PinnedState, DevicePreferences {}
 
 export type UiSlice<T> = StateCreator<UiState, [["zustand/persist", unknown]], [], T>;

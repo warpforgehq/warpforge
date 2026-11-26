@@ -390,7 +390,11 @@ export function SessionChat({
             placeholder={workflow.placeholder ?? "Steer this session..."}
             toolbar={
               task.configOptions && task.configOptions.length > 0 ? (
-                <AgentConfigBar taskId={task.id} options={task.configOptions} />
+                <AgentConfigBar
+                  taskId={task.id}
+                  agentId={task.agent}
+                  options={task.configOptions}
+                />
               ) : undefined
             }
           />

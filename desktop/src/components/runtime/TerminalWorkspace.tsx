@@ -1,8 +1,18 @@
 import "@xterm/xterm/css/xterm.css"; // oxlint-disable-line import/no-unassigned-import
 import { AlertCircle, Plus, RefreshCw, X } from "lucide-react";
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useSyncExternalStore } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { cn } from "@/lib/utils";
+import { useUi } from "@/store/ui";
 
 import type { TerminalController } from "../../lib/terminalController";
 import type { TerminalEntry } from "../../lib/terminalWorkspace";
@@ -19,6 +29,7 @@ export const TerminalWorkspaceView = memo(function TerminalWorkspaceView({
   taskId,
 }: Props) {
   const workspace = getTerminalWorkspace(project, taskId ?? null);
+  const [pendingClose, setPendingClose] = useState<{ id: string; remove: boolean } | null>(null);
 
   const terminals = useSyncExternalStore(
     workspace.subscribe,
@@ -44,6 +55,16 @@ export const TerminalWorkspaceView = memo(function TerminalWorkspaceView({
     void workspace.spawn();
   }, [workspace]);
 
+  const closeTab = (id: string, remove: boolean) => {
+    if (remove) workspace.remove(id);
+    else workspace.close(id);
+  };
+  const requestClose = (id: string, remove: boolean) => {
+    if (useUi.getState().confirmations.closeTerminal) setPendingClose({ id, remove });
+    else closeTab(id, remove);
+  };
+  const closingTab = terminals.find((entry) => entry.terminalId === pendingClose?.id);
+
   if (terminals.length === 0) {
     return <TerminalEmptyState onNew={handleNew} error={spawnError} onRetry={handleRetry} />;
   }
@@ -54,11 +75,31 @@ export const TerminalWorkspaceView = memo(function TerminalWorkspaceView({
         terminals={terminals}
         activeId={activeId}
         onSelect={(id) => workspace.setActive(id)}
-        onClose={(id) => workspace.close(id)}
-        onRemove={(id) => workspace.remove(id)}
+        onClose={(id) => requestClose(id, false)}
+        onRemove={(id) => requestClose(id, true)}
+        onRetryClose={(id) => workspace.close(id)}
         onRestart={(id) => void workspace.restart(id)}
         onNew={handleNew}
       />
+      {closingTab && pendingClose && (
+        <ConfirmDialog
+          open
+          title="Close this terminal tab?"
+          description={
+            pendingClose.remove ? (
+              <>Remove “{closingTab.label}” from the tab bar.</>
+            ) : (
+              <>Closing “{closingTab.label}” stops its shell session.</>
+            )
+          }
+          confirmLabel="Close terminal"
+          onCancel={() => setPendingClose(null)}
+          onConfirm={() => {
+            closeTab(pendingClose.id, pendingClose.remove);
+            setPendingClose(null);
+          }}
+        />
+      )}
       <div className="relative min-h-0 flex-1">
         {terminals.map((entry) => (
           <TerminalPane
@@ -128,6 +169,7 @@ const TerminalTabBar = memo(function TerminalTabBar({
   onSelect,
   onClose,
   onRemove,
+  onRetryClose,
   onRestart,
   onNew,
 }: {
@@ -136,6 +178,7 @@ const TerminalTabBar = memo(function TerminalTabBar({
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
   onRemove: (id: string) => void;
+  onRetryClose: (id: string) => void;
   onRestart: (id: string) => void;
   onNew: () => void;
 }) {
@@ -151,6 +194,7 @@ const TerminalTabBar = memo(function TerminalTabBar({
           onSelect={() => onSelect(entry.terminalId)}
           onClose={() => onClose(entry.terminalId)}
           onRemove={() => onRemove(entry.terminalId)}
+          onRetryClose={() => onRetryClose(entry.terminalId)}
           onRestart={() => onRestart(entry.terminalId)}
         />
       ))}
@@ -175,6 +219,7 @@ const TerminalTab = memo(function TerminalTab({
   onSelect,
   onClose,
   onRemove,
+  onRetryClose,
   onRestart,
 }: {
   terminalId: string;
@@ -184,6 +229,7 @@ const TerminalTab = memo(function TerminalTab({
   onSelect: () => void;
   onClose: () => void;
   onRemove: () => void;
+  onRetryClose: () => void;
   onRestart: () => void;
 }) {
   const lifecycle = useControllerLifecycle(controller);
@@ -244,7 +290,7 @@ const TerminalTab = memo(function TerminalTab({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onClose();
+              onRetryClose();
             }}
             className="flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground/60 transition-colors hover:bg-secondary/40 hover:text-foreground"
             aria-label={`Retry ${label}`}

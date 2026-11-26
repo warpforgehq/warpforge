@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { devicePreferenceDefaults } from "@/store/ui/devicePreferences";
 
 import { daemon } from "../daemon";
 import type { AgentConfig, ConfigOption, Snapshot } from "../protocol";
@@ -70,7 +72,7 @@ const snapshot: Snapshot = {
   terminals: [],
 };
 
-function renderDialog(onOpenChange = vi.fn<(open: boolean) => void>()) {
+function renderDialog(onOpenChange = vi.fn<(open: boolean) => void>(), data = snapshot) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -82,7 +84,7 @@ function renderDialog(onOpenChange = vi.fn<(open: boolean) => void>()) {
           defaultProject="warpforge"
           onOpenChange={onOpenChange}
           open
-          snapshot={snapshot}
+          snapshot={data}
         />
       </QueryClientProvider>,
     ),
@@ -116,7 +118,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  useUi.setState({ openTaskId: null });
+  useUi.setState({ openTaskId: null, pickers: devicePreferenceDefaults.pickers });
 });
 
 describe("NewTaskDialog", () => {
@@ -127,6 +129,51 @@ describe("NewTaskDialog", () => {
     const prompt = screen.getByPlaceholderText("What should the agent do?");
     expect(modes.compareDocumentPosition(prompt) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("button", { name: "Model: Default" })).toBeInTheDocument();
+  });
+
+  it("preselects the saved default agent and model for a new task", async () => {
+    useUi.getState().setDefaultAgent("codex");
+    useUi.getState().setDefaultModel("sonnet");
+    renderDialog(undefined, { ...snapshot, agents: [agent, { ...codex, models: [modelOption] }] });
+
+    expect(screen.getByRole("button", { name: "Harness" })).toHaveTextContent("Codex");
+    expect(screen.getByRole("button", { name: "Model: Sonnet" })).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByPlaceholderText("What should the agent do?"),
+      "Start with my defaults",
+    );
+    await user.click(screen.getByRole("button", { name: "Start task" }));
+    await waitFor(() =>
+      expect(daemon.request).toHaveBeenCalledWith(
+        "task.create",
+        expect.objectContaining({ agent: "codex", default_model: "sonnet" }),
+      ),
+    );
+  });
+
+  it("offers a custom model before the agent advertises a model list", async () => {
+    useUi.getState().setDefaultAgent("codex");
+    useUi.getState().setCustomModel("codex", "provider/custom-v2", true);
+    renderDialog();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Model: Default" }));
+    fireEvent.mouseDown(screen.getByRole("button", { name: "provider/custom-v2" }));
+    expect(screen.getByRole("button", { name: "Model: provider/custom-v2" })).toBeInTheDocument();
+
+    await user.type(
+      screen.getByPlaceholderText("What should the agent do?"),
+      "Try the custom model",
+    );
+    await user.click(screen.getByRole("button", { name: "Start task" }));
+    await waitFor(() =>
+      expect(daemon.request).toHaveBeenCalledWith(
+        "task.create",
+        expect.objectContaining({ default_model: "provider/custom-v2" }),
+      ),
+    );
   });
 
   it("shows inherited model when agent has a remembered lastModel", () => {
