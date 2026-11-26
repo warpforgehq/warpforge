@@ -30,7 +30,7 @@ function str(value: unknown): string | undefined {
 }
 
 function urlOf(result: Result): string {
-  return typeof result.url === "string" ? result.url : "";
+  return str(result.url) ?? "";
 }
 
 function delay(ms: number, signal: AbortSignal): Promise<void> {
@@ -94,7 +94,8 @@ async function settle(
   const after = await tryCall(tabId, { action: "changes" }, allowed);
   if (!after || after.blocked) return immediate;
   if (urlOf(after) !== urlOf(acted)) {
-    const title = typeof after.title === "string" && after.title ? ` ${JSON.stringify(after.title)}` : "";
+    const t = str(after.title);
+    const title = t ? ` ${JSON.stringify(t)}` : "";
     return merge(immediate, [`navigated → ${urlOf(after)}${title}`]);
   }
   return merge(immediate, lines(after, "changes"));
