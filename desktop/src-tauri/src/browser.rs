@@ -326,21 +326,12 @@ fn reload_from_origin(webview: &Webview) -> Result<(), String> {
     webview.reload().map_err(|e| e.to_string())
 }
 
-/// tauri-runtime-wry 2.11 hands `with_webview` +1-retained raw pointers and
-/// never releases them; this takes ownership of all three so each call is
-/// balanced. Re-check `WebviewMessage::WithWebview` on a Tauri upgrade.
+/// tauri-runtime-wry 2.12 hands `with_webview` borrowed pointers, so this
+/// retains the view and must not release the others: an extra release
+/// deallocates the live NSWindow. Re-check `WithWebview` on a Tauri upgrade.
 #[cfg(target_os = "macos")]
 pub(crate) fn adopt_wk_webview(
     platform: tauri::webview::PlatformWebview,
 ) -> Option<objc2::rc::Retained<objc2_web_kit::WKWebView>> {
-    use objc2::rc::Retained;
-    use objc2::runtime::AnyObject;
-
-    unsafe {
-        drop(Retained::<AnyObject>::from_raw(
-            platform.controller().cast(),
-        ));
-        drop(Retained::<AnyObject>::from_raw(platform.ns_window().cast()));
-        Retained::from_raw(platform.inner().cast())
-    }
+    unsafe { objc2::rc::Retained::retain(platform.inner().cast()) }
 }
