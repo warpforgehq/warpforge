@@ -84,7 +84,6 @@ it("updates the task rows when the mounted viewport is measured, resized, and sc
           openTaskId={null}
           collapsed={false}
           onToggleCollapsed={noop}
-          onSelectView={noop}
           onSelectMode={noop}
           onOpenTask={noop}
           onNewTask={noop}

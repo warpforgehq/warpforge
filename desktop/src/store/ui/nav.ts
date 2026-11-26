@@ -68,6 +68,9 @@ export interface NavState {
   closeSettings: () => void;
   /** The channel, direct thread or Smith the Smiths area shows. Transient. */
   teamSelection: TeamSelection | null;
+  /** The schedule shown in Automations. Transient across app restarts. */
+  selectedAutomationId: string | null;
+  selectAutomation: (id: string | null) => void;
   /** Unix seconds each teammate's page was last open, by Smith id. */
   teamSmithSeenAt: Record<string, number>;
   /** Unix seconds each channel was last open, by its feed key. */
@@ -141,12 +144,21 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   sidebarMode: "tasks",
   settingsOpen: false,
   teamSelection: null,
+  selectedAutomationId: null,
   teamSmithSeenAt: {},
   teamChannelSeenAt: {},
   smithsProject: null,
   newSmithOpen: false,
 
-  setView: (view) => set({ openTaskId: null, openTaskNav: null, settingsOpen: false, view }),
+  setView: (view) =>
+    set((s) => ({
+      openTaskId: null,
+      openTaskNav: null,
+      settingsOpen: false,
+      sidebarMode: view === "automations" ? view : s.sidebarMode,
+      view,
+    })),
+  selectAutomation: (selectedAutomationId) => set({ selectedAutomationId }),
   selectTasksSegment: (validTaskId) =>
     set((s) => {
       const view: View = s.selectedProjectId ? "project" : "control";

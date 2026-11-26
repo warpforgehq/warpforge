@@ -270,7 +270,6 @@ export default function AppDemo() {
               onOpenSettings={noop}
               onOpenTask={openTaskInDemo}
               onSelectMode={noop}
-              onSelectView={noop}
               onToggleCollapsed={noop}
               openTaskId={openTaskId}
               state={daemon.getState()}

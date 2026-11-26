@@ -3,7 +3,8 @@ import { memo, useEffect, useState } from "react";
 import { InboxListPane } from "@/components/inbox/InboxListPane";
 import type { ConnectionState, DaemonState } from "@/daemon";
 import { cn } from "@/lib/utils";
-import type { GlobalView, SidebarMode, View } from "@/store/ui";
+import type { SidebarMode, View } from "@/store/ui";
+import { AutomationList } from "@/views/automations/AutomationList";
 
 import { DeleteShelfDialog } from "./DeleteShelfDialog";
 import { railSelection, SIDEBAR_BODY_ID, SIDEBAR_MODES } from "./modes";
@@ -31,7 +32,6 @@ interface SidebarProps {
   connection?: ConnectionState;
   connectionError?: string | null;
   onToggleCollapsed: () => void;
-  onSelectView: (view: GlobalView) => void;
   /** Picking a mode switches the panel and the main area. For Tasks the host
    *  restores the last task it can still find, else the selected project. */
   onSelectMode: (mode: SidebarMode) => void;
@@ -74,7 +74,6 @@ function Sidebar({
   connection = "connected",
   connectionError = null,
   onToggleCollapsed,
-  onSelectView,
   onSelectMode,
   onOpenTask,
   onNewTask,
@@ -86,12 +85,10 @@ function Sidebar({
   onDeleteSettledShelf,
 }: SidebarProps) {
   const tree = useSidebarTree(state, openTaskId);
-  // A rail view (Automations) owns the main area: no mode stays lit beside it,
-  // and the panel falls back to the task tree rather than the last mode's body.
-  const railView =
-    view === "automations" && !openTaskId && !settingsOpen ? ("automations" as const) : null;
-  const panelMode: SidebarMode = railView ? "tasks" : mode;
-  const selection = railView ? railView : railSelection(mode, settingsOpen);
+  // An existing session can have Automations open with an older sidebar mode.
+  const panelMode =
+    view === "automations" && !openTaskId ? "automations" : mode === "automations" ? "tasks" : mode;
+  const selection = railSelection(panelMode, settingsOpen);
   const panelHidden = collapsed || !canExpand;
   const trailingHidden = useTrailingFlag(panelHidden, PANEL_FADE_MS);
   const panelMounted = !panelHidden || !trailingHidden;
@@ -110,7 +107,6 @@ function Sidebar({
         liveLane={tree.liveLane}
         modeCount={tree.modeCount}
         onToggleCollapsed={onToggleCollapsed}
-        onSelectView={onSelectView}
         onSelectMode={onSelectMode}
         onNewTask={onNewTask}
         onOpenTask={onOpenTask}
@@ -147,6 +143,10 @@ function Sidebar({
                     }
                     onAddProject={onAddProject}
                   />
+                </div>
+              ) : panelMode === "automations" ? (
+                <div id={SIDEBAR_BODY_ID} className="min-h-0 flex-1">
+                  {connection === "connected" && <AutomationList />}
                 </div>
               ) : panelMode === "team" ? (
                 <div id={SIDEBAR_BODY_ID} className="min-h-0 flex-1 overflow-y-auto">

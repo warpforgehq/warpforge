@@ -15,13 +15,13 @@ import type { SettingsState } from "./settings";
 export type GlobalView = "control" | "inbox" | "automations" | "memory" | "team";
 /** What the rail has picked. A mode sets the sidebar panel and the main area;
  *  Mission Control shows the task tree beside its dashboard. */
-export type SidebarMode = "tasks" | "inbox" | "team" | "control";
+export type SidebarMode = "tasks" | Exclude<GlobalView, "memory">;
 /** What the Smiths (Team) main area shows. */
 export type TeamSelection =
   | { kind: "conversation"; key: string }
   | { kind: "teammate"; id: string; tab?: "chat" | "work" | "settings" };
 /** "project" is a subject, not a nav destination: it is reached by selecting a
- *  project in the sidebar tree, never from NAV. */
+ *  project in the sidebar tree, never from the rail’s modes. */
 export type View = GlobalView | "project";
 /** Page shown in Settings; the sidebar panel lists them while Settings are open. */
 export type SettingsPage =

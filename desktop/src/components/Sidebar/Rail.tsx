@@ -3,12 +3,11 @@ import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useRef, useState
 
 import UpdateControl from "@/components/UpdateControl";
 import type { ConnectionState } from "@/daemon";
-import { useUi, type GlobalView, type SidebarMode } from "@/store/ui";
+import { useUi, type SidebarMode } from "@/store/ui";
 
 import { ConnectionDot } from "./ConnectionDot";
 import { LiveLane, type LiveLaneItem } from "./LiveLane";
 import { SIDEBAR_BODY_ID, SIDEBAR_MODES, type RailSelection } from "./modes";
-import { NAV } from "./nav";
 import { RailButton, type RailBadge } from "./RailButton";
 import { WarpforgeMark } from "./WarpforgeMark";
 
@@ -27,7 +26,6 @@ export interface RailProps {
   liveLane: { tasks: LiveLaneItem[]; overflow: number };
   modeCount: (mode: SidebarMode) => number;
   onToggleCollapsed: () => void;
-  onSelectView: (view: GlobalView) => void;
   onSelectMode: (mode: SidebarMode) => void;
   onNewTask: () => void;
   onOpenTask: (id: string) => void;
@@ -56,7 +54,6 @@ export function Rail({
   liveLane,
   modeCount,
   onToggleCollapsed,
-  onSelectView,
   onSelectMode,
   onNewTask,
   onOpenTask,
@@ -143,16 +140,6 @@ export function Rail({
             ariaControls={SIDEBAR_BODY_ID}
             onClick={() => onSelectMode(item.id)}
             {...roving(`mode:${item.id}`)}
-          />
-        ))}
-        {NAV.map((item) => (
-          <RailButton
-            key={item.id}
-            icon={item.icon}
-            label={item.label}
-            active={selection === item.id}
-            onClick={() => onSelectView(item.id)}
-            {...roving(`nav:${item.id}`)}
           />
         ))}
       </nav>

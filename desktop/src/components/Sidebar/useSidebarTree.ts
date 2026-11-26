@@ -282,7 +282,9 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
           ? inboxUnseen
           : mode === "team"
             ? teamUnread
-            : blockingCount,
+            : mode === "control"
+              ? blockingCount
+              : 0,
     [blockingCount, inboxUnseen, needsYouCount, teamUnread],
   );
 

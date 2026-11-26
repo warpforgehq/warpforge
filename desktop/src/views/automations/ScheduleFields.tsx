@@ -10,7 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { AutomationPreset, ProjectInfo } from "@/protocol";
 
-import { EnabledSwitch } from "./AutomationCard";
+import { EnabledSwitch } from "./EnabledSwitch";
 import { type AutomationForm, effectiveTrigger, type FormProblems } from "./form";
 import { WorktreeBaseSelect } from "./WorktreeBaseSelect";
 

@@ -1,12 +1,11 @@
 import type { BadgeProps } from "@/lib/badgeVariants";
 import { configRole } from "@/lib/configRole";
-import { cn } from "@/lib/utils";
 import type { AgentConfig, AutomationRun, AutomationRunStatus, ConfigOption } from "@/protocol";
 
 interface RunStatusMeta {
   label: string;
   badge: BadgeProps["variant"];
-  /** Timeline / spark marker colour. */
+  /** Timeline marker colour. */
   dot: string;
   /** One line explaining why a run ended this way. */
   hint: string;
@@ -97,31 +96,4 @@ export function runSummary(run: AutomationRun): string {
   const when = new Date(run.startedAt * 1000).toLocaleString();
   const detail = run.error ? ` — ${run.error}` : "";
   return `#${run.runNumber} · ${meta.label} · ${run.trigger} · ${when}${detail}`;
-}
-
-/**
- * The last N runs as a row of ✓/✗ dots, newest on the right so the row reads
- * left-to-right like time does. Runs the daemon has not produced yet leave no
- * placeholder — an empty slot would read as a skipped run.
- */
-export function RunSpark({ runs, limit = 10 }: { runs: AutomationRun[]; limit?: number }) {
-  const recent = runs.slice(0, limit).reverse();
-  if (recent.length === 0) {
-    return <span className="text-[11px] text-muted-foreground/60">no runs yet</span>;
-  }
-  return (
-    <span className="flex items-center gap-1" aria-label={`Last ${recent.length} runs`}>
-      {recent.map((run) => (
-        <span
-          key={run.id}
-          title={runSummary(run)}
-          className={cn(
-            "size-1.5 rounded-full",
-            RUN_STATUS_META[run.status].dot,
-            run.status === "running" && "animate-pulse",
-          )}
-        />
-      ))}
-    </span>
-  );
 }

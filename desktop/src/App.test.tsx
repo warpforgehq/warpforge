@@ -377,7 +377,7 @@ describe("Sidebar modes", () => {
     expect(useUi.getState()).toMatchObject({ sidebarMode: "inbox", view: "inbox" });
   });
 
-  it("picks the modes with ⌥⌘1–3, by physical key", async () => {
+  it("picks the modes with ⌥⌘ and the physical digit key", async () => {
     useUi.setState({ sidebarMode: "tasks", view: "control" });
     render(<App />);
     await screen.findByTestId("app-sidebar");
@@ -388,6 +388,8 @@ describe("Sidebar modes", () => {
     // Plain ⌘1 stays the task workspace's.
     fireEvent.keyDown(window, { code: "Digit1", key: "1", metaKey: true });
     expect(useUi.getState().sidebarMode).toBe("inbox");
+    fireEvent.keyDown(window, { altKey: true, code: "Digit5", key: "∞", metaKey: true });
+    expect(useUi.getState()).toMatchObject({ sidebarMode: "automations", view: "automations" });
   });
 });
 

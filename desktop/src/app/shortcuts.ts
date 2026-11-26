@@ -2,13 +2,14 @@ import { useEffect, useRef } from "react";
 
 import type { SidebarMode } from "@/store/ui";
 
-/** ⌥⌘1–4, by physical key: ⌥ turns the digit into another character on macOS,
+/** ⌥⌘1–5, by physical key: ⌥ turns the digit into another character on macOS,
  *  and plain ⌘1–9 already switch a task's workspace surfaces. */
 const MODE_KEYS: Record<string, SidebarMode> = {
   Digit1: "tasks",
   Digit2: "inbox",
   Digit3: "team",
   Digit4: "control",
+  Digit5: "automations",
 };
 
 /**

@@ -121,6 +121,7 @@ export function AppContent({
   useTaskPullRequestSync(connection);
   useTaskKeepersSync(connection);
   const sidebarMode = useUi((state) => state.sidebarMode);
+  const sidebarCollapsed = useUi((state) => state.sidebarCollapsed);
   const settingsOpen = useUi((state) => state.settingsOpen);
   const closeSettings = useUi((state) => state.closeSettings);
 
@@ -218,7 +219,11 @@ export function AppContent({
                   listInSidebar={showPersistent && sidebarMode === "inbox"}
                 />
               ) : view === "automations" ? (
-                <Automations snapshot={snapshot} onOpenTask={onOpenTask} />
+                <Automations
+                  snapshot={snapshot}
+                  onOpenTask={onOpenTask}
+                  listInSidebar={showPersistent && !sidebarCollapsed}
+                />
               ) : view === "memory" ? (
                 <Memory snapshot={snapshot} onOpenTask={onOpenTask} />
               ) : view === "team" ? (

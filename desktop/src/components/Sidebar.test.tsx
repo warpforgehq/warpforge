@@ -93,7 +93,7 @@ import { daemon } from "../daemon";
 import type { DaemonState } from "../daemon";
 import type { ProjectInfo, PullRequestSummary, TaskInfo } from "../protocol";
 import { useUi } from "../store/ui";
-import type { GlobalView, SidebarMode } from "../store/ui";
+import type { SidebarMode } from "../store/ui";
 import Sidebar from "./Sidebar";
 import {
   LANE_GLYPH_PX,
@@ -161,7 +161,6 @@ const handlers = {
   onOpenSettings: vi.fn<() => void>(),
   onOpenTask: vi.fn<(id: string) => void>(),
   onOpenProject: vi.fn<(name: string) => void>(),
-  onSelectView: vi.fn<(view: GlobalView) => void>(),
   onSelectMode: vi.fn<(mode: SidebarMode) => void>(),
   onToggleCollapsed: vi.fn<() => void>(),
 };
@@ -346,7 +345,7 @@ describe("Sidebar shell", () => {
     }
 
     fireEvent.click(screen.getByRole("button", { name: "Automations" }));
-    expect(handlers.onSelectView).toHaveBeenCalledWith("automations");
+    expect(handlers.onSelectMode).toHaveBeenCalledWith("automations");
 
     fireEvent.click(toggle);
     expect(handlers.onToggleCollapsed).toHaveBeenCalled();
@@ -411,17 +410,6 @@ describe("Sidebar modes", () => {
     });
   }
 
-  it("lights only Automations while it owns the main area, with the task tree beside it", () => {
-    renderSidebar(makeState([]), { mode: "inbox", view: "automations" });
-    expect(screen.getByRole("button", { name: /^Automations/ })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(mode("Inbox")).not.toHaveAttribute("aria-current");
-    expect(mode("Tasks")).not.toHaveAttribute("aria-current");
-    expect(screen.getByTestId("sidebar-panel")).toHaveTextContent(/Tasks/i);
-  });
-
   it("marks the mode it is given on any other view", () => {
     renderSidebar(makeState([]), { mode: "inbox", view: "control" });
     expect(mode("Inbox")).toHaveAttribute("aria-current", "page");
@@ -434,7 +422,6 @@ describe("Sidebar modes", () => {
     expect(handlers.onSelectMode).toHaveBeenCalledWith("team");
     fireEvent.click(mode("Tasks"));
     expect(handlers.onSelectMode).toHaveBeenCalledWith("tasks");
-    expect(handlers.onSelectView).not.toHaveBeenCalled();
   });
 
   it("explains the Smiths mode on hover", async () => {
@@ -768,12 +755,8 @@ describe("Sidebar workspace tree", () => {
   it("opens the project from the row itself, leaving disclosure to the chevron", () => {
     const { container } = renderSidebar(makeState([task("a", { prompt: "Task A" })]));
 
-    // One call carries both halves: the store's `openProject` selects the
-    // project *and* switches the view, so the row does not also fire
-    // `onSelectView` — that would be a second, redundant navigation.
     fireEvent.click(container.querySelector<HTMLElement>('[data-project="warpforge"]')!);
     expect(handlers.onOpenProject).toHaveBeenCalledWith("warpforge");
-    expect(handlers.onSelectView).not.toHaveBeenCalled();
     expect(screen.getByText("Task A")).toBeInTheDocument();
   });
 

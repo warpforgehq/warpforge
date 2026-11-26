@@ -21,8 +21,9 @@ keep the same room for the tree; the split adds `RAIL_WIDTH` on top. Narrow wind
 **Mission Control is a mode.** `SidebarMode` gained `"control"`, so the rail's
 selection is one value: `railSelection(mode, settingsOpen)`. Its panel is the
 task tree. Opening a task from the tree while in Mission Control moves the
-mode to Tasks. Automations and Memory stay main-area views in the panel footer; while the
-panel is hidden (collapsed or narrow) the rail shows them instead, unselected.
+mode to Tasks. Automations is also a mode. Its panel lists schedules and
+filters, and the main area shows the overview or the selected schedule. The
+main area can open the list when the panel is hidden. Memory lives in Settings.
 
 **Settings replace the panel and the main area.** `settingsOpen` lives in the
 UI store, is never persisted, and every navigation action (`setView`,

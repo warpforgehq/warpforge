@@ -161,7 +161,6 @@ export default function App() {
     onSettleFinishedTurns: settleFinishedTurns,
     onDeleteSettledShelf: deleteSettledShelf,
     onOpenTask: handleOpenTask,
-    onSelectView: handleSelectView,
     onSelectMode: handleSelectMode,
     onOpenProject: handleOpenProject,
     onAddProject: () => setAddProjectOpen(true),
