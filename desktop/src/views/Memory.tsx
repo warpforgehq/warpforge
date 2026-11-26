@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Brain } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { daemon } from "@/daemon";
@@ -16,13 +16,15 @@ type Tab = "memories" | "proposals";
 interface Props {
   snapshot: Snapshot;
   onOpenTask: (id: string) => void;
+  /** Replaces the title block, for a host that already names the screen. */
+  header?: ReactNode;
 }
 
 /**
  * The Memory screen: browse and search what agents have saved, edit or delete
  * it, see how memories link, and review dreaming proposals.
  */
-export default function Memory({ snapshot, onOpenTask }: Props) {
+export default function Memory({ snapshot, onOpenTask, header }: Props) {
   const [tab, setTab] = useState<Tab>("memories");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [items, setItems] = useState<MemoryItem[]>([]);
@@ -42,15 +44,17 @@ export default function Memory({ snapshot, onOpenTask }: Props) {
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
       <header className="flex shrink-0 flex-wrap items-end justify-between gap-x-4 gap-y-2 px-1 pb-3 pt-2">
-        <div className="min-w-0 space-y-1.5">
-          <h1 className="truncate text-xl font-semibold leading-none tracking-tight">Memory</h1>
-          <p className="truncate text-[13px] text-muted-foreground">
-            {stats.data
-              ? `${stats.data.globalCount} global, ${stats.data.projectCount} project. `
-              : ""}
-            What agents remember across tasks.
-          </p>
-        </div>
+        {header ?? (
+          <div className="min-w-0 space-y-1.5">
+            <h1 className="truncate text-xl font-semibold leading-none tracking-tight">Memory</h1>
+            <p className="truncate text-[13px] text-muted-foreground">
+              {stats.data
+                ? `${stats.data.globalCount} global, ${stats.data.projectCount} project. `
+                : ""}
+              What agents remember across tasks.
+            </p>
+          </div>
+        )}
         <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
           <TabsList>
             <TabsTrigger variant="pill" value="memories">

@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -38,6 +39,8 @@ export interface SurfaceRailProps {
   surfaceVisible: boolean;
   /** Focus the conversation, or bring it back when the workspace owns the split. */
   onConversation: () => void;
+  /** Pinned to the rail's foot, below the surfaces. */
+  footer?: ReactNode;
 }
 
 /**
@@ -56,6 +59,7 @@ export function SurfaceRail({
   chatVisible,
   surfaceVisible,
   onConversation,
+  footer,
 }: SurfaceRailProps) {
   const railRef = useRef<HTMLElement>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
@@ -185,7 +189,12 @@ export function SurfaceRail({
 
   // Pipeline comes and goes with the task, and a tab stop parked on a button
   // that no longer exists drops the whole rail out of the tab order.
-  const tabStop = items.some((item) => item.key === tabbable) ? tabbable : CONVERSATION_KEY;
+  // The conversation keeps its ⌘1 entry in `items` but has no button: the
+  // title row already offers focus, hide and restore for it.
+  const buttons = items.filter((item) => item.key !== CONVERSATION_KEY);
+  const tabStop = buttons.some((item) => item.key === tabbable)
+    ? tabbable
+    : (buttons[0]?.key ?? CONVERSATION_KEY);
 
   return (
     <nav
@@ -195,7 +204,7 @@ export function SurfaceRail({
       aria-orientation="vertical"
       aria-label="Workspace rail"
       onKeyDown={onKeyDown}
-      className="relative flex w-7 shrink-0 flex-col items-center gap-1"
+      className="relative flex w-11 shrink-0 flex-col items-center gap-2 border-l border-border/70 bg-chrome py-1.5"
     >
       <span
         ref={pillRef}
@@ -204,7 +213,7 @@ export function SurfaceRail({
         style={{ opacity: 0 }}
         className="pointer-events-none absolute left-0 top-0 z-0 rounded-md bg-primary transition-transform duration-[180ms] ease-[var(--ease-fold)] will-change-transform"
       />
-      {items.map((item) => (
+      {buttons.map((item) => (
         <SurfaceRailButton
           key={item.key}
           railKey={item.key}
@@ -222,6 +231,7 @@ export function SurfaceRail({
         />
       ))}
       <span className="flex-1" />
+      {footer && <div className="pb-1.5">{footer}</div>}
     </nav>
   );
 }

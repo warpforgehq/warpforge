@@ -1,4 +1,12 @@
-import { Archive, MoreHorizontal, Pin, PinOff, Trash2 } from "lucide-react";
+import {
+  Archive,
+  MoreHorizontal,
+  MoreVertical,
+  Pin,
+  PinOff,
+  Trash2,
+  WandSparkles,
+} from "lucide-react";
 import { useState } from "react";
 
 import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
@@ -11,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { taskLabel } from "@/lib/taskLabel";
+import { regenerateTaskTitle } from "@/lib/taskTitle";
 
 import { daemon } from "../daemon";
 import type { TaskInfo } from "../protocol";
@@ -20,11 +29,14 @@ export function TaskMenu({
   onTogglePin,
   pinned,
   task,
+  side,
 }: {
   onClose: () => void;
   onTogglePin: () => void;
   pinned: boolean;
   task: TaskInfo;
+  /** Where the menu opens; below its trigger by default. */
+  side?: "left" | "bottom";
 }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   return (
@@ -35,13 +47,23 @@ export function TaskMenu({
             type="button"
             size="icon"
             variant="ghost"
-            className="size-7"
+            className={
+              side === "left" ? "size-7 text-muted-foreground hover:text-foreground" : "size-7"
+            }
             aria-label="Task actions"
           >
-            <MoreHorizontal className="size-4" />
+            {side === "left" ? (
+              <MoreVertical className="size-4" />
+            ) : (
+              <MoreHorizontal className="size-4" />
+            )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent side={side} align="end" className="w-48">
+          <DropdownMenuItem onSelect={() => void regenerateTaskTitle(task)}>
+            <WandSparkles />
+            Regenerate title
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={onTogglePin}>
             {pinned ? <PinOff /> : <Pin />}
             {pinned ? "Unpin from Mission Control" : "Pin to Mission Control"}

@@ -113,9 +113,12 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
             onClick={() => onOpen(task.id)}
             style={{ paddingLeft: sidebarContentLeft(depth) }}
             className={cn(
-              "flex h-8 w-full items-center gap-2 rounded-md pr-1.5 text-left transition-colors",
+              "flex h-7 w-full items-center gap-2 rounded-md pr-1.5 text-left transition-colors",
               "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
               active ? "font-medium text-foreground" : "hover:bg-accent/60",
+              state === "working" &&
+                !active &&
+                "bg-[linear-gradient(90deg,hsl(var(--primary)/0.09),transparent_75%)]",
             )}
           >
             <button
@@ -148,7 +151,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
               <span
                 data-lane="title"
                 className={cn(
-                  "min-w-0 flex-1 truncate text-[13px] leading-none",
+                  "min-w-0 flex-1 truncate text-[0.78125rem] leading-none",
                   active ? "font-medium text-foreground" : meta.titleClass,
                 )}
               >
@@ -182,7 +185,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
               className="relative ml-auto flex h-6 shrink-0 items-center justify-end gap-1 transition-opacity group-hover/row:opacity-0 group-focus-within/row:opacity-0"
             >
               {childCount > 0 && (
-                <span className="tnum w-4 text-right text-[11px] text-muted-foreground/45">
+                <span className="w-4 text-right font-mono text-[0.625rem] tabular-nums text-muted-foreground/45">
                   {childCount}
                 </span>
               )}
@@ -191,11 +194,11 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
                 className={cn("size-3.5 shrink-0", receded && "opacity-40 grayscale")}
               />
               {state === "snoozed" ? (
-                <span className="tnum w-7 text-right text-[11px] text-info/80">
+                <span className="w-7 text-right font-mono text-[0.625rem] tabular-nums text-info/80">
                   {snoozeWakeLabel(task.snoozedUntil!, nowSec)}
                 </span>
               ) : (
-                <span className="tnum w-7 text-right text-[11px] text-muted-foreground/50">
+                <span className="w-7 text-right font-mono text-[0.625rem] tabular-nums text-muted-foreground/50">
                   {meta.live ? <LiveElapsed since={task.updatedAt} /> : elapsed(task.updatedAt)}
                 </span>
               )}

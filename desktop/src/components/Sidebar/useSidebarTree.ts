@@ -11,7 +11,7 @@ import { keeperAttentionReasons } from "@/lib/keepers";
 import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
 import { boardTasks } from "@/lib/taskOrigin";
 import { useUi } from "@/store/ui";
-import type { GlobalView, SidebarMode } from "@/store/ui";
+import type { SidebarMode } from "@/store/ui";
 
 import {
   ancestorIds,
@@ -25,7 +25,7 @@ import {
   type SidebarRow,
 } from "./logic";
 
-/** Most chips the collapsed rail shows before folding the rest into `+N`. */
+/** Most chips the rail shows before folding the rest into `+N`. */
 export const LIVE_LANE_MAX = 6;
 
 export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
@@ -74,8 +74,8 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   // the badge, the tab count and the rows never disagree.
   const inboxUnseen = useInboxUnseenCount(names);
   const teamUnread = useTeamUnread();
-  // Only the collapsed rail needs this count; expanded renders AgentUpdateBanner,
-  // which reads the same cached query.
+  // The rail's agent-update button; the panel's AgentUpdateBanner reads the
+  // same cached query.
   const agentUpdates = useAgentUpdatesCount();
 
   const forceVisibleTaskIds = useMemo(
@@ -84,7 +84,7 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   );
 
   /**
-   * The collapsed rail's live lane: work in flight or waiting on a human,
+   * The rail's live lane: work in flight or waiting on a human,
    * most-recent first. The rail's job is presence, so this is data the expanded
    * tree already has — no separate daemon query.
    */
@@ -191,16 +191,27 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     return null;
   }, [rows, settlingProject]);
 
+  // Row heights are designed at the 14px base; ⌘+ and ⌘- scale them with the text.
+  const fontScale = useUi((state) => state.fontSize) / 14;
   const virtualizer = useVirtualizer({
     count: rows.length,
     estimateSize: (index) => {
       const row = rows[index];
-      return row ? rowHeight(row) : 34;
+      return Math.round((row ? rowHeight(row) : 34) * fontScale);
     },
     getItemKey: (index) => rows[index]?.key ?? index,
     getScrollElement: () => scrollRef.current,
     overscan: 8,
   });
+
+  useEffect(() => {
+    virtualizer.measure();
+  }, [fontScale, virtualizer]);
+
+  // The virtualizer mutates in place. Pass its render values to TaskTree so
+  // React Compiler can invalidate the JSX when the range or size changes.
+  const virtualItems = virtualizer.getVirtualItems();
+  const totalSize = virtualizer.getTotalSize();
 
   useEffect(() => {
     if (!attentionTargetId || handledTargetNonce.current === attentionTargetNonce) return;
@@ -257,11 +268,6 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     [pinned, setPinnedTaskIds, taskGroupIndex],
   );
 
-  const navCount = useCallback(
-    (id: GlobalView) => (id === "control" ? blockingCount : 0),
-    [blockingCount],
-  );
-
   // The same count as Mission Control's "Needs you" tab: the attention queue
   // without sessions lost to a restart.
   const needsYouCount = useMemo(
@@ -270,8 +276,14 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   );
   const modeCount = useCallback(
     (mode: SidebarMode) =>
-      mode === "tasks" ? needsYouCount : mode === "inbox" ? inboxUnseen : teamUnread,
-    [inboxUnseen, needsYouCount, teamUnread],
+      mode === "tasks"
+        ? needsYouCount
+        : mode === "inbox"
+          ? inboxUnseen
+          : mode === "team"
+            ? teamUnread
+            : blockingCount,
+    [blockingCount, inboxUnseen, needsYouCount, teamUnread],
   );
 
   return {
@@ -280,7 +292,6 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     handlePin,
     liveLane,
     modeCount,
-    navCount,
     nowSec,
     pinned,
     projectNames: names,
@@ -290,9 +301,10 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     setSettlingProject,
     settleMarkedIds,
     taskGroupIndex,
+    totalSize,
     toggleProject,
     toggleShelf,
     toggleTask,
-    virtualizer,
+    virtualItems,
   };
 }

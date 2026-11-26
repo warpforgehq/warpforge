@@ -115,6 +115,7 @@ export const useUi = create<UiState>()(
         inboxSelectedKey: _inboxSelectedKey,
         teamSelection: _teamSelection,
         newSmithOpen: _newSmithOpen,
+        settingsOpen: _settingsOpen,
         inboxFilters,
         backlogParamsByProject,
         ...rest

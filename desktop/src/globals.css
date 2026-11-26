@@ -56,6 +56,9 @@
    * component is banned — pick the token for the level instead.
    */
   --color-edge: hsl(var(--border) / 1);
+  /* Window chrome: the background nudged toward the text colour, so the
+     work surface reads as a sheet on it in every theme, light or dark. */
+  --color-chrome: color-mix(in srgb, hsl(var(--background)) 96%, hsl(var(--foreground)));
   --color-border: hsl(var(--border) / 0.6);
   --color-rule: hsl(var(--border) / 0.4);
   --color-input: hsl(var(--input));
@@ -488,6 +491,11 @@ html.native-glass .bg-card .cm-gutters {
  * an input inside a rail should still read as a well. */
 html.native-glass .bg-deep-surface {
   background-color: hsl(var(--deep-surface, 120 4% 4%) / var(--glass-panel)) !important;
+}
+
+/* Chrome is a tint over the desktop under glass, never a solid block. */
+html.native-glass .bg-chrome {
+  background-color: hsl(var(--card) / var(--glass-panel)) !important;
 }
 
 html.native-glass .bg-popover {

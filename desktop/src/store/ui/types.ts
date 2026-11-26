@@ -13,9 +13,9 @@ import type { SettingsState } from "./settings";
 
 /** A destination the nav can address. */
 export type GlobalView = "control" | "inbox" | "automations" | "memory" | "team";
-/** What the sidebar body shows. A mode also sets the main area; the views in
- *  `GlobalView` change only the main area. */
-export type SidebarMode = "tasks" | "inbox" | "team";
+/** What the rail has picked. A mode sets the sidebar panel and the main area;
+ *  Mission Control shows the task tree beside its dashboard. */
+export type SidebarMode = "tasks" | "inbox" | "team" | "control";
 /** What the Smiths (Team) main area shows. */
 export type TeamSelection =
   | { kind: "conversation"; key: string }
@@ -23,7 +23,7 @@ export type TeamSelection =
 /** "project" is a subject, not a nav destination: it is reached by selecting a
  *  project in the sidebar tree, never from NAV. */
 export type View = GlobalView | "project";
-/** Page shown in the Settings overlay's left rail. */
+/** Page shown in Settings; the sidebar panel lists them while Settings are open. */
 export type SettingsPage =
   | "appearance"
   | "agents"

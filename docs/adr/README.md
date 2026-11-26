@@ -43,3 +43,4 @@ stale and then misleads.
 | [0029](0029-projectless-chats.md) | A chat is a task with no project, run in its own folder |
 | [0030](0030-keepers.md) | Keepers: post-agents that keep a task's change green, before and after its pull request |
 | [0031](0031-browser-webview-ownership.md) | Browser webview ownership under wry 2.12 and agent focus restore |
+| [0032](0032-permanent-rail.md) | A permanent rail picks, the panel beside it shows; Settings replace the panel |

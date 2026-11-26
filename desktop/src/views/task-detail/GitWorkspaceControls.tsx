@@ -230,7 +230,7 @@ export function GitWorkspaceControls({
           )}
         </button>
         {open && branch && (
-          <div className="absolute bottom-full right-0 z-50 mb-1 flex max-h-[min(520px,calc(100vh-4rem))] w-[min(420px,calc(100vw-1rem))] flex-col overflow-hidden rounded-md border border-border bg-popover shadow-xl">
+          <div className="absolute right-0 top-full z-50 mt-1 flex max-h-[min(520px,calc(100vh-4rem))] w-[min(420px,calc(100vw-1rem))] flex-col overflow-hidden rounded-md border border-border bg-popover shadow-xl">
             <div className="shrink-0 border-b p-2">
               <label className="flex h-8 items-center gap-2 rounded-md border border-input bg-background/60 px-2 focus-within:ring-1 focus-within:ring-ring">
                 <Search className="size-4 shrink-0 text-muted-foreground" />

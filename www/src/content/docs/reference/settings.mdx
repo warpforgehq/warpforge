@@ -6,7 +6,9 @@ sidebar:
   label: Settings
 ---
 
-Everything Warpforge lets you change, in the order the Settings panel presents it — plus the [Factory settings](#factory-settings-per-project) each project keeps in its own menu.
+Everything Warpforge lets you change, in the order Settings presents it — plus the [Factory settings](#factory-settings-per-project) each project keeps in its own menu.
+
+Open Settings from the gear at the bottom of the rail. The sidebar panel switches to the list of sections and the page fills the main area; press <kbd>Esc</kbd>, the back arrow in the panel, or anything in the rail to return to your work. With the panel folded away (<kbd>{"⌘\\"}</kbd>) the sections appear as tabs above the page instead.
 
 ## Appearance
 
@@ -113,7 +115,7 @@ One file per item keeps writes small and makes the directory readable — and di
 Settings for the [shared memory store](/concepts/memory/):
 
 - **Embedding mode** — off (full-text only) or local embeddings, which turns search hybrid.
-- **Memories** — counts per scope, so you can see what's actually accumulated. Browse and edit them in the [Memory screen](/concepts/memory/#the-memory-screen) (sidebar → Memory).
+- **Memories** — counts per scope, so you can see what's actually accumulated. Browse and edit them in the [Memory screen](/concepts/memory/#the-memory-screen) (Settings → Memory).
 - **Active scopes** — which of global and project are on. Read-only here; edit `~/.warpforge/config.yaml`.
 - **Per-project DB** — whether a project overlay database exists. Auto-created, not something you make by hand.
 
@@ -125,7 +127,7 @@ The [compaction pass](/concepts/memory/#dreaming) that reviews memories against 
 - **Dream project** — which project the pass runs against.
 - **Dream now** — run it on demand.
 
-Review the resulting proposals in the [Memory screen](/concepts/memory/#reviewing-proposals) (sidebar → Memory); the pass never changes a memory itself, and each proposal says what approving it will do.
+Review the resulting proposals in the [Memory screen](/concepts/memory/#reviewing-proposals) (Settings → Memory); the pass never changes a memory itself, and each proposal says what approving it will do.
 
 ## Text generation
 

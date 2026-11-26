@@ -76,8 +76,10 @@ vi.mock("./views/Team", () => ({
 vi.mock("./views/TaskDetail", () => ({
   default: vi.fn<() => React.ReactNode>(() => <div data-testid="task-detail" />),
 }));
-vi.mock("./views/Settings", () => ({
-  default: ({ open }: { open: boolean }) => (open ? <div data-testid="settings" /> : null),
+vi.mock("./views/settings", () => ({
+  default: ({ showNav }: { showNav: boolean }) => (
+    <div data-testid="settings" data-show-nav={showNav || undefined} />
+  ),
 }));
 vi.mock("./views/NewTaskDialog", () => ({
   default: ({
@@ -104,8 +106,14 @@ vi.mock("./views/BootstrapWizard", () => ({
   default: vi.fn<() => React.ReactNode>(() => <div data-testid="bootstrap-wizard" />),
 }));
 vi.mock("./components/Sidebar", () => ({
-  default: ({ onSelectMode }: { onSelectMode: (mode: "tasks" | "inbox" | "team") => void }) => (
-    <div data-testid="app-sidebar">
+  default: ({
+    canExpand = true,
+    onSelectMode,
+  }: {
+    canExpand?: boolean;
+    onSelectMode: (mode: "tasks" | "inbox" | "team") => void;
+  }) => (
+    <div data-testid="app-sidebar" data-rail-only={canExpand ? undefined : ""}>
       <button type="button" onClick={() => onSelectMode("tasks")}>
         Tasks mode
       </button>
@@ -154,6 +162,7 @@ beforeEach(() => {
     lastTaskId: null,
     openTaskId: null,
     selectedProjectId: null,
+    settingsOpen: false,
   });
   vi.clearAllMocks();
   setWide(true);
@@ -175,14 +184,14 @@ describe("App sidebar layout", () => {
     expect(screen.queryByRole("button", { name: "Close sessions rail" })).not.toBeInTheDocument();
   });
 
-  it("renders no sidebar on narrow viewports", async () => {
+  it("keeps only the rail on narrow viewports", async () => {
     setWide(false);
 
     await renderApp();
 
     expect(screen.queryByTestId("persistent-sidebar")).not.toBeInTheDocument();
     expect(screen.queryByTestId("sidebar-resize-handle")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("app-sidebar")).not.toBeInTheDocument();
+    expect(screen.getByTestId("app-sidebar")).toHaveAttribute("data-rail-only");
   });
 
   it("collapsed sidebar shrinks to the icon rail and drops the resize handle", async () => {
@@ -379,6 +388,39 @@ describe("Sidebar modes", () => {
     // Plain ⌘1 stays the task workspace's.
     fireEvent.keyDown(window, { code: "Digit1", key: "1", metaKey: true });
     expect(useUi.getState().sidebarMode).toBe("inbox");
+  });
+});
+
+describe("Settings in place", () => {
+  it("fills the main area with no overlay, and any mode leaves it", async () => {
+    await renderApp();
+    act(() => useUi.getState().openSettings());
+
+    const settings = await screen.findByTestId("settings");
+    // The sidebar panel carries the sections, so the page draws none of its own.
+    expect(settings).not.toHaveAttribute("data-show-nav");
+    expect(screen.queryByTestId("mission-control")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Inbox mode" }));
+    expect(useUi.getState().settingsOpen).toBe(false);
+    expect(await screen.findByTestId("inbox")).toBeInTheDocument();
+  });
+
+  it("draws its own sections when the panel is collapsed", async () => {
+    useUi.setState({ sidebarCollapsed: true });
+    await renderApp();
+    act(() => useUi.getState().openSettings());
+    expect(await screen.findByTestId("settings")).toHaveAttribute("data-show-nav");
+  });
+
+  it("is left for the composer by New task", async () => {
+    await renderApp();
+    act(() => useUi.getState().openSettings());
+    await screen.findByTestId("settings");
+    fireEvent.keyDown(window, { key: "n", metaKey: true });
+    expect(await screen.findByTestId("new-task-dialog")).toBeInTheDocument();
+    expect(useUi.getState().settingsOpen).toBe(false);
   });
 });
 

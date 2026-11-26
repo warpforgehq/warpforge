@@ -23,7 +23,6 @@ import { QuickOpenHost, type ProjectSubject } from "./QuickOpenHost";
 const AddProjectDialog = lazy(() => import("../views/AddProjectDialog"));
 const AgentSetupDialog = lazy(() => import("../views/AgentSetupDialog"));
 const BootstrapWizard = lazy(() => import("@/components/BootstrapWizard"));
-const SettingsView = lazy(() => import("../views/settings"));
 
 export interface AppOverlaysProps {
   dialogs: AppDialogs;
@@ -46,14 +45,7 @@ export function AppOverlays({
 }: AppOverlaysProps) {
   const pendingAgentSetup = useSyncExternalStore(daemon.subscribe, getPendingAgentSetup);
   const pendingQuit = useTauriClose();
-  const {
-    addProjectOpen,
-    setAddProjectOpen,
-    wizardProject,
-    setWizardProject,
-    settingsOpen,
-    setSettingsOpen,
-  } = dialogs;
+  const { addProjectOpen, setAddProjectOpen, wizardProject, setWizardProject } = dialogs;
 
   return (
     <>
@@ -71,7 +63,6 @@ export function AppOverlays({
           onAdded={dialogs.handleProjectAdded}
         />
       )}
-      <SettingsView open={settingsOpen} onOpenChange={setSettingsOpen} />
       {pendingQuit && (
         <ConfirmDialog
           open

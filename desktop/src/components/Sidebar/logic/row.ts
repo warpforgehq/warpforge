@@ -168,11 +168,11 @@ export type SidebarRow =
 
 const EMPTY_HEIGHT = 34;
 const EMPTY_WITH_HINT_HEIGHT = 50;
-/** `mt-1` of air above the group plus the row button's `h-8`. */
-const PROJECT_HEIGHT = 36;
-const SHELF_HEIGHT = 28;
-/** Equals the row button's `h-8`, so sibling rails abut with no seam (08 §D). */
-const TASK_HEIGHT = 32;
+/** `mt-1` of air above the group plus the row button's `h-7`. */
+const PROJECT_HEIGHT = 32;
+const SHELF_HEIGHT = 24;
+/** Equals the row button's `h-7`, so sibling rails abut with no seam (08 §D). */
+const TASK_HEIGHT = 28;
 
 /**
  * Rows are fixed-height by construction (every one truncates), so the

@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { GitPullRequest, PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import { useEffect, useState, useTransition, type RefObject } from "react";
 
-import { TaskPullRequestChip } from "@/components/pullRequest/TaskPullRequestChip";
 import { Panel, PanelGroup, PanelSeparator } from "@/components/ui/panels";
 import { PaneHeader } from "@/components/workspace";
 import { daemon } from "@/daemon";
@@ -168,9 +167,7 @@ export function DiffSurface({
                 </button>
               </span>
             )}
-            {pr ? (
-              <TaskPullRequestChip task={task} compact />
-            ) : (
+            {!pr && (
               <button
                 type="button"
                 disabled={Boolean(prCreationReason)}

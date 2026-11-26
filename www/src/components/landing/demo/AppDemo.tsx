@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import AppHeader from "@app/components/AppHeader";
 import Sidebar from "@app/components/Sidebar";
+import { RAIL_WIDTH } from "@app/components/Sidebar/Rail";
 import { TooltipProvider } from "@app/components/ui/tooltip";
 import { daemon } from "@app/daemon";
 import { useChannelsSync, usePeerFeedSync } from "@app/hooks/usePeerFeed";
@@ -257,7 +258,7 @@ export default function AppDemo() {
         <div
           className="flex h-full w-full overflow-hidden bg-background text-foreground"
         >
-          <aside style={{ width: SIDEBAR_WIDTH_MIN }}
+          <aside style={{ width: RAIL_WIDTH + SIDEBAR_WIDTH_MIN }}
             className="flex shrink-0 flex-col overflow-hidden">
             <Sidebar
               collapsed={false}

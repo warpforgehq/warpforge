@@ -61,6 +61,11 @@ export interface NavState {
   teamSeenAt: number;
   /** The sidebar body's mode. Persisted: the app reopens on the same body. */
   sidebarMode: SidebarMode;
+  /** Settings fill the main area and the sidebar panel. Transient: any
+   *  navigation leaves them. */
+  settingsOpen: boolean;
+  openSettings: () => void;
+  closeSettings: () => void;
   /** The channel, direct thread or Smith the Smiths area shows. Transient. */
   teamSelection: TeamSelection | null;
   /** Unix seconds each teammate's page was last open, by Smith id. */
@@ -134,19 +139,22 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   backlogParamsByProject: {},
   teamSeenAt: 0,
   sidebarMode: "tasks",
+  settingsOpen: false,
   teamSelection: null,
   teamSmithSeenAt: {},
   teamChannelSeenAt: {},
   smithsProject: null,
   newSmithOpen: false,
 
-  setView: (view) => set({ openTaskId: null, openTaskNav: null, view }),
+  setView: (view) => set({ openTaskId: null, openTaskNav: null, settingsOpen: false, view }),
   selectTasksSegment: (validTaskId) =>
     set((s) => {
       const view: View = s.selectedProjectId ? "project" : "control";
-      if (!validTaskId) return { lastTaskId: null, openTaskId: null, openTaskNav: null, view };
+      if (!validTaskId)
+        return { lastTaskId: null, openTaskId: null, openTaskNav: null, settingsOpen: false, view };
       return {
         activeSurface: DEFAULT_TASK_SURFACE,
+        settingsOpen: false,
         lastTaskId: validTaskId,
         openTaskId: validTaskId,
         openTaskNav: null,
@@ -155,7 +163,13 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       };
     }),
   openProject: (selectedProjectId) =>
-    set({ openTaskId: null, openTaskNav: null, view: "project", selectedProjectId }),
+    set({
+      openTaskId: null,
+      openTaskNav: null,
+      settingsOpen: false,
+      view: "project",
+      selectedProjectId,
+    }),
   // Contextual task tools must not leak from one task into the next.
   // Project-scoped layout preferences remain persisted.
   // Closing a task keeps `lastTaskId`: that is what the Tasks segment returns to.
@@ -166,6 +180,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       rightPanel: null,
       activeSurface: DEFAULT_TASK_SURFACE,
       lastTaskId: openTaskId ?? s.lastTaskId,
+      settingsOpen: openTaskId ? false : s.settingsOpen,
     })),
   openTaskWithNav: (openTaskId, openTaskNav) =>
     set({
@@ -174,6 +189,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       rightPanel: null,
       activeSurface: openTaskNav.surface,
       lastTaskId: openTaskId,
+      settingsOpen: false,
     }),
   clearOpenTaskNav: () => set({ openTaskNav: null }),
   setSmithsProject: (smithsProject) => set({ smithsProject }),
@@ -183,8 +199,10 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
     set((s) => ({ teamChannelSeenAt: { ...s.teamChannelSeenAt, [key]: at } })),
   markSmithSeen: (id, at) => set((s) => ({ teamSmithSeenAt: { ...s.teamSmithSeenAt, [id]: at } })),
   setSidebarMode: (sidebarMode) => set({ sidebarMode }),
+  openSettings: () => set({ settingsOpen: true }),
+  closeSettings: () => set({ settingsOpen: false }),
   openTeam: (teamSelection) =>
-    set({ openTaskId: null, openTaskNav: null, teamSelection, view: "team" }),
+    set({ openTaskId: null, openTaskNav: null, settingsOpen: false, teamSelection, view: "team" }),
   markTeamSeen: (at) => set((s) => (at > s.teamSeenAt ? { teamSeenAt: at } : {})),
   revealTask: (id, nav) => {
     const smith = Object.values(useSmithsStore.getState().smiths).find(
@@ -194,6 +212,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       set({
         openTaskId: null,
         openTaskNav: null,
+        settingsOpen: false,
         sidebarMode: "team",
         teamSelection: { id: smith.id, kind: "teammate" },
         view: "team",
@@ -208,6 +227,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       openTaskId: id,
       openTaskNav: nav ?? null,
       rightPanel: null,
+      settingsOpen: false,
       sidebarMode: "tasks",
     }));
   },

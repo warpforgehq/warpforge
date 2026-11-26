@@ -28,8 +28,6 @@ export interface AppDialogs {
   setAddProjectOpen: (open: boolean) => void;
   wizardProject: string | null;
   setWizardProject: (project: string | null) => void;
-  settingsOpen: boolean;
-  setSettingsOpen: (open: boolean) => void;
   /** Open New Task, optionally pre-filling a project, prompt, backlog link and mode. */
   startNewTask: (
     project?: string,
@@ -55,7 +53,6 @@ export function useAppDialogs(): AppDialogs {
   const [newTaskAddedProject, setNewTaskAddedProject] = useState<string | null>(null);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   const [wizardProject, setWizardProject] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // The composer has no close control: any navigation leaves it, including the
   // store actions sidebar rows call directly. Synchronous, so a caller that
@@ -68,7 +65,8 @@ export function useAppDialogs(): AppDialogs {
           next.openTaskId !== prev.openTaskId ||
           next.selectedProjectId !== prev.selectedProjectId ||
           next.teamSelection !== prev.teamSelection ||
-          next.attentionTargetNonce !== prev.attentionTargetNonce
+          next.attentionTargetNonce !== prev.attentionTargetNonce ||
+          (next.settingsOpen && !prev.settingsOpen)
         ) {
           setNewTaskOpen(false);
         }
@@ -83,6 +81,7 @@ export function useAppDialogs(): AppDialogs {
       setNewTaskBacklogItemId(backlogItemId ?? null);
       setNewTaskOptions(options ?? {});
       setNewTaskAddedProject(null);
+      useUi.getState().closeSettings();
       setNewTaskOpen(true);
     },
     [],
@@ -117,8 +116,6 @@ export function useAppDialogs(): AppDialogs {
     setAddProjectOpen,
     wizardProject,
     setWizardProject,
-    settingsOpen,
-    setSettingsOpen,
     startNewTask,
     handleProjectAdded,
   };

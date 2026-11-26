@@ -79,13 +79,14 @@ vi.mock("@tanstack/react-virtual", () => ({
       getVirtualItems: () => items,
       getTotalSize: () => totalSize,
       measureElement: vi.fn<(el: Element) => void>(),
+      measure: vi.fn<() => void>(),
       scrollToIndex: vi.fn<(index: number) => void>(),
     };
   },
 }));
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { daemon } from "../daemon";
@@ -224,13 +225,12 @@ afterEach(() => {
 });
 
 describe("Sidebar shell", () => {
-  it("renders brand, New task with its shortcut, nav and Settings", () => {
+  it("renders the logo mark, New task, nav and Settings", () => {
     renderSidebar(makeState([]));
 
-    expect(screen.getByText("WARP")).toBeInTheDocument();
-    expect(screen.getByText("FORGE")).toBeInTheDocument();
+    expect(screen.getByTestId("warpforge-mark")).toBeInTheDocument();
+    expect(screen.queryByText("W")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /New task/ })).toBeInTheDocument();
-    expect(screen.getByText("⌘N")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Mission Control/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
   });
@@ -242,9 +242,7 @@ describe("Sidebar shell", () => {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
     expect(screen.queryByRole("button", { name: /^Projects/ })).not.toBeInTheDocument();
-    // Inbox is a mode, above the divider, not one of the views below it.
-    const views = screen.getByRole("navigation", { name: "Views" });
-    expect(within(views).queryByRole("button", { name: /^Inbox/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Memory/ })).not.toBeInTheDocument();
     const modes = screen.getByRole("navigation", { name: "Modes" });
     for (const label of [/^Tasks/, /^Inbox/, /^Smiths/]) {
       expect(within(modes).getByRole("button", { name: label })).toBeInTheDocument();
@@ -290,17 +288,36 @@ describe("Sidebar shell", () => {
     );
   });
 
-  it("marks the active nav view with a primary edge-bar, not a fill", () => {
-    renderSidebar(makeState([]), { view: "automations" });
+  it("lights exactly one rail item, with one primary edge-bar", () => {
+    const { rerender } = renderSidebar(makeState([task("t1", { status: "running" })]), {
+      mode: "control",
+      openTaskId: "t1",
+      view: "control",
+    });
+    const rail = screen.getByRole("toolbar");
+    const selected = () => rail.querySelectorAll('[aria-current="page"]');
+    expect(selected()).toHaveLength(1);
+    expect(selected()[0]).toHaveAccessibleName("Mission Control");
+    expect(rail.querySelectorAll("[data-rail-indicator]")).toHaveLength(1);
 
-    const row = screen.getByRole("button", { name: /^Automations/ });
-    expect(row).toHaveAttribute("aria-current", "page");
-    // The active marker is "where you are", so it is the edge bar. A fill is
-    // only ever the hover state (which the class list still carries).
-    expect(row.className.split(" ")).not.toContain("bg-accent");
-    const bar = row.querySelector("span[aria-hidden]");
-    expect(bar?.className).toContain("bg-primary");
-    expect(bar?.className).toContain("left-0");
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <TooltipProvider>
+          <Sidebar
+            state={makeState([])}
+            view="control"
+            mode="control"
+            openTaskId={null}
+            collapsed={false}
+            settingsOpen
+            {...handlers}
+          />
+        </TooltipProvider>
+      </QueryClientProvider>,
+    );
+    expect(selected()).toHaveLength(1);
+    expect(selected()[0]).toHaveAccessibleName("Settings");
+    expect(rail.querySelectorAll("[data-rail-indicator]")).toHaveLength(1);
   });
 
   it("offers to register the first project from the empty tree", () => {
@@ -312,15 +329,14 @@ describe("Sidebar shell", () => {
     expect(handlers.onAddProject).toHaveBeenCalled();
   });
 
-  it("collapses to an icon rail that keeps nav and Settings reachable", () => {
+  it("collapses to the rail, which keeps nav and Settings reachable", () => {
     renderSidebar(makeState([task("t1", { prompt: "Hidden when collapsed" })]), {
       collapsed: true,
     });
 
     const toggle = screen.getByRole("button", { name: "Expand sidebar" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText("WARP")).not.toBeInTheDocument();
-    expect(screen.queryByText("Workspace")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("sidebar-panel")).not.toBeInTheDocument();
     expect(screen.queryByText("Hidden when collapsed")).not.toBeInTheDocument();
     // Every rail control keeps an accessible name even without a visible label.
     // The three modes are here too: the body is gone at this width, so the
@@ -329,11 +345,14 @@ describe("Sidebar shell", () => {
       expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
 
+    fireEvent.click(screen.getByRole("button", { name: "Automations" }));
+    expect(handlers.onSelectView).toHaveBeenCalledWith("automations");
+
     fireEvent.click(toggle);
     expect(handlers.onToggleCollapsed).toHaveBeenCalled();
   });
 
-  it("cross-fades the tree and the rail instead of swapping at frame zero", () => {
+  it("fades the panel out before unmounting it, keeping the rail throughout", () => {
     vi.useFakeTimers();
     try {
       const shell = (collapsed: boolean) => (
@@ -351,16 +370,15 @@ describe("Sidebar shell", () => {
         </QueryClientProvider>
       );
       const { rerender } = render(shell(false));
-      expect(screen.queryByRole("button", { name: "Expand sidebar" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument();
 
       rerender(shell(true));
-      // Both trees are mounted through the 120ms pass: the rail fades in while
-      // the tree fades out, instead of the tree cutting away at frame zero.
       expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
-      expect(screen.getByText("WARP")).toBeInTheDocument();
+      expect(screen.getByTestId("sidebar-panel")).toHaveAttribute("aria-hidden", "true");
 
       act(() => vi.advanceTimersByTime(120));
-      expect(screen.queryByText("WARP")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("sidebar-panel")).not.toBeInTheDocument();
+      expect(screen.getByRole("toolbar")).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }
@@ -371,17 +389,15 @@ describe("Sidebar shell", () => {
 
     const toolbar = screen.getByRole("toolbar");
     expect(toolbar).toHaveAttribute("aria-orientation", "vertical");
+    const newTask = screen.getByRole("button", { name: "New task" });
+    expect(newTask).toHaveAttribute("tabindex", "0");
     const toggle = screen.getByRole("button", { name: "Expand sidebar" });
-    expect(toggle).toHaveAttribute("tabindex", "0");
-    // The explicit control wears the panel icon, so it pairs with the expanded
-    // sidebar's `PanelLeftClose`; the brand is a mark, not a second toggle.
     expect(toggle.querySelector(".lucide-panel-left-open")).not.toBeNull();
-    expect(screen.queryByRole("button", { name: "W" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toHaveAttribute("tabindex", "-1");
 
-    toggle.focus();
+    newTask.focus();
     fireEvent.keyDown(toolbar, { key: "ArrowDown" });
-    expect(screen.getByRole("button", { name: "New task" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Tasks" })).toHaveFocus();
 
     fireEvent.keyDown(toolbar, { key: "End" });
     expect(screen.getByRole("button", { name: "Settings" })).toHaveFocus();
@@ -395,14 +411,21 @@ describe("Sidebar modes", () => {
     });
   }
 
-  it("marks the mode it is given, whatever view the main area shows", () => {
+  it("lights only Automations while it owns the main area, with the task tree beside it", () => {
     renderSidebar(makeState([]), { mode: "inbox", view: "automations" });
-    expect(mode("Inbox")).toHaveAttribute("aria-pressed", "true");
-    expect(mode("Tasks")).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("button", { name: /^Automations/ })).toHaveAttribute(
       "aria-current",
       "page",
     );
+    expect(mode("Inbox")).not.toHaveAttribute("aria-current");
+    expect(mode("Tasks")).not.toHaveAttribute("aria-current");
+    expect(screen.getByTestId("sidebar-panel")).toHaveTextContent(/Tasks/i);
+  });
+
+  it("marks the mode it is given on any other view", () => {
+    renderSidebar(makeState([]), { mode: "inbox", view: "control" });
+    expect(mode("Inbox")).toHaveAttribute("aria-current", "page");
+    expect(mode("Tasks")).not.toHaveAttribute("aria-current");
   });
 
   it("asks the host to switch modes, the one you are on included", () => {
@@ -414,9 +437,10 @@ describe("Sidebar modes", () => {
     expect(handlers.onSelectView).not.toHaveBeenCalled();
   });
 
-  it("explains the Smiths mode on hover", () => {
+  it("explains the Smiths mode on hover", async () => {
     renderSidebar(makeState([]));
-    expect(mode("Smiths").getAttribute("title")).toContain("Smiths — AI teammates");
+    fireEvent.focus(mode("Smiths"));
+    expect((await screen.findAllByText("Smiths — AI teammates")).length).toBeGreaterThan(0);
   });
 
   it("shows the Smiths body in Smiths mode", () => {
@@ -425,13 +449,13 @@ describe("Sidebar modes", () => {
     expect(taskRows("a")).toHaveLength(0);
   });
 
-  it("counts what needs you on Tasks", () => {
+  it("puts no count on Tasks; attention shows on Mission Control and in the tree", () => {
     renderSidebar(
       makeState([
         task("blocked", { blockedReason: "no creds", prompt: "Blocked", status: "blocked" }),
       ]),
     );
-    expect(mode("Tasks").textContent).toContain("1");
+    expect(mode("Tasks").querySelector("[data-rail-badge]")).toBeNull();
   });
 
   it("keeps New task and the views in every mode", () => {
@@ -470,10 +494,16 @@ describe("Sidebar attention", () => {
       ]),
     );
 
-    // The attention queue holds all four; only the blocked one wants a human.
+    // The attention queue holds all four; only the blocked one wants a human,
+    // and that lights Mission Control.
     expect(
-      within(screen.getByRole("button", { name: /Mission Control/ })).getByText("1"),
-    ).toBeInTheDocument();
+      screen.getByRole("button", { name: "Mission Control" }).querySelector("[data-rail-badge]"),
+    ).toHaveAttribute("data-rail-badge", "light");
+    cleanup();
+    renderSidebar(makeState([task("r1", { status: "waiting", filesChanged: 1 })]));
+    expect(
+      screen.getByRole("button", { name: "Mission Control" }).querySelector("[data-rail-badge]"),
+    ).toBeNull();
   });
 
   it("treats a pending permission as needing you", () => {
@@ -1105,7 +1135,7 @@ describe("Sidebar inbox mode", () => {
 
     expect(await screen.findByText("Add widget")).toBeInTheDocument();
     expect(screen.queryByText("Task A")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Inbox/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /^Inbox/ })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: /New task/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
   });

@@ -2,7 +2,7 @@
  * Agent CLI versions, polled app-wide instead of only while Settings → Agents
  * is open. Detection is an on-demand daemon read (it shells out to npm), so it
  * belongs in React Query rather than the push store; one shared key keeps the
- * sidebar banner, the collapsed rail and the Agents panel on a single RPC.
+ * sidebar banner, the rail and the Agents panel on a single RPC.
  */
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";

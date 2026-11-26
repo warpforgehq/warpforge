@@ -53,11 +53,17 @@ export function renderTranscriptItem({ item }: { item: TranscriptListRow }) {
       key={item.id}
       data-row-id={item.id}
       className={cn(
-        "min-w-0 overflow-x-clip pb-3",
-        isUser ? "ml-auto max-w-[90%] w-full" : "mx-auto w-full",
+        "w-full min-w-0 overflow-x-clip pb-3",
+        isUser ? "flex justify-end" : "mx-auto",
       )}
     >
-      <TranscriptListItem row={item} />
+      {isUser ? (
+        <div className="min-w-0 max-w-[90%]">
+          <TranscriptListItem row={item} />
+        </div>
+      ) : (
+        <TranscriptListItem row={item} />
+      )}
     </div>
   );
 }

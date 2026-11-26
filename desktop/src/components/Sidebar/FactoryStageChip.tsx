@@ -45,7 +45,7 @@ export function FactoryStageChip({ task, receded }: { task: TaskInfo; receded: b
           void openExternalLink(pr.url);
         }}
         className={cn(
-          "inline-flex max-w-[8.5rem] shrink-0 items-center gap-1 rounded px-1 text-[11px] leading-4 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          "inline-flex max-w-[8.5rem] shrink-0 items-center gap-1 rounded px-1 text-[0.6875rem] leading-4 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
           state.chipClass,
           receded && "opacity-50",
         )}
@@ -75,7 +75,7 @@ export function FactoryStageChip({ task, receded }: { task: TaskInfo; receded: b
       data-factory-stage={label}
       title={title}
       className={cn(
-        "max-w-[8.5rem] shrink-0 truncate rounded px-1 text-[11px] leading-4",
+        "max-w-[8.5rem] shrink-0 truncate rounded px-1 text-[0.6875rem] leading-4",
         queued ? "bg-secondary text-muted-foreground" : "bg-primary/10 text-primary",
         receded && "opacity-50",
       )}

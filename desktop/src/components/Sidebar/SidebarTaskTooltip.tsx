@@ -58,8 +58,10 @@ export function SidebarTaskTooltipBody({
   const orchestrator = isOrchestratorTask(task, childCount);
   return (
     <div className="flex max-w-[17rem] flex-col gap-2 p-1">
-      <div className="text-[13px] font-medium leading-snug text-foreground">{taskLabel(task)}</div>
-      <div className="grid gap-1.5 text-[11px] text-muted-foreground">
+      <div className="text-[0.8125rem] font-medium leading-snug text-foreground">
+        {taskLabel(task)}
+      </div>
+      <div className="grid gap-1.5 text-[0.6875rem] text-muted-foreground">
         <TooltipLine icon={StateIcon} tone={meta.toneClass}>
           <span className="text-foreground/85">{meta.label}</span>
           <span className="text-muted-foreground/60"> · </span>
@@ -68,7 +70,7 @@ export function SidebarTaskTooltipBody({
         <TooltipLine icon={FolderTree}>{task.project}</TooltipLine>
         {worktree && (
           <TooltipLine icon={GitBranch}>
-            <span className="font-mono text-[11px]">{worktree}</span>
+            <span className="font-mono text-[0.6875rem]">{worktree}</span>
           </TooltipLine>
         )}
         <div className="flex min-w-0 items-start gap-2">

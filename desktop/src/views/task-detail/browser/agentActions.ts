@@ -16,7 +16,9 @@ function asObject(value: unknown): Result {
 
 function lines(result: Result, key: string): string[] {
   const value = result[key];
-  return Array.isArray(value) ? value.filter((line): line is string => typeof line === "string") : [];
+  return Array.isArray(value)
+    ? value.filter((line): line is string => typeof line === "string")
+    : [];
 }
 
 function merge(first: string[], second: string[]): string[] {

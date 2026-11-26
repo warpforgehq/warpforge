@@ -38,7 +38,7 @@ interface Props {
 }
 
 const ROW =
-  "flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left text-[13px] transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring";
+  "flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left text-[0.8125rem] transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring";
 
 function Section({
   title,
@@ -52,7 +52,7 @@ function Section({
   return (
     <section aria-label={title} className="space-y-px">
       <div className="flex items-center justify-between px-2 pb-1">
-        <h2 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-[0.6875rem] font-medium uppercase tracking-wide text-muted-foreground">
           {title}
         </h2>
         {action}
@@ -80,7 +80,7 @@ function Unread({ count }: { count: number }) {
   return (
     <span
       aria-label={`${count} unread`}
-      className="tnum ml-auto shrink-0 rounded-full bg-primary px-1.5 text-[11px] font-medium text-primary-foreground"
+      className="tnum ml-auto shrink-0 rounded-full bg-primary px-1.5 text-[0.6875rem] font-medium text-primary-foreground"
     >
       {count}
     </span>
@@ -180,7 +180,7 @@ export function SmithsBody({ projects, tasks }: Props) {
   );
 
   if (!project) {
-    return <p className="px-4 py-3 text-[13px] text-muted-foreground">Add a project first.</p>;
+    return <p className="px-4 py-3 text-[0.8125rem] text-muted-foreground">Add a project first.</p>;
   }
 
   return (
@@ -212,7 +212,7 @@ export function SmithsBody({ projects, tasks }: Props) {
       <Section title="Smiths" action={<HeaderButton label="New smith" onClick={openNewSmith} />}>
         {smiths.length === 0 ? (
           <div className="space-y-3 px-2 py-1">
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-[0.8125rem] text-muted-foreground">
               Smiths are your AI teammates. They remember past work, take tasks from the board and
               talk to each other.
             </p>
@@ -282,14 +282,14 @@ export function SmithsBody({ projects, tasks }: Props) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-h-72 w-56 overflow-y-auto">
               {dmTargets.length === 0 && (
-                <DropdownMenuItem disabled className="text-[13px]">
+                <DropdownMenuItem disabled className="text-[0.8125rem]">
                   No sessions in this project
                 </DropdownMenuItem>
               )}
               {dmTargets.map((target) => (
                 <DropdownMenuItem
                   key={target.id}
-                  className="text-[13px]"
+                  className="text-[0.8125rem]"
                   onSelect={() =>
                     openTeam({ key: userThread(project, target.id).key, kind: "conversation" })
                   }

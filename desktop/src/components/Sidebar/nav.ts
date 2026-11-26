@@ -1,16 +1,9 @@
-import { Brain, CalendarClock, LayoutGrid } from "lucide-react";
+import { CalendarClock, type LucideIcon } from "lucide-react";
 
 import type { GlobalView } from "@/store/ui";
 
-/** Views: they change the main area only. Tasks, Inbox and Smiths are modes
- *  (`modes.ts`), because they also change the sidebar body. */
-export const NAV: {
-  id: GlobalView;
-  label: string;
-  icon: typeof LayoutGrid;
-  attention?: boolean;
-}[] = [
-  { attention: true, icon: LayoutGrid, id: "control", label: "Mission Control" },
+/** Views that change only the main area, offered in the rail below the
+ *  modes (`modes.ts`). Memory lives in Settings. */
+export const NAV: { id: GlobalView; label: string; icon: LucideIcon }[] = [
   { icon: CalendarClock, id: "automations", label: "Automations" },
-  { icon: Brain, id: "memory", label: "Memory" },
 ];

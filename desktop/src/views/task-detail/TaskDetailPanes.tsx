@@ -1,12 +1,16 @@
-import { useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 
 import { TaskPullRequestSurface } from "@/components/pullRequest/TaskPullRequestSurface";
+import { TaskAccountMenu } from "@/components/TaskAccountMenu";
 import { Card } from "@/components/ui/card";
 import { Panel, PanelCollapseHint, PanelGroup, PanelSeparator } from "@/components/ui/panels";
-import { FlipButton, SurfaceRail } from "@/components/workspace";
+import { PaneWindowControls, SurfaceRail } from "@/components/workspace";
+import { daemon } from "@/daemon";
 import { saveFile } from "@/lib/saveFile";
 import { setTaskDiff, setTaskEditorView, setTaskFiles } from "@/lib/sessionStore";
 import { cn } from "@/lib/utils";
+import { useTitleRow } from "@/store/titleRow";
 
 import { AgentLimitsExhaustedBanner } from "../../components/AgentLimitsExhaustedBanner";
 import { DiffNotesProvider } from "../../components/diffNotes/DiffNotesContext";
@@ -23,7 +27,7 @@ import { DiffSurface } from "./DiffSurface";
 import { FilesSurface } from "./FilesSurface";
 import { PipelineSurface } from "./PipelineSurface";
 import { TaskConversation } from "./TaskConversation";
-import { TaskConversationHeader } from "./TaskConversationHeader";
+import { TaskRailMenu } from "./TaskRailMenu";
 import { TaskStatusStrip } from "./TaskStatusStrip";
 import { TaskSurfaceHeader } from "./TaskSurfaceHeader";
 import { useTaskDetail, WORKSPACE_MIN_WIDTH } from "./useTaskDetail";
@@ -43,10 +47,9 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
     showDiff,
     setShowDiff,
     toggleChat,
-    chatOnRight,
-    toggleChatOnRight,
     workspaceSize,
     setResizing,
+    resizing,
     foldTarget,
     splitRef,
     activeFilePath,
@@ -127,6 +130,45 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
     () => new Set(taskSession.diff.collapsedFiles),
     [taskSession.diff.collapsedFiles],
   );
+  const titleSlot = useTitleRow((state) => state.slot);
+  const surfaceSlot = useTitleRow((state) => state.surfaceSlot);
+  const metaSlot = useTitleRow((state) => state.metaSlot);
+  const paneSlot = useTitleRow((state) => state.paneSlot);
+  const setPaneFull = useTitleRow((state) => state.setPaneFull);
+  const paneFull = showDiff && !showChat;
+  useEffect(() => {
+    setPaneFull(paneFull);
+    return () => setPaneFull(false);
+  }, [paneFull, setPaneFull]);
+  const setSplitHot = useTitleRow((state) => state.setSplitHot);
+  const [separatorHovered, setSeparatorHovered] = useState(false);
+  useEffect(() => {
+    setSplitHot(separatorHovered || resizing);
+    return () => setSplitHot(false);
+  }, [separatorHovered, resizing, setSplitHot]);
+  const setSplitX = useTitleRow((state) => state.setSplitX);
+  const splitEdgeRef = useRef<HTMLDivElement>(null);
+  const split = showChat && showDiff;
+  useLayoutEffect(() => {
+    const edge = splitEdgeRef.current;
+    if (!split || !edge) {
+      setSplitX(null);
+      return;
+    }
+    // The 1px separator sits right before the pane; its left edge is the line.
+    const publish = () => setSplitX(edge.getBoundingClientRect().left - 1);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(edge);
+    if (splitRef.current) observer.observe(splitRef.current);
+    window.addEventListener("resize", publish);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", publish);
+      setSplitX(null);
+    };
+  }, [split, setSplitX, splitRef]);
+
   const toggleDiffFileCollapsed = (path: string) => {
     const next = new Set(taskSession.diff.collapsedFiles);
     if (next.has(path)) next.delete(path);
@@ -139,29 +181,24 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
   // content at its old width and merely clips it, so the editors inside are
   // neither remounted nor remeasured when focus mode hides them.
   const chatPane = (
-    <Panel key="chat" pin className="min-w-0 px-1">
+    <Panel key="chat" pin className="min-w-0">
       {showChat && (
         <Card
           className={cn(
-            "relative flex h-full min-h-0 w-full flex-col overflow-hidden border bg-transparent shadow-none",
+            "relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-none border-0 bg-transparent shadow-none",
             !showDiff && "mx-auto max-w-[1100px]",
           )}
         >
-          <TaskConversationHeader
-            showDiff={showDiff}
-            setShowDiff={setShowDiff}
-            toggleChat={toggleChat}
-            side={chatOnRight ? "right" : "left"}
-            extraActions={
-              taskGroup && (
-                <TaskAgentSwitcher
-                  tree={taskGroup}
-                  currentTaskId={task.id}
-                  onOpenTask={onOpenTask}
-                />
-              )
-            }
-          />
+          {titleSlot &&
+            taskGroup &&
+            createPortal(
+              <TaskAgentSwitcher
+                tree={taskGroup}
+                currentTaskId={task.id}
+                onOpenTask={onOpenTask}
+              />,
+              titleSlot,
+            )}
           <AgentLimitsExhaustedBanner agentId={task.agent} />
           <SessionLostBanner task={task} onOpenTask={onOpenTask} />
           <ModelMismatchBanner task={task} />
@@ -194,27 +231,38 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
       onSizeChange={handleWorkspaceResize}
       // Folding drives the panel's width to zero, but its gutter and the card's
       // own two edges survive it and read as a seam beside the conversation.
-      className={cn("min-w-0", showDiff ? "px-1" : "px-0")}
+      className="min-w-0"
     >
       <Card
+        ref={splitEdgeRef}
         className={cn(
-          "relative flex h-full min-h-0 flex-col overflow-hidden border bg-card shadow-none",
-          showDiff ? "border-border" : "border-transparent",
+          "relative flex h-full min-h-0 flex-col overflow-hidden rounded-none border-0 bg-transparent shadow-none",
         )}
       >
-        <TaskSurfaceHeader
-          activeSurface={activeSurface}
-          tabs={surfaceTabs}
-          workspaceFocused={!showChat}
-          onFocusWorkspace={toggleChat}
-          onHideSurface={() => setShowDiff(false)}
-          onRestore={toggleChat}
-          side={chatOnRight ? "left" : "right"}
-          extraActions={
-            showChat && <FlipButton chatOnRight={chatOnRight} onClick={toggleChatOnRight} />
-          }
-        />
-
+        {surfaceSlot &&
+          showDiff &&
+          createPortal(
+            <TaskSurfaceHeader
+              className="h-full flex-1 border-0 px-0 pr-2"
+              activeSurface={activeSurface}
+              tabs={surfaceTabs}
+            />,
+            surfaceSlot,
+          )}
+        {paneSlot &&
+          showDiff &&
+          createPortal(
+            <PaneWindowControls
+              focused={!showChat}
+              side="right"
+              expandLabel="Focus workspace"
+              hideLabel="Hide surface"
+              onExpand={toggleChat}
+              onHide={() => setShowDiff(false)}
+              onRestore={toggleChat}
+            />,
+            paneSlot,
+          )}
         <div className="min-h-0 min-w-0 flex-1">
           {activeSurface === "files" && (
             <FilesSurface
@@ -339,13 +387,15 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
     <PanelSeparator
       key="sep"
       divider={false}
-      className={cn(!(showChat && showDiff) && "pointer-events-none opacity-0")}
+      className={cn("before:hidden", !(showChat && showDiff) && "pointer-events-none opacity-0")}
       onPointerDown={() => setResizing(true)}
+      onPointerEnter={() => setSeparatorHovered(true)}
+      onPointerLeave={() => setSeparatorHovered(false)}
     />
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {/* The rail stays outside the drag track: `splitRef`'s rect is what the
             fold threshold is measured against.
@@ -358,7 +408,7 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
             edge of the window while the workspace owned the split. */}
         <div ref={splitRef} className="relative flex min-h-0 min-w-0 flex-1 gap-2 overflow-hidden">
           <PanelGroup orientation="horizontal" className="min-h-0 min-w-0 flex-1 overflow-hidden">
-            {chatOnRight ? [surfacePane, separator, chatPane] : [chatPane, separator, surfacePane]}
+            {[chatPane, separator, surfacePane]}
           </PanelGroup>
         </div>
         <SurfaceRail
@@ -374,15 +424,37 @@ export function TaskDetailPanes({ task, onOpenTask, onOpenPush, detail }: Props)
             if (!showChat) toggleChat();
             else setShowDiff(false);
           }}
+          footer={
+            <div className="flex flex-col items-center gap-2">
+              <TaskRailMenu task={task} />
+              <TaskAccountRing agentId={task.agent} />
+            </div>
+          }
         />
       </div>
-      <TaskStatusStrip
-        task={task}
-        branch={diff?.branch ?? null}
-        repositoryOperation={repositoryOperation}
-        onOpenCommit={openCommit}
-        onOpenPush={onOpenPush}
-      />
+      {metaSlot &&
+        createPortal(
+          <TaskStatusStrip
+            task={task}
+            branch={diff?.branch ?? null}
+            repositoryOperation={repositoryOperation}
+            onOpenCommit={openCommit}
+            onOpenPush={onOpenPush}
+          />,
+          metaSlot,
+        )}
     </div>
+  );
+}
+
+function TaskAccountRing({ agentId }: { agentId: string }) {
+  const { snapshot } = useSyncExternalStore(daemon.subscribe, daemon.getState);
+  return (
+    <TaskAccountMenu
+      variant="ring"
+      agentId={agentId}
+      agents={snapshot.agents ?? []}
+      accounts={snapshot.accounts ?? []}
+    />
   );
 }

@@ -2,7 +2,7 @@ import { Bot, Brain, ListChecks, Palette, Plug, Wrench, type LucideIcon } from "
 
 import type { SettingsPage } from "@/store/ui";
 
-/** Left-rail entries of the Settings overlay, in display order. */
+/** Settings sections, in display order. */
 export const SETTINGS_PAGES: { id: SettingsPage; label: string; icon: LucideIcon }[] = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "agents", label: "Agents", icon: Bot },

@@ -12,6 +12,8 @@ vi.mock("./GitWorkspaceControls", () => ({
   ),
 }));
 
+import { TaskAccountMenu } from "@/components/TaskAccountMenu";
+
 import { TaskStatusStrip } from "./TaskStatusStrip";
 
 const task: TaskInfo = {
@@ -69,7 +71,7 @@ afterEach(() => {
 });
 
 describe("TaskStatusStrip", () => {
-  it("puts the task's account and quota where the workspace chip used to be", async () => {
+  it("holds the git controls and leaves the account to the workspace rail", async () => {
     mockDaemon();
     const { container } = render(
       <TaskStatusStrip
@@ -81,11 +83,25 @@ describe("TaskStatusStrip", () => {
       />,
     );
 
-    const trigger = await screen.findByRole("button", { name: /account$/ });
-    expect(trigger).toHaveTextContent("56% 5h");
-    expect(container.firstElementChild?.firstElementChild).toContainElement(trigger);
+    expect(await screen.findByTestId("git-controls")).toHaveTextContent("main");
+    expect(screen.queryByRole("button", { name: /account$/ })).toBeNull();
     expect(container).not.toHaveTextContent("Local Workspace");
-    expect(screen.getByTestId("git-controls")).toHaveTextContent("main");
+  });
+
+  it("draws the account's quota as rings in the rail variant", async () => {
+    mockDaemon();
+    const { container } = render(
+      <TaskAccountMenu
+        variant="ring"
+        agentId={task.agent}
+        agents={[]}
+        accounts={daemon.getState().snapshot.accounts ?? []}
+      />,
+    );
+
+    const trigger = await screen.findByRole("button", { name: /account$/ });
+    expect(trigger.getAttribute("title")).toMatch(/56% left/);
+    expect(container.querySelectorAll("circle[data-window]").length).toBeGreaterThan(0);
   });
 
   it("reports a push in flight beside the git controls", async () => {

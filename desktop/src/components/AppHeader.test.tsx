@@ -49,8 +49,21 @@ function renderHeader(
   openTask: TaskInfo | null,
   view: "control" | "project" | "inbox" = "project",
 ) {
+  const snapshot = {
+    ...daemon.getState().snapshot,
+    tasks: openTask ? [openTask] : [],
+  };
   return render(
-    <AppHeader view={view} openTask={openTask} onAddProject={() => {}} onCloseTask={() => {}} />,
+    <AppHeader
+      view={view}
+      openTask={openTask}
+      snapshot={snapshot}
+      windowButtonsInset={false}
+      composing={false}
+      onAddProject={() => {}}
+      onOpenTask={() => {}}
+      onCloseTask={() => {}}
+    />,
   );
 }
 
@@ -87,10 +100,13 @@ describe("AppHeader with an open task", () => {
     mockDaemon();
     renderHeader(task({ worktree: "/tmp/wt/fix-header" }));
 
-    expect(screen.getByTitle("/tmp/wt/fix-header")).toHaveTextContent("Git Worktree");
+    expect(screen.getByLabelText("Runs in a git worktree")).toHaveAttribute(
+      "title",
+      "Git worktree: /tmp/wt/fix-header",
+    );
   });
 
-  it("names the Smith a task runs as before its title and opens its page", async () => {
+  it("names the Smith a task runs and opens its page", async () => {
     mockDaemon();
     useSmithsStore.getState().upsert(smithFixture());
     renderHeader(task({ smithId: "sm_1" }));

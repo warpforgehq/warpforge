@@ -29,7 +29,8 @@ describe("browser_scroll", () => {
     root.scrollTop = 0;
     const holder = portal('<div role="list"><span>Item 1</span></div>');
     const onScroll = () => {
-      holder.innerHTML = '<div role="list"><span>Item 1</span><span>Item 2</span></div>' +
+      holder.innerHTML =
+        '<div role="list"><span>Item 1</span><span>Item 2</span></div>' +
         '<button type="button">Load more</button>';
     };
     root.addEventListener("scroll", onScroll);
@@ -88,7 +89,7 @@ describe("check_wait", () => {
   });
 
   it("sees text split across inline elements", () => {
-    const holder = portal('<div>Result code: <b>DLY-1</b></div>');
+    const holder = portal("<div>Result code: <b>DLY-1</b></div>");
     try {
       const found = agent({ action: "check_wait", text: "Result code: DLY-1" });
       expect(found.met).toBe(true);
@@ -105,8 +106,7 @@ describe("check_wait", () => {
       expect(agent({ action: "check_wait", text: "Result code: DLY-2" }).met).toBe(false);
 
       holder.innerHTML =
-        '<div style="display:none">Result code: DLY-2</div>' +
-        '<div>Result code: DLY-2</div>';
+        '<div style="display:none">Result code: DLY-2</div>' + "<div>Result code: DLY-2</div>";
       const found = agent({ action: "check_wait", text: "Result code: DLY-2" });
       expect(found.met).toBe(true);
       expect(found.line).toContain("Result code: DLY-2");

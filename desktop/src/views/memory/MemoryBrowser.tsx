@@ -18,7 +18,7 @@ const SCOPES: { id: ScopeFilter; label: string }[] = [
   { id: "project", label: "Project" },
 ];
 
-const SELECT_CLASS = "h-8 rounded-md border bg-background px-2 text-[13px]";
+const SELECT_CLASS = "h-7 min-w-0 flex-1 rounded-md border bg-background px-1.5 text-[12px]";
 
 /** How close to the bottom (px) the list gets before the next page is fetched. */
 const NEAR_END_PX = 240;
@@ -102,8 +102,8 @@ export function MemoryBrowser({
           className="h-8 pl-7 text-[13px]"
         />
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="Scope" className="flex rounded-md bg-muted/70 p-0.5">
+      <div className="flex items-center gap-1.5">
+        <div role="group" aria-label="Scope" className="flex shrink-0 rounded-md bg-muted/70 p-0.5">
           {SCOPES.map((item) => (
             <button
               key={item.id}
@@ -111,7 +111,7 @@ export function MemoryBrowser({
               aria-pressed={scope === item.id}
               onClick={() => setScope(item.id)}
               className={cn(
-                "h-7 rounded px-2.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground",
+                "h-6 rounded px-2 text-[12px] text-muted-foreground transition-colors hover:text-foreground",
                 scope === item.id && "bg-secondary font-medium text-foreground shadow-sm",
               )}
             >
@@ -136,7 +136,7 @@ export function MemoryBrowser({
           aria-label="Tag"
           value={tag}
           onChange={(event) => setTag(event.target.value)}
-          className={cn(SELECT_CLASS, "min-w-0 max-w-32")}
+          className={SELECT_CLASS}
         >
           <option value="">Any tag</option>
           {tag && !tags.includes(tag) && <option value={tag}>{tag}</option>}

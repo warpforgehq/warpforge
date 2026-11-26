@@ -1,10 +1,9 @@
 import { Check, ChevronDown, Folder, FolderGit2 } from "lucide-react";
-import { useMemo, useSyncExternalStore } from "react";
+import { useRef } from "react";
 
 import { TaskPullRequestChip } from "@/components/pullRequest/TaskPullRequestChip";
-import { TaskMenu } from "@/components/TaskMenu";
 import { TaskSmithByline } from "@/components/TaskSmith";
-import { TaskTitleEditor } from "@/components/TaskTitleEditor";
+import { TaskTabs } from "@/components/titlebar/TaskTabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,144 +11,135 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { daemon } from "@/daemon";
-import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
-import type { TaskInfo } from "@/protocol";
-import { useUi, type GlobalView, type View } from "@/store/ui";
-
-const VIEW_LABEL: Record<GlobalView, string> = {
-  automations: "Automations",
-  control: "Mission Control",
-  inbox: "Inbox",
-  memory: "Memory",
-  team: "Smiths",
-};
+import { cn } from "@/lib/utils";
+import type { Snapshot, TaskInfo } from "@/protocol";
+import { useTitleRow } from "@/store/titleRow";
+import { useUi, type View } from "@/store/ui";
 
 interface AppHeaderProps {
   view: View;
   openTask: TaskInfo | null;
+  snapshot: Snapshot;
+  /** The macOS window buttons sit over this row's left end. */
+  windowButtonsInset: boolean;
+  /** The new-task composer covers the main area; task controls hide. */
+  composing: boolean;
   onAddProject: () => void;
+  onOpenTask: (id: string) => void;
   onCloseTask: () => void;
 }
 
+/** Room the macOS window buttons take at the left of the row. */
+const WINDOW_BUTTONS_WIDTH = 84;
+
 /**
- * Global chrome: a breadcrumb row, and nothing else. App update and daemon
- * connection sit in the sidebar footer/brand row, as do brand, navigation,
- * New task and Settings.
- *
- * When a task is open, the breadcrumb's second segment becomes its (editable)
- * title with the workspace it runs in beside it, then the task menu. The task's
- * harness, account and quota live in the task footer, next to its git state —
- * an account picker belongs where the work is, not on a view that has no agent
- * in focus. Project and status are deliberately not repeated here: the sidebar
- * already establishes which project you're in, and status is one glance away in
- * the conversation itself. Navigating to another view (sidebar nav, or clicking
- * another task) closes this one — no separate back control needed.
+ * The window's title row above the main card: one tab per open task, and the
+ * open task's controls at the right end — workspace, pull request, menu. The
+ * whole row drags the window; Tauri's handler skips buttons and roles.
+ * @param props see `AppHeaderProps`
+ * @returns the row
  */
-export default function AppHeader({ view, openTask, onAddProject, onCloseTask }: AppHeaderProps) {
-  const { snapshot } = useSyncExternalStore(daemon.subscribe, daemon.getState);
+export default function AppHeader({
+  view,
+  openTask,
+  snapshot,
+  windowButtonsInset,
+  composing,
+  onAddProject,
+  onOpenTask,
+  onCloseTask,
+}: AppHeaderProps) {
   const selectedProjectId = useUi((s) => s.selectedProjectId);
   const openProject = useUi((s) => s.openProject);
-  const pinnedTaskIds = useUi((s) => s.pinnedTaskIds);
-  const setPinnedTaskIds = useUi((s) => s.setPinnedTaskIds);
-  const isProject = view === "project" && !openTask;
+  const isProject = view === "project" && !openTask && !composing;
   const crumbProject =
     isProject && snapshot.projects.length > 0
       ? (snapshot.projects.find((p) => p.name === selectedProjectId) ?? snapshot.projects[0])
       : null;
-  const taskGroupIndex = useMemo(() => buildTaskGroupIndex(snapshot.tasks), [snapshot.tasks]);
-  const taskPinned = openTask
-    ? isTaskGroupPinned(taskGroupIndex, pinnedTaskIds, openTask.id)
-    : false;
+  const task = composing ? null : openTask;
+  const setSlot = useTitleRow((state) => state.setSlot);
+  const setSurfaceSlot = useTitleRow((state) => state.setSurfaceSlot);
+  const setMetaSlot = useTitleRow((state) => state.setMetaSlot);
+  const setPaneSlot = useTitleRow((state) => state.setPaneSlot);
+  const paneFull = useTitleRow((state) => state.paneFull);
+  const splitX = useTitleRow((state) => state.splitX);
+  const headerRef = useRef<HTMLElement>(null);
+  const headerRight = headerRef.current?.getBoundingClientRect().right ?? null;
+  const rightWidth =
+    task && splitX !== null && headerRight !== null ? Math.max(0, headerRight - splitX) : null;
 
   return (
-    // `deep` so the whole row drags the window, not only its bare background —
-    // the hidden native title bar no longer offers a drag handle. Tauri's
-    // handler stops at buttons, inputs and anything with a role, so the
-    // controls in this row still click.
     <header
+      ref={headerRef}
       data-tauri-drag-region="deep"
-      className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-card px-2.5"
+      className="flex h-10 shrink-0 items-center gap-2"
+      style={{ paddingLeft: windowButtonsInset ? WINDOW_BUTTONS_WIDTH : 8 }}
     >
-      <nav
-        aria-label="Breadcrumb"
-        className="flex min-w-0 flex-1 items-center gap-2 text-muted-foreground"
-      >
-        <span className="text-[13px]">{openTask ? openTask.project : "Warpforge"}</span>
-        <span aria-hidden className="text-[13px] text-muted-foreground/60">
-          /
-        </span>
-        {openTask ? (
-          <>
-            <TaskSmithByline task={openTask} interactive />
-            <TaskTitleEditor task={openTask} />
-            {/* Only worth saying when it is the unusual case. A task in the
-                project's own checkout is the default, and a chip announcing
-                "Local Workspace" on most tasks is a label nobody reads. */}
-            {openTask.worktree && (
-              <span
-                className="flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-px text-[11px] text-muted-foreground"
-                title={openTask.worktree}
-              >
-                <Folder className="size-3 shrink-0" />
-                Git Worktree
-              </span>
-            )}
-            <TaskPullRequestChip task={openTask} />
-          </>
-        ) : view === "project" ? (
-          <>
-            {crumbProject && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label="Switch project"
-                    className="flex min-w-0 max-w-56 items-center gap-1 rounded px-1 py-0.5 text-[15px] font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
-                    <span className="truncate">{crumbProject.name}</span>
-                    <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  {snapshot.projects.map((p) => (
-                    <DropdownMenuItem
-                      key={p.name}
-                      onSelect={() => openProject(p.name)}
-                      className="gap-2"
-                    >
-                      <FolderGit2 className="size-4 text-muted-foreground" />
-                      <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                      {p.name === crumbProject.name && <Check className="size-4 text-primary" />}
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={onAddProject} className="gap-2">
-                    <FolderGit2 className="size-4 text-muted-foreground" />
-                    Add project
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </>
-        ) : (
-          <strong className="min-w-0 truncate text-[15px] font-medium text-foreground">
-            {VIEW_LABEL[view]}
-          </strong>
-        )}
-      </nav>
+      {crumbProject && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Switch project"
+              className="flex min-w-0 max-w-56 shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[13px] font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <FolderGit2 className="size-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate">{crumbProject.name}</span>
+              <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            {snapshot.projects.map((p) => (
+              <DropdownMenuItem key={p.name} onSelect={() => openProject(p.name)} className="gap-2">
+                <FolderGit2 className="size-4 text-muted-foreground" />
+                <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                {p.name === crumbProject.name && <Check className="size-4 text-primary" />}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={onAddProject} className="gap-2">
+              <FolderGit2 className="size-4 text-muted-foreground" />
+              Add project
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
-      {openTask && (
-        <TaskMenu
-          task={openTask}
-          pinned={taskPinned}
-          onTogglePin={() =>
-            setPinnedTaskIds(
-              setTaskGroupPinned(taskGroupIndex, pinnedTaskIds, openTask.id, !taskPinned),
-            )
-          }
-          onClose={onCloseTask}
+      {task && !paneFull && (
+        <TaskTabs
+          snapshot={snapshot}
+          openTaskId={task ? task.id : null}
+          onOpenTask={onOpenTask}
+          onCloseActive={(next) => (next ? onOpenTask(next) : onCloseTask())}
         />
+      )}
+
+      <div ref={setSlot} className="flex shrink-0 items-center empty:hidden" />
+
+      {task && (
+        <div
+          className={cn(
+            "flex shrink-0 items-center justify-end gap-1.5 self-stretch pr-2",
+            paneFull && "min-w-0 flex-1",
+            rightWidth !== null && "pl-2",
+          )}
+          style={rightWidth !== null ? { width: rightWidth } : undefined}
+        >
+          <div ref={setSurfaceSlot} className="flex min-w-0 flex-1 items-center self-stretch" />
+          <div ref={setMetaSlot} className="flex shrink-0 items-center gap-2 empty:hidden" />
+          <TaskSmithByline task={task} interactive />
+          {task.worktree && (
+            <span
+              className="flex size-6 items-center justify-center rounded text-muted-foreground"
+              title={`Git worktree: ${task.worktree}`}
+              aria-label="Runs in a git worktree"
+            >
+              <Folder className="size-3.5" />
+            </span>
+          )}
+          <TaskPullRequestChip task={task} />
+          <div ref={setPaneSlot} className="flex shrink-0 items-center gap-1 empty:hidden" />
+        </div>
       )}
     </header>
   );

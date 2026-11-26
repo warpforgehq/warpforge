@@ -372,7 +372,9 @@ describe("page agent", () => {
     );
     const ref = refOf(agent({ action: "snapshot" }).tree ?? "", 'heading "Gone section"');
     unmount();
-    expect(agent({ action: "snapshot", scope: ref }).error).toContain("take a new browser_snapshot");
+    expect(agent({ action: "snapshot", scope: ref }).error).toContain(
+      "take a new browser_snapshot",
+    );
   });
 
   it("refs stay the same for the same element across snapshot modes", () => {
