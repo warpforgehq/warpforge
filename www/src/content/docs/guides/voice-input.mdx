@@ -1,0 +1,48 @@
+---
+title: Voice input
+description: Dictate to your agents in Ukrainian, Russian, English and dozens more languages. Speech is transcribed on your Mac and never leaves it.
+sidebar:
+  order: 14
+  label: Voice input
+---
+
+Talking is often faster than typing a long prompt. Warpforge turns your speech into text right in the chat composer, and the transcription runs entirely on your Mac: no audio is uploaded anywhere, and it works offline once the speech model is downloaded.
+
+## First run: download a speech model
+
+Voice input needs a speech model on disk. The first time you press the microphone button in the composer, Warpforge offers to download the recommended one (about 575 MB) and shows the progress right there. It's a one-time download.
+
+You can also manage models in **Settings → Voice**:
+
+- **Large v3 Turbo** — recommended. The most accurate, especially when you mix languages in one sentence.
+- **Small** — about 190 MB. Faster and lighter, but less accurate on mixed speech.
+
+Download, switch or delete models from that list. Models live in `~/.warpforge/models`. An interrupted download picks up where it left off, and every model is verified before it's used.
+
+The first time you record, macOS asks for permission to use the microphone. If you said no, turn it back on in **System Settings → Privacy & Security → Microphone**.
+
+## Dictating
+
+1. Click the **microphone** in the chat composer, or press **⌘⇧D**.
+2. Speak. The composer shows a live level meter and how long you've been recording.
+3. Click **stop**, or press **⌘⇧D** again.
+
+The text is inserted where your cursor is in the draft, or replaces the selected text. It is never sent on its own, so you can read it over and fix it first.
+
+- **Push to talk:** hold **⌘⇧D** while you speak and let go to finish.
+- **Cancel:** press **Esc** while recording to throw the recording away.
+- A recording can be up to 5 minutes long.
+
+The shortcut works in any keyboard layout, including Ukrainian and Russian.
+
+## Languages
+
+**Auto-detect** is the default and handles speech that switches between languages, like a Ukrainian sentence full of English technical terms. If short phrases come out in the wrong language, pick yours in **Settings → Voice → Language**: Ukrainian, Russian, English and around thirty more are available.
+
+## Custom words
+
+List names and terms you want spelled exactly in **Settings → Voice → Custom words**, separated by commas or new lines — for example `Warpforge, worktree, pull request, Tauri`. This keeps project names and English terms spelled correctly even in the middle of Ukrainian or Russian speech.
+
+## Microphone
+
+Voice input uses your system's default microphone. To record from a different one, pick it in **Settings → Voice → Input device**.

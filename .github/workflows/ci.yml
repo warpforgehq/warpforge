@@ -128,11 +128,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential \
+            cmake \
             libappindicator3-dev \
+            libasound2-dev \
+            libclang-dev \
             librsvg2-dev \
             libssl-dev \
             libwayland-dev \
             libwebkit2gtk-4.1-dev \
             patchelf
       - run: bun desktop/scripts/stage-sidecar.mjs --profile debug
-      - run: cargo check --locked --manifest-path desktop/src-tauri/Cargo.toml
+      # Compiles the whole crate (a superset of `cargo check`) and runs only the
+      # dictation unit tests; replacing the check keeps whisper.cpp to one build.
+      - run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml dictation::

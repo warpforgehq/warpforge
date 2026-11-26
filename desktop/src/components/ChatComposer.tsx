@@ -1,12 +1,15 @@
-import { forwardRef, memo, useCallback } from "react";
+import { forwardRef, memo, useCallback, useRef } from "react";
 
 import { daemon } from "../daemon";
+import { useDictation } from "../hooks/useDictation";
+import { useDictationShortcut } from "../hooks/useDictationShortcut";
 import { useWorkflowSend } from "../hooks/useWorkflowSend";
 import type { ContextUsage } from "../lib/sessionUsage";
 import type { CommandInfo, ProjectFile, PromptSubmission, TaskInfo } from "../protocol";
 import { AgentConfigBar } from "./AgentConfigBar";
 import type { ComposerHandle } from "./Composer";
 import { Composer } from "./Composer";
+import { DictationButton } from "./composer/DictationButton";
 
 interface Props {
   commands: CommandInfo[];
@@ -24,6 +27,20 @@ export const ChatComposer = memo(
     ref,
   ) {
     const workflow = useWorkflowSend(task);
+    const composerRef = useRef<ComposerHandle | null>(null);
+    const setComposerRef = useCallback(
+      (handle: ComposerHandle | null) => {
+        composerRef.current = handle;
+        if (typeof ref === "function") ref(handle);
+        else if (ref) ref.current = handle;
+      },
+      [ref],
+    );
+    const disabled = task.status === "done" || workflow.disabled;
+    const dictation = useDictation(
+      useCallback((text: string) => composerRef.current?.insertText(text), []),
+    );
+    useDictationShortcut(dictation, !disabled);
 
     const onSend = useCallback(
       async (submission: PromptSubmission) => {
@@ -45,20 +62,23 @@ export const ChatComposer = memo(
 
     return (
       <Composer
-        ref={ref}
+        ref={setComposerRef}
         commands={commands}
         contextUsage={contextUsage}
         files={files}
         filesLoading={filesLoading}
         imageSupported={imageSupported}
-        disabled={task.status === "done" || workflow.disabled}
+        disabled={disabled}
         onSend={onSend}
         onCancel={isRunning && !workflow.isWorkflow ? onCancel : undefined}
         placeholder={workflow.placeholder}
         toolbar={
-          task.configOptions && task.configOptions.length > 0 ? (
-            <AgentConfigBar taskId={task.id} options={task.configOptions} />
-          ) : undefined
+          <>
+            {task.configOptions && task.configOptions.length > 0 && (
+              <AgentConfigBar taskId={task.id} options={task.configOptions} />
+            )}
+            <DictationButton dictation={dictation} disabled={disabled} />
+          </>
         }
       />
     );

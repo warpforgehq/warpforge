@@ -13,10 +13,7 @@ import { cn } from "@/lib/utils";
 
 import {
   extractFileReferences,
-  FILE_REF_MIME,
   findMentionAtCaret,
-  insertFileRef,
-  isFileRefDrag,
   rankFiles,
   replaceMention,
   splitFileReference,
@@ -32,9 +29,12 @@ import { AttachButton } from "./composer/AttachButton";
 import { AttachmentBar } from "./composer/AttachmentBar";
 import { ComposerActionButton } from "./composer/ComposerActionButton";
 import { ContextUsageIndicator } from "./composer/ContextUsageIndicator";
+import { diffAttachment } from "./composer/diffAttachment";
 import { FileMentionMenu } from "./composer/FileMentionMenu";
 import { SlashCommandMenu } from "./composer/SlashCommandMenu";
 import { useComposerAttachments } from "./composer/useComposerAttachments";
+import { useComposerDictation } from "./composer/useComposerDictation";
+import { useComposerDrop } from "./composer/useComposerDrop";
 
 export interface ComposerAttachment {
   id: string;
@@ -58,6 +58,8 @@ export interface ComposerHandle {
   attachContext: (chip: ContextChip) => void;
   setContextImage: (id: string, image: { name: string; base64: string }) => void;
   appendDraft: (text: string) => void;
+  /** Insert text at the caret, replacing any selection. */
+  insertText: (text: string) => void;
   submit: () => void;
 }
 const EMPTY_COMMANDS: CommandInfo[] = [];
@@ -110,8 +112,6 @@ export const Composer = forwardRef<
     const [contexts, setContexts] = useState<ContextChip[]>([]);
     const [sending, setSending] = useState(false);
     const [stopping, setStopping] = useState(false);
-    const [dragging, setDragging] = useState(false);
-    const [refDrag, setRefDrag] = useState(false);
     const textRef = useRef<HTMLTextAreaElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const sendActionRef = useRef<() => void>(() => {});
@@ -144,28 +144,11 @@ export const Composer = forwardRef<
       inputRef.current?.click();
     }, []);
 
+    const insertText = useComposerDictation({ textRef, value, setValue, setCaret, onDraftChange });
+
     useImperativeHandle(ref, () => ({
       attachDiff(file, formattedContent) {
-        setDiffs((prev) => [
-          ...prev,
-          {
-            id: `${file.path}#${Date.now()}`,
-            filePath:
-              file.status === "renamed" && file.oldPath
-                ? `${file.oldPath} → ${file.path}`
-                : file.path,
-            status: file.status,
-            content: formattedContent,
-            addedLines: file.hunks.reduce(
-              (sum, h) => sum + h.lines.filter((l) => l.startsWith("+")).length,
-              0,
-            ),
-            removedLines: file.hunks.reduce(
-              (sum, h) => sum + h.lines.filter((l) => l.startsWith("-")).length,
-              0,
-            ),
-          },
-        ]);
+        setDiffs((prev) => [...prev, diffAttachment(file, formattedContent)]);
         textRef.current?.focus();
       },
       attachContext(chip) {
@@ -191,6 +174,7 @@ export const Composer = forwardRef<
           el.setSelectionRange(pos, pos);
         });
       },
+      insertText,
       submit() {
         sendActionRef.current();
       },
@@ -230,6 +214,8 @@ export const Composer = forwardRef<
     useEffect(() => setMenuIndex(0), [value]);
 
     const fileSet = useMemo(() => new Set(files.map((file) => file.path)), [files]);
+    const draft = { textRef, value, setValue, setCaret };
+    const drop = useComposerDrop({ ...draft, fileSet, attach });
     const fileAttachments = extractFileReferences(value)
       .map(splitFileReference)
       .filter((fileRef) => fileSet.has(fileRef.path));
@@ -366,46 +352,7 @@ export const Composer = forwardRef<
     const canSend = hasSubmission && !disabled && !sending;
     const action = onCancel && !hasSubmission ? "stop" : "send";
     return (
-      <div
-        className={cn("relative", compact ? "p-1.5" : "p-2", className)}
-        onDragEnter={(e) => {
-          e.preventDefault();
-          setRefDrag(isFileRefDrag(Array.from(e.dataTransfer.types)));
-          setDragging(true);
-        }}
-        onDragOver={(e) => e.preventDefault()}
-        onDragLeave={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-            setDragging(false);
-            setRefDrag(false);
-          }
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          setRefDrag(false);
-          const mimePath = e.dataTransfer.getData?.(FILE_REF_MIME) ?? "";
-          const plainPath = e.dataTransfer.getData?.("text/plain") ?? "";
-          const refPath =
-            mimePath && fileSet.has(mimePath)
-              ? mimePath
-              : plainPath && fileSet.has(plainPath)
-                ? plainPath
-                : "";
-          if (refPath) {
-            const dropCaret = textRef.current?.selectionStart ?? value.length;
-            const result = insertFileRef(value, dropCaret, refPath);
-            setValue(result.value);
-            setCaret(result.caret);
-            requestAnimationFrame(() => {
-              textRef.current?.focus();
-              textRef.current?.setSelectionRange(result.caret, result.caret);
-            });
-            return;
-          }
-          attach([...e.dataTransfer.files]);
-        }}
-      >
+      <div className={cn("relative", compact ? "p-1.5" : "p-2", className)} {...drop.handlers}>
         {mentionOpen && (
           <FileMentionMenu
             files={mentionMatches}
@@ -424,9 +371,9 @@ export const Composer = forwardRef<
           />
         )}
         <div className="bg-deep-surface relative flex flex-col rounded-lg border border-input transition-colors focus-within:border-ring">
-          {dragging && (
+          {drop.dragging && (
             <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg border-2 border-dashed border-primary bg-background/90 text-sm font-medium">
-              {refDrag ? "Drop to attach file as context" : "Drop files to attach"}
+              {drop.refDrag ? "Drop to attach file as context" : "Drop files to attach"}
             </div>
           )}
           {(diffs.length > 0 || attachments.length > 0 || contexts.length > 0) && (

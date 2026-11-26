@@ -1,4 +1,4 @@
-import { Bot, Brain, ListChecks, Palette, Plug, Wrench, type LucideIcon } from "lucide-react";
+import { Bot, Brain, ListChecks, Mic, Palette, Plug, Wrench, type LucideIcon } from "lucide-react";
 
 import type { SettingsPage } from "@/store/ui";
 
@@ -9,5 +9,6 @@ export const SETTINGS_PAGES: { id: SettingsPage; label: string; icon: LucideIcon
   { id: "integrations", label: "Integrations", icon: Plug },
   { id: "tasks", label: "Tasks", icon: ListChecks },
   { id: "memory", label: "Memory", icon: Brain },
+  { id: "voice", label: "Voice", icon: Mic },
   { id: "advanced", label: "Advanced", icon: Wrench },
 ];

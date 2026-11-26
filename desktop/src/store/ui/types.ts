@@ -30,6 +30,7 @@ export type SettingsPage =
   | "integrations"
   | "tasks"
   | "memory"
+  | "voice"
   | "advanced";
 export type DiffView = "unified" | "split";
 export type RightPanel = "changes" | "files" | "subtasks" | null;
