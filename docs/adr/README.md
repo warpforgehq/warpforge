@@ -46,3 +46,4 @@ stale and then misleads.
 | [0032](0032-permanent-rail.md) | A permanent rail picks, the panel beside it shows; Settings replace the panel |
 | [0033](0033-project-mode.md) | A project is a mode of the Tasks panel; its sections fill the main area without tabs |
 | [0034](0034-spaces.md) | A space groups projects, and a task sees its siblings as extra folders |
+| [0035](0035-project-config-editing.md) | The project config is edited in place, from the UI or by hand, through one daemon writer |
