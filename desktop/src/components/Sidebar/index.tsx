@@ -52,6 +52,8 @@ interface SidebarProps {
   onSettleFinishedTurns?: (ids: string[]) => void;
   /** Bulk-delete every settled task on a project's "N done" shelf. */
   onDeleteSettledShelf?: (project: string) => Promise<void>;
+  /** The window buttons sit over the rail's top; false puts the logo in the title row. */
+  windowButtons?: boolean;
 }
 
 const noop = () => {};
@@ -89,6 +91,7 @@ function Sidebar({
   onCloseSettings = noop,
   onSettleFinishedTurns,
   onDeleteSettledShelf,
+  windowButtons,
 }: SidebarProps) {
   const panelScope = useUi((s) => s.panelScope);
   const spaces = state.snapshot.spaces;
@@ -128,6 +131,7 @@ function Sidebar({
         onOpenTask={onOpenTask}
         onOpenSettings={onOpenSettings}
         onCloseSettings={onCloseSettings}
+        windowButtons={windowButtons}
       />
 
       {panelMounted && (

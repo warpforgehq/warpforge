@@ -61,6 +61,13 @@ const themes = Object.fromEntries(THEMES.map((t) => [t.id, { colors: t.colors, m
         overflow: hidden;
       }
     </style>
+    {/* `astro dev` injects its toolbar into every page, this frame included,
+        where it floats over the composer and the diff. */}
+    <style is:global>
+      astro-dev-toolbar {
+        display: none !important;
+      }
+    </style>
   </head>
   <body>
     <AppDemo client:only="react" />

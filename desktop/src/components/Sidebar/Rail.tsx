@@ -3,6 +3,7 @@ import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useRef, useState
 
 import UpdateControl from "@/components/UpdateControl";
 import type { ConnectionState, DaemonState } from "@/daemon";
+import { cn } from "@/lib/utils";
 import { pinKey, usePins } from "@/store/pins";
 import { useUi, type SidebarMode } from "@/store/ui";
 
@@ -36,6 +37,8 @@ export interface RailProps {
   onOpenTask: (id: string) => void;
   onOpenSettings: () => void;
   onCloseSettings: () => void;
+  /** The window buttons sit above the logo; false puts the logo in the title row. */
+  windowButtons?: boolean;
 }
 
 function modeBadge(mode: SidebarMode, count: number): RailBadge | null {
@@ -66,6 +69,7 @@ export function Rail({
   onOpenTask,
   onOpenSettings,
   onCloseSettings,
+  windowButtons = true,
 }: RailProps) {
   const rootRef = useRef<HTMLElement>(null);
   const [tabbable, setTabbable] = useState("new-task");
@@ -116,9 +120,14 @@ export function Rail({
       style={{ width: RAIL_WIDTH }}
       className="flex h-full min-h-0 shrink-0 flex-col items-center pb-2"
     >
-      <div data-tauri-drag-region="deep" className="h-10 w-full shrink-0" />
+      {windowButtons && <div data-tauri-drag-region="deep" className="h-10 w-full shrink-0" />}
 
-      <div className="relative flex h-8 w-full shrink-0 items-center justify-center">
+      <div
+        className={cn(
+          "relative flex w-full shrink-0 items-center justify-center",
+          windowButtons ? "h-8" : "h-10 pt-2",
+        )}
+      >
         <WarpforgeMark className="h-[15px] w-auto text-foreground" />
         <span className="absolute bottom-1 right-2.5 flex">
           <ConnectionDot connection={connection} connectionError={connectionError} />

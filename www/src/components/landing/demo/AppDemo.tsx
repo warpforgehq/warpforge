@@ -14,13 +14,20 @@ import { DEFAULT_INBOX_FILTERS } from "@app/lib/inboxFilters";
 import { usePeersStore } from "@app/store/peers";
 import { usePrFeedbackStore } from "@app/store/prFeedback";
 import { useSmithsStore } from "@app/store/smiths";
+import { PANEL_BOUNDS, usePanelLayout } from "@app/store/panelLayout";
 import { useTabs } from "@app/store/tabs";
-import { DEFAULT_TASK_SURFACE, SIDEBAR_WIDTH_MIN, type SidebarMode, useUi } from "@app/store/ui";
+import { DEFAULT_TASK_SURFACE, type SidebarMode, useUi } from "@app/store/ui";
 import InboxView from "@app/views/InboxView";
 import TaskDetail from "@app/views/TaskDetail";
 import Team from "@app/views/Team";
 
 import { sceneById, type Scene } from "./scenes";
+
+/**
+ * The task panel's width here, under the app's own resize floor: the scenes'
+ * trees are a few short rows, and the diff needs the room more.
+ */
+const DEMO_PANEL_WIDTH = 228;
 
 /** How long the finished run stays on screen before the demo replays. */
 const REPLAY_PAUSE_MS = 6000;
@@ -72,9 +79,9 @@ function startScene(scene: Scene, replay = false) {
   }
   // The tab strip persists on the landing page's origin; each scene starts bare.
   useTabs.setState({ closed: [], open: [] });
-  // The app's own defaults, minus the two that only make sense at desk
-  // width: side-by-side diff needs more room than this frame has, and the
-  // nav rail is wound down to the narrowest the app itself allows.
+  usePanelLayout.setState({ chatOnRight: false, panelSizes: { diff: PANEL_BOUNDS.diff.min } });
+  // The app's own defaults, minus the ones that only make sense at desk
+  // width: side-by-side diff, and the wide task panel and changes rail.
   useUi.setState({
     ...nav,
     diffView: "unified",
@@ -85,7 +92,7 @@ function startScene(scene: Scene, replay = false) {
     openTaskNav: null,
     panelScope: null,
     settingsOpen: false,
-    sidebarWidth: SIDEBAR_WIDTH_MIN,
+    sidebarWidth: DEMO_PANEL_WIDTH,
     ...scene.ui,
   });
 }
@@ -146,6 +153,7 @@ export default function AppDemo() {
   const openTaskId = useUi((s) => s.openTaskId);
   const view = useUi((s) => s.view);
   const sidebarMode = useUi((s) => s.sidebarMode);
+  const sidebarWidth = useUi((s) => s.sidebarWidth);
 
   const current = useRef(scene);
   current.current = scene;
@@ -275,7 +283,7 @@ export default function AppDemo() {
       <TooltipProvider delayDuration={300}>
         <div className="flex h-full w-full overflow-hidden bg-chrome text-foreground">
           <aside
-            style={{ width: RAIL_WIDTH + SIDEBAR_WIDTH_MIN }}
+            style={{ width: RAIL_WIDTH + sidebarWidth }}
             className="flex h-full min-h-0 shrink-0 flex-col overflow-hidden"
           >
             <Sidebar
@@ -292,6 +300,7 @@ export default function AppDemo() {
               openTaskId={openTaskId}
               state={daemon.getState()}
               view={view}
+              windowButtons={false}
             />
           </aside>
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
