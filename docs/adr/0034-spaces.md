@@ -90,10 +90,16 @@ would promise a guarantee Warpforge cannot keep.
 the task's root. The Explorer does not browse sibling folders in phase 1.
 
 **The desktop shows a space through project mode (ADR 0033).** A space is a
-scope with several projects: its panel lists each member's sections and the
-tasks of all members, grouped by project. A space can be pinned to the rail
-like a project. New Task inside a space asks for the primary project,
-defaulting to the one you are in.
+scope with several projects (`panelScope: { kind: "space"; id }`): its panel
+lists the member projects, each opening that project's mode, and the loose
+folders as plain rows, then the tasks of all member projects grouped by
+project. A project in a space shows an "in <space>" link back to it. Sections
+stay per project rather than being repeated for every member. A space can be
+pinned to the rail like a project. New Task inside a space asks for the
+primary project, defaulting to the one you came from. A task with sibling
+folders shows "+N repos" in the title row, listing what its agent was given
+(`TaskInfo.workspaceFolders`). Settings → Spaces & repos edits spaces and marks
+members that come from `linked:` (`ProjectInfo.linked`, resolved paths).
 
 ## Invariants
 

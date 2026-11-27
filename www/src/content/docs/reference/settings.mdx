@@ -60,17 +60,15 @@ Each agent row also has a **refresh** button for its model list, showing how man
 
 Pick a **Default agent** and **Default model** to preselect them when New Task opens. You can change either for an individual task. Factory uses its project defaults, and a Smith uses its own agent and model.
 
-Use **Agents in pickers** to hide agents you rarely choose. Hiding an agent leaves it enabled and leaves existing tasks and saved configurations in place.
-
 ### Accounts
 
 Several logins for the same agent — personal and work, or two seats — for **Claude Code** and **Codex**. Import the login you're currently signed in as under a name, then switch which one new sessions use.
 
 Covered in full under [Several logins for one agent](/concepts/agents/#several-logins-for-one-agent).
 
-## Models
+### Models
 
-Choose an agent in **Model list by agent**. Under **Custom model IDs**, enter an exact ID, such as `provider/model`, and select **Add** to make it available in that agent’s model pickers. The agent must support the ID. Use **Remove** to delete a custom entry or switch off a model under **Models in pickers** to hide it from new selections.
+Click an agent's row to open its models. Switch a model off to hide it from new selections. Under the list, enter an exact model ID, such as `provider/model`, and select **Add** to make it available in that agent's model pickers — the agent must support the ID. Custom IDs are marked **custom** and have a **Remove** button. To keep an agent out of the pickers altogether, switch the agent off.
 
 ## Tasks
 
@@ -134,6 +132,10 @@ A server powers go-to-definition, find references, rename, hover docs, completio
 Connect **GitHub** (the `gh auth login` sign-in you already have, or a personal access token with `repo` and `read:project`) or **Linear** (a personal API key, kept in your OS keychain). A Linear key is account-wide, so each project picks the team it reads from.
 
 See [Connect a tracker](/guides/tasks-and-backlog/#connect-a-tracker).
+
+## Spaces & repos
+
+Group projects and folders into spaces so an agent working in one repository can see the others. Create, rename and delete spaces, add a registered project or any folder, and remove members. Members listed under `linked:` in a project's `workspace.yaml` are marked **from workspace.yaml**. See [Spaces](/guides/spaces/).
 
 ## Backlog storage
 

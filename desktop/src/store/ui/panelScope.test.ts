@@ -75,7 +75,7 @@ it("picking a section leaves an open task of the same project", () => {
 it("stays in project mode for its own tasks and leaves it for another project's", () => {
   useUi.getState().openProject("alpha");
   useUi.getState().openTask("a-1");
-  expect(useUi.getState().panelScope?.name).toBe("alpha");
+  expect(useUi.getState().panelScope).toEqual({ kind: "project", name: "alpha" });
 
   useUi.getState().openTask("b-1");
   expect(useUi.getState().panelScope).toBeNull();

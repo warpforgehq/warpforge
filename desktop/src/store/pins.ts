@@ -5,6 +5,7 @@ import { persist } from "zustand/middleware";
 export type Pin =
   | { kind: "task"; id: string }
   | { kind: "project"; id: string }
+  | { kind: "space"; id: string }
   | { kind: "smith"; id: string }
   | { kind: "channel"; id: string; name: string };
 

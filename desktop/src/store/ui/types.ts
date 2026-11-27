@@ -28,6 +28,7 @@ export type SettingsPage =
   | "notifications"
   | "agents"
   | "integrations"
+  | "spaces"
   | "tasks"
   | "memory"
   | "advanced";

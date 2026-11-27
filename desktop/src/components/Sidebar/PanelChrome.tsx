@@ -18,7 +18,7 @@ export function PanelHeader({
     return (
       <div
         data-tauri-drag-region="deep"
-        className="flex h-10 shrink-0 items-center gap-0.5 pl-5 pr-3 pt-2"
+        className="flex h-10 shrink-0 items-center gap-0.5 pl-9 pr-3 pt-2"
       >
         <button
           type="button"

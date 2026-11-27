@@ -58,6 +58,18 @@ const index = {
       "history cleanup retention worktree expiry",
     ],
   ],
+  spaces: [
+    [
+      "spaces",
+      "Spaces",
+      "group projects repositories repos monorepo siblings folders workspace create rename delete",
+    ],
+    [
+      "space-members",
+      "Space members",
+      "add remove project folder linked workspace.yaml sibling repository",
+    ],
+  ],
   integrations: [
     [
       "language-servers",

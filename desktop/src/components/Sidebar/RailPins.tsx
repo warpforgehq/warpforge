@@ -8,10 +8,10 @@ import { useContextMenu } from "@/hooks/useContextMenu";
 import { defaultSmithColor, smithColor } from "@/lib/smithColors";
 import { taskLabel } from "@/lib/taskLabel";
 import { cn } from "@/lib/utils";
-import type { TaskInfo } from "@/protocol";
+import type { Space, TaskInfo } from "@/protocol";
 import { pinKey, usePins, type Pin } from "@/store/pins";
 import { useSmithsStore } from "@/store/smiths";
-import { scopeProjects, useUi } from "@/store/ui";
+import { useUi } from "@/store/ui";
 
 import { SIDEBAR_STATE_META } from "./logic/stateMeta";
 import { resolveTaskState } from "./logic/taskState";
@@ -49,13 +49,47 @@ function ProjectTile({ name }: { name: string }) {
   );
 }
 
+/** A space's tile: stacked cards behind its letter, with the member count. */
+function SpaceTile({ space }: { space: Space | undefined }) {
+  const name = space?.name ?? "?";
+  const index = defaultSmithColor(name);
+  return (
+    <span aria-hidden className="relative grid size-6 place-items-center">
+      <span
+        className="absolute inset-0 -translate-y-[3px] translate-x-[3px] rounded-md border border-border bg-muted"
+        data-space-stack
+      />
+      <span
+        style={{ backgroundColor: smithColor(index, 0.18), color: smithColor(index) }}
+        className="relative grid size-6 place-items-center rounded-md bg-chrome text-[0.75rem] font-bold uppercase leading-none ring-1 ring-chrome"
+      >
+        {name.slice(0, 1)}
+      </span>
+      {space && space.members.length > 0 && (
+        <span className="absolute -bottom-1 -right-1.5 min-w-3.5 rounded-full bg-chrome px-0.5 text-center font-mono text-[0.5625rem] leading-[0.875rem] text-muted-foreground ring-1 ring-border">
+          {space.members.length}
+        </span>
+      )}
+    </span>
+  );
+}
+
 /** Whether the main area is showing what `pin` points at. */
 function usePinActive(pin: Pin): boolean {
   return useUi((s) => {
     if (s.settingsOpen) return false;
     if (pin.kind === "task") return s.openTaskId === pin.id;
     if (pin.kind === "project") {
-      return s.sidebarMode === "tasks" && (scopeProjects(s.panelScope)?.includes(pin.id) ?? false);
+      return (
+        s.sidebarMode === "tasks" &&
+        s.panelScope?.kind === "project" &&
+        s.panelScope.name === pin.id
+      );
+    }
+    if (pin.kind === "space") {
+      return (
+        s.sidebarMode === "tasks" && s.panelScope?.kind === "space" && s.panelScope.id === pin.id
+      );
     }
     if (s.openTaskId) return false;
     const selection = s.view === "team" ? s.teamSelection : null;
@@ -71,6 +105,7 @@ function PinButton({
   index,
   roving,
   task,
+  space,
   attention,
   nowSec,
   onOpenTask,
@@ -78,6 +113,7 @@ function PinButton({
   pin: Pin;
   index: number;
   task: TaskInfo | undefined;
+  space: Space | undefined;
   attention: boolean;
   nowSec: number;
   onOpenTask: (id: string) => void;
@@ -94,13 +130,15 @@ function PinButton({
   const label =
     pin.kind === "project"
       ? pin.id
-      : pin.kind === "smith"
-        ? (smith?.name ?? "Smith")
-        : pin.kind === "channel"
-          ? `#${pin.name}`
-          : task
-            ? taskLabel(task)
-            : pin.id;
+      : pin.kind === "space"
+        ? (space?.name ?? "Space")
+        : pin.kind === "smith"
+          ? (smith?.name ?? "Smith")
+          : pin.kind === "channel"
+            ? `#${pin.name}`
+            : task
+              ? taskLabel(task)
+              : pin.id;
 
   const open = () => {
     const ui = useUi.getState();
@@ -109,6 +147,8 @@ function PinButton({
       onOpenTask(pin.id);
     } else if (pin.kind === "project") {
       ui.openProject(pin.id);
+    } else if (pin.kind === "space") {
+      ui.openSpace(pin.id);
     } else {
       ui.setSidebarMode("team");
       ui.openTeam(
@@ -123,7 +163,11 @@ function PinButton({
     <RailButton
       label={label}
       tooltip={
-        status ? `${label} · ${task?.project || "Chat"} · ${status.label}` : `${label} · pinned`
+        status
+          ? `${label} · ${task?.project || "Chat"} · ${status.label}`
+          : pin.kind === "space" && space
+            ? `${label} · space of ${space.members.length}`
+            : `${label} · pinned`
       }
       onClick={open}
       draggable
@@ -159,6 +203,8 @@ function PinButton({
       >
         {pin.kind === "project" ? (
           <ProjectTile name={pin.id} />
+        ) : pin.kind === "space" ? (
+          <SpaceTile space={space} />
         ) : pin.kind === "smith" ? (
           <SmithAvatar smith={{ id: pin.id, name: smith?.name ?? "?" }} />
         ) : task && status ? (
@@ -214,16 +260,19 @@ export function RailPins({
   useEffect(() => {
     if (connection !== "connected" || !snapshotReady) return;
     const projects = new Set(snapshot.projects.map((project) => project.name));
+    const spaceIds = snapshot.spaces ? new Set(snapshot.spaces.map((space) => space.id)) : null;
     prune((pin) =>
       pin.kind === "project"
         ? projects.has(pin.id)
-        : pin.kind === "smith"
-          ? Object.keys(smiths).length === 0 || pin.id in smiths
-          : pin.kind === "task"
-            ? tasks.has(pin.id)
-            : true,
+        : pin.kind === "space"
+          ? !spaceIds || spaceIds.has(pin.id)
+          : pin.kind === "smith"
+            ? Object.keys(smiths).length === 0 || pin.id in smiths
+            : pin.kind === "task"
+              ? tasks.has(pin.id)
+              : true,
     );
-  }, [connection, snapshotReady, snapshot.projects, smiths, tasks, pins, prune]);
+  }, [connection, snapshotReady, snapshot.projects, snapshot.spaces, smiths, tasks, pins, prune]);
 
   if (pins.length === 0) return null;
   return (
@@ -237,6 +286,11 @@ export function RailPins({
             pin={pin}
             index={index}
             task={task}
+            space={
+              pin.kind === "space"
+                ? snapshot.spaces?.find((candidate) => candidate.id === pin.id)
+                : undefined
+            }
             attention={!!task && attentionIds.has(task.id)}
             nowSec={nowSec}
             onOpenTask={onOpenTask}

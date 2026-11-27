@@ -1,3 +1,10 @@
+/** A sibling folder a task's agent was given alongside its own project. */
+export interface WorkspaceFolderInfo {
+  name: string;
+  path: string;
+  git: boolean;
+}
+
 export interface Space {
   id: string;
   name: string;

@@ -1,0 +1,40 @@
+---
+title: Spaces
+description: Group the repositories one product lives in, so an agent working in one of them can see the others.
+sidebar:
+  order: 2
+  label: Spaces
+---
+
+One product often lives in several repositories: an app, its infrastructure, a repo of schemas. A **space** groups them. Each repository keeps its own services, ports, backlog and pull requests; what changes is what an agent can see. A task started in one project of a space also gets the space's other repositories, so a change that spans an API and its Helm values no longer needs one session per repo.
+
+## Create a space
+
+Open **Settings → Spaces & repos**. Name a space and press **Create space**, then add members:
+
+- **Add project** puts a registered project in the space. A project belongs to one space at a time; picking one that is already in another space says which.
+- **Add folder…** adds a folder that is not worth registering as a project, such as a checkout of shared schemas.
+
+From the sidebar, right-click a project and choose **Add to space…**, or **Open space** when it already belongs to one.
+
+You can also commit the grouping, so everyone who clones the repo gets it. List the siblings under `linked:` in the project's `.warpforge/workspace.yaml`, as paths relative to the repository:
+
+```yaml
+linked:
+  - ../infra
+  - ../k8s-schemas
+```
+
+A linked path that is a registered project joins as that project; any other folder joins as a folder. Members that come from `linked:` are marked **from workspace.yaml** in Settings. Removing one there does not stick while it is still listed in the file.
+
+## Work in a space
+
+Pick a space from the project switcher at the top of the sidebar, or pin it to the rail by right-clicking its name. The sidebar shows the space's projects and folders, then the tasks of every project in it, grouped by project. Click a project to open its sections; the small **in Payments**-style link under its name takes you back to the space. **‹** returns to all projects.
+
+**+** next to **Tasks** starts a new task in the space. The task still belongs to one project, chosen in the composer and defaulting to the one you came from: its worktree, services, Keepers and pull request are that project's.
+
+## What the agent sees
+
+A task in a space shows **+N repos** in the window's title row. Click it to see each folder the agent was given, with its path. The list is taken when the task starts, so editing the space affects new tasks, not running ones.
+
+For now, the other repositories are used at their main checkout, not in a task worktree: edits there are shared with every other task of the space, and they do not show in the Changes rail. Commit in each repository separately.

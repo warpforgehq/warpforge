@@ -1,4 +1,14 @@
-import { Bell, Bot, Brain, ListChecks, Palette, Plug, Wrench, type LucideIcon } from "lucide-react";
+import {
+  Bell,
+  Bot,
+  Brain,
+  Layers,
+  ListChecks,
+  Palette,
+  Plug,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 
 import type { SettingsPage } from "@/store/ui";
 
@@ -53,6 +63,12 @@ export const SETTINGS_GROUPS: { label: string; pages: SectionLink[] }[] = [
         label: "Integrations",
         description: "Language servers and issue trackers.",
         icon: Plug,
+      },
+      {
+        id: "spaces",
+        label: "Spaces & repos",
+        description: "Group repositories so agents on a task can see the others.",
+        icon: Layers,
       },
     ],
   },

@@ -97,6 +97,71 @@ describe("RailPins", () => {
     expect(lit()).toBe(false);
   });
 
+  it("opens a pinned space, shows its member count and lights while in it", () => {
+    usePins.setState({ pins: [{ kind: "space", id: "s-1" }] });
+    const withSpace: DaemonState = {
+      ...state,
+      snapshot: {
+        ...state.snapshot,
+        spaces: [
+          {
+            id: "s-1",
+            members: [
+              { kind: "project", name: "api" },
+              { kind: "folder", name: "schemas", path: "/work/schemas" },
+            ],
+            name: "Payments",
+          },
+        ],
+      },
+    };
+    render(pins(withSpace));
+    const pin = () => document.querySelector('[data-pin="space:s-1"]');
+
+    expect(pin()?.textContent).toContain("2");
+    fireEvent.click(screen.getByRole("button", { name: "Payments" }));
+    expect(useUi.getState().panelScope).toEqual({ kind: "space", id: "s-1" });
+    expect(pin()?.className).toContain("ring-primary");
+
+    act(() => useUi.getState().exitPanelScope());
+    expect(pin()?.className).not.toContain("ring-primary");
+  });
+
+  it("opens a pinned space, shows its member count and lights while in it", () => {
+    const spaced: DaemonState = {
+      ...state,
+      snapshot: {
+        ...EMPTY_SNAPSHOT,
+        spaces: [
+          {
+            id: "s1",
+            members: [
+              { kind: "project", name: "warpforge" },
+              { kind: "folder", name: "k8s", path: "/work/k8s" },
+            ],
+            name: "Payments",
+          },
+        ],
+      },
+    };
+    usePins.setState({ pins: [{ kind: "space", id: "s1" }] });
+    render(pins(spaced));
+    const lit = () =>
+      document.querySelector('[data-pin="space:s1"]')?.className.includes("ring-primary");
+
+    const button = screen.getByRole("button", { name: "Payments" });
+    expect(within(button).getByText("2")).toBeInTheDocument();
+    expect(lit()).toBe(false);
+
+    fireEvent.click(button);
+    expect(useUi.getState().panelScope).toEqual({ kind: "space", id: "s1" });
+    expect(lit()).toBe(true);
+    expect(document.querySelector('[data-pin="project:warpforge"]')).toBeNull();
+
+    act(() => useUi.getState().exitPanelScope());
+    expect(lit()).toBe(false);
+  });
+
   it("opens a pinned channel as a team conversation", () => {
     usePins.setState({ pins: [{ kind: "channel", id: "warpforge#general", name: "general" }] });
     renderPins();

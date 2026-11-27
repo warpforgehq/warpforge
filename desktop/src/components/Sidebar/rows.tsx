@@ -1,6 +1,7 @@
 import { ArrowUpRight, CheckCheck, ChevronRight, Inbox, Trash2 } from "lucide-react";
 
 import { ProjectLiveGlyph } from "@/components/liveActivity/LiveActivityGlyph";
+import { useProjectContextMenu } from "@/components/spaces/projectMenu";
 import { cn } from "@/lib/utils";
 
 import {
@@ -11,7 +12,6 @@ import {
   type SidebarRow,
 } from "./logic";
 import { ChatsBadge, ProjectBadge } from "./ProjectBadge";
-import { usePinContextMenu } from "./RailPins";
 
 /**
  * Closes a project group with the history it hides: "12 done". Settled work is
@@ -122,7 +122,7 @@ export function ProjectRow({
    *  tree can highlight exactly the rows it would settle. */
   onSettleHover?: (hovering: boolean) => void;
 }) {
-  const pinMenu = usePinContextMenu();
+  const projectMenu = useProjectContextMenu();
   const settle = row.settleIds.length > 0;
   const preview = row.settlePreview.some(Boolean) ? ` — ${row.settlePreview.join(", ")}` : "";
   const settleTitle = `Settle ${row.settleIds.length} finished turn${
@@ -138,7 +138,7 @@ export function ProjectRow({
         data-project={row.name}
         aria-label={`Open project ${row.name}`}
         onClick={() => onOpenProject(row.name)}
-        onContextMenu={(event) => pinMenu(event, { kind: "project", id: row.name })}
+        onContextMenu={(event) => projectMenu(event, row.name)}
         style={{ paddingLeft: sidebarContentLeft(0) }}
         className="flex h-7 w-full min-w-0 items-center gap-2 rounded-md pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >

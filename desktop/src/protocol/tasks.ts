@@ -1,5 +1,6 @@
 import type { AdvisorOutcome, TaskAdvisor } from "./advisor";
 import type { ConfigOption } from "./runtime";
+import type { WorkspaceFolderInfo } from "./spaces";
 import type {
   OrchGraphInfo,
   WorkflowEventAgent,
@@ -45,6 +46,8 @@ export interface TaskInfo {
   blockedReason: string | null;
   /** The model the user explicitly asked for on this task, if they ever did. */
   model?: string | null;
+  /** Sibling folders of the task's space, captured at creation (ADR 0034). */
+  workspaceFolders?: WorkspaceFolderInfo[];
   /**
    * Why the task is blocked, when the daemon could classify it. `session_lost`
    * means the agent no longer has the saved session and never will — the stored

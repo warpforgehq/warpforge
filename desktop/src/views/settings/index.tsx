@@ -13,6 +13,7 @@ import AppearancePage from "./pages/Appearance";
 import IntegrationsPage from "./pages/Integrations";
 import MemoryPage from "./pages/Memory";
 import NotificationsPage from "./pages/Notifications";
+import SpacesPage from "./pages/Spaces";
 import TasksPage from "./pages/Tasks";
 
 const PAGES: Record<SettingsPage, () => React.ReactElement> = {
@@ -20,6 +21,7 @@ const PAGES: Record<SettingsPage, () => React.ReactElement> = {
   notifications: NotificationsPage,
   agents: AgentsPage,
   integrations: IntegrationsPage,
+  spaces: SpacesPage,
   tasks: TasksPage,
   memory: MemoryPage,
   advanced: AdvancedPage,

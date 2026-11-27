@@ -68,6 +68,9 @@ export class DaemonEvents extends DaemonStore {
           snapshot: { ...snap, projects: [...snap.projects, ev.data] },
         });
         break;
+      case "spaces.changed":
+        this.setState({ snapshot: { ...snap, spaces: ev.data } });
+        break;
       case "project.removed":
         for (const terminal of snap.terminals) {
           if (terminal.project === ev.data.name) {

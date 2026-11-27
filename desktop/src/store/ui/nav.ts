@@ -4,7 +4,7 @@ import { useSmithsStore } from "@/store/smiths";
 import { browser } from "@/views/task-detail/browser/browserClient";
 import { clearBrowserSession } from "@/views/task-detail/browser/browserSession";
 
-import { type PanelScope, scopeHolds, taskProject } from "./panelScope";
+import { type PanelScope, scopeHolds, scopeProjects, taskProject } from "./panelScope";
 import {
   DEFAULT_TASK_SURFACE,
   type DiffView,
@@ -66,6 +66,11 @@ export interface NavState {
   panelScope: PanelScope | null;
   /** Return the Tasks panel to every project. */
   exitPanelScope: () => void;
+  /**
+   * Narrow the Tasks panel to a space's projects. An open task of a member
+   * stays on screen; otherwise the main area shows the composer.
+   */
+  openSpace: (id: string) => void;
   /** Settings fill the main area and the sidebar panel. Transient: any
    *  navigation leaves them. */
   settingsOpen: boolean;
@@ -214,6 +219,20 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
         view: "project",
       };
     }),
+  openSpace: (id) =>
+    set((s) => {
+      const scope: PanelScope = { kind: "space", id };
+      const keepTask =
+        s.openTaskId !== null &&
+        (scopeProjects(scope) ?? []).includes(taskProject(s.openTaskId) ?? "");
+      return {
+        ...(keepTask ? {} : { openTaskId: null, openTaskNav: null }),
+        panelScope: scope,
+        settingsOpen: false,
+        sidebarMode: "tasks",
+        view: "start",
+      };
+    }),
   exitPanelScope: () =>
     set((s) => ({ panelScope: null, view: s.view === "project" ? "start" : s.view })),
   // Contextual task tools must not leak from one task into the next.
@@ -327,7 +346,8 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
         backlogParamsByProject,
         projectSurfaceByProject,
         selectedProjectId: s.selectedProjectId === project ? null : s.selectedProjectId,
-        ...(s.panelScope?.name === project && { panelScope: null }),
+        ...(s.panelScope?.kind === "project" &&
+          s.panelScope.name === project && { panelScope: null, view: "start" as const }),
       };
     }),
 });

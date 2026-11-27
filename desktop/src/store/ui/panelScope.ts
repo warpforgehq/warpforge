@@ -1,18 +1,49 @@
 import { daemon } from "@/daemon";
+import type { Space } from "@/protocol";
+
+/** What the sidebar panel is narrowed to: one project, or a space of several. */
+export type PanelScope = { kind: "project"; name: string } | { kind: "space"; id: string };
+
+function knownSpaces(): Space[] {
+  return daemon.getState?.().snapshot?.spaces ?? [];
+}
 
 /**
- * What the sidebar panel is narrowed to. A project today; a space (several
- * projects) will be another kind sharing the same mode.
+ * The registered projects a space lists, in its order.
+ * @param space the space
+ * @returns names of its project members
  */
-export type PanelScope = { kind: "project"; name: string };
+export function spaceProjectNames(space: Space): string[] {
+  return space.members.flatMap((member) => (member.kind === "project" ? [member.name] : []));
+}
+
+/**
+ * The space a project belongs to, if any.
+ * @param project the project name
+ * @param spaces spaces to search; the daemon's when omitted
+ * @returns the space, or undefined
+ */
+export function spaceOfProject(
+  project: string,
+  spaces: Space[] = knownSpaces(),
+): Space | undefined {
+  return spaces.find((space) => spaceProjectNames(space).includes(project));
+}
 
 /**
  * The projects a scope covers, in display order.
  * @param scope the panel scope, or null for every project
+ * @param spaces spaces to resolve a space scope against; the daemon's when omitted
  * @returns the scoped project names, or null when unscoped
  */
-export function scopeProjects(scope: PanelScope | null): string[] | null {
-  return scope ? [scope.name] : null;
+export function scopeProjects(
+  scope: PanelScope | null,
+  spaces: Space[] = knownSpaces(),
+): string[] | null {
+  if (!scope) return null;
+  if (scope.kind === "project") return [scope.name];
+  const space = spaces.find((candidate) => candidate.id === scope.id);
+  return space ? spaceProjectNames(space) : [];
 }
 
 /**

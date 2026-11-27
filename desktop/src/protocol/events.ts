@@ -202,4 +202,6 @@ export interface ProjectInfo {
   agentTemplates: Record<string, string>;
   /** Why the personal local config file is being ignored; absent when it applies. */
   localConfigError?: string | null;
+  /** `linked:` entries of workspace.yaml, resolved against the project path. */
+  linked?: string[];
 }

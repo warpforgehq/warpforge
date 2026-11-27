@@ -2,6 +2,7 @@ import { Folder } from "lucide-react";
 import { useRef } from "react";
 
 import { TaskPullRequestChip } from "@/components/pullRequest/TaskPullRequestChip";
+import { WorkspaceFoldersChip } from "@/components/spaces/WorkspaceFoldersChip";
 import { TaskSmithByline } from "@/components/TaskSmith";
 import { TaskTabs } from "@/components/titlebar/TaskTabs";
 import { cn } from "@/lib/utils";
@@ -97,6 +98,7 @@ export default function AppHeader({
               <Folder className="size-3.5" />
             </span>
           )}
+          <WorkspaceFoldersChip task={task} />
           <TaskPullRequestChip task={task} />
           <div ref={setPaneSlot} className="flex shrink-0 items-center gap-1 empty:hidden" />
         </div>

@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useState } from "react";
 
 import { InboxListPane } from "@/components/inbox/InboxListPane";
+import { AddToSpaceDialog } from "@/components/spaces/AddToSpaceDialog";
 import type { ConnectionState, DaemonState } from "@/daemon";
 import { cn } from "@/lib/utils";
 import { type ProjectSurface, scopeProjects, type SidebarMode, useUi, type View } from "@/store/ui";
@@ -13,6 +14,7 @@ import { ProjectPanel } from "./ProjectPanel";
 import { Rail } from "./Rail";
 import { SettingsNav } from "./SettingsNav";
 import { SmithsBody } from "./SmithsBody";
+import { SpacePanel } from "./SpacePanel";
 import { TaskTree } from "./TaskTree";
 import { useSidebarTree } from "./useSidebarTree";
 
@@ -88,7 +90,12 @@ function Sidebar({
   onDeleteSettledShelf,
 }: SidebarProps) {
   const panelScope = useUi((s) => s.panelScope);
-  const scope = useMemo(() => scopeProjects(panelScope), [panelScope]);
+  const spaces = state.snapshot.spaces;
+  const scopedSpace =
+    panelScope?.kind === "space" ? spaces?.find((space) => space.id === panelScope.id) : undefined;
+  // A space that is gone scopes nothing: the panel shows every project.
+  const liveScope = panelScope?.kind === "space" && !scopedSpace ? null : panelScope;
+  const scope = useMemo(() => scopeProjects(liveScope, spaces ?? []), [liveScope, spaces]);
   const tree = useSidebarTree(state, openTaskId, scope);
   // An existing session can have Automations open with an older sidebar mode.
   const panelMode =
@@ -136,7 +143,20 @@ function Sidebar({
               <PanelHeader title="Settings" onBack={onCloseSettings} />
               <SettingsNav />
             </>
-          ) : panelMode === "tasks" && panelScope ? (
+          ) : panelMode === "tasks" && scopedSpace ? (
+            <SpacePanel
+              space={scopedSpace}
+              snapshot={state.snapshot}
+              tree={tree}
+              openTask={state.snapshot.tasks.find((task) => task.id === openTaskId) ?? null}
+              openTaskId={openTaskId}
+              onOpenProject={onOpenProject}
+              onOpenTask={onOpenTask}
+              onNewTask={onNewTask}
+              onAddProject={onAddProject}
+              onSettleFinishedTurns={onSettleFinishedTurns}
+            />
+          ) : panelMode === "tasks" && panelScope?.kind === "project" ? (
             <ProjectPanel
               project={panelScope.name}
               snapshot={state.snapshot}
@@ -188,6 +208,7 @@ function Sidebar({
         </aside>
       )}
 
+      <AddToSpaceDialog />
       <DeleteShelfDialog
         row={tree.deletingShelf}
         onCancel={() => tree.setDeletingShelf(null)}
