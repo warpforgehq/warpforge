@@ -166,7 +166,7 @@ export function useTaskCreation({
     onCreated?.(taskId);
     // The snapshot may not list the new task yet, so its list is set here.
     if (chat) setTaskListView("chats");
-    openTask(taskId);
+    openTask(taskId, chat ? undefined : project);
     toast.success(
       queued ? "Queued in Factory" : selectedWorkflow ? "Factory task started" : "Task started",
       {

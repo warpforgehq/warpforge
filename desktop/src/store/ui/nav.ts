@@ -1,22 +1,11 @@
-import { type BacklogParams, DEFAULT_BACKLOG_PARAMS } from "@/components/backlog/types";
-import { forgetProject } from "@/lib/sessionStore";
 import { useSmithsStore } from "@/store/smiths";
-import { browser } from "@/views/task-detail/browser/browserClient";
-import { clearBrowserSession } from "@/views/task-detail/browser/browserSession";
 
-import {
-  listViewFor,
-  type PanelScope,
-  scopeHolds,
-  scopeProjects,
-  type TaskListView,
-  taskProject,
-} from "./panelScope";
+import { listViewFor, scopeHolds } from "./panelScope";
+import { rememberTaskPlace } from "./projectNav";
 import {
   DEFAULT_TASK_SURFACE,
   type DiffView,
   type GlobalView,
-  type ProjectSurface,
   type RepositoryOperation,
   type RightPanel,
   type SidebarMode,
@@ -24,18 +13,9 @@ import {
   type TaskSurface,
   type TeamSelection,
   type UiSlice,
+  type UiState,
   type View,
 } from "./types";
-
-/** The space to return to when `project` is opened from inside it. */
-function viaSpace(scope: PanelScope | null, project: string): { via?: string } {
-  const space =
-    scope?.kind === "space" ? scope.id : scope?.kind === "project" ? scope.via : undefined;
-  if (!space) return {};
-  return (scopeProjects({ kind: "space", id: space }) ?? []).includes(project)
-    ? { via: space }
-    : {};
-}
 
 export interface NavState {
   // Navigation
@@ -60,38 +40,11 @@ export interface NavState {
   rightPanel: RightPanel;
   /** Which workspace surface is active in the centre pane. Task-scoped, like `rightPanel`. */
   activeSurface: TaskSurface;
-  /**
-   * Which surface the project page shows, per project. Persisted like the
-   * other project-scoped layout state: reopening a project should land where
-   * you left it rather than snapping back to Backlog.
-   */
-  projectSurfaceByProject: Record<string, ProjectSurface>;
-  /**
-   * The backlog's filters, sort and search, per project. Persisted because a
-   * filter is a stance, not a keystroke: someone who reads their board as
-   * "assigned to me" had to say so again on every project switch and every
-   * restart. The search term is deliberately dropped on the way to storage —
-   * see `partialize` in `store.ts`.
-   */
-  backlogParamsByProject: Record<string, BacklogParams>;
   /** Unix seconds the Team view last showed the feed; newer records count as
    *  unread on its nav item. */
   teamSeenAt: number;
   /** The sidebar body's mode. Persisted: the app reopens on the same body. */
   sidebarMode: SidebarMode;
-  /** What the Tasks panel is narrowed to; null shows every project. Persisted. */
-  panelScope: PanelScope | null;
-  /** Return the Tasks panel to every project. */
-  exitPanelScope: () => void;
-  /** The unscoped panel's list; back from a project or space returns to it. Persisted. */
-  taskListView: TaskListView;
-  /** Show project tasks or chats, leaving any project or space scope. */
-  setTaskListView: (view: TaskListView) => void;
-  /**
-   * Narrow the Tasks panel to a space's projects. An open task of a member
-   * stays on screen; otherwise the main area shows the composer.
-   */
-  openSpace: (id: string) => void;
   /** Settings fill the main area and the sidebar panel. Transient: any
    *  navigation leaves them. */
   settingsOpen: boolean;
@@ -114,15 +67,11 @@ export interface NavState {
    *  it still in the daemon snapshot, else the selected project, else the
    *  composer. A stale id is dropped rather than reopened. */
   selectTasksSegment: (validTaskId: string | null) => void;
-  openTask: (id: string | null) => void;
+  /** Open a task; `project` names its project when the snapshot may not list it yet. */
+  openTask: (id: string | null, project?: string) => void;
   /** Open a task and immediately surface a specific file/diff in its workspace. */
   openTaskWithNav: (id: string, nav: TaskOpenNav) => void;
   clearOpenTaskNav: () => void;
-  /**
-   * Enter a project's mode. Without `section`, an open task of that project
-   * stays on screen; otherwise the project's remembered section shows.
-   */
-  openProject: (id: string, section?: ProjectSurface) => void;
   /**
    * Open a task from outside the sidebar body (a notification, toast or link) and switch the sidebar to the mode that shows it: a
    * Smith's thread opens that Smith in Smiths mode, any other task opens in
@@ -137,12 +86,6 @@ export interface NavState {
   setDiffView: (v: DiffView) => void;
   setRightPanel: (panel: RightPanel) => void;
   setActiveSurface: (surface: TaskSurface) => void;
-  setProjectSurface: (project: string, surface: ProjectSurface) => void;
-  /** Merge a change into one project's backlog query. */
-  patchBacklogParams: (project: string, patch: Partial<BacklogParams>) => void;
-  resetBacklogParams: (project: string) => void;
-  /** Forget every per-project memory — for a project that was removed. */
-  clearProjectState: (project: string) => void;
   markTeamSeen: (at: number) => void;
   setSidebarMode: (mode: SidebarMode) => void;
   /** Show a channel, thread or Smith in the Smiths area, and go there. */
@@ -158,16 +101,24 @@ export interface NavState {
 
 /**
  * Opening a task outside the panel's scope returns the panel to every project,
- * and the list switches to the one that shows the task.
+ * the list switches to the one that shows the task, and the task becomes its
+ * project's last place.
  */
-function leaveScopeFor(
-  s: Pick<NavState, "panelScope" | "taskListView" | "view">,
+function arriveAt(
+  s: Pick<UiState, "lastTaskByProject" | "panelScope" | "taskListView" | "view">,
   taskId: string | null,
-): Partial<NavState> {
+  project?: string,
+): Partial<UiState> {
   if (!taskId) return {};
+  const remembered = rememberTaskPlace(s, taskId, project);
   const taskListView = listViewFor(taskId, s.taskListView);
-  if (scopeHolds(s.panelScope, taskId)) return { taskListView };
-  return { panelScope: null, taskListView, view: s.view === "project" ? "start" : s.view };
+  if (scopeHolds(s.panelScope, taskId)) return { ...remembered, taskListView };
+  return {
+    ...remembered,
+    panelScope: null,
+    taskListView,
+    view: s.view === "project" ? "start" : s.view,
+  };
 }
 
 export const createNavSlice: UiSlice<NavState> = (set) => ({
@@ -184,12 +135,8 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   diffView: "split",
   rightPanel: null,
   activeSurface: DEFAULT_TASK_SURFACE,
-  projectSurfaceByProject: {},
-  backlogParamsByProject: {},
   teamSeenAt: 0,
   sidebarMode: "tasks",
-  panelScope: null,
-  taskListView: "tasks",
   settingsOpen: false,
   teamSelection: null,
   selectedAutomationId: null,
@@ -224,6 +171,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
         panelScope: null,
         settingsOpen: false,
         taskListView: listViewFor(validTaskId, s.taskListView),
+        ...rememberTaskPlace(s, validTaskId),
         lastTaskId: validTaskId,
         openTaskId: validTaskId,
         openTaskNav: null,
@@ -231,60 +179,12 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
         view,
       };
     }),
-  openProject: (selectedProjectId, section) =>
-    set((s) => {
-      const keepTask =
-        !section && s.openTaskId !== null && taskProject(s.openTaskId) === selectedProjectId;
-      return {
-        ...(keepTask ? {} : { openTaskId: null, openTaskNav: null }),
-        ...(section && {
-          projectSurfaceByProject: { ...s.projectSurfaceByProject, [selectedProjectId]: section },
-        }),
-        panelScope: {
-          kind: "project",
-          name: selectedProjectId,
-          ...viaSpace(s.panelScope, selectedProjectId),
-        },
-        selectedProjectId,
-        settingsOpen: false,
-        sidebarMode: "tasks",
-        view: "project",
-      };
-    }),
-  openSpace: (id) =>
-    set((s) => {
-      const scope: PanelScope = { kind: "space", id };
-      const members = scopeProjects(scope) ?? [];
-      const keepTask = s.openTaskId !== null && members.includes(taskProject(s.openTaskId) ?? "");
-      const selectedProjectId =
-        s.selectedProjectId && members.includes(s.selectedProjectId)
-          ? s.selectedProjectId
-          : (members[0] ?? s.selectedProjectId);
-      return {
-        ...(keepTask ? {} : { openTaskId: null, openTaskNav: null }),
-        panelScope: scope,
-        selectedProjectId,
-        settingsOpen: false,
-        sidebarMode: "tasks",
-        view: "start",
-      };
-    }),
-  exitPanelScope: () =>
-    set((s) => ({ panelScope: null, view: s.view === "project" ? "start" : s.view })),
-  setTaskListView: (taskListView) =>
-    set((s) => ({
-      panelScope: null,
-      settingsOpen: false,
-      sidebarMode: "tasks",
-      taskListView,
-      view: s.view === "project" ? "start" : s.view,
-    })),
   // Contextual task tools must not leak from one task into the next.
   // Project-scoped layout preferences remain persisted.
   // Closing a task keeps `lastTaskId`: that is what the Tasks segment returns to.
-  openTask: (openTaskId) =>
+  openTask: (openTaskId, project) =>
     set((s) => ({
-      ...leaveScopeFor(s, openTaskId),
+      ...arriveAt(s, openTaskId, project),
       openTaskId,
       openTaskNav: null,
       rightPanel: null,
@@ -294,7 +194,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
     })),
   openTaskWithNav: (openTaskId, openTaskNav) =>
     set((s) => ({
-      ...leaveScopeFor(s, openTaskId),
+      ...arriveAt(s, openTaskId),
       openTaskId,
       openTaskNav,
       rightPanel: null,
@@ -331,7 +231,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       return;
     }
     set((s) => ({
-      ...leaveScopeFor(s, id),
+      ...arriveAt(s, id),
       activeSurface: nav?.surface ?? DEFAULT_TASK_SURFACE,
       attentionTargetId: id,
       attentionTargetNonce: s.attentionTargetNonce + 1,
@@ -353,45 +253,4 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   setDiffView: (diffView) => set({ diffView }),
   setRightPanel: (rightPanel) => set({ rightPanel }),
   setActiveSurface: (activeSurface) => set({ activeSurface }),
-  setProjectSurface: (project, surface) =>
-    set((s) => ({
-      projectSurfaceByProject: { ...s.projectSurfaceByProject, [project]: surface },
-    })),
-  patchBacklogParams: (project, patch) =>
-    set((s) => ({
-      backlogParamsByProject: {
-        ...s.backlogParamsByProject,
-        [project]: {
-          ...(s.backlogParamsByProject[project] ?? DEFAULT_BACKLOG_PARAMS),
-          ...patch,
-        },
-      },
-    })),
-  resetBacklogParams: (project) =>
-    set((s) => ({
-      backlogParamsByProject: {
-        ...s.backlogParamsByProject,
-        [project]: DEFAULT_BACKLOG_PARAMS,
-      },
-    })),
-  clearProjectState: (project) =>
-    set((s) => {
-      const projectSurfaceByProject = { ...s.projectSurfaceByProject };
-      const backlogParamsByProject = { ...s.backlogParamsByProject };
-      delete projectSurfaceByProject[project];
-      delete backlogParamsByProject[project];
-      // The workspace session is a separate cache; forget it alongside the
-      // preferences so it cannot outlive the project.
-      forgetProject(project);
-      // The browser's tabs and its native content views are project-scoped too.
-      clearBrowserSession(project);
-      void browser.closeProject(project);
-      return {
-        backlogParamsByProject,
-        projectSurfaceByProject,
-        selectedProjectId: s.selectedProjectId === project ? null : s.selectedProjectId,
-        ...(s.panelScope?.kind === "project" &&
-          s.panelScope.name === project && { panelScope: null, view: "start" as const }),
-      };
-    }),
 });

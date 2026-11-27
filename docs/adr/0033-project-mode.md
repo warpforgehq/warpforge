@@ -33,8 +33,10 @@ becomes a section picker, so sections stay reachable.
 
 **Enter and exit rules.**
 - `openProject(name)` enters the mode. If the open task belongs to that
-  project it stays on screen; otherwise the project's remembered section
-  (`projectSurfaceByProject`, default Backlog) shows.
+  project it stays on screen; otherwise the project's last place shows: the
+  task opened there last (`lastTaskByProject`) if it still exists and is not
+  archived, else the remembered section (`projectSurfaceByProject`, default
+  Backlog). Picking a section clears the remembered task, so the later wins.
 - `openProject(name, section)` always shows that section.
 - Opening a task of a scoped project keeps the mode; opening a task outside
   the scope (a toast, Quick Open, the inbox) leaves it.

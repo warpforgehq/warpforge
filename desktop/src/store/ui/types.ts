@@ -4,6 +4,7 @@ import type { EditHunk } from "../../protocol";
 import type { DevicePreferences } from "./devicePreferences";
 import type { LayoutState } from "./layout";
 import type { NavState } from "./nav";
+import type { ProjectNavState } from "./projectNav";
 import type { SettingsState } from "./settings";
 
 /**
@@ -83,6 +84,7 @@ export function clampSidebarWidth(v: unknown): number {
   return Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, Math.round(v)));
 }
 
-export interface UiState extends NavState, LayoutState, SettingsState, DevicePreferences {}
+export interface UiState
+  extends NavState, ProjectNavState, LayoutState, SettingsState, DevicePreferences {}
 
 export type UiSlice<T> = StateCreator<UiState, [["zustand/persist", unknown]], [], T>;
