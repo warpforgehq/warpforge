@@ -26,10 +26,11 @@ function task(id: string, overrides: Partial<TaskInfo> = {}): TaskInfo {
 
 const chat = (id: string) => task(id, { kind: "chat", project: "" });
 
-function build(tasks: TaskInfo[], projectOrder = ["warpforge"], collapsed: string[] = []) {
+function build(tasks: TaskInfo[], projectOrder = ["warpforge"], chats = false) {
   return buildSidebarRows({
     activePathIds: new Set(),
-    collapsedProjects: new Set(collapsed),
+    chats,
+    collapsedProjects: new Set(),
     expandedShelves: new Set(),
     expandedTaskIds: new Set(),
     forceVisibleTaskIds: new Set(),
@@ -43,26 +44,32 @@ function build(tasks: TaskInfo[], projectOrder = ["warpforge"], collapsed: strin
 }
 
 describe("chats in the sidebar", () => {
-  it("lists chats under their own group above the projects", () => {
+  it("keeps chats out of the Tasks list", () => {
     const rows = build([task("a"), chat("c1"), chat("c2")]);
-    expect(rows.map((row) => row.key)).toEqual([
-      "chats",
-      "workspace:c1",
-      "workspace:c2",
-      "project:warpforge",
-      "workspace:a",
+    expect(rows.map((row) => row.key)).toEqual(["project:warpforge", "workspace:a"]);
+  });
+
+  it("lists only chats in the Chats list, flat and newest first", () => {
+    const rows = build(
+      [task("a"), { ...chat("old"), updatedAt: 1 }, { ...chat("new"), updatedAt: 5 }],
+      ["warpforge"],
+      true,
+    );
+    expect(rows.map((row) => row.key)).toEqual(["workspace:new", "workspace:old"]);
+  });
+
+  it("shelves finished chats under the chats group", () => {
+    const rows = build([{ ...chat("done"), status: "done" }], [], true);
+    expect(rows.map((row) => row.key)).toEqual([`shelf:${CHATS_GROUP}`]);
+  });
+
+  it("shows one quiet line without chats", () => {
+    expect(build([task("a")], ["warpforge"], true)).toEqual([
+      { hint: null, key: "empty:chats", kind: "empty", label: "No chats yet" },
     ]);
-    expect(rows.find((row) => row.kind === "chats")).toMatchObject({ count: 2, expanded: true });
   });
 
-  it("shows chats even before any project exists", () => {
-    const rows = build([chat("c1")], []);
-    expect(rows.map((row) => row.key)).toEqual(["chats", "workspace:c1"]);
-  });
-
-  it("folds the group and leaves no header without chats", () => {
-    expect(build([chat("c1")], [], [CHATS_GROUP]).map((row) => row.key)).toEqual(["chats"]);
-    expect(build([], []).map((row) => row.key)).toEqual(["empty:workspace"]);
-    expect(build([task("a")]).some((row) => row.kind === "chats")).toBe(false);
+  it("offers to add a project when only chats exist", () => {
+    expect(build([chat("c1")], []).map((row) => row.key)).toEqual(["empty:workspace"]);
   });
 });

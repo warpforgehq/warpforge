@@ -1,4 +1,5 @@
 import { daemon } from "@/daemon";
+import { isChat } from "@/lib/taskKind";
 import type { Space } from "@/protocol";
 
 /**
@@ -72,4 +73,20 @@ export function scopeHolds(scope: PanelScope | null, taskId: string): boolean {
   if (!projects) return true;
   const project = taskProject(taskId);
   return project !== null && projects.includes(project);
+}
+
+/** Which list the unscoped Tasks panel shows: project tasks or projectless chats. */
+export type TaskListView = "tasks" | "chats";
+
+/**
+ * The list that shows a task, so opening it keeps it visible in the tree.
+ * @param taskId the task about to be shown
+ * @param current the list shown now
+ * @returns "chats" for a chat, "tasks" for a project task, `current` when unknown
+ */
+export function listViewFor(taskId: string, current: TaskListView): TaskListView {
+  const tasks = daemon.getState?.().snapshot?.tasks ?? [];
+  const task = tasks.find((candidate) => candidate.id === taskId);
+  if (!task) return current;
+  return isChat(task) ? "chats" : "tasks";
 }

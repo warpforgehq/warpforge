@@ -47,14 +47,11 @@ export function ScopeHeader({
   onAddProject: () => void;
 }) {
   const exitPanelScope = useUi((s) => s.exitPanelScope);
-  const openSpace = useUi((s) => s.openSpace);
   const pinMenu = usePinContextMenu();
   const pin = { id: current.id, kind: current.kind } as const;
   const pinned = usePins((s) => s.pins.some((candidate) => pinKey(candidate) === pinKey(pin)));
   const togglePin = usePins((s) => s.toggle);
-  const spaces = snapshot.spaces ?? [];
-  const tick = (kind: "project" | "space", id: string) =>
-    current.kind === kind && current.id === id && <Check className="size-4 text-primary" />;
+  const chats = useUi((s) => s.taskListView === "chats");
 
   return (
     <div
@@ -64,8 +61,8 @@ export function ScopeHeader({
       <button
         type="button"
         onClick={back?.onClick ?? exitPanelScope}
-        aria-label={back ? `Back to ${back.label}` : "Back to all projects"}
-        title={back?.label ?? "All projects"}
+        aria-label={`Back to ${back?.label ?? (chats ? "chats" : "all projects")}`}
+        title={back?.label ?? (chats ? "Chats" : "All projects")}
         className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <ChevronLeft aria-hidden className="size-4" />
@@ -83,40 +80,12 @@ export function ScopeHeader({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-60">
-          {spaces.length > 0 && (
-            <>
-              <DropdownMenuLabel className="text-[0.75rem] font-normal text-muted-foreground">
-                Spaces
-              </DropdownMenuLabel>
-              {spaces.map((space) => (
-                <DropdownMenuItem
-                  key={space.id}
-                  onSelect={() => openSpace(space.id)}
-                  className="gap-2"
-                >
-                  <Layers className="size-4 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate">{space.name}</span>
-                  {tick("space", space.id)}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[0.75rem] font-normal text-muted-foreground">
-                Projects
-              </DropdownMenuLabel>
-            </>
-          )}
-          {snapshot.projects.map((p) => (
-            <DropdownMenuItem key={p.name} onSelect={() => onOpenProject(p.name)} className="gap-2">
-              <FolderGit2 className="size-4 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate">{p.name}</span>
-              {tick("project", p.name)}
-            </DropdownMenuItem>
-          ))}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={onAddProject} className="gap-2">
-            <FolderGit2 className="size-4 text-muted-foreground" />
-            Add project
-          </DropdownMenuItem>
+          <ScopeSwitchItems
+            snapshot={snapshot}
+            current={current}
+            onOpenProject={onOpenProject}
+            onAddProject={onAddProject}
+          />
         </DropdownMenuContent>
       </DropdownMenu>
       {current.kind === "space" && (
@@ -136,6 +105,66 @@ export function ScopeHeader({
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * The switcher's spaces and projects, then Add project.
+ * @param props.snapshot the daemon snapshot listing them
+ * @param props.current the scope to tick, if any
+ * @param props.onOpenProject enters a project's mode
+ * @param props.onAddProject opens Add project
+ * @returns the menu items
+ */
+export function ScopeSwitchItems({
+  snapshot,
+  current,
+  onOpenProject,
+  onAddProject,
+}: {
+  snapshot: Snapshot;
+  current?: { kind: "project" | "space"; id: string };
+  onOpenProject: (name: string) => void;
+  onAddProject: () => void;
+}) {
+  const openSpace = useUi((s) => s.openSpace);
+  const spaces = snapshot.spaces ?? [];
+  const tick = (kind: "project" | "space", id: string) =>
+    current?.kind === kind && current.id === id && <Check className="size-4 text-primary" />;
+
+  return (
+    <>
+      {spaces.length > 0 && (
+        <>
+          <DropdownMenuLabel className="text-[0.75rem] font-normal text-muted-foreground">
+            Spaces
+          </DropdownMenuLabel>
+          {spaces.map((space) => (
+            <DropdownMenuItem key={space.id} onSelect={() => openSpace(space.id)} className="gap-2">
+              <Layers className="size-4 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate">{space.name}</span>
+              {tick("space", space.id)}
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-[0.75rem] font-normal text-muted-foreground">
+            Projects
+          </DropdownMenuLabel>
+        </>
+      )}
+      {snapshot.projects.map((p) => (
+        <DropdownMenuItem key={p.name} onSelect={() => onOpenProject(p.name)} className="gap-2">
+          <FolderGit2 className="size-4 text-muted-foreground" />
+          <span className="min-w-0 flex-1 truncate">{p.name}</span>
+          {tick("project", p.name)}
+        </DropdownMenuItem>
+      ))}
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onSelect={onAddProject} className="gap-2">
+        <FolderGit2 className="size-4 text-muted-foreground" />
+        Add project
+      </DropdownMenuItem>
+    </>
   );
 }
 

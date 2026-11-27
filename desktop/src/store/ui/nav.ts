@@ -4,7 +4,14 @@ import { useSmithsStore } from "@/store/smiths";
 import { browser } from "@/views/task-detail/browser/browserClient";
 import { clearBrowserSession } from "@/views/task-detail/browser/browserSession";
 
-import { type PanelScope, scopeHolds, scopeProjects, taskProject } from "./panelScope";
+import {
+  listViewFor,
+  type PanelScope,
+  scopeHolds,
+  scopeProjects,
+  type TaskListView,
+  taskProject,
+} from "./panelScope";
 import {
   DEFAULT_TASK_SURFACE,
   type DiffView,
@@ -76,6 +83,10 @@ export interface NavState {
   panelScope: PanelScope | null;
   /** Return the Tasks panel to every project. */
   exitPanelScope: () => void;
+  /** The unscoped panel's list; back from a project or space returns to it. Persisted. */
+  taskListView: TaskListView;
+  /** Show project tasks or chats, leaving any project or space scope. */
+  setTaskListView: (view: TaskListView) => void;
   /**
    * Narrow the Tasks panel to a space's projects. An open task of a member
    * stays on screen; otherwise the main area shows the composer.
@@ -145,13 +156,18 @@ export interface NavState {
   closeNewSmith: () => void;
 }
 
-/** Opening a task outside the panel's scope returns the panel to every project. */
+/**
+ * Opening a task outside the panel's scope returns the panel to every project,
+ * and the list switches to the one that shows the task.
+ */
 function leaveScopeFor(
-  s: Pick<NavState, "panelScope" | "view">,
+  s: Pick<NavState, "panelScope" | "taskListView" | "view">,
   taskId: string | null,
 ): Partial<NavState> {
-  if (!taskId || scopeHolds(s.panelScope, taskId)) return {};
-  return { panelScope: null, view: s.view === "project" ? "start" : s.view };
+  if (!taskId) return {};
+  const taskListView = listViewFor(taskId, s.taskListView);
+  if (scopeHolds(s.panelScope, taskId)) return { taskListView };
+  return { panelScope: null, taskListView, view: s.view === "project" ? "start" : s.view };
 }
 
 export const createNavSlice: UiSlice<NavState> = (set) => ({
@@ -173,6 +189,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   teamSeenAt: 0,
   sidebarMode: "tasks",
   panelScope: null,
+  taskListView: "tasks",
   settingsOpen: false,
   teamSelection: null,
   selectedAutomationId: null,
@@ -191,7 +208,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
     })),
   selectAutomation: (selectedAutomationId) => set({ selectedAutomationId }),
   selectTasksSegment: (validTaskId) =>
-    set(() => {
+    set((s) => {
       const view: View = "start";
       if (!validTaskId)
         return {
@@ -206,6 +223,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
         activeSurface: DEFAULT_TASK_SURFACE,
         panelScope: null,
         settingsOpen: false,
+        taskListView: listViewFor(validTaskId, s.taskListView),
         lastTaskId: validTaskId,
         openTaskId: validTaskId,
         openTaskNav: null,
@@ -237,8 +255,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
     set((s) => {
       const scope: PanelScope = { kind: "space", id };
       const members = scopeProjects(scope) ?? [];
-      const keepTask =
-        s.openTaskId !== null && members.includes(taskProject(s.openTaskId) ?? "");
+      const keepTask = s.openTaskId !== null && members.includes(taskProject(s.openTaskId) ?? "");
       const selectedProjectId =
         s.selectedProjectId && members.includes(s.selectedProjectId)
           ? s.selectedProjectId
@@ -254,6 +271,14 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
     }),
   exitPanelScope: () =>
     set((s) => ({ panelScope: null, view: s.view === "project" ? "start" : s.view })),
+  setTaskListView: (taskListView) =>
+    set((s) => ({
+      panelScope: null,
+      settingsOpen: false,
+      sidebarMode: "tasks",
+      taskListView,
+      view: s.view === "project" ? "start" : s.view,
+    })),
   // Contextual task tools must not leak from one task into the next.
   // Project-scoped layout preferences remain persisted.
   // Closing a task keeps `lastTaskId`: that is what the Tasks segment returns to.

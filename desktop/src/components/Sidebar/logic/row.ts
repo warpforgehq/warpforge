@@ -126,14 +126,6 @@ export type SidebarRow =
       settlePreview: string[];
     }
   | {
-      /** Header of the group of chats, the tasks with no project. */
-      key: string;
-      kind: "chats";
-      count: number;
-      attentionCount: number;
-      expanded: boolean;
-    }
-  | {
       /** Quiet disclosure closing a project group: "12 done". */
       key: string;
       kind: "shelf";
@@ -185,7 +177,6 @@ export function rowHeight(row: SidebarRow): number {
     case "empty":
       return row.hint === null ? EMPTY_HEIGHT : EMPTY_WITH_HINT_HEIGHT;
     case "project":
-    case "chats":
       return PROJECT_HEIGHT;
     case "shelf":
       return SHELF_HEIGHT;

@@ -6,4 +6,5 @@ export {
   scopeProjects,
   spaceOfProject,
   spaceProjectNames,
+  type TaskListView,
 } from "./panelScope";

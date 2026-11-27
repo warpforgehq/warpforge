@@ -4,14 +4,8 @@ import { ProjectLiveGlyph } from "@/components/liveActivity/LiveActivityGlyph";
 import { useProjectContextMenu } from "@/components/spaces/projectMenu";
 import { cn } from "@/lib/utils";
 
-import {
-  CHATS_GROUP,
-  LANE_TWISTY_PX,
-  sidebarContentLeft,
-  sidebarTwistyLeft,
-  type SidebarRow,
-} from "./logic";
-import { ChatsBadge, ProjectBadge } from "./ProjectBadge";
+import { LANE_TWISTY_PX, sidebarContentLeft, sidebarTwistyLeft, type SidebarRow } from "./logic";
+import { ProjectBadge } from "./ProjectBadge";
 
 /**
  * Closes a project group with the history it hides: "12 done". Settled work is
@@ -208,51 +202,6 @@ export function ProjectRow({
         aria-hidden
         className="pointer-events-none absolute right-1.5 top-1/2 hidden size-3.5 -translate-y-1/2 text-muted-foreground/70 group-hover/proj:block group-focus-within/proj:block"
       />
-    </div>
-  );
-}
-
-/** Heads the chats, the tasks with no project; it only folds the group. */
-export function ChatsRow({
-  row,
-  onToggle,
-}: {
-  row: Extract<SidebarRow, { kind: "chats" }>;
-  onToggle: (name: string) => void;
-}) {
-  return (
-    <div className="relative mt-1">
-      <button
-        type="button"
-        aria-expanded={row.expanded}
-        aria-label={`${row.expanded ? "Collapse" : "Expand"} chats`}
-        onClick={() => onToggle(CHATS_GROUP)}
-        style={{ paddingLeft: sidebarContentLeft(0) }}
-        className="flex h-7 w-full min-w-0 items-center gap-2 rounded-md pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
-      >
-        <span
-          aria-hidden
-          style={{ left: sidebarTwistyLeft(0), width: LANE_TWISTY_PX }}
-          className="absolute top-1/2 grid -translate-y-1/2 place-items-center text-muted-foreground/40"
-        >
-          <ChevronRight
-            className={cn("size-3 shrink-0 transition-transform", row.expanded && "rotate-90")}
-          />
-        </span>
-        <ChatsBadge />
-        <strong className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold tracking-tight text-foreground/70">
-          Chats
-        </strong>
-        {row.attentionCount > 0 && (
-          <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-warn" />
-        )}
-        <span
-          title={`${row.count} active chat${row.count === 1 ? "" : "s"}`}
-          className="shrink-0 font-mono text-[0.6875rem] tabular-nums text-muted-foreground/45"
-        >
-          {row.count}
-        </span>
-      </button>
     </div>
   );
 }

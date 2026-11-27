@@ -16,7 +16,10 @@ import { useUi } from "@/store/ui";
 import {
   ancestorIds,
   buildSidebarRows,
+  isSettledTask,
+  needsHuman,
   projectNames,
+  resolveTaskState,
   rowHeight,
   sortProjectsByActivity,
   type SidebarRow,
@@ -26,13 +29,15 @@ import {
  * The task tree's rows and the counts the rail shows beside it.
  * @param state the daemon state
  * @param openTaskId the task on screen
- * @param scope projects the tree is narrowed to; null lists every project and chats
+ * @param scope projects the tree is narrowed to; null lists every project
+ * @param chats list chats instead of project tasks; ignored under a scope
  * @returns rows, virtual range and tree actions
  */
 export function useSidebarTree(
   state: DaemonState,
   openTaskId: string | null,
   scope: readonly string[] | null = null,
+  chats = false,
 ) {
   const attentionTargetId = useUi((store) => store.attentionTargetId);
   const attentionTargetNonce = useUi((store) => store.attentionTargetNonce);
@@ -82,13 +87,27 @@ export function useSidebarTree(
   // same cached query.
   const agentUpdates = useAgentUpdatesCount();
 
+  const listChats = chats && !scope;
   const treeTasks = useMemo(
-    () => (scope ? tasks.filter((task) => scope.includes(task.project) && !isChat(task)) : tasks),
-    [scope, tasks],
+    () =>
+      tasks.filter((task) =>
+        listChats ? isChat(task) : !isChat(task) && (!scope || scope.includes(task.project)),
+      ),
+    [listChats, scope, tasks],
   );
+  // What needs you in each list, so the one not shown can still flag it.
+  const listAttention = useMemo(() => {
+    const counts = { chats: 0, tasks: 0 };
+    for (const task of tasks) {
+      if (isSettledTask(task)) continue;
+      const taskState = resolveTaskState(task, { attention: attentionIds.has(task.id), nowSec });
+      if (needsHuman(taskState)) counts[isChat(task) ? "chats" : "tasks"] += 1;
+    }
+    return counts;
+  }, [attentionIds, nowSec, tasks]);
   const treeNames = useMemo(
-    () => (scope ? names.filter((name) => scope.includes(name)) : names),
-    [names, scope],
+    () => (listChats ? [] : scope ? names.filter((name) => scope.includes(name)) : names),
+    [listChats, names, scope],
   );
   // One project in scope: the panel header already names it, so the tree
   // drops its group row and never leaves it collapsed.
@@ -145,12 +164,14 @@ export function useSidebarTree(
       queue,
       selectedProject,
       tasks: treeTasks,
+      chats: listChats,
     });
     return single ? built.filter((row) => row.kind !== "project") : built;
   }, [
     activePathIds,
     collapsedProjects,
     expandedShelves,
+    listChats,
     expandedTaskIds,
     forceVisibleTaskIds,
     treeNames,
@@ -240,6 +261,7 @@ export function useSidebarTree(
     deletingShelf,
     attentionIds,
     inboxUnseen,
+    listAttention,
     teamUnread,
     nowSec,
     projectNames: names,

@@ -155,6 +155,7 @@ export default function App() {
     connection,
     connectionError,
     onNewTask: (project?: string) => startNewTask(project),
+    onNewChat: () => startNewTask(undefined, undefined, undefined, { chat: true }),
     settingsOpen,
     onOpenSettings: openSettings,
     onCloseSettings: closeSettings,
