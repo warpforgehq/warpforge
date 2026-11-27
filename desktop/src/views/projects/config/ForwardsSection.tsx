@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import type { EffectiveProjectConfig, ProjectConfigForward, ProjectConfigScope } from "@/protocol";
 import { settingsControl, SettingsNote, SettingsSection } from "@/views/settings/primitives";
 
-import { DraftInput, OnlyMeBadge, ScopeToggle } from "./fields";
+import { DraftInput, localEdge, OnlyMeBadge, ScopeToggle } from "./fields";
 import type { ConfigEdit } from "./useProjectConfig";
 
 export interface ConfigData {
@@ -113,7 +113,7 @@ export function ForwardsSection({ view, data, edit, readOnly }: Props) {
         const expanded = open === key;
         return (
           <div key={key}>
-            <div className="flex items-center gap-2 px-3.5 py-2.5">
+            <div className={cn("flex items-center gap-2 py-2.5 pl-3 pr-3.5", localEdge(local))}>
               <button
                 type="button"
                 aria-expanded={expanded}
@@ -127,8 +127,13 @@ export function ForwardsSection({ view, data, edit, readOnly }: Props) {
                     expanded && "rotate-90",
                   )}
                 />
-                <span className="text-[0.8125rem] font-medium text-foreground">{key}</span>
-                <span className="min-w-0 truncate font-mono text-[0.75rem] text-muted-foreground">
+                <span
+                  title={key}
+                  className="max-w-[12rem] shrink-0 truncate whitespace-nowrap text-[0.8125rem] font-medium text-foreground"
+                >
+                  {key}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-mono text-[0.75rem] text-muted-foreground">
                   :{forward.localPort} → {forward.pod}:{forward.remotePort}
                 </span>
               </button>

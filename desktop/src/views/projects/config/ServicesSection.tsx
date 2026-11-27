@@ -15,7 +15,7 @@ import {
   SettingsSection,
 } from "@/views/settings/primitives";
 
-import { clearEdits, OnlyMeBadge, setEdits } from "./fields";
+import { clearEdits, localEdge, OnlyMeBadge, setEdits } from "./fields";
 import { ServiceEditor } from "./ServiceEditor";
 import type { ConfigEdit } from "./useProjectConfig";
 
@@ -54,9 +54,10 @@ export function ServicesSection({ project, view, runtime, edit, readOnly }: Prop
         const service = view.services[name]!;
         const live = runtime.find((candidate) => candidate.name === name);
         const expanded = open === name;
+        const local = isLocalPath(view.localFields, ["services", name]);
         return (
           <div key={name}>
-            <div className="flex items-center gap-2 px-3.5 py-2.5">
+            <div className={cn("flex items-center gap-2 py-2.5 pl-3 pr-3.5", localEdge(local))}>
               <button
                 type="button"
                 aria-expanded={expanded}
@@ -70,12 +71,17 @@ export function ServicesSection({ project, view, runtime, edit, readOnly }: Prop
                     expanded && "rotate-90",
                   )}
                 />
-                <span className="text-[0.8125rem] font-medium text-foreground">{name}</span>
-                <span className="min-w-0 truncate font-mono text-[0.75rem] text-muted-foreground">
+                <span
+                  title={name}
+                  className="max-w-[12rem] shrink-0 truncate whitespace-nowrap text-[0.8125rem] font-medium text-foreground"
+                >
+                  {name}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-mono text-[0.75rem] text-muted-foreground">
                   {service.command}
                 </span>
               </button>
-              {isLocalPath(view.localFields, ["services", name]) && <OnlyMeBadge />}
+              {local && <OnlyMeBadge />}
               {live?.needsRestart && (
                 <>
                   <SettingsBadge tone="warn">Restart to apply</SettingsBadge>

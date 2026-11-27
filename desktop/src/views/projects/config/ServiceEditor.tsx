@@ -10,7 +10,7 @@ import {
   clearEdits,
   DraftInput,
   FieldRow,
-  OnlyMeBadge,
+  localEdge,
   ScopeToggle,
   setEdits,
   TextField,
@@ -98,7 +98,6 @@ function PortFallback({
           edit(next ? setEdits(view, path, "auto", scope.target) : clearEdits(path))
         }
       />
-      {scope.local && <OnlyMeBadge />}
     </FieldRow>
   );
 }
@@ -139,7 +138,6 @@ function DependsOn({
           </button>
         ))}
       </div>
-      {scope.local && <OnlyMeBadge />}
     </FieldRow>
   );
 }
@@ -148,7 +146,7 @@ function EnvRow({ view, edit, readOnly, path, value }: Common & { path: string[]
   const key = path[3]!;
   const scope = useFieldScope(view, path, "shared", value, edit);
   return (
-    <div className="flex items-center gap-2">
+    <div className={cn("flex items-center gap-2 pl-2", localEdge(scope.local))}>
       <span className="w-40 shrink-0 truncate font-mono text-[0.75rem]" title={key}>
         {key}
       </span>
@@ -159,7 +157,6 @@ function EnvRow({ view, edit, readOnly, path, value }: Common & { path: string[]
         mono
         onCommit={(text) => edit(setEdits(view, path, text, scope.target))}
       />
-      {scope.local && <OnlyMeBadge />}
       <ScopeToggle
         label={`Save ${key} to`}
         value={scope.target}

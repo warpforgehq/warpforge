@@ -4,7 +4,7 @@ import type { ConfigPath } from "@/lib/projectConfig/ops";
 import { isLocalPath } from "@/lib/projectConfig/view";
 import { cn } from "@/lib/utils";
 import type { EffectiveProjectConfig, ProjectConfigScope } from "@/protocol";
-import { SettingsBadge, settingsControl } from "@/views/settings/primitives";
+import { settingsControl } from "@/views/settings/primitives";
 
 import type { ConfigEdit } from "./useProjectConfig";
 
@@ -81,9 +81,11 @@ export function ScopeToggle({
           onClick={() => option.value !== value && onChange(option.value)}
           className={cn(
             "h-full rounded-[calc(var(--radius-control)-0.125rem)] px-1.5 text-[0.6875rem] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-            option.value === value
-              ? "bg-foreground/10 text-foreground"
-              : "text-muted-foreground hover:text-foreground",
+            option.value !== value
+              ? "text-muted-foreground hover:text-foreground"
+              : option.value === "local"
+                ? LOCAL_TINT
+                : "bg-foreground/10 text-foreground",
           )}
         >
           {option.label}
@@ -93,9 +95,30 @@ export function ScopeToggle({
   );
 }
 
-/** The marker on values that come from this machine's overlay. */
+/** Tint for anything that marks this machine's overlay. */
+const LOCAL_TINT = "bg-info/15 text-info";
+
+/**
+ * The left edge of a row: an accent bar when its value comes from the overlay.
+ * @param local the value comes from the overlay
+ * @returns classes for the row
+ */
+export function localEdge(local: boolean): string {
+  return cn("border-l-2", local ? "border-info" : "border-transparent");
+}
+
+/** The marker on collapsed rows whose values come from this machine's overlay. */
 export function OnlyMeBadge() {
-  return <SettingsBadge>Only me</SettingsBadge>;
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center whitespace-nowrap rounded px-1.5 text-[0.6875rem] font-medium leading-[1.125rem]",
+        LOCAL_TINT,
+      )}
+    >
+      Only me
+    </span>
+  );
 }
 
 /**
@@ -191,12 +214,21 @@ export function FieldRow({
 }: {
   label: string;
   hint?: string;
-  scope: { target: ProjectConfigScope; pick: (scope: ProjectConfigScope) => void };
+  scope: {
+    local: boolean;
+    target: ProjectConfigScope;
+    pick: (scope: ProjectConfigScope) => void;
+  };
   readOnly?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1.5">
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1.5 pl-2",
+        localEdge(scope.local),
+      )}
+    >
       <div className="w-32 shrink-0">
         <div className="text-[0.75rem] font-medium text-foreground">{label}</div>
         {hint && <div className="text-[0.6875rem] text-muted-foreground">{hint}</div>}
@@ -268,7 +300,6 @@ export function TextField({
         mono={mono}
         onCommit={commit}
       />
-      {scope.local && <OnlyMeBadge />}
     </FieldRow>
   );
 }
