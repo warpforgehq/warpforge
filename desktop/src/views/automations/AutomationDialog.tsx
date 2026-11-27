@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Play } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { AgentLogo } from "@/components/AgentLogo";
@@ -17,6 +17,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { daemon } from "@/daemon";
 import { automationRunsKey, automationsKey, useTicker } from "@/hooks/useAutomations";
 import { agentDisplayName } from "@/lib/agentNames";
+import { configRole } from "@/lib/configRole";
+import { usePickerAgents, usePickerOptions } from "@/lib/pickerPreferences";
 import { cn } from "@/lib/utils";
 import type { Automation, Snapshot } from "@/protocol";
 
@@ -29,7 +31,6 @@ import {
   patchFrom,
   validateForm,
 } from "./form";
-import { modelOptionOf } from "./labels";
 import { ScheduleFields } from "./ScheduleFields";
 
 interface Props {
@@ -55,25 +56,25 @@ export function AutomationDialog({
 }: Props) {
   const queryClient = useQueryClient();
   const now = useTicker(30_000);
-  const agents = useMemo(
-    () => (snapshot.agents ?? []).filter((agent) => agent.enabled),
-    [snapshot.agents],
-  );
+  const agents = usePickerAgents(snapshot.agents);
+  const fallback = snapshot.agents?.[0]?.id ?? "claude";
+  const initialAgent =
+    agents[0]?.id ?? (snapshot.agents?.some((agent) => agent.enabled) ? "" : fallback);
   const [form, setForm] = useState<AutomationForm>(() =>
     automation
       ? formFromAutomation(automation)
-      : emptyForm(
-          defaultProject ?? snapshot.projects[0]?.name ?? "",
-          agents[0]?.id ?? snapshot.agents?.[0]?.id ?? "claude",
-        ),
+      : emptyForm(defaultProject ?? snapshot.projects[0]?.name ?? "", initialAgent),
   );
   const [busy, setBusy] = useState<"save" | "run" | null>(null);
   const patch = (change: Partial<AutomationForm>) =>
     setForm((previous) => ({ ...previous, ...change }));
 
   const problems = validateForm(form);
-  const blocked = hasProblems(problems);
-  const modelOption = modelOptionOf(snapshot.agents ?? [], form.agent);
+  const blocked = hasProblems(problems) || !form.agent;
+  const reported = snapshot.agents?.find((agent) => agent.id === form.agent)?.models;
+  const modelOption = usePickerOptions(form.agent, reported).find(
+    (option) => configRole(option) === "model",
+  );
   // The daemon cannot express "clear the model override" (an absent field means
   // "leave alone"), so an automation that already has one may only swap it.
   const modelLocked = !!automation?.model;
@@ -159,7 +160,11 @@ export function AutomationDialog({
                   onChange={(event) => patch({ agent: event.target.value, model: "" })}
                   className="bg-deep-surface h-8 min-w-0 flex-1 rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring"
                 >
-                  {agents.length === 0 && <option value={form.agent}>{form.agent}</option>}
+                  {!agents.some((agent) => agent.id === form.agent) && (
+                    <option disabled value={form.agent}>
+                      {form.agent ? agentDisplayName(form.agent) : "Choose an agent"}
+                    </option>
+                  )}
                   {agents.map((agent) => (
                     <option key={agent.id} value={agent.id}>
                       {agentDisplayName(agent.id, agent.displayName)}
@@ -167,6 +172,11 @@ export function AutomationDialog({
                   ))}
                 </select>
               </div>
+              {!form.agent && (
+                <span className="text-xs text-muted-foreground">
+                  Show an agent in Settings to schedule an automation.
+                </span>
+              )}
             </label>
             <label className="flex min-w-0 flex-col gap-1">
               <span className="text-[11px] font-medium text-muted-foreground">Model</span>
@@ -187,6 +197,12 @@ export function AutomationDialog({
                 >
                   Agent default
                 </option>
+                {form.model &&
+                  !modelOption?.options.some((option) => option.value === form.model) && (
+                    <option disabled value={form.model}>
+                      {form.model}
+                    </option>
+                  )}
                 {modelOption?.options.map((choice) => (
                   <option key={choice.value} value={choice.value}>
                     {choice.name}

@@ -146,6 +146,7 @@ impl ServiceManager {
             logs: existing_logs,
             next_seq,
             original_port: claim.port,
+            env: Default::default(),
             allocated_port,
             port_pinned: claim.pin == ports::PortPin::Strict,
             port_warning: None,

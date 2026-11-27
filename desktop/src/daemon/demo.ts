@@ -43,6 +43,7 @@ export class DaemonDemo extends DaemonEvents {
       connectionError: null,
       sessionUpdates,
       snapshot: seed.snapshot,
+      snapshotReady: true,
     });
   }
 

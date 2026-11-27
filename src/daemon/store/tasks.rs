@@ -34,8 +34,8 @@ impl Store {
                  created_at, updated_at, files_changed, blocked_reason, config_options, worktree,
                  base_branch, parent_task_id, settled_override, settled_at, snoozed_until,
                  snoozed_at, account_id, backlog_item_id, blocked_kind, model, origin, advisor, smith,
-                 write_limit, kind, keepers)
-            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28,?29,?30)
+                 write_limit, kind, keepers, workspace_folders)
+            VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28,?29,?30,?31)
             ON CONFLICT(id) DO UPDATE SET
                 session_id=excluded.session_id,
                 agent=excluded.agent,
@@ -92,6 +92,7 @@ impl Store {
                 write_limit,
                 kind_str(task.kind),
                 keepers,
+                serde_json::to_string(&task.workspace_folders)?,
             ],
         )?;
         Ok(())
@@ -107,7 +108,7 @@ impl Store {
              created_at, updated_at, files_changed, blocked_reason, config_options, worktree, \
              parent_task_id, title, settled_override, settled_at, snoozed_until, snoozed_at, \
              account_id, backlog_item_id, blocked_kind, model, origin, base_branch, advisor, \
-             smith, write_limit, kind, keepers FROM tasks",
+             smith, write_limit, kind, keepers, workspace_folders FROM tasks",
         )?;
         let rows = stmt.query_map([], |row| {
             let tags_json: String = row.get(6)?;
@@ -117,6 +118,7 @@ impl Store {
             let smith_json: Option<String> = row.get(26)?;
             let write_limit_json: Option<String> = row.get(27)?;
             let keepers_json: Option<String> = row.get(29)?;
+            let workspace_folders: String = row.get(30)?;
             let mut status = parse_status(&status_str);
             if matches!(status, TaskStatus::Running | TaskStatus::Queued) {
                 status = TaskStatus::Interrupted;
@@ -138,6 +140,7 @@ impl Store {
                 blocked_kind: parse_blocked_kind(row.get(21)?),
                 config_options: serde_json::from_str(&config_options_json).unwrap_or_default(),
                 worktree: row.get(12)?,
+                workspace_folders: serde_json::from_str(&workspace_folders).unwrap_or_default(),
                 base_branch: row.get(24)?,
                 orchestration_graph: None,
                 workflow_run: None,

@@ -61,12 +61,12 @@ export default function TrackersPanel() {
   return (
     <div className="space-y-4">
       {/* ── Linear ── */}
-      <div className="space-y-2">
+      <div id="linear" tabIndex={-1} className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-[13px] font-semibold text-foreground">Linear</h3>
+            <h3 className="text-[0.8125rem] font-medium text-foreground">Linear</h3>
             {linear?.connected && (
-              <span className="flex items-center gap-1 text-[11px] text-emerald-500">
+              <span className="flex items-center gap-1 text-[0.6875rem] text-ok">
                 <Check className="size-3" />
                 {linear.email ?? "connected"}
               </span>
@@ -93,12 +93,13 @@ export default function TrackersPanel() {
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
               placeholder="lin_api_…"
-              className="h-7 flex-1 text-[13px]"
+              className="h-8 flex-1 text-[0.8125rem]"
               aria-label="Linear API key"
             />
             <Button
               type="button"
               size="sm"
+              variant="outline"
               disabled={!apiKey.trim() || busy === "linear"}
               onClick={() =>
                 void run(
@@ -115,7 +116,7 @@ export default function TrackersPanel() {
             </Button>
           </div>
         )}
-        <p className="text-[13px] text-muted-foreground/80">
+        <p className="text-[0.75rem] leading-relaxed text-muted-foreground">
           A personal API key, stored in your keychain by the daemon.{" "}
           <button
             type="button"
@@ -127,13 +128,13 @@ export default function TrackersPanel() {
           </button>
         </p>
         {linear?.connected && snapshot.projects.length > 0 && (
-          <div className="space-y-1.5 rounded-md border border-border p-2.5">
-            <p className="text-[11px] font-medium text-muted-foreground">
+          <div className="space-y-1.5 rounded-lg border border-border p-2.5">
+            <p className="text-[0.6875rem] font-medium text-muted-foreground">
               Which team each project imports from
             </p>
             {snapshot.projects.map((project) => (
               <div key={project.name} className="flex items-center justify-between gap-3">
-                <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">
+                <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-foreground">
                   {project.name}
                 </span>
                 <ProjectLinearTeamSelect project={project.name} />
@@ -144,12 +145,12 @@ export default function TrackersPanel() {
       </div>
 
       {/* ── GitHub ── */}
-      <div className="space-y-2 border-t border-rule pt-4">
+      <div id="github" tabIndex={-1} className="space-y-2 border-t border-rule pt-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-[13px] font-semibold text-foreground">GitHub</h3>
+            <h3 className="text-[0.8125rem] font-medium text-foreground">GitHub</h3>
             {github?.connected && (
-              <span className="flex items-center gap-1 text-[11px] text-emerald-500">
+              <span className="flex items-center gap-1 text-[0.6875rem] text-ok">
                 <Check className="size-3" />
                 {github.login ?? "connected"}
               </span>
@@ -176,12 +177,13 @@ export default function TrackersPanel() {
               value={githubToken}
               onChange={(e) => setGithubToken(e.target.value)}
               placeholder={github?.connected ? "replace token (ghp_…)" : "ghp_… or github_pat_…"}
-              className="h-7 flex-1 text-[13px]"
+              className="h-8 flex-1 text-[0.8125rem]"
               aria-label="GitHub token"
             />
             <Button
               type="button"
               size="sm"
+              variant="outline"
               disabled={!githubToken.trim() || busy === "github"}
               onClick={() =>
                 void run(
@@ -203,7 +205,7 @@ export default function TrackersPanel() {
               )}
             </Button>
           </div>
-          <p className="text-[13px] text-muted-foreground/80">
+          <p className="text-[0.75rem] leading-relaxed text-muted-foreground">
             Personal access token (classic with{" "}
             <code className="rounded bg-secondary px-1">repo, read:project</code> or fine-grained).
             Stored in keychain.{" "}
@@ -221,7 +223,7 @@ export default function TrackersPanel() {
               </>
             )}
           </p>
-          {github?.warning && <p className="text-[13px] text-amber-500">{github.warning}</p>}
+          {github?.warning && <p className="text-[0.75rem] text-warn">{github.warning}</p>}
         </div>
       </div>
     </div>

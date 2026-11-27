@@ -1,13 +1,11 @@
 use std::collections::HashMap;
-use std::path::Path;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use tokio::sync::{mpsc, oneshot};
 
 use warpforge_protocol as wire;
 
 use crate::agent::{AgentEvent, AgentStatus};
-use crate::config::{load_workspace_config, try_load_workspace_config};
 use crate::portforward::{PfEvent, PfStatus};
 use crate::service::{ServiceEvent, ServiceStatus};
 
@@ -51,8 +49,7 @@ impl Daemon {
         let mut services = Vec::new();
         let mut portforwards = Vec::new();
         for project in self.projects.iter() {
-            let config = load_workspace_config(Path::new(&project.path));
-            let state = self.build_project_config_state(&project.name, config.as_ref());
+            let state = self.build_project_config_state(&project.name);
             projects.push(state.project);
             services.extend(state.services);
             portforwards.extend(state.portforwards);
@@ -85,6 +82,7 @@ impl Daemon {
         // holds no transcript in memory to fold here.
         wire::Snapshot {
             projects,
+            spaces: self.load_spaces(),
             services,
             portforwards,
             tasks,
@@ -142,6 +140,7 @@ impl Daemon {
         // Resolve every project's port range before anything can start (and,
         // for registry entries predating stored ranges, freeze their migration).
         self.recompute_port_ranges();
+        self.load_linked_spaces();
 
         let mut config_poll = tokio::time::interval(CONFIG_POLL_INTERVAL);
         config_poll.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -218,38 +217,6 @@ impl Daemon {
         }
     }
 
-    pub(crate) async fn handle_config_changes(&mut self) {
-        let ready = self.config_observer.ready(&self.projects, Instant::now());
-        for (project_name, fingerprint) in ready {
-            let Some(index) = self
-                .projects
-                .iter()
-                .position(|project| project.name == project_name)
-            else {
-                continue;
-            };
-            let project_path = self.projects[index].path.clone();
-
-            // An existing but invalid file is commonly just an editor's
-            // intermediate save. Keep the last rendered state and retry after
-            // the contents change instead of flashing empty controls.
-            let config = match try_load_workspace_config(Path::new(&project_path)) {
-                Ok(config) => config,
-                Err(_) => continue,
-            };
-            crate::config_local::ensure_local_ignored(Path::new(&project_path));
-
-            self.remove_undeclared_runtime(&project_name, config.as_ref())
-                .await;
-            self.config_observer
-                .mark_applied(&project_name, fingerprint);
-            // A newly declared (or removed) `ports.range` takes effect
-            // immediately; re-resolve and broadcast every project it moved,
-            // plus this one even if its own range did not change.
-            self.recompute_and_broadcast_port_ranges(Some(&project_name));
-        }
-    }
-
     pub(crate) fn handle_agent_event(&mut self, ev: AgentEvent) {
         let known_agent = match &ev {
             AgentEvent::Data { id, .. } | AgentEvent::Exit { id, .. } => {
@@ -308,6 +275,7 @@ impl Daemon {
                     service,
                     status: status.clone(),
                     allocated_port,
+                    needs_restart: false,
                 }
             }
             ServiceEvent::PortProbe { key, .. } => {
@@ -325,6 +293,7 @@ impl Daemon {
                     service,
                     status: ServiceStatus::Failed,
                     allocated_port: 0,
+                    needs_restart: false,
                 }
             }
         };

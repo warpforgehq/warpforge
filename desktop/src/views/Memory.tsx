@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Brain } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { daemon } from "@/daemon";
+import { cn } from "@/lib/utils";
 import type { Memory as MemoryItem, Snapshot } from "@/protocol";
 
 import { MemoryBrowser } from "./memory/MemoryBrowser";
@@ -16,13 +16,15 @@ type Tab = "memories" | "proposals";
 interface Props {
   snapshot: Snapshot;
   onOpenTask: (id: string) => void;
+  /** Replaces the title block; receives the Memories/Proposals tabs to place. */
+  header?: (tabs: ReactNode) => ReactNode;
 }
 
 /**
  * The Memory screen: browse and search what agents have saved, edit or delete
  * it, see how memories link, and review dreaming proposals.
  */
-export default function Memory({ snapshot, onOpenTask }: Props) {
+export default function Memory({ snapshot, onOpenTask, header }: Props) {
   const [tab, setTab] = useState<Tab>("memories");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [items, setItems] = useState<MemoryItem[]>([]);
@@ -39,32 +41,40 @@ export default function Memory({ snapshot, onOpenTask }: Props) {
     setTab("memories");
   }, []);
 
+  const tabs = (
+    <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
+      <TabsList>
+        <TabsTrigger variant="pill" value="memories">
+          Memories
+        </TabsTrigger>
+        <TabsTrigger variant="pill" value="proposals">
+          Proposals
+          {pending > 0 && <span className="tnum text-[11px] text-warn">{pending}</span>}
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <header className="flex shrink-0 flex-wrap items-end justify-between gap-x-4 gap-y-2 px-1 pb-3 pt-2">
-        <div className="min-w-0 space-y-1.5">
-          <h1 className="truncate text-xl font-semibold leading-none tracking-tight">Memory</h1>
-          <p className="truncate text-[13px] text-muted-foreground">
-            {stats.data
-              ? `${stats.data.globalCount} global, ${stats.data.projectCount} project. `
-              : ""}
-            What agents remember across tasks.
-          </p>
-        </div>
-        <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
-          <TabsList>
-            <TabsTrigger variant="pill" value="memories">
-              Memories
-            </TabsTrigger>
-            <TabsTrigger variant="pill" value="proposals">
-              Proposals
-              {pending > 0 && <span className="tnum text-[11px] text-warn">{pending}</span>}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </header>
+      {header ? (
+        <div className="shrink-0">{header(tabs)}</div>
+      ) : (
+        <header className="flex shrink-0 flex-wrap items-end justify-between gap-x-4 gap-y-2 px-1 pb-3 pt-2">
+          <div className="min-w-0 space-y-1.5">
+            <h1 className="truncate text-xl font-semibold leading-none tracking-tight">Memory</h1>
+            <p className="truncate text-[13px] text-muted-foreground">
+              {stats.data
+                ? `${stats.data.globalCount} global, ${stats.data.projectCount} project. `
+                : ""}
+              What agents remember across tasks.
+            </p>
+          </div>
+          {tabs}
+        </header>
+      )}
 
-      <div className="flex min-h-0 flex-1 gap-3 px-1 pb-2">
+      <div className={cn("flex min-h-0 flex-1 gap-4 pb-2", header ? "mt-6" : "px-1")}>
         {tab === "proposals" ? (
           <Proposals index={index} onOpenMemory={open} />
         ) : (
@@ -77,7 +87,10 @@ export default function Memory({ snapshot, onOpenTask }: Props) {
             />
             <section
               aria-label="Memory detail"
-              className="min-h-0 min-w-0 flex-1 overflow-y-auto rounded-md border p-4"
+              className={cn(
+                "min-h-0 min-w-0 flex-1 overflow-y-auto",
+                selected && "rounded-xl border border-border bg-foreground/[0.02] p-4",
+              )}
             >
               {selected ? (
                 <MemoryDetail
@@ -90,10 +103,9 @@ export default function Memory({ snapshot, onOpenTask }: Props) {
                   onOpenTask={onOpenTask}
                 />
               ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-[13px] text-muted-foreground">
-                  <Brain aria-hidden className="size-5" />
+                <p className="px-1 pt-2 text-[0.8125rem] text-muted-foreground">
                   Select a memory to read, edit or link it.
-                </div>
+                </p>
               )}
             </section>
           </>

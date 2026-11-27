@@ -11,8 +11,8 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
 import { ArchiveMergedTaskDialog } from "@/components/pullRequest/ArchiveMergedTaskDialog";
+import { useTaskActions } from "@/components/TaskActionDialogs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +39,7 @@ const ACTION_BUTTON =
  * also offers what its queue or its last run allows.
  * @param props.task The row's task.
  * @param props.state What the row shows the task as.
- * @param props.pinned Whether it is pinned to Mission Control.
+ * @param props.pinned Whether it is pinned to the rail.
  * @param props.factory Whether it is a Factory task.
  * @param props.onPin Toggles the pin.
  */
@@ -58,7 +58,7 @@ export function RowActions({
 }) {
   const [busy, setBusy] = useState(false);
   const [snoozeOpen, setSnoozeOpen] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const actions = useTaskActions(task);
   const [confirmingArchive, setConfirmingArchive] = useState(false);
   const pr = useTaskPullRequest(task.id);
   const mergedWorktree = pr?.state === "merged" && task.worktree ? pr : null;
@@ -174,10 +174,10 @@ export function RowActions({
             {factory && <FactoryMenuItems task={task} />}
             <DropdownMenuItem onSelect={() => onPin(task.id)}>
               <Pin className="size-3.5 opacity-70" />
-              {pinned ? "Unpin from Mission Control" : "Pin to Mission Control"}
+              {pinned ? "Unpin from rail" : "Pin to rail"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => void daemon.archiveTask(task.id)}>
+            <DropdownMenuItem disabled={actions.busy} onSelect={actions.archiveTask}>
               <Archive className="size-3.5 opacity-70" />
               Archive task
             </DropdownMenuItem>
@@ -190,7 +190,8 @@ export function RowActions({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onSelect={() => setConfirmingDelete(true)}
+              disabled={actions.busy}
+              onSelect={actions.deleteTask}
             >
               <Trash2 className="size-3.5 opacity-70" />
               Delete task
@@ -207,13 +208,7 @@ export function RowActions({
           onOpenChange={setConfirmingArchive}
         />
       )}
-      <DeleteTaskDialog
-        task={task}
-        label={label}
-        open={confirmingDelete}
-        onCancel={() => setConfirmingDelete(false)}
-        onDeleted={() => setConfirmingDelete(false)}
-      />
+      {actions.dialogs}
     </div>
   );
 }

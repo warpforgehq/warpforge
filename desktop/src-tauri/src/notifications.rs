@@ -27,7 +27,11 @@ pub fn notify_attention(
 ) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        use mac_usernotifications::{Action, Notification};
+        use mac_usernotifications::{check_bundle, Action, Notification};
+
+        if check_bundle().is_err() {
+            return Ok(());
+        }
 
         let attention_id = attention_id(
             &payload.kind,
@@ -44,7 +48,12 @@ pub fn notify_attention(
                 .action(Action::button("approve", "Approve"))
                 .action(Action::button("reject", "Reject"));
         }
-        notification = notification.action(Action::button("review", "Review"));
+        let action_label = if payload.kind == "finish" {
+            "Open task"
+        } else {
+            "Review"
+        };
+        notification = notification.action(Action::button("review", action_label));
 
         let AttentionPayload {
             kind,

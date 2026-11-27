@@ -5,9 +5,8 @@
 ## Context
 
 A chart, a table or a mockup says more than prose, and agents can write one
-as a self-contained HTML page. The reference implementation (T3 Code's
-`html_render`) stores the page, shows it in a sandboxed iframe in the
-thread, and measures and previews it in a headless Chromium on the server.
+as a self-contained HTML page. A common shape for this stores the page,
+shows it in a sandboxed iframe in the thread, and measures and previews it in a headless Chromium on the server.
 Warpforge's daemon has no browser, while the desktop app already owns
 WebKit views and their capture (`browser_capture.rs`, ADR 0021).
 

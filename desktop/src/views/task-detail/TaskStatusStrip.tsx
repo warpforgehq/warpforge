@@ -1,10 +1,8 @@
 import { Loader2 } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
-import { TaskAccountMenu } from "@/components/TaskAccountMenu";
 import { daemon } from "@/daemon";
 import { isChat } from "@/lib/taskKind";
-import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 
 import { AdvisorIndicator } from "./AdvisorIndicator";
@@ -22,9 +20,8 @@ interface Props {
 }
 
 /**
- * The task's footer: its harness, account, quota and advisor on the left, git
- * state on the right. Switching the account still moves the harness's global
- * login.
+ * The task's advisor, repository activity and git state, shown in the window's
+ * title row. The account and quota live at the foot of the workspace rail.
  *
  * @param task the open task
  * @param branch the task's current branch, when known
@@ -41,20 +38,15 @@ export function TaskStatusStrip({
 }: Props) {
   const { snapshot } = useSyncExternalStore(daemon.subscribe, daemon.getState);
   return (
-    <div className="flex h-6 shrink-0 items-center gap-2 pl-0.5 pr-1 text-[11px] text-muted-foreground">
-      <TaskAccountMenu
-        agentId={task.agent}
-        agents={snapshot.agents ?? []}
-        accounts={snapshot.accounts ?? []}
-      />
+    <div className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
       {task.advisor && <AdvisorIndicator advisor={task.advisor} agents={snapshot.agents ?? []} />}
       {repositoryOperation && (
-        <span className="ml-auto mr-2 flex shrink-0 items-center gap-1 text-muted-foreground">
+        <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
           <Loader2 className="size-3 animate-spin" />
           {repositoryOperation.kind === "pull" ? "Pulling from remote…" : "Pushing to remote…"}
         </span>
       )}
-      <span className={cn("flex items-center gap-2", !repositoryOperation && "ml-auto")}>
+      <span className="flex items-center gap-2">
         {isChat(task) ? (
           <>
             <ContinueInProject task={task} />

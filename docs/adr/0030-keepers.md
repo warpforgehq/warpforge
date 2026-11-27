@@ -1,5 +1,7 @@
 # 0030 — Keepers: post-agents that keep a task's change green, before and after its pull request
 
+> The desktop attention and dashboard presentation in this record was superseded by [0032](0032-permanent-rail.md#2026-11-27-update).
+
 **Status:** proposed (2026-11-06) — draft · backlog #145; prerequisite #146;
 editing UI #147 · amends [0020](0020-task-pull-request-status.md), replaces
 Phase 3 of [0023](0023-backlog-runner.md)

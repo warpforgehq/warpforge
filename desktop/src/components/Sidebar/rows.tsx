@@ -1,6 +1,7 @@
 import { ArrowUpRight, CheckCheck, ChevronRight, Inbox, Trash2 } from "lucide-react";
 
 import { ProjectLiveGlyph } from "@/components/liveActivity/LiveActivityGlyph";
+import { useProjectContextMenu } from "@/components/spaces/projectMenu";
 import { cn } from "@/lib/utils";
 
 import {
@@ -48,7 +49,7 @@ export function ShelfRow({
         } in ${row.project || "chats"}`}
         onClick={() => onToggle(row.project)}
         style={{ paddingLeft: sidebarContentLeft(0) }}
-        className="relative flex h-6 w-full items-center gap-1.5 rounded-md pr-7 text-left text-[11px] text-muted-foreground/45 transition-colors hover:bg-accent/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+        className="relative flex h-6 w-full items-center gap-1.5 rounded-md pr-7 text-left text-[0.75rem] text-muted-foreground/45 transition-colors hover:bg-accent/50 hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <span
           aria-hidden
@@ -87,7 +88,7 @@ export function EmptyRow({
   onAddProject?: () => void;
 }) {
   return (
-    <div className="flex items-start gap-2 px-2.5 py-1.5 text-[11px] text-muted-foreground/50">
+    <div className="flex items-start gap-2 px-2.5 py-1.5 text-[0.6875rem] text-muted-foreground/50">
       <Inbox aria-hidden className="mt-px size-3.5 shrink-0 opacity-60" />
       <span className="min-w-0">
         {row.label}
@@ -97,7 +98,7 @@ export function EmptyRow({
         <button
           type="button"
           onClick={onAddProject}
-          className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[13px] font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+          className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[0.8125rem] font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
         >
           Add project
         </button>
@@ -112,6 +113,7 @@ export function ProjectRow({
   onOpenProject,
   onSettle,
   onSettleHover,
+  onNewTaskIn,
 }: {
   row: Extract<SidebarRow, { kind: "project" }>;
   onToggle: (name: string) => void;
@@ -120,7 +122,10 @@ export function ProjectRow({
   /** True while the pointer (or focus) is on the bulk-settle button, so the
    *  tree can highlight exactly the rows it would settle. */
   onSettleHover?: (hovering: boolean) => void;
+  /** Starts a task in the project, from its context menu. */
+  onNewTaskIn: (project: string) => void;
 }) {
+  const projectMenu = useProjectContextMenu(onNewTaskIn);
   const settle = row.settleIds.length > 0;
   const preview = row.settlePreview.some(Boolean) ? ` — ${row.settlePreview.join(", ")}` : "";
   const settleTitle = `Settle ${row.settleIds.length} finished turn${
@@ -136,13 +141,14 @@ export function ProjectRow({
         data-project={row.name}
         aria-label={`Open project ${row.name}`}
         onClick={() => onOpenProject(row.name)}
+        onContextMenu={(event) => projectMenu(event, row.name)}
         style={{ paddingLeft: sidebarContentLeft(0) }}
-        className="flex h-8 w-full min-w-0 items-center gap-2 rounded-md pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+        className="flex h-7 w-full min-w-0 items-center gap-2 rounded-md pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <ProjectBadge name={row.name} />
         <strong
           className={cn(
-            "min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight",
+            "min-w-0 flex-1 truncate text-[0.8125rem] font-semibold tracking-tight",
             row.selected ? "text-foreground" : "text-foreground/70",
           )}
         >
@@ -159,7 +165,7 @@ export function ProjectRow({
         )}
         <span
           title={`${row.count} active task${row.count === 1 ? "" : "s"}`}
-          className="tnum shrink-0 text-[11px] text-muted-foreground/45 transition-opacity group-hover/proj:opacity-0"
+          className="shrink-0 font-mono text-[0.6875rem] tabular-nums text-muted-foreground/45 transition-opacity group-hover/proj:opacity-0"
         >
           {row.count}
         </span>
@@ -222,7 +228,7 @@ export function ChatsRow({
         aria-label={`${row.expanded ? "Collapse" : "Expand"} chats`}
         onClick={() => onToggle(CHATS_GROUP)}
         style={{ paddingLeft: sidebarContentLeft(0) }}
-        className="flex h-8 w-full min-w-0 items-center gap-2 rounded-md pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+        className="flex h-7 w-full min-w-0 items-center gap-2 rounded-md pr-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <span
           aria-hidden
@@ -234,7 +240,7 @@ export function ChatsRow({
           />
         </span>
         <ChatsBadge />
-        <strong className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight text-foreground/70">
+        <strong className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold tracking-tight text-foreground/70">
           Chats
         </strong>
         {row.attentionCount > 0 && (
@@ -242,7 +248,7 @@ export function ChatsRow({
         )}
         <span
           title={`${row.count} active chat${row.count === 1 ? "" : "s"}`}
-          className="tnum shrink-0 text-[11px] text-muted-foreground/45"
+          className="shrink-0 font-mono text-[0.6875rem] tabular-nums text-muted-foreground/45"
         >
           {row.count}
         </span>

@@ -10,6 +10,7 @@ import type { ClientRequestBody } from "./browser";
 import type { Channel } from "./channels";
 import type { KeeperFinding, KeeperLoopState, KeeperRun, TaskKeepers } from "./keepers";
 import type { PeerMessage } from "./peers";
+import type { ProjectConfigError } from "./projectConfig";
 import type { TaskPullRequest } from "./pulls";
 import type { ItemRun, RunnerStatus } from "./runner";
 import type {
@@ -24,6 +25,7 @@ import type {
   TerminalScreen,
 } from "./runtime";
 import type { Smith } from "./smiths";
+import type { Space } from "./spaces";
 import type { SessionUpdate, TaskInfo } from "./tasks";
 
 // ── Events ──────────────────────────────────────────────────────────────────
@@ -33,6 +35,7 @@ export type DaemonEvent =
   | { event: "project.added"; data: ProjectInfo }
   | { event: "project.removed"; data: { name: string } }
   | { event: "project.configChanged"; data: ProjectConfigState }
+  | { event: "spaces.changed"; data: Space[] }
   | {
       event: "service.status";
       data: {
@@ -40,6 +43,7 @@ export type DaemonEvent =
         service: string;
         status: ServiceStatus;
         allocated_port: number;
+        needsRestart?: boolean;
       };
     }
   | {
@@ -166,6 +170,7 @@ export type DaemonEvent =
 
 export interface Snapshot {
   projects: ProjectInfo[];
+  spaces?: Space[];
   services: ServiceInfo[];
   portforwards: PortForwardInfo[];
   tasks: TaskInfo[];
@@ -196,7 +201,9 @@ export interface ProjectInfo {
   /** Name of the project whose declared range this one collides with. */
   portRangeConflict?: string | null;
   declaredServices: string[];
-  agentTemplates: Record<string, string>;
   /** Why the personal local config file is being ignored; absent when it applies. */
   localConfigError?: string | null;
+  configError?: ProjectConfigError | null;
+  /** `linked:` entries of workspace.yaml, resolved against the project path. */
+  linked?: string[];
 }

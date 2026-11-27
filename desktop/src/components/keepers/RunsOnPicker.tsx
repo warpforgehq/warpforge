@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useBusy } from "@/hooks/useBusy";
 import { type KeeperRunsOn, runsOnLabel, runsOnOptions } from "@/lib/keeperRunsOn";
+import { usePickerAgents, usePickerOptions } from "@/lib/pickerPreferences";
 import type { AgentConfig, ConfigOption, KeeperDefinition } from "@/protocol";
 
 const SELECT =
@@ -71,9 +72,14 @@ export function RunsOnPicker({
   const [open, setOpen] = useState(false);
   const [saving, run] = useBusy();
   const [draft, setDraft] = useState<KeeperRunsOn>({});
-  const enabled = agents.filter((agent) => agent.enabled);
+  const enabled = usePickerAgents(agents);
   const unknown = draft.agent && !enabled.some((agent) => agent.id === draft.agent);
-  const options = runsOnOptions(agents, draft.agent);
+  const configured = agents.find((agent) => agent.id === draft.agent);
+  const modelOptions = usePickerOptions(draft.agent, configured?.models);
+  const options = runsOnOptions(
+    configured ? [{ ...configured, models: modelOptions }] : [],
+    draft.agent,
+  );
   const label = runsOnLabel(definition, agents);
 
   const toggle = (next: boolean) => {
@@ -117,7 +123,11 @@ export function RunsOnPicker({
               onChange={(event) => setDraft({ agent: event.target.value || undefined })}
             >
               <option value="">Task's agent</option>
-              {unknown && <option value={draft.agent}>{draft.agent} (not enabled)</option>}
+              {unknown && (
+                <option disabled value={draft.agent}>
+                  {draft.agent}
+                </option>
+              )}
               {enabled.map((agent) => (
                 <option key={agent.id} value={agent.id}>
                   {agent.displayName}

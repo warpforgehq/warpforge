@@ -6,7 +6,7 @@ use warpforge_protocol as wire;
 
 use crate::daemon::actor::{Command, Daemon, Event};
 use crate::daemon::runtime::Write as PersistWrite;
-use crate::daemon::task::{Task, TaskStatus};
+use crate::daemon::task::TaskStatus;
 use crate::daemon::workflow::{RunState, StageKind, WorkflowRun};
 
 // ─── Workflow pipeline engine (actor glue) ───────────────────────────────────
@@ -238,7 +238,7 @@ impl Daemon {
         let existing = task_id.as_ref().and_then(|id| self.tasks.get(id)).cloned();
         let created = existing.is_none();
         let mut task = existing.unwrap_or_else(|| {
-            let mut task = Task::new(&project, &prompt, &agent, tags.clone());
+            let mut task = self.new_task(&project, &prompt, &agent, tags.clone());
             if let Some(id) = task_id {
                 task.id = id;
             }

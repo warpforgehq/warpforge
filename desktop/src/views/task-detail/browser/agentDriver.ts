@@ -9,13 +9,8 @@ import { serveClientRequests, type ClientRequestChannel } from "@/daemon/clientR
 import { IS_TAURI } from "@/lib/platform";
 
 import { BROWSER_CAPABILITY, type BrowserAction, type ClientRequestBody } from "../../../protocol";
-import {
-  browser,
-  onBrowserState,
-  onBrowserTitle,
-  type BrowserStateEvent,
-} from "./browserClient";
 import { isNoTab, runBrowserAction } from "./agentActions";
+import { browser, onBrowserState, onBrowserTitle, type BrowserStateEvent } from "./browserClient";
 import { recordTabPage, showAgentTab } from "./browserSession";
 import { runHtmlPreview } from "./htmlPreview";
 

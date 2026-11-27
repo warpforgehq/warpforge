@@ -3,7 +3,6 @@ use warpforge_protocol as wire;
 use crate::daemon::actor::PendingResume;
 use crate::daemon::actor::PendingSessionStart;
 use crate::daemon::actor::{Command, Daemon, Event};
-use crate::daemon::task::Task;
 use crate::daemon::task::TaskStatus;
 
 impl Daemon {
@@ -32,7 +31,7 @@ impl Daemon {
                 } else {
                     title
                 };
-                let task = Task::new(&project, &prompt, &agent, vec!["resumed".into()]);
+                let task = self.new_task(&project, &prompt, &agent, vec!["resumed".into()]);
                 let id = task.id.clone();
                 // A freshly resumed external session carries no model intent
                 // yet; threaded so the resume path reads the task, not a

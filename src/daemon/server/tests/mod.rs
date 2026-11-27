@@ -8,6 +8,8 @@ mod connection;
 mod origin;
 mod quit;
 mod requests;
+#[cfg(unix)]
+mod spaces;
 mod terminals;
 mod update;
 mod workflow;

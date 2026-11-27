@@ -108,7 +108,7 @@ describe("the task the Tasks segment returns to", () => {
       lastTaskId: null,
       openTaskId: null,
       selectedProjectId: null,
-      view: "control",
+      view: "start",
     });
   });
 
@@ -135,19 +135,25 @@ describe("the task the Tasks segment returns to", () => {
     expect(useUi.getState().openTaskId).toBe("task-1");
     // The view moves off the inbox too, so closing the task lands on the tasks
     // side rather than bouncing back to the review queue.
-    expect(useUi.getState().view).toBe("project");
+    expect(useUi.getState().view).toBe("start");
     expect(useUi.getState().activeSurface).toBe(DEFAULT_TASK_SURFACE);
   });
 
-  it("falls back to the selected project, then to Mission Control", () => {
-    useUi.setState({ lastTaskId: null, selectedProjectId: "warpforge", view: "inbox" });
+  it("leaves project mode for every project's tasks and the composer", () => {
+    useUi.setState({
+      lastTaskId: null,
+      panelScope: { kind: "project", name: "warpforge" },
+      selectedProjectId: "warpforge",
+      view: "project",
+    });
     useUi.getState().selectTasksSegment(null);
-    expect(useUi.getState().view).toBe("project");
+    expect(useUi.getState().view).toBe("start");
+    expect(useUi.getState().panelScope).toBeNull();
     expect(useUi.getState().openTaskId).toBeNull();
 
     useUi.setState({ selectedProjectId: null, view: "inbox" });
     useUi.getState().selectTasksSegment(null);
-    expect(useUi.getState().view).toBe("control");
+    expect(useUi.getState().view).toBe("start");
   });
 
   it("drops a remembered task the caller could not find instead of reopening it", () => {
@@ -189,7 +195,7 @@ describe("the task the Tasks segment returns to", () => {
     await useUi.persist.rehydrate();
 
     expect(useUi.getState().lastTaskId).toBeNull();
-    expect(useUi.getState().view).toBe("control");
+    expect(useUi.getState().view).toBe("start");
   });
 });
 
@@ -336,7 +342,7 @@ describe("task workspace surface state", () => {
 
     await useUi.persist.rehydrate();
 
-    expect(useUi.getState().view).toBe("control");
+    expect(useUi.getState().view).toBe("start");
   });
 
   it("leaves a persisted view alone when it is still reachable", async () => {
@@ -359,7 +365,7 @@ describe("task workspace surface state", () => {
     expect(useUi.getState().selectedProjectId).toBe("warpforge");
   });
 
-  it("lands on Mission Control when the removed Projects route had no selection", async () => {
+  it("lands on the composer when the removed Projects route had no selection", async () => {
     // With no nav item left to re-enter, `view: "project"` with a null
     // selection would show whichever project happens to be first.
     localStorage.setItem(
@@ -369,7 +375,7 @@ describe("task workspace surface state", () => {
 
     await useUi.persist.rehydrate();
 
-    expect(useUi.getState().view).toBe("control");
+    expect(useUi.getState().view).toBe("start");
   });
 
   it("migrates version 3 glass settings onto the new defaults", async () => {
@@ -477,13 +483,13 @@ describe("inbox selection and filters", () => {
 describe("sidebar mode", () => {
   beforeEach(() => {
     localStorage.clear();
-    useUi.setState({ sidebarMode: "tasks", teamSelection: null, view: "control" });
+    useUi.setState({ sidebarMode: "tasks", teamSelection: null, view: "start" });
   });
 
   it.each([
     ["inbox", "inbox"],
     ["team", "team"],
-    ["control", "tasks"],
+    ["start", "tasks"],
     ["project", "tasks"],
   ])("migrates a version 8 install on %s to the %s mode", async (view, mode) => {
     localStorage.setItem("wf-ui", JSON.stringify({ state: { view }, version: 8 }));
@@ -593,7 +599,7 @@ describe("revealTask", () => {
   });
 
   it("opens a Smith's thread as that Smith's page in Smiths mode", () => {
-    useUi.setState({ openTaskId: "t_other", sidebarMode: "tasks", view: "control" });
+    useUi.setState({ openTaskId: "t_other", sidebarMode: "tasks", view: "start" });
     useUi.getState().revealTask("t_thread");
     expect(useUi.getState()).toMatchObject({
       openTaskId: null,

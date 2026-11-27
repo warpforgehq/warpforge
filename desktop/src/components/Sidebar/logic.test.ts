@@ -238,7 +238,7 @@ describe("projectNames", () => {
   // resources but never touches its tasks (see `remove_project` in the
   // daemon). This must not resurrect a removed project as a phantom sidebar
   // group — it's registered projects only, full stop. Such a task stays
-  // reachable elsewhere (Mission Control), just not here.
+  // reachable by a direct link.
   it("returns registered projects only, in snapshot order", () => {
     expect(projectNames({ projects: [{ name: "warpforge" }, { name: "website" }] })).toEqual([
       "warpforge",

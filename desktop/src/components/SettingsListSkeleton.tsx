@@ -2,7 +2,7 @@ import { SkeletonBar, SkeletonBlock } from "@/components/ui/skeleton";
 
 /**
  * Placeholder for a settings list whose rows are still being detected — the
- * language-server and agent panels. Mirrors the real rows' `px-4 py-2.5`
+ * language-server and agent panels. Mirrors the real rows' `px-3.5 py-3`
  * rhythm: a logo lane, a name bar, a version bar and a right-aligned
  * button-shaped block, so the list does not flash a centred sentence.
  */
@@ -21,7 +21,7 @@ export function SettingsListSkeleton({
         <div
           key={row}
           data-testid={`${testId}-row`}
-          className="flex items-center justify-between gap-4 border-t border-rule px-4 py-2.5 first:border-t-0"
+          className="flex items-center justify-between gap-4 border-t border-rule px-3.5 py-3 first:border-t-0"
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <SkeletonBar className="size-4 shrink-0" />

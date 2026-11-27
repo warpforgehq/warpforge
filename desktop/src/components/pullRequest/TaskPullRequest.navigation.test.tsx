@@ -131,25 +131,6 @@ it("returns from a PR to its owning task", () => {
   expect(useUi.getState()).toMatchObject({ openTaskId: task.id, activeSurface: "pull-request" });
 });
 
-it("renders compact status without archive controls or another refresh", () => {
-  setup();
-  const refresh = vi.mocked(daemon.refreshTaskPullRequests);
-  vi.mocked(daemon.getState).mockReturnValue({
-    ...daemon.getState(),
-    taskPullRequests: { [task.id]: { ...pr, state: "merged" } },
-  });
-  const withWorktree = { ...task, title: "Change", prompt: "Change", worktree: "/worktree" };
-  render(
-    <>
-      <TaskPullRequestChip task={withWorktree} />
-      <TaskPullRequestChip task={withWorktree} compact />
-    </>,
-  );
-  expect(screen.getAllByRole("button", { name: "Archive and remove worktree" })).toHaveLength(1);
-  expect(screen.getAllByRole("button", { name: /open in Warpforge/ })).toHaveLength(2);
-  expect(refresh).toHaveBeenCalledTimes(1);
-});
-
 it.each(["Enter", " "])("honours modifiers on %s for chip and glyph", async (key) => {
   setup();
   const external = vi.spyOn(links, "openExternalLink").mockResolvedValue();

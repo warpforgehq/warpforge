@@ -9,7 +9,16 @@ import {
   useUi,
 } from "@/store/ui";
 
-import { hsl, NumberInput, Section, SettingRow, Slider, Toggle } from "../primitives";
+import {
+  hsl,
+  NumberInput,
+  SettingsPage,
+  SettingsRow,
+  SettingsSection,
+  Slider,
+  Toggle,
+} from "../primitives";
+import { ProjectSections } from "./appearance/ProjectSections";
 
 export default function AppearancePage() {
   const fontSize = useUi((s) => s.fontSize);
@@ -36,130 +45,155 @@ export default function AppearancePage() {
   const opacityPercent = Math.round(sidebarOpacity * 100);
 
   return (
-    <Section title="Appearance">
-      <div className="grid grid-cols-4 gap-2 p-4">
-        {THEMES.map((t) => {
-          const active = t.id === theme;
-          const swatch = (key: keyof typeof t.colors) => hsl(t.colors[key]);
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTheme(t.id)}
-              aria-pressed={active}
-              className={`flex cursor-pointer flex-col items-start gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
-                active ? "border-ring bg-accent" : "border-border bg-card hover:border-primary/50"
-              }`}
-            >
-              <span className="flex items-center gap-1.5">
-                <span
-                  className="size-4 rounded-full border border-border"
-                  style={{ background: swatch("background") }}
-                />
-                <span
-                  className="size-4 rounded-full border border-border"
-                  style={{ background: swatch("primary") }}
-                />
-                <span
-                  className="size-4 rounded-full border border-border"
-                  style={{ background: swatch("muted-foreground") }}
-                />
-                <span
-                  className="size-4 rounded-full border border-border"
-                  style={{ background: swatch("accent") }}
-                />
-              </span>
-              <span className="text-[13px] font-medium text-foreground">{t.name}</span>
-            </button>
-          );
-        })}
-      </div>
-      <SettingRow
-        title="UI font size"
-        description="Labels, chat, buttons — all general chrome."
-        hint="Cmd/Ctrl +/− to change, Cmd/Ctrl 0 to reset. Default 14px."
-        control={
-          <>
-            {fontDirty && (
-              <Button
+    <SettingsPage page="appearance">
+      <SettingsSection id="theme" title="Theme" padded>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {THEMES.map((t) => {
+            const active = t.id === theme;
+            const swatch = (key: keyof typeof t.colors) => hsl(t.colors[key]);
+            return (
+              <button
+                key={t.id}
                 type="button"
-                size="sm"
-                variant="ghost"
-                className="h-7 text-[13px] text-muted-foreground"
-                onClick={resetFontSizes}
+                onClick={() => setTheme(t.id)}
+                aria-pressed={active}
+                className={`flex cursor-pointer flex-col items-start gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
+                  active
+                    ? "border-ring bg-foreground/[0.06]"
+                    : "border-border bg-background hover:border-edge"
+                }`}
               >
-                Reset
-              </Button>
-            )}
-            <NumberInput value={fontSize} min={10} max={24} onChange={setFontSize} />
-          </>
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="size-4 rounded-full border border-border"
+                    style={{ background: swatch("background") }}
+                  />
+                  <span
+                    className="size-4 rounded-full border border-border"
+                    style={{ background: swatch("primary") }}
+                  />
+                  <span
+                    className="size-4 rounded-full border border-border"
+                    style={{ background: swatch("muted-foreground") }}
+                  />
+                  <span
+                    className="size-4 rounded-full border border-border"
+                    style={{ background: swatch("accent") }}
+                  />
+                </span>
+                <span className="text-[0.8125rem] font-medium text-foreground">{t.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </SettingsSection>
+      <SettingsSection
+        title="Text"
+        actions={
+          fontDirty && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-6 text-[0.75rem] text-muted-foreground"
+              onClick={resetFontSizes}
+            >
+              Restore defaults
+            </Button>
+          )
         }
-      />
-      <SettingRow
-        title="Mono font size"
-        description="Code editor, diffs, terminal. Scales on its own."
-        hint="Independent of the UI font. Default 13px."
-        control={<NumberInput value={monoFontSize} min={9} max={22} onChange={setMonoFontSize} />}
-      />
-      <SettingRow
-        title="Transparent window"
-        description="Blur the desktop behind the app chrome."
-        hint="macOS and Windows only; Linux stays opaque. Takes effect immediately."
-        control={
-          <Toggle
-            id="transparent-window"
-            checked={transparentWindow}
-            onChange={setTransparentWindow}
-            disabled={!HAS_NATIVE_GLASS}
-          />
-        }
-      />
-      <SettingRow
-        title="Glass opacity"
-        description="How much of the desktop shows through the app."
-        hint="The conversation is the most transparent surface; the sidebar and panels sit halfway between it and solid. Default 85%."
-        control={
-          <Slider
-            id="sidebar-opacity"
-            value={opacityPercent}
-            display={`${opacityPercent}%`}
-            min={Math.round(SIDEBAR_OPACITY_MIN * 100)}
-            max={Math.round(SIDEBAR_OPACITY_MAX * 100)}
-            disabled={glassOff}
-            onChange={(percent) => setSidebarOpacity(percent / 100)}
-          />
-        }
-      />
-      <SettingRow
-        title="Blur radius"
-        description="Background blur behind the window."
-        hint="Higher values cost more to composite. Default 24. macOS only — Windows Acrylic has a fixed radius."
-        control={
-          <Slider
-            id="blur-radius"
-            value={blurRadius}
-            display={String(blurRadius)}
-            min={BLUR_RADIUS_MIN}
-            max={BLUR_RADIUS_MAX}
-            disabled={glassOff}
-            onChange={setBlurRadius}
-          />
-        }
-      />
-      <SettingRow
-        title="Main pane glass"
-        description="Extend the translucent treatment to the work surface."
-        hint="Off keeps diffs, editors and the task pane solid while the chrome stays glass."
-        control={
-          <Toggle id="body-glass" checked={bodyGlass} onChange={setBodyGlass} disabled={glassOff} />
-        }
-      />
-      <SettingRow
-        title="TheoMod"
-        description="Blurs email addresses everywhere, for screen sharing."
-        hint="Hover a blurred address to peek. Copying still works."
-        control={<Toggle id="theo-mod" checked={theoMod} onChange={setTheoMod} />}
-      />
-    </Section>
+      >
+        <SettingsRow
+          id="ui-font-size"
+          title="UI font size"
+          description="Labels, chat, buttons — all general chrome."
+          hint="Cmd/Ctrl +/− to change, Cmd/Ctrl 0 to reset. Default 14px."
+          control={<NumberInput value={fontSize} min={10} max={24} onChange={setFontSize} />}
+        />
+        <SettingsRow
+          id="mono-font-size"
+          title="Mono font size"
+          description="Code editor, diffs, terminal. Scales on its own."
+          hint="Independent of the UI font. Default 13px."
+          control={<NumberInput value={monoFontSize} min={9} max={22} onChange={setMonoFontSize} />}
+        />
+      </SettingsSection>
+      <SettingsSection title="Window">
+        <SettingsRow
+          id="transparent-window"
+          title="Transparent window"
+          description="Blur the desktop behind the app chrome."
+          hint="macOS and Windows only; Linux stays opaque. Takes effect immediately."
+          control={
+            <Toggle
+              id="transparent-window-switch"
+              label="Transparent window"
+              checked={transparentWindow}
+              onChange={setTransparentWindow}
+              disabled={!HAS_NATIVE_GLASS}
+            />
+          }
+        />
+        <SettingsRow
+          id="glass-opacity"
+          title="Glass opacity"
+          description="How much of the desktop shows through the app."
+          hint="The conversation is the most transparent surface; the sidebar and panels sit halfway between it and solid. Default 85%."
+          control={
+            <Slider
+              id="sidebar-opacity"
+              value={opacityPercent}
+              display={`${opacityPercent}%`}
+              min={Math.round(SIDEBAR_OPACITY_MIN * 100)}
+              max={Math.round(SIDEBAR_OPACITY_MAX * 100)}
+              disabled={glassOff}
+              onChange={(percent) => setSidebarOpacity(percent / 100)}
+            />
+          }
+        />
+        <SettingsRow
+          id="blur-radius"
+          title="Blur radius"
+          description="Background blur behind the window."
+          hint="Higher values cost more to composite. Default 24. macOS only — Windows Acrylic has a fixed radius."
+          control={
+            <Slider
+              id="blur-radius-slider"
+              value={blurRadius}
+              display={String(blurRadius)}
+              min={BLUR_RADIUS_MIN}
+              max={BLUR_RADIUS_MAX}
+              disabled={glassOff}
+              onChange={setBlurRadius}
+            />
+          }
+        />
+        <SettingsRow
+          id="main-pane-glass"
+          title="Main pane glass"
+          description="Extend the translucent treatment to the work surface."
+          hint="Off keeps diffs, editors and the task pane solid while the chrome stays glass."
+          control={
+            <Toggle
+              id="body-glass"
+              label="Main pane glass"
+              checked={bodyGlass}
+              onChange={setBodyGlass}
+              disabled={glassOff}
+            />
+          }
+        />
+      </SettingsSection>
+      <ProjectSections />
+      <SettingsSection title="Privacy">
+        <SettingsRow
+          id="theomod"
+          title="TheoMod"
+          description="Blurs email addresses everywhere, for screen sharing."
+          hint="Hover a blurred address to peek. Copying still works."
+          control={<Toggle id="theo-mod" label="TheoMod" checked={theoMod} onChange={setTheoMod} />}
+        />
+      </SettingsSection>
+    </SettingsPage>
   );
 }

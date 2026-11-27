@@ -6,12 +6,8 @@ const browser = {
 
 vi.mock("./browserClient", () => ({ browser, NO_TAB: "no such browser tab" }));
 
-const {
-  runBrowserAction,
-  SETTLE_MS,
-  SCROLL_SETTLE_MS,
-  WAIT_POLL_MS,
-} = await import("./agentActions");
+const { runBrowserAction, SETTLE_MS, SCROLL_SETTLE_MS, WAIT_POLL_MS } =
+  await import("./agentActions");
 
 const allowed = ["http://localhost:4400"];
 const signal = () => new AbortController().signal;
@@ -38,12 +34,7 @@ describe("settle after click, type and press", () => {
       return { url: "http://localhost:4400/", changes: ["a", "b"] };
     });
 
-    const pending = runBrowserAction(
-      "t",
-      { action: "click", ref: "e1" },
-      allowed,
-      signal(),
-    );
+    const pending = runBrowserAction("t", { action: "click", ref: "e1" }, allowed, signal());
     await vi.advanceTimersByTimeAsync(SETTLE_MS);
     const result = await pending;
 
@@ -94,12 +85,7 @@ describe("settle after click, type and press", () => {
       throw new Error("the page did not run the browser script");
     });
 
-    const pending = runBrowserAction(
-      "t",
-      { action: "click", ref: "e1" },
-      allowed,
-      signal(),
-    );
+    const pending = runBrowserAction("t", { action: "click", ref: "e1" }, allowed, signal());
     await vi.advanceTimersByTimeAsync(SETTLE_MS);
     const result = await pending;
 
@@ -109,12 +95,7 @@ describe("settle after click, type and press", () => {
   it("does not settle a blocked action", async () => {
     browser.agentCall.mockResolvedValue({ blocked: "https://other.test" });
 
-    const result = await runBrowserAction(
-      "t",
-      { action: "click", ref: "e1" },
-      allowed,
-      signal(),
-    );
+    const result = await runBrowserAction("t", { action: "click", ref: "e1" }, allowed, signal());
     expect(result.blocked).toBe("https://other.test");
     expect(browser.agentCall).toHaveBeenCalledTimes(1);
   });
@@ -132,16 +113,11 @@ describe("scroll settle", () => {
             scroll: { y: 900, height: 1000, percent: 100, bottom: true, appeared: 2 },
           };
         default:
-          return { url: "http://localhost:4400/", changes: ["status \"More loaded\" [e4]"] };
+          return { url: "http://localhost:4400/", changes: ['status "More loaded" [e4]'] };
       }
     });
 
-    const pending = runBrowserAction(
-      "t",
-      { action: "scroll", to: "bottom" },
-      allowed,
-      signal(),
-    );
+    const pending = runBrowserAction("t", { action: "scroll", to: "bottom" }, allowed, signal());
     await vi.advanceTimersByTimeAsync(SCROLL_SETTLE_MS);
     const result = await pending;
 

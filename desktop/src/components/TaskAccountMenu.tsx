@@ -25,6 +25,8 @@ import { usageWindowShortLabel } from "@/lib/usageWindowLabel";
 import { cn } from "@/lib/utils";
 import type { AccountInfo, AgentConfig, AgentLimitWindow, AgentSpend } from "@/protocol";
 
+import { UsageRing } from "./UsageRing";
+
 /**
  * The open task's harness, its account, and its quota — one control.
  *
@@ -44,10 +46,13 @@ export function TaskAccountMenu({
   agentId,
   agents,
   accounts,
+  variant = "inline",
 }: {
   agentId: string;
   agents: AgentConfig[];
   accounts: AccountInfo[];
+  /** `ring`: a round rail button with the quota as rings around the logo. */
+  variant?: "inline" | "ring";
 }) {
   const { accounts: limits, refresh } = useAgentLimits();
   const { agents: spend } = useAgentSpend();
@@ -76,6 +81,23 @@ export function TaskAccountMenu({
   const shown = [headline?.session, headline?.weekly].filter(
     (window): window is AgentLimitWindow => window != null,
   );
+
+  const ring = variant === "ring";
+  const logo = (
+    <AgentLogo
+      agentId={agentId}
+      displayName={displayName}
+      className={ring ? "size-3" : "size-3.5"}
+    />
+  );
+
+  if (cards.length === 0 && ring) {
+    return (
+      <span className="grid size-7 place-items-center" title={displayName}>
+        <UsageRing windows={[]}>{logo}</UsageRing>
+      </span>
+    );
+  }
 
   if (cards.length === 0) {
     // Nothing signed in for this harness yet. Still say which harness the task
@@ -112,31 +134,42 @@ export function TaskAccountMenu({
   // the label already is the harness name.
   const titleHead = label === displayName ? displayName : `${displayName}: ${label}`;
   return (
-    <div className="flex min-w-0 items-center gap-1.5">
+    <div className={ring ? "relative flex" : "flex min-w-0 items-center gap-1.5"}>
+      {error && ring && (
+        <span
+          aria-hidden
+          title={error}
+          className="absolute left-0 top-0 size-1.5 rounded-full bg-warn"
+        />
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="flex h-5 min-w-0 items-center gap-1.5 rounded px-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          className={
+            ring
+              ? "relative grid size-7 place-items-center rounded-md transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              : "flex h-5 min-w-0 items-center gap-1.5 rounded px-1.5 text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          }
           aria-label={`${displayName} account`}
           title={`${titleHead}${shown.map((w) => ` · ${w.label}: ${quotaSentence(w)}`).join("")}`}
         >
-          <AgentLogo agentId={agentId} displayName={displayName} className="size-3.5" />
-          <span className="max-w-28 truncate">
-            <EmailBlur text={label} />
-          </span>
-          {shown.length > 0 && (
-            <span aria-hidden className="flex min-w-0 items-center gap-1.5">
-              {shown.map((window) => (
-                <QuotaBar key={window.id} window={window} />
-              ))}
-            </span>
+          {ring ? (
+            <UsageRing windows={shown}>{logo}</UsageRing>
+          ) : (
+            <InlineTriggerBody logo={logo} label={label} shown={shown} />
           )}
-          {pending !== null && <LoaderCircle className="size-3 animate-spin" />}
+          {pending !== null && (
+            <LoaderCircle
+              className={
+                ring ? "absolute right-0 top-0 size-3 animate-spin" : "size-3 animate-spin"
+              }
+            />
+          )}
         </DropdownMenuTrigger>
         {/* Capped to the viewport so a machine with several harnesses signed in
             scrolls instead of running off a short screen. */}
         <DropdownMenuContent
-          side="top"
-          align="start"
+          side={ring ? "left" : "top"}
+          align={ring ? "end" : "start"}
           className="max-h-[min(80vh,32rem)] w-80 space-y-2 overflow-y-auto p-2"
         >
           {cards.map((card) => (
@@ -166,24 +199,52 @@ export function TaskAccountMenu({
       </DropdownMenu>
       {/* Reachable without opening the menu: a stale number is the reason you
           come here, and the menu's own Refresh is one click further in. */}
-      <button
-        type="button"
-        aria-label="Refresh usage"
-        title="Refresh usage"
-        onClick={() => void onRefresh()}
-        disabled={refreshing}
-        className="grid size-5 shrink-0 place-items-center rounded text-muted-foreground/70 transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-60"
-      >
-        <RefreshCcw aria-hidden className={cn("size-3", refreshing && "animate-spin")} />
-      </button>
+      {!ring && (
+        <button
+          type="button"
+          aria-label="Refresh usage"
+          title="Refresh usage"
+          onClick={() => void onRefresh()}
+          disabled={refreshing}
+          className="grid size-5 shrink-0 place-items-center rounded text-muted-foreground/70 transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-60"
+        >
+          <RefreshCcw aria-hidden className={cn("size-3", refreshing && "animate-spin")} />
+        </button>
+      )}
       {/* Outside the dropdown on purpose: the menu can close on the same frame a
           switch fails, and an error rendered inside it would go with it. */}
-      {error && (
+      {error && !ring && (
         <span className="max-w-64 truncate text-[11px] text-warn" role="status" title={error}>
           {error}
         </span>
       )}
     </div>
+  );
+}
+
+function InlineTriggerBody({
+  logo,
+  label,
+  shown,
+}: {
+  logo: ReactNode;
+  label: string;
+  shown: AgentLimitWindow[];
+}) {
+  return (
+    <>
+      {logo}
+      <span className="max-w-28 truncate">
+        <EmailBlur text={label} />
+      </span>
+      {shown.length > 0 && (
+        <span aria-hidden className="flex min-w-0 items-center gap-1.5">
+          {shown.map((window) => (
+            <QuotaBar key={window.id} window={window} />
+          ))}
+        </span>
+      )}
+    </>
   );
 }
 

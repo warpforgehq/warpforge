@@ -70,6 +70,7 @@ pub struct ManagedService {
     pub next_seq: u64,
     /// Port declared in .warpforge.yaml (0 = none)
     pub original_port: u16,
+    env: HashMap<String, String>,
     /// Actual port the process is listening on (allocated from range)
     pub allocated_port: u16,
     /// True when the declared port was pinned strictly (no fallback).
@@ -138,6 +139,16 @@ pub struct ServiceManager {
 }
 
 impl ManagedService {
+    pub(crate) fn needs_restart(&self, definition: &crate::config::ServiceConfig) -> bool {
+        self.alive
+            && (self.command != definition.command
+                || self.original_port != definition.port.unwrap_or(0)
+                || match &definition.env {
+                    Some(env) => &self.env != env,
+                    None => !self.env.is_empty(),
+                })
+    }
+
     /// Whether this entry's last run may still be running, whatever its status.
     pub fn process_alive(&self) -> bool {
         self.alive

@@ -118,9 +118,7 @@ describe("click and type report what changed", () => {
     render(
       <>
         <div role="status">Ready</div>
-        <button type="button">
-          Save
-        </button>
+        <button type="button">Save</button>
       </>,
     );
     const ref = refOfButton("Save");
@@ -152,7 +150,8 @@ describe("dialogs, menus and toasts from components", () => {
       'textbox "Item"',
     );
 
-    const changes = agent({ action: "type", ref: field, text: "old note", submit: true }).changes ?? [];
+    const changes =
+      agent({ action: "type", ref: field, text: "old note", submit: true }).changes ?? [];
 
     expect(find(changes, /^dialog "Delete item" \[e\d+\] opened/)).toBeDefined();
     expect(find(changes, /^status "Item deleted" \[e\d+\]$/)).toBeDefined();
@@ -204,7 +203,9 @@ describe("dialogs, menus and toasts from components", () => {
       <button
         type="button"
         onClick={() =>
-          portal('<section aria-live="polite" aria-label="Notifications"><div>Your changes were saved</div></section>')
+          portal(
+            '<section aria-live="polite" aria-label="Notifications"><div>Your changes were saved</div></section>',
+          )
         }
       >
         Save

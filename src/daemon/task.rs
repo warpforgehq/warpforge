@@ -67,6 +67,8 @@ pub struct Task {
     /// Path to the git worktree for this task, if it runs isolated.
     /// `None` = run in the project's main working directory.
     pub worktree: Option<String>,
+    /// Sibling main checkouts captured once at task creation (ADR 0034).
+    pub(crate) workspace_folders: Vec<crate::daemon::spaces::WorkspaceFolder>,
     /// The branch this task's worktree forked from, recorded at creation so a
     /// merge after a restart targets the real base rather than the root's
     /// current branch (ADR 0015). `None` for a task without a worktree, or one
@@ -199,6 +201,7 @@ impl Task {
             blocked_kind: None,
             config_options: Vec::new(),
             worktree: None,
+            workspace_folders: Vec::new(),
             base_branch: None,
             orchestration_graph: None,
             workflow_run: None,

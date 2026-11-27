@@ -8,6 +8,7 @@ import { daemon } from "@/daemon";
 import { HAS_NATIVE_GLASS, IS_MAC } from "@/lib/platform";
 import {
   type GlobalView,
+  type ProjectSurface,
   type SidebarMode,
   SIDEBAR_WIDTH_DEFAULT,
   SIDEBAR_WIDTH_MAX,
@@ -21,20 +22,16 @@ import { useAppDialogs } from "./app/dialogs";
 import { getConnection, getConnectionError, getSnapshot, LiveSidebar } from "./app/hosts";
 import { useShellShortcuts } from "./app/shortcuts";
 import { CHATS_GROUP } from "./components/Sidebar/logic";
+import { RAIL_WIDTH } from "./components/Sidebar/Rail";
 import { useDaemonEvents } from "./hooks/useDaemonEvents";
 import { useFontScaling } from "./hooks/useFontScaling";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { usePullShortcut } from "./hooks/usePullShortcut";
-import { openBranchCommits } from "./views/push/branchNavigation";
 import { usePushShortcut } from "./hooks/usePushShortcut";
 import { useRunnerEvents } from "./hooks/useRunner";
 import { useTheme } from "./hooks/useTheme";
 import { queryClient } from "./query";
-
-/** Icon-rail width when the sidebar is collapsed. The spec proposed 48px, the
- *  old rail was 64px; the owner settled on the middle: a 36px target with 10px
- *  either side. */
-const SIDEBAR_COLLAPSED_WIDTH = 56;
+import { openBranchCommits } from "./views/push/branchNavigation";
 
 export default function App() {
   const snapshot = useSyncExternalStore(daemon.subscribe, getSnapshot);
@@ -54,16 +51,13 @@ export default function App() {
   const setSidebarWidth = useUi((s) => s.setSidebarWidth);
   const sidebarCollapsed = useUi((s) => s.sidebarCollapsed);
   const toggleSidebarCollapsed = useUi((s) => s.toggleSidebarCollapsed);
+  const settingsOpen = useUi((s) => s.settingsOpen);
+  const openSettings = useUi((s) => s.openSettings);
+  const closeSettings = useUi((s) => s.closeSettings);
   const isWide = useMediaQuery("(min-width: 1024px)");
   const showPersistent = isWide;
   const dialogs = useAppDialogs();
-  const {
-    newTaskOpen,
-    setNewTaskOpen,
-    setAddProjectOpen,
-    setSettingsOpen,
-    startNewTask,
-  } = dialogs;
+  const { newTaskOpen, setNewTaskOpen, setAddProjectOpen, startNewTask } = dialogs;
 
   useFontScaling();
   useTheme();
@@ -108,9 +102,9 @@ export default function App() {
     else handleSelectView(mode);
   };
 
-  const handleOpenProject = (name: string) => {
+  const handleOpenProject = (name: string, section?: ProjectSurface) => {
     setNewTaskOpen(false);
-    openProject(name);
+    openProject(name, section);
   };
 
   const openTask = snapshot.tasks.find((t) => t.id === openTaskId) ?? null;
@@ -160,12 +154,13 @@ export default function App() {
     collapsed: sidebarCollapsed,
     connection,
     connectionError,
-    onNewTask: () => startNewTask(),
-    onOpenSettings: () => setSettingsOpen(true),
+    onNewTask: (project?: string) => startNewTask(project),
+    settingsOpen,
+    onOpenSettings: openSettings,
+    onCloseSettings: closeSettings,
     onSettleFinishedTurns: settleFinishedTurns,
     onDeleteSettledShelf: deleteSettledShelf,
     onOpenTask: handleOpenTask,
-    onSelectView: handleSelectView,
     onSelectMode: handleSelectMode,
     onOpenProject: handleOpenProject,
     onAddProject: () => setAddProjectOpen(true),
@@ -181,14 +176,15 @@ export default function App() {
         {/* Prototype shell: full-height sidebar beside a column of topbar + content. */}
         <div
           className={`flex h-screen flex-col ${
-            HAS_NATIVE_GLASS && transparentWindow ? "bg-transparent" : "bg-background"
+            HAS_NATIVE_GLASS && transparentWindow ? "bg-transparent" : "bg-chrome"
           }`}
         >
-          {/* The overlay title bar puts the traffic lights over the content, so
-              macOS reserves a strip for them — and it is the drag handle the
-              hidden native title bar no longer provides. */}
-          {IS_MAC && <div data-tauri-drag-region="deep" className="h-7 shrink-0" />}
           <div className="relative flex min-h-0 flex-1">
+            {!showPersistent && (
+              <aside className="flex h-full min-h-0 shrink-0" data-testid="narrow-rail">
+                <LiveSidebar {...sidebarProps} collapsed canExpand={false} />
+              </aside>
+            )}
             {/* One shape whatever the sidebar is doing: moving the content
                 column between branches remounts every view under it, editors
                 and chat included. Collapsing narrows the panel instead. */}
@@ -196,18 +192,18 @@ export default function App() {
               {showPersistent && (
                 <Panel
                   key="sidebar"
-                  size={sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : sidebarWidth}
+                  size={sidebarCollapsed ? RAIL_WIDTH : RAIL_WIDTH + sidebarWidth}
                   // The minimum follows the state: collapsed sits at the rail
                   // width, expanded enforces the normal floor. Keeping 260 while
                   // collapsed would put the rail below its own panel's minimum.
-                  minSize={sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH_MIN}
-                  maxSize={SIDEBAR_WIDTH_MAX}
-                  defaultSize={SIDEBAR_WIDTH_DEFAULT}
+                  minSize={sidebarCollapsed ? RAIL_WIDTH : RAIL_WIDTH + SIDEBAR_WIDTH_MIN}
+                  maxSize={RAIL_WIDTH + SIDEBAR_WIDTH_MAX}
+                  defaultSize={RAIL_WIDTH + SIDEBAR_WIDTH_DEFAULT}
                   // The collapse animation drives the size to the rail width; a
                   // clamped store update from that would overwrite the width the
                   // user chose for the expanded state, so only a user drag counts.
                   onSizeChange={(size: number) => {
-                    if (!sidebarCollapsed) setSidebarWidth(size);
+                    if (!sidebarCollapsed) setSidebarWidth(size - RAIL_WIDTH);
                   }}
                   className="min-w-0"
                 >
@@ -252,6 +248,8 @@ export default function App() {
                   onOpenPush={openBranchCommits}
                   projectNames={projectNames}
                   showPersistent={showPersistent}
+                  settingsNavInPanel={showPersistent && !sidebarCollapsed}
+                  windowButtonsInset={IS_MAC && (!showPersistent || sidebarCollapsed)}
                 />
               </Panel>
             </PanelGroup>

@@ -29,7 +29,7 @@ describe("TabsTrigger", () => {
 
   it("keeps the pill as an explicit variant", () => {
     const [first] = renderTriggers({ variant: "pill" });
-    expect(first.className).toContain("rounded-md");
+    expect(first.className).toContain("rounded-control");
     expect(first.className).toContain("data-[state=active]:shadow-sm");
     expect(first.className).not.toContain("border-b-2");
   });

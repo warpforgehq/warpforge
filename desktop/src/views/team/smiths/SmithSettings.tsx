@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePickerAgents, usePickerOptions } from "@/lib/pickerPreferences";
 import { injectionNote } from "@/lib/smiths";
 import { applyName, applyVoice, voiceOf } from "@/lib/soulText";
 import { cn } from "@/lib/utils";
@@ -152,9 +153,9 @@ function ProjectsCard({ detail, snapshot }: { detail: SmithDetail; snapshot: Sna
 
 function ModelCard({ detail, snapshot }: { detail: SmithDetail; snapshot: Snapshot }) {
   const form = useCardForm(detail, ["agent", "model", "accountId"]);
-  const agents = (snapshot.agents ?? []).filter((agent) => agent.enabled);
-  const models =
-    modelOption(agents.find((a) => a.id === form.values.agent)?.models ?? [])?.options ?? [];
+  const agents = usePickerAgents(snapshot.agents);
+  const reported = snapshot.agents?.find((agent) => agent.id === form.values.agent)?.models;
+  const models = modelOption(usePickerOptions(form.values.agent, reported))?.options ?? [];
   const accounts = (snapshot.accounts ?? []).filter((a) => a.agentId === form.values.agent);
   const note = injectionNote(detail.smith);
   return (
@@ -185,6 +186,11 @@ function ModelCard({ detail, snapshot }: { detail: SmithDetail; snapshot: Snapsh
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={DEFAULT}>Default model</SelectItem>
+            {form.values.model && !models.some((model) => model.value === form.values.model) && (
+              <SelectItem disabled value={form.values.model}>
+                {form.values.model}
+              </SelectItem>
+            )}
             {models.map((choice) => (
               <SelectItem key={choice.value} value={choice.value}>
                 {choice.name}
@@ -312,7 +318,7 @@ function PermissionsCard({ detail }: { detail: SmithDetail }) {
           <Input
             aria-label="Add a path"
             placeholder="src/ — Enter to add"
-            className="h-7 w-48 font-mono text-xs"
+            className="h-8 w-48 font-mono text-xs"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {

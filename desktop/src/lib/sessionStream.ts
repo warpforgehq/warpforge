@@ -419,19 +419,3 @@ export function mergeSessionHistory(
   }
   return coalesceUpdates([...fetched, ...live.slice(lastMatched + 1)]);
 }
-
-/**
- * Coalesce only the tail of a session's raw updates. Used by Mission Control
- * tiles where the full history is not needed — only the last few renderable
- * items. A delta chain that starts before the window boundary is dropped
- * silently (acceptable: the tile shows a truncated tail, not a partial word).
- */
-export function coalesceTailUpdates(updates: SessionUpdate[], tailSize: number): SessionUpdate[] {
-  if (updates.length <= tailSize) return coalesceUpdates(updates);
-  const start = updates.length - tailSize;
-  const tail = updates.slice(start);
-  const output: SessionUpdate[] = [];
-  const toolIndexes = new Map<string, number>();
-  for (const update of tail) appendCoalesced(output, toolIndexes, update);
-  return output;
-}

@@ -25,7 +25,7 @@ impl Daemon {
                     let repo = self
                         .task_repo_path(&task_id)
                         .ok_or_else(|| format!("project `{}` is not registered", task.project))?;
-                    let command = self.resolve_agent_command(&task.project, &agent_id);
+                    let command = self.resolve_agent_command(&agent_id);
                     let env = self.resolve_agent_env(&agent_id, account);
                     let prompt = task.prompt.clone();
                     Ok((repo, command, prompt, env, task.base_branch.clone()))
@@ -73,7 +73,7 @@ impl Daemon {
                 reply,
             } => {
                 let resolved = self.project_path(&project).map(|repo| {
-                    let command = self.resolve_agent_command(&project, &agent_id);
+                    let command = self.resolve_agent_command(&agent_id);
                     let env = self.resolve_agent_env(
                         &agent_id,
                         crate::daemon::accounts::SpawnAccount::Active,

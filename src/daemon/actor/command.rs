@@ -1119,4 +1119,6 @@ pub enum Command {
     Smiths(crate::daemon::actor::smiths::SmithCommand),
     /// Keepers' commands, matched exhaustively in `actor/keepers/`.
     Keepers(crate::daemon::actor::keepers::KeeperCommand),
+    Spaces(crate::daemon::actor::spaces::SpaceCommand),
+    ProjectConfig(super::project_config::ProjectConfigCommand),
 }

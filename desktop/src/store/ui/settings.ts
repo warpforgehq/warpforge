@@ -1,3 +1,9 @@
+import {
+  DEFAULT_PROJECT_SECTION_PREFS,
+  type ProjectSectionPrefs,
+  withSectionHidden,
+  withSectionMoved,
+} from "@/lib/projectSections";
 import { DEFAULT_THEME } from "@/lib/themes";
 
 import {
@@ -7,6 +13,7 @@ import {
   SIDEBAR_OPACITY_DEFAULT,
   SIDEBAR_OPACITY_MAX,
   SIDEBAR_OPACITY_MIN,
+  type ProjectSurface,
   type SettingsPage,
   type UiSlice,
 } from "./types";
@@ -58,6 +65,11 @@ export interface SettingsState {
   /** Easter egg: blur email addresses wherever they render. */
   theoMod: boolean;
   setTheoMod: (v: boolean) => void;
+  /** Which sections a project lists in the panel, and their order. Global. */
+  projectSections: ProjectSectionPrefs;
+  /** Hide or show a section; the last visible one cannot be hidden. */
+  setProjectSectionHidden: (id: ProjectSurface, hidden: boolean) => void;
+  moveProjectSection: (id: ProjectSurface, delta: -1 | 1) => void;
   /** Transparent window + native desktop blur. Off by default. */
   transparentWindow: boolean;
   setTransparentWindow: (v: boolean) => void;
@@ -72,7 +84,8 @@ export interface SettingsState {
   setBodyGlass: (v: boolean) => void;
   /** Last Settings page the user was on — reopening lands where they left. */
   settingsPage: SettingsPage;
-  setSettingsPage: (page: SettingsPage) => void;
+  settingsTarget: { id: string } | null;
+  setSettingsPage: (page: SettingsPage, rowId?: string) => void;
   /**
    * Whether New Task starts in an isolated git worktree. Persisted so the
    * choice survives across task creations instead of resetting every time.
@@ -118,12 +131,14 @@ export const createSettingsSlice: UiSlice<SettingsState> = (set) => ({
   branchWorktree: true,
   newWorkItemExpanded: false,
   theoMod: false,
+  projectSections: DEFAULT_PROJECT_SECTION_PREFS,
   transparentWindow: false,
   sidebarOpacity: SIDEBAR_OPACITY_DEFAULT,
   blurRadius: BLUR_RADIUS_DEFAULT,
   bodyGlass: true,
   lspEnabled: true,
   settingsPage: "appearance",
+  settingsTarget: null,
 
   // ── Font size settings ──
   setFontSize: (fontSize) => set({ fontSize: clampFontSize(fontSize) }),
@@ -150,6 +165,10 @@ export const createSettingsSlice: UiSlice<SettingsState> = (set) => ({
   setBranchWorktree: (branchWorktree) => set({ branchWorktree }),
   setNewWorkItemExpanded: (newWorkItemExpanded) => set({ newWorkItemExpanded }),
   setTheoMod: (theoMod) => set({ theoMod }),
+  setProjectSectionHidden: (id, hidden) =>
+    set((s) => ({ projectSections: withSectionHidden(s.projectSections, id, hidden) })),
+  moveProjectSection: (id, delta) =>
+    set((s) => ({ projectSections: withSectionMoved(s.projectSections, id, delta) })),
   setTransparentWindow: (transparentWindow) => set({ transparentWindow }),
   setSidebarOpacity: (v) =>
     set({
@@ -160,6 +179,7 @@ export const createSettingsSlice: UiSlice<SettingsState> = (set) => ({
       blurRadius: Math.min(BLUR_RADIUS_MAX, Math.max(BLUR_RADIUS_MIN, Math.round(v))),
     }),
   setBodyGlass: (bodyGlass) => set({ bodyGlass }),
-  setSettingsPage: (settingsPage) => set({ settingsPage }),
+  setSettingsPage: (settingsPage, rowId) =>
+    set({ settingsPage, settingsTarget: rowId ? { id: rowId } : null }),
   toggleLsp: () => set((s) => ({ lspEnabled: !s.lspEnabled })),
 });

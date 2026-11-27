@@ -119,15 +119,13 @@ impl Daemon {
             })
     }
 
-    /// The agent whose health a task's session speaks for. A project
-    /// `agentTemplates` entry that shares the agent's name runs another
-    /// command, so it says nothing about the agent's install.
-    /// @param task_id the task whose session started or failed
-    /// @returns the agent id, or `None` when the session ran another command
+    /// The registered agent whose health a task's session speaks for.
     pub(crate) fn session_health_agent(&self, task_id: &str) -> Option<String> {
         let task = self.tasks.get(task_id)?;
         let id = self.agent_id_of(&task.agent);
-        let command = self.agent_health_command(id)?;
-        (self.resolve_agent_command(&task.project, &task.agent) == command).then(|| id.to_string())
+        self.configured_agents
+            .iter()
+            .find(|agent| agent.id == id)
+            .map(|agent| agent.id.clone())
     }
 }

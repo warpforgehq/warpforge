@@ -2,11 +2,12 @@
 // params, `_meta` included — as one JSON line, supports session/load, and
 // ends every turn at once.
 //
-// argv: <log path>
+// argv: <log path> [additional-directories]
 
 import fs from "node:fs";
 
 const logPath = process.argv[2];
+const additionalDirectories = process.argv[3] === "additional-directories";
 const sid = "mock-smith-1";
 let buf = "";
 let turn = 0;
@@ -17,7 +18,9 @@ const log = (obj) => fs.appendFileSync(logPath, JSON.stringify(obj) + "\n");
 function handle(msg) {
   if (msg.method) log({ method: msg.method, params: msg.params });
   if (msg.method === "initialize") {
-    send({ jsonrpc: "2.0", id: msg.id, result: { protocolVersion: 1, agentCapabilities: { loadSession: true } } });
+    const agentCapabilities = { loadSession: true };
+    if (additionalDirectories) agentCapabilities.sessionCapabilities = { additionalDirectories: {} };
+    send({ jsonrpc: "2.0", id: msg.id, result: { protocolVersion: 1, agentCapabilities } });
   } else if (msg.method === "session/new") {
     send({ jsonrpc: "2.0", id: msg.id, result: { sessionId: sid } });
   } else if (msg.method === "session/load") {

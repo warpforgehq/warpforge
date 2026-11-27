@@ -28,6 +28,7 @@ import {
   type Destination,
 } from "@/lib/continueSession";
 import { buildConversationBranchPrompt, renderTranscript } from "@/lib/conversationBranch";
+import { usePickerAgents } from "@/lib/pickerPreferences";
 import { estimateTokens, formatTokenRange } from "@/lib/tokenEstimate";
 import { cn } from "@/lib/utils";
 import type { SessionUpdate, TaskInfo } from "@/protocol";
@@ -159,7 +160,7 @@ export function ContinueSessionDialog({
   onOpenTask: (id: string) => void;
 }) {
   const daemonState = useSyncExternalStore(daemon.subscribe, daemon.getState);
-  const agents = (daemonState.snapshot.agents ?? []).filter((agent) => agent.enabled);
+  const agents = usePickerAgents(daemonState.snapshot.agents);
   const accounts = daemonState.snapshot.accounts ?? [];
   const transcript = useMemo(
     () => renderTranscript(updates, throughIndex),

@@ -160,7 +160,7 @@ describe("SidebarTaskRow pull requests", () => {
 });
 
 describe("SidebarTaskRow group glyphs", () => {
-  it("gives a Factory pipeline the workflow glyph, not Users", () => {
+  it("lets a Factory pipeline's stage chip stand in for the workflow glyph", () => {
     mockFactory([{ deliver: true, project: "demo", state: "running", taskId: "t1" }]);
     const { container } = renderRow(
       {
@@ -177,15 +177,15 @@ describe("SidebarTaskRow group glyphs", () => {
       2,
     );
 
-    expect(screen.getByTitle("Factory pipeline · 2 stages")).toBeInTheDocument();
-    expect(container.querySelector(".lucide-workflow")).not.toBeNull();
+    expect(screen.queryByTitle("Factory pipeline · 2 stages")).toBeNull();
+    expect(container.querySelector(".lucide-workflow")).toBeNull();
     expect(container.querySelector(".lucide-users")).toBeNull();
   });
 
-  it("keeps Users for an orchestrator task", () => {
+  it("draws no extra glyph for an orchestrator task; its child count says it", () => {
     const { container } = renderRow({ ...base, tags: ["orchestrator-chat"] });
-    expect(screen.getByTitle("Orchestrator lead")).toBeInTheDocument();
-    expect(container.querySelector(".lucide-users")).not.toBeNull();
+    expect(screen.queryByTitle("Orchestrator lead")).toBeNull();
+    expect(container.querySelector(".lucide-users")).toBeNull();
     expect(container.querySelector(".lucide-workflow")).toBeNull();
   });
 });

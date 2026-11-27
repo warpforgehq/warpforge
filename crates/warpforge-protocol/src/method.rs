@@ -52,6 +52,24 @@ fn default_page_size() -> u32 {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "method", content = "params", rename_all = "camelCase")]
 pub enum Method {
+    #[serde(rename = "space.list")]
+    SpaceList {},
+    #[serde(rename = "space.create")]
+    SpaceCreate { name: String },
+    #[serde(rename = "space.rename")]
+    SpaceRename { id: String, name: String },
+    #[serde(rename = "space.delete")]
+    SpaceDelete { id: String },
+    #[serde(rename = "space.addMember")]
+    SpaceAddMember {
+        id: String,
+        member: crate::SpaceMember,
+    },
+    #[serde(rename = "space.removeMember")]
+    SpaceRemoveMember {
+        id: String,
+        member: crate::SpaceMemberKey,
+    },
     /// Negotiate the wire contract before a client enables mutations.
     #[serde(rename = "system.handshake")]
     SystemHandshake {
@@ -115,6 +133,11 @@ pub enum Method {
         /// Inclusive range like `"4200-4299"`; `None` clears the override.
         range: Option<String>,
     },
+
+    #[serde(rename = "project.config.read")]
+    ProjectConfigRead { project: String },
+    #[serde(rename = "project.config.write")]
+    ProjectConfigWrite(crate::ProjectConfigWrite),
 
     // ── Runtime lifecycle ──
     /// Stop all running dev services and port-forwards without shutting down
@@ -1148,16 +1171,6 @@ pub enum Method {
     /// `{ yaml, issues: [{ severity, message }] }`.
     #[serde(rename = "bootstrap.finalize")]
     BootstrapFinalize { response: String },
-    /// Read the project's current config file and validate it. Used after a
-    /// bootstrap task to review what the agent wrote. Returns
-    /// `{ yaml, issues: [{ severity, message }] }`.
-    #[serde(rename = "bootstrap.readConfig")]
-    BootstrapReadConfig { project: String },
-    /// Write the accepted YAML to the project's config file. Returns
-    /// `{ ok, path }`.
-    #[serde(rename = "bootstrap.writeConfig")]
-    BootstrapWriteConfig { project: String, yaml: String },
-
     // ── LSP ──
     /// Ensure a language server is running for a task's workspace + language.
     /// Reuses an existing server for the same (workspace, language). Returns

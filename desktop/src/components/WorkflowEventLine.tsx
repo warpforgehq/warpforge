@@ -10,16 +10,14 @@ import { cn } from "@/lib/utils";
 import type { SessionUpdate } from "@/protocol";
 
 import { AgentBadge } from "./AgentBadge";
-import { CollapsibleMarkdown, Markdown } from "./Markdown";
+import { CollapsibleMarkdown } from "./Markdown";
 
 type WorkflowEvent = Extract<SessionUpdate, { kind: "workflow_event" }>;
 
 export function WorkflowEventLine({
-  compact,
   onOpenTask,
   update,
 }: {
-  compact?: boolean;
   onOpenTask?: (id: string) => void;
   update: WorkflowEvent;
 }) {
@@ -105,14 +103,11 @@ export function WorkflowEventLine({
         </div>
       )}
 
-      {update.detail &&
-        (compact ? (
-          <Markdown className="mt-2 text-xs text-current">{update.detail}</Markdown>
-        ) : (
-          <div className="mt-2 border-t border-rule pt-2 text-foreground">
-            <CollapsibleMarkdown>{update.detail}</CollapsibleMarkdown>
-          </div>
-        ))}
+      {update.detail && (
+        <div className="mt-2 border-t border-rule pt-2 text-foreground">
+          <CollapsibleMarkdown>{update.detail}</CollapsibleMarkdown>
+        </div>
+      )}
     </section>
   );
 }

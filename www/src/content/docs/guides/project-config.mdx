@@ -1,0 +1,46 @@
+---
+title: Editing a project's config
+description: Change services, port forwards, ports and worktree setup from the Config section, for the whole team or only for you.
+sidebar:
+  order: 2
+  label: Project config
+---
+
+A project's setup lives in its config file, `.warpforge/workspace.yaml` (see the [configuration reference](/reference/configuration/)). The **Config** section edits that file for you. Open a project and pick **Config** in the sidebar, or right-click the project and choose **Edit project**.
+
+## What you can change
+
+- **Services** — expand a service to change its command, port, ready pattern and timeout, health check, port fallback, the services it depends on, and its environment variables. **Add service** takes a name and a command; the trash button removes one.
+- **Port forwards** — namespace, pod, and local and remote ports. Add new ones at the foot of the list.
+- **Ports** — the port range the project's services use.
+- **Worktree** — the files copied into each task's worktree, and the setup command that runs there.
+- **Linked repos** — listed for reference. Which repos a project works with is managed in **Settings → Spaces & repos**.
+
+Changes collect until you press **Save**, or **Discard** to drop them. **Open file** shows the raw file in Explorer.
+
+## Shared or only for you
+
+Every field has a **Shared | Only me** switch.
+
+- **Shared** values are written to the config file, which is committed with the project, so your whole team gets them.
+- **Only me** values are written to your personal overrides file, which stays on this machine and is never committed. They take precedence over the shared values. Fields set this way carry an **Only me** badge.
+
+New environment variables start as **Only me**, since they often hold machine-specific values or credentials. Everything else starts as **Shared**. Switching an **Only me** value to **Shared** moves it into the shared file.
+
+If you save an environment variable whose name looks like a secret — containing `TOKEN`, `SECRET`, `KEY`, `PASSWORD`, `PASS` or `PRIVATE` — to **Shared**, Warpforge asks first, because it would be committed to git.
+
+## Edits by hand and by agents
+
+The file stays the source of truth. Whatever you, an agent or a `git checkout` writes to it shows on the Config page as soon as it lands, and comments, key order and keys Warpforge doesn't know about are kept when you save from the page.
+
+If the file changes while you have unsaved edits, your edits are applied to the new version. When the same value changed on both sides, the page shows the value on disk next to yours, and you pick which one to keep before saving.
+
+## When the file has an error
+
+If the config file can't be read — a YAML mistake after a hand edit, say — the page shows the file, line and column of the problem with an **Open file** button, and becomes read-only until the file is fixed. Your services keep running with the last config that worked.
+
+A save that would produce an invalid config is refused, with the line and column of the problem.
+
+## Restart to apply
+
+Saving doesn't restart anything. A running service whose command, port or environment changed is marked **Restart to apply**, both on the Config page and in **Runtime**; restart it when you're ready. Removing a service from the config stops it when you save.

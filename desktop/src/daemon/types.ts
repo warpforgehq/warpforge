@@ -24,6 +24,8 @@ export interface DaemonState {
   /** Most recent connection, discovery, or handshake failure. Cleared after a successful handshake. */
   connectionError: string | null;
   snapshot: Snapshot;
+  /** True after the daemon delivers a complete snapshot for this connection. */
+  snapshotReady?: boolean;
   /** Retained per-task ACP stream (bounded), keyed by task id. */
   sessionUpdates: Record<string, SessionUpdate[]>;
   /** Service log lines keyed by "project/service", bounded to MAX_SERVICE_LOGS. */

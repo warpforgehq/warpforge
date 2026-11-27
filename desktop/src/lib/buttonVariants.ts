@@ -6,7 +6,7 @@ export const buttonVariants = cva(
   // `cursor-pointer` because a `<button>` is `cursor: default` in every
   // browser and Tailwind's preflight leaves that alone — without it the whole
   // app's controls read as inert text.
-  "inline-flex cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-[color,background-color,border-color,transform] duration-100 ease-[var(--ease-out)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-control text-sm font-medium transition-[color,background-color,border-color,transform] duration-100 ease-[var(--ease-out)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
   {
     defaultVariants: {
       size: "default",
@@ -16,8 +16,8 @@ export const buttonVariants = cva(
       size: {
         default: "h-8 px-3 py-1",
         icon: "h-8 w-8",
-        lg: "h-10 rounded-md px-6",
-        sm: "h-7 rounded px-2 text-[13px]",
+        lg: "h-10 px-6",
+        sm: "h-7 px-2 text-[0.8125rem]",
       },
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",

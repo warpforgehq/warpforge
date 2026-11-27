@@ -1,5 +1,7 @@
 # 0010 — Pull-request inbox: a second surface, not a backlog column
 
+> The desktop attention and dashboard presentation in this record was superseded by [0032](0032-permanent-rail.md#2026-11-27-update).
+
 **Status:** accepted (2026-09-07)
 
 ## Context

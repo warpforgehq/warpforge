@@ -7,7 +7,6 @@ import { ComposerHeading } from "./ComposerHeading";
 
 const project = (name: string): Snapshot["projects"][number] =>
   ({
-    agentTemplates: {},
     declaredServices: [],
     name,
     path: `/workspace/${name}`,

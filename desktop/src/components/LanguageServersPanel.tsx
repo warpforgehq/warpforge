@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Loader2, RotateCw } from "lucide-react";
+import { Loader2, RotateCw } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SettingsBadge, SettingsRow } from "@/views/settings/primitives";
 
 import { daemon } from "../daemon";
 import { SettingsListSkeleton } from "./SettingsListSkeleton";
@@ -86,68 +87,69 @@ export default function LanguageServersPanel() {
 
   return (
     <div className="flex flex-col">
-      {servers.map((server) => {
-        const isBusy = busy.has(server.id);
-        const behind = server.status === "behind";
-        return (
-          <div
-            key={server.id}
-            className="flex items-center justify-between gap-4 border-t border-rule px-4 py-2.5 first:border-t-0"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 text-[15px] font-medium">
-                {server.language}
-                {server.installed ? (
-                  behind ? (
-                    <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[11px] font-medium text-warn">
-                      update available
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-ok/15 px-1.5 py-0.5 text-[11px] font-medium text-ok">
-                      {server.version ? `v${server.version}` : "installed"}
-                    </span>
-                  )
+      <div className="divide-y divide-rule">
+        {servers.map((server) => {
+          const isBusy = busy.has(server.id);
+          const behind = server.status === "behind";
+          return (
+            <SettingsRow
+              key={server.id}
+              title={server.language}
+              meta={
+                !server.installed ? (
+                  <SettingsBadge>not found</SettingsBadge>
+                ) : behind ? (
+                  <SettingsBadge tone="warn">update available</SettingsBadge>
                 ) : (
-                  <span className="flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
-                    <Download className="size-2.5" />
-                    not found
+                  <span className="font-mono text-[0.75rem] text-muted-foreground">
+                    {server.version ? `v${server.version}` : "installed"}
                   </span>
-                )}
-              </div>
-              {behind && server.latestVersion && server.version && (
-                <p className="mt-0.5 text-[11px] text-warn">
-                  v{server.version} → v{server.latestVersion}
-                </p>
-              )}
-              {!server.installed && !server.canManage && (
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  Install: <span className="font-mono">{server.installHint}</span>
-                </p>
-              )}
-              {errors[server.id] && (
-                <p className="mt-0.5 font-mono text-[11px] text-destructive">{errors[server.id]}</p>
-              )}
-            </div>
-            {server.canManage && (!server.installed || behind) && (
-              <Button
-                size="sm"
-                variant={behind ? "default" : "secondary"}
-                disabled={isBusy}
-                onClick={() => void manage(server.id)}
-              >
-                {isBusy && <Loader2 className="size-3 animate-spin" />}
-                {isBusy ? "Working…" : server.installed ? "Update" : "Install"}
-              </Button>
-            )}
-          </div>
-        );
-      })}
-      <div className="flex items-center gap-2 border-t border-rule px-4 py-2.5">
+                )
+              }
+              description={
+                (behind && server.latestVersion && server.version) ||
+                (!server.installed && !server.canManage) ||
+                errors[server.id] ? (
+                  <>
+                    {behind && server.latestVersion && server.version && (
+                      <span className="block text-warn">
+                        v{server.version} → v{server.latestVersion}
+                      </span>
+                    )}
+                    {!server.installed && !server.canManage && (
+                      <span className="block">
+                        Install: <span className="font-mono">{server.installHint}</span>
+                      </span>
+                    )}
+                    {errors[server.id] && (
+                      <span className="block font-mono text-destructive">{errors[server.id]}</span>
+                    )}
+                  </>
+                ) : undefined
+              }
+              control={
+                server.canManage &&
+                (!server.installed || behind) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isBusy}
+                    onClick={() => void manage(server.id)}
+                  >
+                    {isBusy && <Loader2 className="size-3 animate-spin" />}
+                    {isBusy ? "Working…" : server.installed ? "Update" : "Install"}
+                  </Button>
+                )
+              }
+            />
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-2 border-t border-rule px-3.5 py-2.5">
         <Button
           type="button"
           size="sm"
-          variant="outline"
-          className="h-7 gap-1.5 text-[13px]"
+          variant="ghost"
           onClick={() => void refetch()}
           disabled={isFetching}
         >

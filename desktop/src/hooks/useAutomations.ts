@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 import { daemon } from "@/daemon";
 import type { Automation, AutomationRun, DaemonEvent } from "@/protocol";
 
-/** How much run history one automation keeps client-side: enough for the card
- *  spark (10), the 24h timeline and a readable history list. */
-export const RUN_HISTORY_LIMIT = 25;
+/** The daemon keeps 100 finished runs and may have a run in flight. */
+const RUN_HISTORY_LIMIT = 101;
 
 export const automationsKey = ["automations"] as const;
 export const automationRunsKey = (id: string) => ["automationRuns", id] as const;
@@ -18,19 +17,29 @@ export function useAutomationsQuery() {
   });
 }
 
+function runHistoryQuery(id: string) {
+  return {
+    queryFn: () => daemon.automationRuns(id, RUN_HISTORY_LIMIT),
+    queryKey: automationRunsKey(id),
+  };
+}
+
+export function useAutomationHistory(id: string | null) {
+  return useQuery({ ...runHistoryQuery(id ?? ""), enabled: id !== null });
+}
+
 /** Run history for many automations at once, keyed by automation id. */
-export function useAutomationRuns(ids: string[]): Record<string, AutomationRun[]> {
-  const results = useQueries({
-    queries: ids.map((id) => ({
-      queryFn: () => daemon.automationRuns(id, RUN_HISTORY_LIMIT),
-      queryKey: automationRunsKey(id),
-    })),
-  });
+export function useAutomationRuns(ids: string[]) {
+  const results = useQueries({ queries: ids.map(runHistoryQuery) });
   const byId: Record<string, AutomationRun[]> = {};
   for (let index = 0; index < ids.length; index++) {
     byId[ids[index]!] = results[index]?.data ?? [];
   }
-  return byId;
+  return {
+    byId,
+    loading: results.some((result) => result.isLoading),
+    failed: results.some((result) => result.isError),
+  };
 }
 
 function upsertRun(runs: AutomationRun[], run: AutomationRun): AutomationRun[] {

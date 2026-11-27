@@ -1,13 +1,94 @@
-import { Bot, Brain, ListChecks, Palette, Plug, Wrench, type LucideIcon } from "lucide-react";
+import {
+  Bell,
+  Bot,
+  Brain,
+  Layers,
+  ListChecks,
+  Palette,
+  Plug,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 
 import type { SettingsPage } from "@/store/ui";
 
-/** Left-rail entries of the Settings overlay, in display order. */
-export const SETTINGS_PAGES: { id: SettingsPage; label: string; icon: LucideIcon }[] = [
-  { id: "appearance", label: "Appearance", icon: Palette },
-  { id: "agents", label: "Agents", icon: Bot },
-  { id: "integrations", label: "Integrations", icon: Plug },
-  { id: "tasks", label: "Tasks", icon: ListChecks },
-  { id: "memory", label: "Memory", icon: Brain },
-  { id: "advanced", label: "Advanced", icon: Wrench },
+interface SectionLink {
+  id: SettingsPage;
+  label: string;
+  /** One line under the page title. */
+  description: string;
+  icon: LucideIcon;
+}
+
+export const SETTINGS_GROUPS: { label: string; pages: SectionLink[] }[] = [
+  {
+    label: "Personal",
+    pages: [
+      {
+        id: "appearance",
+        label: "Appearance",
+        description: "Theme, text size and window glass.",
+        icon: Palette,
+      },
+      {
+        id: "notifications",
+        label: "Notifications",
+        description: "Choose which events interrupt you, and how.",
+        icon: Bell,
+      },
+    ],
+  },
+  {
+    label: "Agents",
+    pages: [
+      {
+        id: "agents",
+        label: "Agents & accounts",
+        description: "Install, update and sign in to agents, and choose the models they offer.",
+        icon: Bot,
+      },
+      {
+        id: "tasks",
+        label: "Tasks",
+        description: "Confirmations, generated text and how long finished work is kept.",
+        icon: ListChecks,
+      },
+    ],
+  },
+  {
+    label: "Workspace",
+    pages: [
+      {
+        id: "integrations",
+        label: "Integrations",
+        description: "Language servers and issue trackers.",
+        icon: Plug,
+      },
+      {
+        id: "spaces",
+        label: "Spaces & repos",
+        description: "Group repositories so agents on a task can see the others.",
+        icon: Layers,
+      },
+    ],
+  },
+  {
+    label: "System",
+    pages: [
+      {
+        id: "memory",
+        label: "Memory",
+        description: "What agents remember across sessions, and how it is searched.",
+        icon: Brain,
+      },
+      {
+        id: "advanced",
+        label: "Advanced",
+        description: "Storage and maintenance for power users.",
+        icon: Wrench,
+      },
+    ],
+  },
 ];
+
+export const SETTINGS_PAGES = SETTINGS_GROUPS.flatMap((group) => group.pages);

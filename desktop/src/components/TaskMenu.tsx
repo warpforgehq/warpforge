@@ -1,7 +1,14 @@
-import { Archive, MoreHorizontal, Pin, PinOff, Trash2 } from "lucide-react";
-import { useState } from "react";
+import {
+  Archive,
+  MoreHorizontal,
+  MoreVertical,
+  Pin,
+  PinOff,
+  Trash2,
+  WandSparkles,
+} from "lucide-react";
 
-import { DeleteTaskDialog } from "@/components/DeleteTaskDialog";
+import { useTaskActions } from "@/components/TaskActionDialogs";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,9 +17,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { taskLabel } from "@/lib/taskLabel";
+import { regenerateTaskTitle } from "@/lib/taskTitle";
 
-import { daemon } from "../daemon";
 import type { TaskInfo } from "../protocol";
 
 export function TaskMenu({
@@ -20,13 +26,16 @@ export function TaskMenu({
   onTogglePin,
   pinned,
   task,
+  side,
 }: {
   onClose: () => void;
   onTogglePin: () => void;
   pinned: boolean;
   task: TaskInfo;
+  /** Where the menu opens; below its trigger by default. */
+  side?: "left" | "bottom";
 }) {
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const actions = useTaskActions(task, onClose);
   return (
     <>
       <DropdownMenu>
@@ -35,30 +44,36 @@ export function TaskMenu({
             type="button"
             size="icon"
             variant="ghost"
-            className="size-7"
+            className={
+              side === "left" ? "size-7 text-muted-foreground hover:text-foreground" : "size-7"
+            }
             aria-label="Task actions"
           >
-            <MoreHorizontal className="size-4" />
+            {side === "left" ? (
+              <MoreVertical className="size-4" />
+            ) : (
+              <MoreHorizontal className="size-4" />
+            )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent side={side} align="end" className="w-48">
+          <DropdownMenuItem onSelect={() => void regenerateTaskTitle(task)}>
+            <WandSparkles />
+            Regenerate title
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={onTogglePin}>
             {pinned ? <PinOff /> : <Pin />}
-            {pinned ? "Unpin from Mission Control" : "Pin to Mission Control"}
+            {pinned ? "Unpin from rail" : "Pin to rail"}
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={() => {
-              void daemon.archiveTask(task.id);
-              onClose();
-            }}
-          >
+          <DropdownMenuItem disabled={actions.busy} onSelect={actions.archiveTask}>
             <Archive />
             Archive task
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
-            onSelect={() => setConfirmingDelete(true)}
+            disabled={actions.busy}
+            onSelect={actions.deleteTask}
           >
             <Trash2 />
             Delete task
@@ -66,16 +81,7 @@ export function TaskMenu({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DeleteTaskDialog
-        task={task}
-        label={taskLabel(task)}
-        open={confirmingDelete}
-        onCancel={() => setConfirmingDelete(false)}
-        onDeleted={() => {
-          setConfirmingDelete(false);
-          onClose();
-        }}
-      />
+      {actions.dialogs}
     </>
   );
 }

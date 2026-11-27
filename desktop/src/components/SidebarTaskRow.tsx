@@ -1,4 +1,4 @@
-import { ChevronRight, Users, Workflow } from "lucide-react";
+import { ChevronRight, Workflow } from "lucide-react";
 import { memo, useEffect, useState } from "react";
 
 import { TaskLiveGlyph } from "@/components/liveActivity/LiveActivityGlyph";
@@ -7,12 +7,11 @@ import { TaskAgentMark } from "@/components/TaskSmith";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { isFactoryTask } from "@/lib/factory";
 import { elapsed } from "@/lib/status";
-import { isOrchestratorTask } from "@/lib/taskGroups";
 import { taskLabel } from "@/lib/taskLabel";
 import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 
-import { FactoryStageChip } from "./Sidebar/FactoryStageChip";
+import { FactoryStageChip, useFactoryChipShown } from "./Sidebar/FactoryStageChip";
 import {
   LANE_GLYPH_PX,
   LANE_META_PX,
@@ -63,6 +62,7 @@ export interface SidebarTaskRowProps {
   ancestorLines: readonly boolean[];
   isLast: boolean;
   activeLane: number | null;
+  onActivePath?: boolean;
   active: boolean;
   childCount: number;
   expanded: boolean;
@@ -80,6 +80,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
   ancestorLines,
   isLast,
   activeLane,
+  onActivePath,
   active,
   childCount,
   expanded,
@@ -93,17 +94,19 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
   const meta = SIDEBAR_STATE_META[state];
   const StateIcon = STATE_ICON[meta.icon];
   const receded = state === "snoozed" || state === "settled" || state === "done";
-  const orchestrator = isOrchestratorTask(task, childCount);
   const factory = isFactoryTask(task);
   const pipeline = factory && (childCount > 0 || task.workflowRun != null);
+  // The stage chip already marks the row as Factory work; the pipeline glyph is for rows without it.
+  const chipShown = useFactoryChipShown(task);
 
   return (
-    <div className="group/row relative" data-rail-depth={depth}>
+    <div className="group/row relative flex h-full items-center" data-rail-depth={depth}>
       <RowGutter
         depth={depth}
         ancestorLines={ancestorLines}
         isLast={isLast}
         activeLane={activeLane}
+        onActivePath={onActivePath}
       />
       <Tooltip>
         <TooltipTrigger asChild>
@@ -113,9 +116,12 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
             onClick={() => onOpen(task.id)}
             style={{ paddingLeft: sidebarContentLeft(depth) }}
             className={cn(
-              "flex h-8 w-full items-center gap-2 rounded-md pr-1.5 text-left transition-colors",
+              "flex h-7 w-full items-center gap-2 rounded-md pr-1.5 text-left transition-colors",
               "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
               active ? "font-medium text-foreground" : "hover:bg-accent/60",
+              state === "working" &&
+                !active &&
+                "bg-[linear-gradient(90deg,hsl(var(--primary)/0.09),transparent_75%)]",
             )}
           >
             <button
@@ -148,7 +154,7 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
               <span
                 data-lane="title"
                 className={cn(
-                  "min-w-0 flex-1 truncate text-[13px] leading-none",
+                  "min-w-0 flex-1 truncate text-[0.8125rem] leading-none",
                   active ? "font-medium text-foreground" : meta.titleClass,
                 )}
               >
@@ -157,8 +163,14 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
               <TaskLiveGlyph project={task.project} taskId={task.id} receded={receded} />
               {factory && <FactoryStageChip task={task} receded={receded} />}
             </button>
-            {!factory && <TaskPullRequestGlyph taskId={task.id} receded={receded} />}
-            {pipeline ? (
+            {!factory && (
+              <TaskPullRequestGlyph
+                taskId={task.id}
+                receded={receded}
+                parentTaskId={task.parentTaskId}
+              />
+            )}
+            {pipeline && !chipShown ? (
               <span
                 title={
                   childCount > 0
@@ -169,20 +181,14 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
               >
                 <Workflow aria-hidden className="size-3 text-muted-foreground/60" />
               </span>
-            ) : (
-              orchestrator && (
-                <span title="Orchestrator lead" className="inline-flex shrink-0">
-                  <Users aria-hidden className="size-3 text-muted-foreground/60" />
-                </span>
-              )
-            )}
+            ) : null}
             <span
               data-lane="meta"
               style={{ width: LANE_META_PX }}
               className="relative ml-auto flex h-6 shrink-0 items-center justify-end gap-1 transition-opacity group-hover/row:opacity-0 group-focus-within/row:opacity-0"
             >
               {childCount > 0 && (
-                <span className="tnum w-4 text-right text-[11px] text-muted-foreground/45">
+                <span className="w-5 text-right font-mono text-[0.6875rem] tabular-nums text-muted-foreground/45">
                   {childCount}
                 </span>
               )}
@@ -191,11 +197,11 @@ export const SidebarTaskRow = memo(function SidebarTaskRow({
                 className={cn("size-3.5 shrink-0", receded && "opacity-40 grayscale")}
               />
               {state === "snoozed" ? (
-                <span className="tnum w-7 text-right text-[11px] text-info/80">
+                <span className="w-7 text-right font-mono text-[0.6875rem] tabular-nums text-info/80">
                   {snoozeWakeLabel(task.snoozedUntil!, nowSec)}
                 </span>
               ) : (
-                <span className="tnum w-7 text-right text-[11px] text-muted-foreground/50">
+                <span className="w-7 text-right font-mono text-[0.6875rem] tabular-nums text-muted-foreground/50">
                   {meta.live ? <LiveElapsed since={task.updatedAt} /> : elapsed(task.updatedAt)}
                 </span>
               )}

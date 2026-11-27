@@ -1,61 +1,66 @@
-import { PanelLeftClose, Plus, Settings } from "lucide-react";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
-import { AgentUpdateBanner } from "@/components/AgentUpdateBanner";
 import { InboxListPane } from "@/components/inbox/InboxListPane";
-import { SidebarTaskRow } from "@/components/SidebarTaskRow";
-import { UpdateBanner } from "@/components/UpdateBanner";
-import UpdateControl from "@/components/UpdateControl";
+import { AddToSpaceDialog } from "@/components/spaces/AddToSpaceDialog";
 import type { ConnectionState, DaemonState } from "@/daemon";
-import { isTaskGroupPinned } from "@/lib/taskGroups";
 import { cn } from "@/lib/utils";
-import type { GlobalView, SidebarMode, View } from "@/store/ui";
+import { type ProjectSurface, scopeProjects, type SidebarMode, useUi, type View } from "@/store/ui";
+import { AutomationList } from "@/views/automations/AutomationList";
+import { RemoveProjectHost } from "@/views/projects/RemoveProjectHost";
 
-import { CollapsedRail } from "./CollapsedRail";
-import { ConnectionDot } from "./ConnectionDot";
 import { DeleteShelfDialog } from "./DeleteShelfDialog";
-import { SIDEBAR_BODY_ID, SIDEBAR_MODES } from "./modes";
-import { NAV } from "./nav";
-import { ChatsRow, EmptyRow, ProjectRow, ShelfRow } from "./rows";
+import { railSelection, SIDEBAR_BODY_ID, SIDEBAR_MODES } from "./modes";
+import { PanelFooter, PanelHeader } from "./PanelChrome";
+import { ProjectPanel } from "./ProjectPanel";
+import { Rail } from "./Rail";
+import { SettingsNav } from "./SettingsNav";
 import { SmithsBody } from "./SmithsBody";
+import { SpacePanel } from "./SpacePanel";
+import { TaskTree } from "./TaskTree";
 import { useSidebarTree } from "./useSidebarTree";
 
 interface SidebarProps {
   state: DaemonState;
   view: View;
-  /** The sidebar body's mode. */
+  /** What the rail has picked; the panel shows its context. */
   mode: SidebarMode;
   openTaskId: string | null;
+  /** The panel is folded away, leaving the rail. */
   collapsed: boolean;
+  /** Settings replace the panel's content while open. */
+  settingsOpen?: boolean;
+  /** False on windows too narrow for the panel: the rail stands alone. */
+  canExpand?: boolean;
   /** Default to "looks fine" rather than forcing every caller (mainly tests)
       to pass connection state that has nothing to do with what they check. */
   connection?: ConnectionState;
   connectionError?: string | null;
   onToggleCollapsed: () => void;
-  onSelectView: (view: GlobalView) => void;
-  /** Picking a mode switches the body and the main area. For Tasks the host
+  /** Picking a mode switches the panel and the main area. For Tasks the host
    *  restores the last task it can still find, else the selected project. */
   onSelectMode: (mode: SidebarMode) => void;
   onOpenTask: (id: string) => void;
-  onNewTask: () => void;
-  onOpenProject: (name: string) => void;
+  /** Start a new task, preselecting `project` when given. */
+  onNewTask: (project?: string) => void;
+  /** Enter a project's mode, optionally on a given section. */
+  onOpenProject: (name: string, section?: ProjectSurface) => void;
   onAddProject: () => void;
   onOpenSettings: () => void;
+  onCloseSettings?: () => void;
   /** Bulk-settle every diff-less finished turn (the same reversible settle
    *  as the per-row check button). */
   onSettleFinishedTurns?: (ids: string[]) => void;
   /** Bulk-delete every settled task on a project's "N done" shelf. */
   onDeleteSettledShelf?: (project: string) => Promise<void>;
+  /** The window buttons sit over the rail's top; false puts the logo in the title row. */
+  windowButtons?: boolean;
 }
 
-/** How long the two sidebar trees overlap before the outgoing one unmounts. */
-const SIDEBAR_CROSS_FADE_MS = 120;
+const noop = () => {};
 
-/**
- * Trails `value` by `delayMs` so a tree can stay mounted through the cross-fade
- * instead of swapping at frame zero. The panel width animates on its own; this
- * only holds the outgoing tree in the DOM long enough to fade out.
- */
+/** How long the outgoing panel stays mounted while it fades. */
+const PANEL_FADE_MS = 120;
+
 function useTrailingFlag(value: boolean, delayMs: number): boolean {
   const [trailing, setTrailing] = useState(value);
   useEffect(() => {
@@ -72,349 +77,152 @@ function Sidebar({
   mode,
   openTaskId,
   collapsed,
+  settingsOpen = false,
+  canExpand = true,
   connection = "connected",
   connectionError = null,
   onToggleCollapsed,
-  onSelectView,
   onSelectMode,
   onOpenTask,
   onNewTask,
   onOpenProject,
   onAddProject,
   onOpenSettings,
+  onCloseSettings = noop,
   onSettleFinishedTurns,
   onDeleteSettledShelf,
+  windowButtons,
 }: SidebarProps) {
-  const {
-    agentUpdates,
-    deletingShelf,
-    handlePin,
-    liveLane,
-    modeCount,
-    navCount,
-    nowSec,
-    pinned,
-    projectNames,
-    rows,
-    scrollRef,
-    setDeletingShelf,
-    setSettlingProject,
-    settleMarkedIds,
-    taskGroupIndex,
-    toggleProject,
-    toggleShelf,
-    toggleTask,
-    virtualizer,
-  } = useSidebarTree(state, openTaskId);
-
-  const handleOpenProjects = useCallback((name: string) => onOpenProject(name), [onOpenProject]);
-
-  // The two trees cross-fade: the panel width owns the 180ms fold, and each
-  // tree owns a 120ms opacity pass. The outgoing tree stays mounted until the
-  // trailing flag catches up so it can fade instead of cutting at frame zero.
-  const trailingCollapsed = useTrailingFlag(collapsed, SIDEBAR_CROSS_FADE_MS);
-  const transitioning = trailingCollapsed !== collapsed;
-  const railMounted = collapsed || trailingCollapsed;
-  const expandedMounted = !collapsed || !trailingCollapsed;
-
-  const rail = (
-    <CollapsedRail
-      view={view}
-      openTaskId={openTaskId}
-      connection={connection}
-      connectionError={connectionError}
-      agentUpdates={agentUpdates}
-      liveLane={liveLane}
-      navCount={navCount}
-      modeCount={modeCount}
-      mode={mode}
-      onToggleCollapsed={onToggleCollapsed}
-      onSelectView={onSelectView}
-      onSelectMode={onSelectMode}
-      onNewTask={onNewTask}
-      onOpenTask={onOpenTask}
-      onOpenSettings={onOpenSettings}
-    />
-  );
+  const panelScope = useUi((s) => s.panelScope);
+  const spaces = state.snapshot.spaces;
+  const scopedSpace =
+    panelScope?.kind === "space" ? spaces?.find((space) => space.id === panelScope.id) : undefined;
+  // A space that is gone scopes nothing: the panel shows every project.
+  const liveScope = panelScope?.kind === "space" && !scopedSpace ? null : panelScope;
+  const scope = useMemo(() => scopeProjects(liveScope, spaces ?? []), [liveScope, spaces]);
+  const tree = useSidebarTree(state, openTaskId, scope);
+  // An existing session can have Automations open with an older sidebar mode.
+  const panelMode =
+    view === "automations" && !openTaskId ? "automations" : mode === "automations" ? "tasks" : mode;
+  const selection = railSelection(panelMode, settingsOpen);
+  const panelHidden = collapsed || !canExpand;
+  const trailingHidden = useTrailingFlag(panelHidden, PANEL_FADE_MS);
+  const panelMounted = !panelHidden || !trailingHidden;
+  const modeLabel = SIDEBAR_MODES.find((item) => item.id === panelMode)?.label ?? "Tasks";
 
   return (
-    <div className="relative h-full min-h-0 min-w-0">
-      {expandedMounted && (
-        <div
-          aria-hidden={collapsed || undefined}
+    <div className="flex h-full min-h-0 min-w-0">
+      <Rail
+        selection={selection}
+        collapsed={panelHidden}
+        canExpand={canExpand}
+        state={state}
+        connection={connection}
+        connectionError={connectionError}
+        agentUpdates={tree.agentUpdates}
+        attentionIds={tree.attentionIds}
+        nowSec={tree.nowSec}
+        inboxUnseen={tree.inboxUnseen}
+        teamUnread={tree.teamUnread}
+        onToggleCollapsed={onToggleCollapsed}
+        onSelectMode={onSelectMode}
+        onNewTask={() => onNewTask()}
+        onNewTaskIn={onNewTask}
+        onOpenTask={onOpenTask}
+        onOpenSettings={onOpenSettings}
+        onCloseSettings={onCloseSettings}
+        windowButtons={windowButtons}
+      />
+
+      {panelMounted && (
+        <aside
+          data-testid="sidebar-panel"
+          data-panel={selection}
+          aria-hidden={panelHidden || undefined}
           className={cn(
-            "absolute inset-0 flex min-h-0 min-w-0 flex-col transition-opacity duration-[120ms] ease-[var(--ease-out)]",
-            collapsed ? "pointer-events-none opacity-0" : "opacity-100",
-            transitioning && !collapsed && "animate-[fade-in_120ms_var(--ease-out)]",
+            "flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-opacity duration-[120ms] ease-[var(--ease-out)]",
+            panelHidden ? "pointer-events-none opacity-0" : "opacity-100",
           )}
         >
-          <aside
-            data-testid="sidebar"
-            className="flex h-full min-h-0 min-w-0 flex-col border-r border-border bg-card"
-          >
-            <div
-              data-tauri-drag-region="deep"
-              className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3.5"
-            >
-              <div className="flex items-center gap-1.5">
-                <strong className="select-none text-[11px] font-bold uppercase tracking-[0.2em] text-foreground">
-                  WARP<span className="text-primary">FORGE</span>
-                </strong>
-                <ConnectionDot connection={connection} connectionError={connectionError} />
-              </div>
-              <button
-                type="button"
-                onClick={onToggleCollapsed}
-                aria-label="Collapse sidebar"
-                title="Collapse sidebar"
-                aria-expanded
-                className="grid size-6 place-items-center rounded text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
-              >
-                <PanelLeftClose className="size-4" />
-              </button>
-            </div>
-
-            <div className="shrink-0 px-2 pb-2 pt-2.5">
-              <button
-                type="button"
-                onClick={onNewTask}
-                title="New task (⌘N) · without a project (⌥⌘N)"
-                className="flex h-8 w-full items-center gap-2 rounded-md bg-primary/15 px-2.5 text-left text-[13px] font-semibold text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
-              >
-                <Plus className="size-4 shrink-0" />
-                <span className="min-w-0 flex-1 truncate">New task</span>
-                <kbd className="tnum shrink-0 font-sans text-[11px] font-medium text-primary/60">
-                  ⌘N
-                </kbd>
-              </button>
-            </div>
-
-            <nav aria-label="Modes" className="flex shrink-0 flex-col gap-px px-2">
-              {SIDEBAR_MODES.map((item) => {
-                const active = mode === item.id;
-                const count = modeCount(item.id);
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    aria-pressed={active}
-                    aria-controls={SIDEBAR_BODY_ID}
-                    aria-keyshortcuts={`Alt+Meta+${item.key}`}
-                    title={
-                      item.id === "team"
-                        ? `Smiths — AI teammates (⌥⌘${item.key})`
-                        : `${item.label} (⌥⌘${item.key})`
+          {selection === "settings" ? (
+            <>
+              <PanelHeader title="Settings" onBack={onCloseSettings} />
+              <SettingsNav />
+            </>
+          ) : panelMode === "tasks" && scopedSpace ? (
+            <SpacePanel
+              space={scopedSpace}
+              snapshot={state.snapshot}
+              tree={tree}
+              openTask={state.snapshot.tasks.find((task) => task.id === openTaskId) ?? null}
+              openTaskId={openTaskId}
+              onOpenProject={onOpenProject}
+              onOpenTask={onOpenTask}
+              onNewTask={onNewTask}
+              onAddProject={onAddProject}
+              onSettleFinishedTurns={onSettleFinishedTurns}
+            />
+          ) : panelMode === "tasks" && panelScope?.kind === "project" ? (
+            <ProjectPanel
+              project={panelScope.name}
+              snapshot={state.snapshot}
+              tree={tree}
+              view={view}
+              openTaskId={openTaskId}
+              onOpenProject={onOpenProject}
+              onOpenTask={onOpenTask}
+              onNewTask={onNewTask}
+              onAddProject={onAddProject}
+              onSettleFinishedTurns={onSettleFinishedTurns}
+            />
+          ) : (
+            <>
+              <PanelHeader title={modeLabel} />
+              {panelMode === "inbox" ? (
+                <div id={SIDEBAR_BODY_ID} className="min-h-0 flex-1">
+                  <InboxListPane
+                    projects={tree.projectNames}
+                    emptyHint={
+                      tree.projectNames.length === 0
+                        ? undefined
+                        : "No open pull requests in your projects."
                     }
-                    onClick={() => onSelectMode(item.id)}
-                    className={cn(
-                      "relative flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
-                      active
-                        ? "bg-accent font-medium text-foreground"
-                        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-                    )}
-                  >
-                    <item.icon
-                      className={cn(
-                        "size-4 shrink-0",
-                        active ? "text-primary" : "text-muted-foreground/60",
-                      )}
-                    />
-                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                    {count > 0 && (
-                      <span className="tnum shrink-0 text-[11px] font-semibold text-warn">
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-
-            <div aria-hidden className="mx-3 my-2 h-px shrink-0 bg-border" />
-
-            <nav
-              aria-label="Views"
-              className="flex shrink-0 flex-col gap-px border-b border-border px-2 pb-2.5"
-            >
-              {NAV.map((item) => {
-                const active = view === item.id && !openTaskId;
-                const count = navCount(item.id);
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => onSelectView(item.id)}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "relative flex h-8 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
-                      active
-                        ? "font-medium text-foreground hover:bg-accent/60"
-                        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-                    )}
-                  >
-                    {active && (
-                      <span
-                        aria-hidden
-                        className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary"
-                      />
-                    )}
-                    <item.icon
-                      className={cn(
-                        "size-4 shrink-0",
-                        active ? "text-foreground" : "text-muted-foreground/60",
-                      )}
-                    />
-                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                    {count > 0 && (
-                      <span
-                        className={cn(
-                          "tnum shrink-0 text-[11px]",
-                          item.attention ? "font-semibold text-warn" : "text-muted-foreground/50",
-                        )}
-                      >
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-
-            {/* Reviewing is "pick one of many, then read it deeply", and the list
-            it needs belongs at the window's left edge rather than beside a
-            tree of tasks nobody is asking about mid-review. */}
-            {mode === "inbox" ? (
-              <div id={SIDEBAR_BODY_ID} className="min-h-0 flex-1">
-                <InboxListPane
-                  projects={projectNames}
-                  emptyHint={
-                    projectNames.length === 0
-                      ? undefined
-                      : "No open pull requests in your projects."
-                  }
-                  onAddProject={onAddProject}
-                />
-              </div>
-            ) : mode === "team" ? (
-              <div id={SIDEBAR_BODY_ID} className="min-h-0 flex-1 overflow-y-auto">
-                <SmithsBody projects={projectNames} tasks={state.snapshot.tasks} />
-              </div>
-            ) : (
-              <div
-                ref={scrollRef}
-                id={SIDEBAR_BODY_ID}
-                className="min-h-0 flex-1 overflow-y-auto px-2 py-3 [scrollbar-gutter:stable]"
-              >
-                <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-                  {virtualizer.getVirtualItems().map((virtualRow) => {
-                    const row = rows[virtualRow.index];
-                    if (!row) return null;
-                    return (
-                      <div
-                        key={row.key}
-                        data-index={virtualRow.index}
-                        className="absolute left-0 top-0 w-full [content-visibility:auto]"
-                        style={{
-                          containIntrinsicSize: `auto ${virtualRow.size}px`,
-                          height: virtualRow.size,
-                          transform: `translateY(${virtualRow.start}px)`,
-                        }}
-                      >
-                        {row.kind === "empty" ? (
-                          <EmptyRow
-                            row={row}
-                            onAddProject={row.key === "empty:workspace" ? onAddProject : undefined}
-                          />
-                        ) : row.kind === "project" ? (
-                          <ProjectRow
-                            row={row}
-                            onToggle={toggleProject}
-                            onOpenProject={handleOpenProjects}
-                            onSettle={onSettleFinishedTurns ?? (() => {})}
-                            onSettleHover={
-                              onSettleFinishedTurns
-                                ? (hovering) => setSettlingProject(hovering ? row.name : null)
-                                : undefined
-                            }
-                          />
-                        ) : row.kind === "chats" ? (
-                          <ChatsRow row={row} onToggle={toggleProject} />
-                        ) : row.kind === "shelf" ? (
-                          <ShelfRow row={row} onToggle={toggleShelf} onDelete={setDeletingShelf} />
-                        ) : (
-                          <div
-                            className={cn(
-                              "transition-opacity",
-                              settleMarkedIds?.has(row.task.id) && "opacity-40",
-                            )}
-                          >
-                            <SidebarTaskRow
-                              task={row.task}
-                              state={row.state}
-                              depth={row.depth}
-                              ancestorLines={row.ancestorLines}
-                              isLast={row.isLast}
-                              activeLane={row.activeLane}
-                              active={openTaskId === row.task.id}
-                              childCount={row.childCount}
-                              expanded={row.expanded}
-                              pinned={isTaskGroupPinned(taskGroupIndex, pinned, row.task.id)}
-                              nowSec={nowSec}
-                              onOpen={onOpenTask}
-                              onToggle={toggleTask}
-                              onPin={handlePin}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                    onAddProject={onAddProject}
+                  />
                 </div>
-              </div>
-            )}
-
-            <footer className="flex shrink-0 flex-col gap-1.5 border-t border-border px-2 py-2">
-              <UpdateBanner />
-              <AgentUpdateBanner onOpenSettings={onOpenSettings} />
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="flex h-8 flex-1 items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
-                >
-                  <Settings className="size-4 shrink-0 text-muted-foreground/60" />
-                  Settings
-                </button>
-                {/* Update lives beside Settings, not buried inside it — the "new
-                version" dot needs to stay visible the way it did in the topbar,
-                just relocated rather than lost. */}
-                <span aria-hidden className="h-5 w-px shrink-0 bg-rule" />
-                <UpdateControl daemonConnected={connection === "connected"} />
-              </div>
-            </footer>
-          </aside>
-        </div>
-      )}
-
-      {railMounted && (
-        <div
-          aria-hidden={!collapsed || undefined}
-          className={cn(
-            "absolute inset-0 transition-opacity duration-[120ms] ease-[var(--ease-out)]",
-            collapsed ? "opacity-100" : "pointer-events-none opacity-0",
-            transitioning && collapsed && "animate-[fade-in_120ms_var(--ease-out)]",
+              ) : panelMode === "automations" ? (
+                <div id={SIDEBAR_BODY_ID} className="min-h-0 flex-1">
+                  {connection === "connected" && <AutomationList />}
+                </div>
+              ) : panelMode === "team" ? (
+                <div id={SIDEBAR_BODY_ID} className="min-h-0 flex-1 overflow-y-auto">
+                  <SmithsBody projects={tree.projectNames} tasks={state.snapshot.tasks} />
+                </div>
+              ) : (
+                <TaskTree
+                  onNewTaskIn={onNewTask}
+                  tree={tree}
+                  openTaskId={openTaskId}
+                  onOpenTask={onOpenTask}
+                  onOpenProject={onOpenProject}
+                  onAddProject={onAddProject}
+                  onSettleFinishedTurns={onSettleFinishedTurns}
+                />
+              )}
+            </>
           )}
-        >
-          {rail}
-        </div>
+          <PanelFooter onOpenSettings={onOpenSettings} />
+        </aside>
       )}
 
+      <AddToSpaceDialog />
+      <RemoveProjectHost snapshot={state.snapshot} />
       <DeleteShelfDialog
-        row={deletingShelf}
-        onCancel={() => setDeletingShelf(null)}
+        row={tree.deletingShelf}
+        onCancel={() => tree.setDeletingShelf(null)}
         onConfirm={async (project) => {
           await onDeleteSettledShelf?.(project);
-          setDeletingShelf(null);
+          tree.setDeletingShelf(null);
         }}
       />
     </div>

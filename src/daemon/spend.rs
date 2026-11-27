@@ -193,6 +193,7 @@ mod tests {
             backlog_item_id: None,
             origin: None,
             model: None,
+            workspace_folders: Vec::new(),
             pending_permission: false,
             queued_prompts: Vec::new(),
             advisor: None,

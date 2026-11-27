@@ -1,6 +1,6 @@
 /**
  * The task's pull request comes back with a failing check and a review
- * comment, the task lands in Needs you, then the visitor is taken to the PR
+ * comment, the task shows the feedback, then the visitor is taken to the PR
  * in the inbox — the same review a person would open next.
  */
 import type { DaemonEvent, TaskPullRequest } from "@app/protocol";

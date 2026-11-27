@@ -14,9 +14,9 @@ import {
 import { daemon } from "@/daemon";
 import { runnerStatusKey, useRunnerStatus } from "@/hooks/useRunner";
 import { agentDisplayName } from "@/lib/agentNames";
+import { configRole } from "@/lib/configRole";
+import { usePickerAgents, usePickerOptions } from "@/lib/pickerPreferences";
 import type { AgentConfig, RunLocation, RunnerSettings } from "@/protocol";
-
-import { modelOptionOf } from "../automations/labels";
 
 const FIELD =
   "bg-deep-surface h-8 w-full rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring disabled:opacity-50";
@@ -117,8 +117,11 @@ function SettingsForm({
     queryFn: () => daemon.workflowList(settings.project),
     queryKey: ["workflows", settings.project],
   });
-  const enabledAgents = agents.filter((agent) => agent.enabled);
-  const modelOption = draft.agent ? modelOptionOf(agents, draft.agent) : null;
+  const enabledAgents = usePickerAgents(agents);
+  const reported = agents.find((agent) => agent.id === draft.agent)?.models;
+  const modelOption = usePickerOptions(draft.agent, reported).find(
+    (option) => configRole(option) === "model",
+  );
 
   const save = async () => {
     setSaving(true);
@@ -197,6 +200,11 @@ function SettingsForm({
             className={FIELD}
           >
             <option value="">First enabled agent</option>
+            {draft.agent && !enabledAgents.some((agent) => agent.id === draft.agent) && (
+              <option disabled value={draft.agent}>
+                {agentDisplayName(draft.agent)}
+              </option>
+            )}
             {enabledAgents.map((agent) => (
               <option key={agent.id} value={agent.id}>
                 {agentDisplayName(agent.id, agent.displayName)}
@@ -214,6 +222,12 @@ function SettingsForm({
             className={FIELD}
           >
             <option value="">Agent default</option>
+            {draft.model &&
+              !modelOption?.options.some((option) => option.value === draft.model) && (
+                <option disabled value={draft.model}>
+                  {draft.model}
+                </option>
+              )}
             {modelOption?.options.map((choice) => (
               <option key={choice.value} value={choice.value}>
                 {choice.name}

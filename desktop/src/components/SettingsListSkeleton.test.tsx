@@ -17,12 +17,12 @@ describe("SettingsListSkeleton", () => {
     expect(block.className).toContain("motion-reduce:animate-none");
   });
 
-  it("mirrors the real rows' px-4 py-2.5 rhythm and dividers", () => {
+  it("mirrors the real rows' px-3.5 py-3 rhythm and dividers", () => {
     render(<SettingsListSkeleton rows={4} />);
     const row = screen.getAllByTestId("settings-list-skeleton-row")[0];
 
-    expect(row.className).toContain("px-4");
-    expect(row.className).toContain("py-2.5");
+    expect(row.className).toContain("px-3.5");
+    expect(row.className).toContain("py-3");
     expect(row.className).toContain("border-t");
     expect(row.className).toContain("first:border-t-0");
     expect(row.children).toHaveLength(2);

@@ -17,6 +17,7 @@ import {
 import { agentDisplayName } from "@/lib/agentNames";
 import { cn } from "@/lib/utils";
 import type { AgentAccountLimits, AgentSpend } from "@/protocol";
+import { settingsControl } from "@/views/settings/primitives";
 
 /** Agents that support several logins. Others simply have no accounts UI. */
 const ACCOUNT_AGENTS = ["claude", "codex"];
@@ -88,14 +89,14 @@ export default function AccountsPanel() {
 
         return (
           <section key={agentId} className="flex flex-col border-t border-rule first:border-t-0">
-            <header className="flex items-center gap-2 px-4 pb-1.5 pt-3 text-[13px] font-semibold">
+            <header className="flex items-center gap-2.5 px-3.5 pb-1.5 pt-3 text-[0.8125rem] font-medium">
               <AgentLogo agentId={agentId} displayName={displayName} />
               {displayName}
               <SpendSummary spend={spend?.find((s) => s.agentId === agentId) ?? null} />
             </header>
 
             {own.length === 0 && strays.length === 0 ? (
-              <p className="px-4 pb-2 text-[13px] text-muted-foreground">
+              <p className="px-3.5 pb-2 text-[0.75rem] leading-relaxed text-muted-foreground">
                 No accounts yet. Sign in to {displayName}, then import the login below.
               </p>
             ) : (
@@ -133,7 +134,7 @@ export default function AccountsPanel() {
 
             {manageable && (
               <form
-                className="flex items-center gap-2 px-4 pb-3 pt-1"
+                className="flex items-center gap-2 px-3.5 pb-3 pt-1"
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!label.trim()) return;
@@ -148,13 +149,12 @@ export default function AccountsPanel() {
                   onChange={(e) => setLabels((prev) => ({ ...prev, [agentId]: e.target.value }))}
                   placeholder="personal"
                   aria-label={`New ${displayName} account name`}
-                  className="bg-deep-surface h-7 w-40 rounded-md border px-2 text-[13px] outline-none focus:ring-1 focus:ring-ring"
+                  className={`${settingsControl} w-40`}
                 />
                 <Button
                   type="submit"
                   size="sm"
                   variant="outline"
-                  className="h-7 gap-1.5 text-[13px]"
                   disabled={!label.trim() || busy !== null}
                 >
                   {busy === `import:${agentId}` ? (
@@ -171,23 +171,23 @@ export default function AccountsPanel() {
       })}
 
       {error && (
-        <p className="border-t border-rule px-4 py-2 text-[13px] text-warn" role="status">
+        <p className="border-t border-rule px-3.5 py-2 text-[0.75rem] text-warn" role="status">
           {error}
         </p>
       )}
 
-      <div className="flex items-center gap-2 border-t border-rule px-4 py-2.5">
+      <div className="flex items-center gap-2 border-t border-rule px-3.5 py-2.5">
         {spend && spend.length > 0 && (
-          <span className="mr-auto text-[11px] text-muted-foreground/80">{SPEND_DISCLAIMER}</span>
+          <span className="mr-auto text-[0.75rem] text-muted-foreground/80">
+            {SPEND_DISCLAIMER}
+          </span>
         )}
-        {limitsError && (
-          <span className="text-[13px] text-red-600 dark:text-red-400">{limitsError}</span>
-        )}
+        {limitsError && <span className="text-[0.75rem] text-destructive">{limitsError}</span>}
         <Button
           type="button"
           size="sm"
-          variant="outline"
-          className="ml-auto h-7 gap-1.5 text-[13px]"
+          variant="ghost"
+          className="ml-auto"
           disabled={refreshing}
           onClick={() => {
             setRefreshing(true);
@@ -212,7 +212,7 @@ function SpendSummary({ spend }: { spend: AgentSpend | null }) {
   if (!spend) return null;
   if (!spend.reported) {
     return (
-      <span className="ml-auto text-[11px] font-normal text-muted-foreground/70">
+      <span className="ml-auto text-[0.6875rem] font-normal text-muted-foreground/70">
         cost not reported
       </span>
     );
@@ -222,7 +222,7 @@ function SpendSummary({ spend }: { spend: AgentSpend | null }) {
   if (!today && !total) return null;
   return (
     <span
-      className="ml-auto text-[11px] font-normal tabular-nums text-muted-foreground"
+      className="ml-auto text-[0.6875rem] font-normal tabular-nums text-muted-foreground"
       title={SPEND_DISCLAIMER}
     >
       {[today && `${today} today`, total && `${total} total`].filter(Boolean).join(" · ")}
@@ -255,13 +255,13 @@ function AccountRow({
   const nowSec = Math.floor(Date.now() / 1000);
   const outdated = limits ? isSnapshotOutdated(limits.fetchedAt, nowSec) : false;
   return (
-    <li className="flex items-center gap-2 px-4 py-1.5 hover:bg-muted/30">
+    <li className="flex items-center gap-2 px-3.5 py-1.5 hover:bg-foreground/[0.03]">
       <button
         type="button"
         onClick={onActivate}
         disabled={disabled || active || !onActivate}
         aria-label={`Use ${label}`}
-        className="flex min-w-0 flex-1 items-center gap-2 text-left text-[13px] disabled:cursor-default"
+        className="flex min-w-0 flex-1 items-center gap-2 text-left text-[0.8125rem] disabled:cursor-default"
       >
         {busy ? (
           <Loader2 className="size-3.5 shrink-0 animate-spin" />
@@ -274,14 +274,14 @@ function AccountRow({
             {outdated && limits && (
               <span
                 title={lastUpdatedSentence(limits.fetchedAt, nowSec)}
-                className="shrink-0 rounded-sm border border-amber-500/40 bg-amber-500/15 px-1 text-[11px] font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400"
+                className="shrink-0 rounded bg-warn/10 px-1.5 text-[0.6875rem] font-medium text-warn"
               >
                 Outdated
               </span>
             )}
           </span>
           {detail && (
-            <span className="truncate text-[11px] text-muted-foreground">
+            <span className="truncate text-[0.6875rem] text-muted-foreground">
               <EmailBlur text={detail} />
             </span>
           )}

@@ -31,7 +31,7 @@ beforeEach(() => {
   resetProjectFileNav();
   resetPendingForTests();
   resetRegistryForTests();
-  useUi.setState({ projectSurfaceByProject: {}, selectedProjectId: null, view: "control" });
+  useUi.setState({ projectSurfaceByProject: {}, selectedProjectId: null, view: "start" });
   vi.spyOn(daemon, "request").mockImplementation(async (method: string) => {
     if (method === "file.list") return [{ path: "README.md", changed: false }];
     if (method === "file.search") {

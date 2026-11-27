@@ -15,7 +15,7 @@ import { RunPreview } from "../../components/RunPreview";
 import { type TaskMode, WorkflowPicker } from "../../components/TaskComposeBar";
 import type { GitBranchList, ProjectFile, Snapshot, WorktreeBase } from "../../protocol";
 import { daemonQuery } from "../../query";
-import { useUi } from "../../store/ui";
+import { scopeProjects, useUi } from "../../store/ui";
 import { AdvisorPicker } from "./AdvisorPicker";
 import { BasePicker } from "./BasePicker";
 import { ChipDivider, HarnessChip, SmithLockedChips, ToggleChip } from "./chips";
@@ -74,6 +74,19 @@ export default function NewTaskDialog({
   addedProject,
   noProjectRequest,
 }: Props) {
+  const panelScope = useUi((state) => state.panelScope);
+  const selectedProjectId = useUi((state) => state.selectedProjectId);
+  const scoped = scopeProjects(panelScope, snapshot.spaces ?? []);
+  const scopeDefault =
+    scoped && scoped.length > 0
+      ? selectedProjectId && scoped.includes(selectedProjectId)
+        ? selectedProjectId
+        : scoped[0]!
+      : null;
+  const pickable =
+    scoped && (!defaultProject || scoped.includes(defaultProject))
+      ? snapshot.projects.filter((candidate) => scoped.includes(candidate.name))
+      : snapshot.projects;
   const {
     agent,
     agentChoices,
@@ -100,7 +113,7 @@ export default function NewTaskDialog({
     workflow,
     workflows,
   } = useTaskSelection({
-    defaultProject,
+    defaultProject: defaultProject ?? scopeDefault,
     initialMode: factorySeed ? "factory" : initialMode,
     snapshot,
   });
@@ -205,9 +218,11 @@ export default function NewTaskDialog({
     (service) =>
       service.project === project && service.status === "running" && service.allocatedPort > 0,
   );
-  const canStart = factorySeed
-    ? !!selectedWorkflow && factoryItems.length > 0
-    : !!prompt.trim() && (!!project || chat) && (!inFactory || !!selectedWorkflow);
+  const canStart =
+    Boolean(agent || smith) &&
+    (factorySeed
+      ? !!selectedWorkflow && factoryItems.length > 0
+      : !!prompt.trim() && (!!project || chat) && (!inFactory || !!selectedWorkflow));
   const startLabel = factorySeed
     ? `Start ${factoryItems.length} in Factory`
     : inFactory
@@ -269,7 +284,11 @@ export default function NewTaskDialog({
       {!factorySeed && !smith && (
         <>
           <ChipDivider />
-          <AdvisorPicker agents={agentChoices} available={mode === "single"} state={advisor} />
+          <AdvisorPicker
+            agents={agentChoices}
+            available={mode === "single" && !!agent}
+            state={advisor}
+          />
         </>
       )}
       <ChipDivider />
@@ -329,7 +348,7 @@ export default function NewTaskDialog({
           <div className="flex flex-col items-center gap-3">
             <ComposerHeading
               project={project}
-              projects={snapshot.projects}
+              projects={pickable}
               locked={!!factorySeed}
               onChange={changeProject}
               onAddProject={onAddProject}
@@ -407,7 +426,11 @@ export default function NewTaskDialog({
                         <span aria-hidden>·</span>
                       </>
                     )}
-                    <span className="truncate">{workspaceLine}</span>
+                    <span className="truncate">
+                      {agent || smith
+                        ? workspaceLine
+                        : "Show an agent in Settings to start a task."}
+                    </span>
                   </>
                 )}
               </p>

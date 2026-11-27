@@ -160,6 +160,8 @@ export type SidebarRow =
       /** The lane level that carries the open task's branch past or into this
        *  row, painted `primary`; null when the branch does not cross it. */
       activeLane: number | null;
+      /** The open task, or an ancestor of it: its own connector is lit too. */
+      onActivePath: boolean;
       childCount: number;
       expanded: boolean;
       attention: boolean;
@@ -168,10 +170,10 @@ export type SidebarRow =
 
 const EMPTY_HEIGHT = 34;
 const EMPTY_WITH_HINT_HEIGHT = 50;
-/** `mt-1` of air above the group plus the row button's `h-8`. */
+/** `mt-1` of air above the group plus the row button's `h-7`. */
 const PROJECT_HEIGHT = 36;
 const SHELF_HEIGHT = 28;
-/** Equals the row button's `h-8`, so sibling rails abut with no seam (08 §D). */
+/** Equals the row button's `h-7`, so sibling rails abut with no seam (08 §D). */
 const TASK_HEIGHT = 32;
 
 /**

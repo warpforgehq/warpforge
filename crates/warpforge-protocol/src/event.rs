@@ -30,6 +30,8 @@ pub enum Event {
     /// config-derived slice of client state; task/session history is untouched.
     #[serde(rename = "project.configChanged")]
     ProjectConfigChanged(ProjectConfigState),
+    #[serde(rename = "spaces.changed")]
+    SpacesChanged(Vec<crate::Space>),
 
     #[serde(rename = "agentLimits.updated")]
     AgentLimitsUpdated { accounts: Vec<AgentAccountLimits> },
@@ -40,6 +42,12 @@ pub enum Event {
         service: String,
         status: ServiceStatus,
         allocated_port: u16,
+        #[serde(
+            default,
+            rename = "needsRestart",
+            skip_serializing_if = "std::ops::Not::not"
+        )]
+        needs_restart: bool,
     },
     #[serde(rename = "service.portWarning")]
     ServicePortWarning {
@@ -285,6 +293,8 @@ pub enum Event {
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot {
     pub projects: Vec<ProjectInfo>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub spaces: Vec<crate::Space>,
     pub services: Vec<ServiceInfo>,
     pub portforwards: Vec<PortForwardInfo>,
     pub tasks: Vec<TaskInfo>,
@@ -321,9 +331,14 @@ pub struct ProjectInfo {
     pub port_range_conflict: Option<String>,
     /// Services declared in .warpforge.yaml (may not be running).
     pub declared_services: Vec<String>,
-    pub agent_templates: HashMap<String, String>,
     /// Why the personal local config file is being ignored; absent when it
     /// applies or does not exist.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub local_config_error: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config_error: Option<crate::ConfigError>,
+    /// `linked:` entries of the project's workspace.yaml, joined onto its
+    /// path with `..` resolved lexically (ADR 0034).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub linked: Vec<String>,
 }

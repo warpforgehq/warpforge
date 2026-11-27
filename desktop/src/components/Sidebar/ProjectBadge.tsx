@@ -18,7 +18,7 @@ export function ProjectBadge({ name, className }: { name: string; className?: st
         color: smithColor(index),
       }}
       className={cn(
-        "grid shrink-0 place-items-center rounded-[5px] text-[11px] font-bold uppercase leading-none",
+        "grid shrink-0 place-items-center rounded-[5px] text-[0.6875rem] font-bold uppercase leading-none",
         className,
       )}
     >

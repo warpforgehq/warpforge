@@ -60,13 +60,16 @@ export class DaemonEvents extends DaemonStore {
         // snapshot means a fresh connection, so transcripts must be fetched
         // again for any chat opened from here on.
         this.historyLoads.clear();
-        this.setState({ snapshot: ev.data });
+        this.setState({ snapshot: ev.data, snapshotReady: true });
         break;
       }
       case "project.added":
         this.setState({
           snapshot: { ...snap, projects: [...snap.projects, ev.data] },
         });
+        break;
+      case "spaces.changed":
+        this.setState({ snapshot: { ...snap, spaces: ev.data } });
         break;
       case "project.removed":
         for (const terminal of snap.terminals) {
@@ -124,7 +127,12 @@ export class DaemonEvents extends DaemonStore {
         const services = exists
           ? snap.services.map((s) =>
               s.project === ev.data.project && s.name === ev.data.service
-                ? { ...s, allocatedPort: ev.data.allocated_port, status: ev.data.status }
+                ? {
+                    ...s,
+                    allocatedPort: ev.data.allocated_port,
+                    status: ev.data.status,
+                    needsRestart: ev.data.needsRestart,
+                  }
                 : s,
             )
           : // A service started after we subscribed — add it. command/originalPort
@@ -135,6 +143,7 @@ export class DaemonEvents extends DaemonStore {
                 allocatedPort: ev.data.allocated_port,
                 command: "",
                 logSeq: 0,
+                needsRestart: ev.data.needsRestart,
                 name: ev.data.service,
                 originalPort: 0,
                 project: ev.data.project,

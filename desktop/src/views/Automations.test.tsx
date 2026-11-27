@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { daemon } from "@/daemon";
 import type { Automation, AutomationRun, Snapshot } from "@/protocol";
 import { EMPTY_SNAPSHOT } from "@/protocol";
+import { useUi } from "@/store/ui";
 
 import Automations from "./Automations";
 
@@ -63,7 +64,6 @@ const snapshot: Snapshot = {
   ],
   projects: [
     {
-      agentTemplates: {},
       declaredServices: [],
       name: "warpforge",
       path: "/tmp/warpforge",
@@ -76,12 +76,13 @@ function renderAutomations() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <Automations snapshot={snapshot} onOpenTask={vi.fn<(id: string) => void>()} />
+      <Automations snapshot={snapshot} onOpenTask={vi.fn<(id: string) => void>()} listInSidebar />
     </QueryClientProvider>,
   );
 }
 
 beforeEach(() => {
+  useUi.getState().selectAutomation(null);
   vi.restoreAllMocks();
   vi.spyOn(daemon, "listAutomations").mockResolvedValue([
     automation(),
@@ -101,39 +102,22 @@ beforeEach(() => {
 });
 
 describe("Automations", () => {
-  it("shows the next run with a countdown and the cards behind it", async () => {
+  it("shows the next run with a countdown", async () => {
     renderAutomations();
-    await screen.findByText("every day at 09:00");
-    const strip = screen.getByTestId("automation-live-strip");
+    const strip = await screen.findByTestId("automation-live-strip");
     expect(within(strip).getByText("PR triage")).toBeInTheDocument();
     // The countdown floors, so the last whole minute has already ticked away.
     expect(strip.textContent).toMatch(/in 2h 1[34]m/);
-    expect(screen.getAllByTestId("automation-card")).toHaveLength(2);
   });
 
-  it("filters by state and by text", async () => {
-    const user = userEvent.setup({ pointerEventsCheck: 0 });
-    renderAutomations();
-    await screen.findByText("every day at 09:00");
-
-    await user.click(screen.getByRole("radio", { name: "Paused" }));
-    expect(screen.getAllByTestId("automation-card")).toHaveLength(1);
-    expect(screen.getByText("Nightly deps")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("radio", { name: "All" }));
-    await user.type(screen.getByLabelText("Search automations"), "pull requests");
-    const cards = screen.getAllByTestId("automation-card");
-    expect(cards).toHaveLength(1);
-    expect(within(cards[0]!).getByText("PR triage")).toBeInTheDocument();
-  });
-
-  it("pauses an automation through the card toggle", async () => {
+  it("pauses an automation from its detail", async () => {
     const update = vi.spyOn(daemon, "updateAutomation").mockResolvedValue(automation());
     const user = userEvent.setup({ pointerEventsCheck: 0 });
+    useUi.getState().selectAutomation("a-1");
     renderAutomations();
-    await screen.findByText("every day at 09:00");
+    await screen.findByRole("heading", { name: "PR triage" });
 
-    await user.click(screen.getAllByTitle("Pause automation")[0]!);
+    await user.click(screen.getByRole("button", { name: "Pause" }));
     expect(update).toHaveBeenCalledWith("a-1", { enabled: false });
   });
 
@@ -142,10 +126,11 @@ describe("Automations", () => {
       .spyOn(daemon, "runAutomationNow")
       .mockResolvedValue(run({ trigger: "manual" }));
     const user = userEvent.setup({ pointerEventsCheck: 0 });
+    useUi.getState().selectAutomation("a-1");
     renderAutomations();
-    await screen.findByText("every day at 09:00");
+    await screen.findByRole("heading", { name: "PR triage" });
 
-    await user.click(screen.getAllByRole("button", { name: /Run now/ })[0]!);
+    await user.click(screen.getByRole("button", { name: "Run now" }));
     expect(runNow).toHaveBeenCalledWith("a-1");
   });
 

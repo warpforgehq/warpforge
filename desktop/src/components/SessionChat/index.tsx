@@ -39,6 +39,7 @@ import type { ComposerHandle } from "../Composer";
 import { Composer } from "../Composer";
 import { FactoryStrip } from "../FactoryStrip";
 import { WorkflowControls } from "../WorkflowControls";
+import { CheckoutRecovery } from "./CheckoutRecovery";
 import {
   CHAT_DRAW_DISTANCE_PX,
   CHAT_ESTIMATED_ROW_PX,
@@ -327,7 +328,7 @@ export function SessionChat({
               onTouchMoveCapture={onTouchMoveCapture}
               onKeyDown={pauseFollowingOnNavigationKey}
               tabIndex={0}
-              className="scrollbar-gutter-both h-full min-w-0 overflow-x-hidden overscroll-y-contain px-2 text-sm [overflow-anchor:none]"
+              className="scrollbar-gutter-both h-full min-w-0 overflow-x-hidden overscroll-y-contain px-3 text-sm [overflow-anchor:none]"
               ListHeaderComponent={CHAT_LIST_HEADER}
               ListFooterComponent={CHAT_LIST_FOOTER}
               ListEmptyComponent={CHAT_LIST_EMPTY}
@@ -364,20 +365,23 @@ export function SessionChat({
           the gap. Stacking both put 14px between the status line and the box
           it describes. */}
       {activity && (
-        <div className="shrink-0 px-2 pb-0 pt-1.5">
+        <div className="shrink-0 px-3 pb-0 pt-1.5">
           <AgentActivityIndicator activity={activity} compact />
         </div>
       )}
       {!readOnly && <QueuedPromptsBar taskId={task.id} queued={task.queuedPrompts ?? []} />}
       {isFactoryTask(task) && !readOnly && <FactoryStrip task={task} />}
+      {!readOnly && task.status === "blocked" && task.blockedKind === "checkout_held" && (
+        <CheckoutRecovery key={task.id} project={task.project} reason={task.blockedReason} />
+      )}
       {task.workflowRun && !readOnly && <WorkflowControls task={task} />}
       {!readOnly && (
         <div>
           <Composer
             // One left edge down the whole column: the header title, every
-            // message and the composer all start at px-3. With no frame around
+            // message and the composer share the same inset. With no frame around
             // the conversation, three different insets is what read as slop.
-            className="px-2"
+            className="px-3"
             ref={composerRef}
             commands={commands}
             contextUsage={contextUsage}
@@ -390,7 +394,11 @@ export function SessionChat({
             placeholder={workflow.placeholder ?? "Steer this session..."}
             toolbar={
               task.configOptions && task.configOptions.length > 0 ? (
-                <AgentConfigBar taskId={task.id} options={task.configOptions} />
+                <AgentConfigBar
+                  taskId={task.id}
+                  agentId={task.agent}
+                  options={task.configOptions}
+                />
               ) : undefined
             }
           />

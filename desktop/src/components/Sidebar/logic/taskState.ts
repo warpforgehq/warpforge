@@ -7,7 +7,7 @@ import type { SidebarTaskState } from "./stateMeta";
 /**
  * The three states that actually want a human *now*: a prompt waiting on an
  * answer, a task that cannot proceed, and a session that died. Drives the sort,
- * the dot on a collapsed project and the Mission Control badge. Matches what
+ * and the dot on a collapsed project. Matches what
  * `buildAttentionQueue` now collects — a finished turn with a diff is not an
  * interruption, and counting it as one made "needs you" mean everything.
  */

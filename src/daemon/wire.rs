@@ -153,6 +153,7 @@ pub fn task_info(t: &Task) -> wire::TaskInfo {
         backlog_item_id: t.backlog_item_id.clone(),
         origin: t.origin.clone(),
         model: t.model.clone(),
+        workspace_folders: t.workspace_folders.iter().map(|f| f.info()).collect(),
         pending_permission: false,
         queued_prompts: t.queued_prompts.clone(),
         advisor: t.advisor.clone(),
@@ -172,11 +173,13 @@ pub fn to_wire(ev: &Event) -> Option<wire::Event> {
             service,
             status,
             allocated_port,
+            needs_restart,
         } => Some(wire::Event::ServiceStatus {
             project: project.clone(),
             service: service.clone(),
             status: service_status(status),
             allocated_port: *allocated_port,
+            needs_restart: *needs_restart,
         }),
         Event::ServicePortWarning {
             project,
@@ -326,6 +329,7 @@ pub fn to_wire(ev: &Event) -> Option<wire::Event> {
         Event::ProjectConfigChanged(state) => {
             Some(wire::Event::ProjectConfigChanged(state.clone()))
         }
+        Event::SpacesChanged(spaces) => Some(wire::Event::SpacesChanged(spaces.clone())),
         Event::LspMessage { server_id, payload } => Some(wire::Event::LspMessage {
             server_id: server_id.clone(),
             payload: payload.clone(),

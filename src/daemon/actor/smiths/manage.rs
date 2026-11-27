@@ -12,7 +12,7 @@ use crate::daemon::smiths::identity::{self, Identity, Revs};
 use crate::daemon::smiths::{
     check_charter, check_color, check_name, default_color, soul_template, CHARTER_TEMPLATE,
 };
-use crate::daemon::task::{now_secs, Task, TaskSmith, TaskStatus};
+use crate::daemon::task::{now_secs, TaskSmith, TaskStatus};
 
 type Reply<T> = oneshot::Sender<Result<T, String>>;
 
@@ -163,7 +163,7 @@ impl Daemon {
                 return;
             }
         };
-        let mut thread = Task::new(
+        let mut thread = self.new_task(
             &smith.home_project,
             &format!("{}'s thread", smith.name),
             &smith.agent,

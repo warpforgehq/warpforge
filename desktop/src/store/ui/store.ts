@@ -1,9 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { usePins } from "@/store/pins";
+
+import { createDevicePreferences, devicePreferenceDefaults } from "./devicePreferences";
 import { createLayoutSlice } from "./layout";
 import { createNavSlice } from "./nav";
-import { createPinnedSlice } from "./pinned";
 import { createSettingsSlice } from "./settings";
 import { clampSidebarWidth, SIDEBAR_OPACITY_MIN, type UiState } from "./types";
 
@@ -13,12 +15,11 @@ export const useUi = create<UiState>()(
       ...createNavSlice(...args),
       ...createLayoutSlice(...args),
       ...createSettingsSlice(...args),
-      ...createPinnedSlice(...args),
+      ...createDevicePreferences(...args),
     }),
     {
       name: "wf-ui",
-      // Next persisted-shape change must bump this to 12.
-      version: 11,
+      version: 15,
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
         if (version === 0 && state && "sidebarWidth" in state) {
@@ -26,13 +27,10 @@ export const useUi = create<UiState>()(
             state = { ...state, sidebarWidth: clampSidebarWidth(state.sidebarWidth) };
           }
         }
-        if (version < 2 && state && !("pinnedLayout" in state)) {
-          state = { ...state, pinnedLayout: {} };
-        }
         // The Board view was removed. `view` is persisted, so without this a
         // session that ended there rehydrates a `view` no branch renders.
         if (version < 3 && state && state.view === "board") {
-          state = { ...state, view: "control" };
+          state = { ...state, view: "start" };
         }
         if (version < 4 && state) {
           // Glass defaults inverted (chrome may be glass, the work surface is
@@ -55,7 +53,7 @@ export const useUi = create<UiState>()(
         // project to show, and falling through to the first registered one
         // lands the user on a project they never picked.
         if (version < 5 && state && state.view === "projects") {
-          state = { ...state, view: state.selectedProjectId ? "project" : "control" };
+          state = { ...state, view: state.selectedProjectId ? "project" : "start" };
         }
         // The Tasks segment returns to the last task. An install upgrading from
         // 5 never stored one, and a task id from storage is only ever offered
@@ -96,6 +94,48 @@ export const useUi = create<UiState>()(
           const filters = state.inboxFilters as Record<string, unknown>;
           state = { ...state, inboxFilters: { ...filters, scope: "review" } };
         }
+        if (version < 12) {
+          state = { ...devicePreferenceDefaults, ...state };
+        }
+        if (version < 13) {
+          const {
+            missionControlTab: _missionControlTab,
+            pinnedTaskIds,
+            pinnedLayout: _pinnedLayout,
+            ...rest
+          } = state;
+          if (Array.isArray(pinnedTaskIds)) {
+            usePins
+              .getState()
+              .migrateTaskPins(
+                pinnedTaskIds.filter((id): id is string => typeof id === "string" && id.length > 0),
+              );
+          }
+          state = {
+            ...rest,
+            ...(rest.view === "control" && { view: "start" }),
+            ...(rest.sidebarMode === "control" && { sidebarMode: "tasks" }),
+          };
+        }
+        // Agents are hidden from pickers by disabling them; the per-device
+        // hide list and the separate Models page are gone.
+        if (version < 14) {
+          const pickers = state.pickers as Record<string, unknown> | undefined;
+          if (pickers && "hiddenAgents" in pickers) {
+            const { hiddenAgents: _hiddenAgents, ...rest } = pickers;
+            state = { ...state, pickers: rest };
+          }
+          if (state.settingsPage === "models") state = { ...state, settingsPage: "agents" };
+        }
+        // The project page became the panel's project mode; a session left
+        // on a project reopens inside that project's mode.
+        if (
+          version < 15 &&
+          state.view === "project" &&
+          typeof state.selectedProjectId === "string"
+        ) {
+          state = { ...state, panelScope: { kind: "project", name: state.selectedProjectId } };
+        }
         return state;
       },
       // OpenTaskId is session-only — a reload shouldn't force-open a stale task.
@@ -114,7 +154,10 @@ export const useUi = create<UiState>()(
         pullFilesPanelCollapsed: _pullFilesPanelCollapsed,
         inboxSelectedKey: _inboxSelectedKey,
         teamSelection: _teamSelection,
+        selectedAutomationId: _selectedAutomationId,
         newSmithOpen: _newSmithOpen,
+        settingsOpen: _settingsOpen,
+        settingsTarget: _settingsTarget,
         inboxFilters,
         backlogParamsByProject,
         ...rest

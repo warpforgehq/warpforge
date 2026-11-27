@@ -19,8 +19,3 @@ services:
     port: 4390
     portFallback: auto
     readyPattern: Serving HTTP
-
-# agentTemplates:
-#   dev:
-#     command: claude
-#     description: "Interactive development session"

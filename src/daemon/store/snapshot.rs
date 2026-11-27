@@ -5,8 +5,8 @@
 
 use warpforge_protocol as wire;
 
-/// Keep projected desktop state bounded like t3code's thread projector. Raw
-/// rows stay durable in SQLite for agent resume/replay.
+/// Keep projected desktop state bounded. Raw rows stay durable in SQLite for
+/// agent resume/replay.
 pub(crate) const MAX_SESSION_SNAPSHOT_UPDATES: usize = 2_000;
 const SNAPSHOT_TRIM_HEADROOM: usize = 256;
 

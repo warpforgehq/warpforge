@@ -1,4 +1,4 @@
-import { ChevronRight, Lightbulb } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useId, useState } from "react";
 
 import { advisorLabel, formatUsageCost } from "@/lib/advisor";
@@ -14,17 +14,14 @@ type AdvisorConsultation = Extract<SessionUpdate, { kind: "advisor_consultation"
 /**
  * One question the task's agent put to its advisor, folded to a header row.
  * @param update the recorded consultation
- * @param compact render a one-line summary for mission-control tiles
  * @param onOpenTask opens the advisor's hidden task
  * @returns the consultation block
  */
 export function AdvisorConsultationBlock({
   update,
-  compact,
   onOpenTask,
 }: {
   update: AdvisorConsultation;
-  compact?: boolean;
   onOpenTask?: (id: string) => void;
 }) {
   const contentId = useId();
@@ -32,18 +29,6 @@ export function AdvisorConsultationBlock({
   const failed = update.outcome === "failed";
   const label = advisorLabel(update.agent, update.model);
   const cost = update.cost ? formatUsageCost(update.cost) : null;
-
-  if (compact) {
-    return (
-      <p className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-        <Lightbulb
-          className={cn("size-3.5 shrink-0", failed ? "text-destructive" : "text-primary")}
-        />
-        <span className="min-w-0 truncate text-foreground">Asked advisor · {label}</span>
-        {failed && <span className="shrink-0 text-[11px] text-destructive">failed</span>}
-      </p>
-    );
-  }
 
   return (
     <section

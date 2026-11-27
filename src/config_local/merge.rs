@@ -16,6 +16,9 @@ pub(super) fn merge_config(base: Value, local: Value) -> Result<(Value, LocalOve
     };
     let mut overrides = LocalOverrides::default();
     for (key, value) in local {
+        if key.as_str() != Some("portforwards") || !value.is_sequence() {
+            record_fields(&mut overrides.fields, &[], &key, &value);
+        }
         match (key.as_str(), value) {
             (_, Value::Null) => {
                 merged.remove(&key);
@@ -28,12 +31,28 @@ pub(super) fn merge_config(base: Value, local: Value) -> Result<(Value, LocalOve
                 );
             }
             (Some("portforwards"), Value::Sequence(forwards)) => {
-                merge_forwards(&mut merged, &key, forwards, &mut overrides.portforwards)?;
+                merge_forwards(&mut merged, &key, forwards, &mut overrides)?;
             }
             (_, value) => merge_entry(&mut merged, key, value),
         }
     }
+    overrides.fields.sort();
+    overrides.fields.dedup();
     Ok((Value::Mapping(merged), overrides))
+}
+
+fn record_fields(fields: &mut Vec<Vec<String>>, parent: &[String], key: &Value, value: &Value) {
+    let Some(key) = key.as_str() else { return };
+    let mut path = parent.to_vec();
+    path.push(key.to_string());
+    match value {
+        Value::Mapping(mapping) => {
+            for (key, value) in mapping {
+                record_fields(fields, &path, key, value);
+            }
+        }
+        _ => fields.push(path),
+    }
 }
 
 fn merge_value(base: &mut Value, local: Value) {
@@ -115,7 +134,7 @@ fn merge_forwards(
     root: &mut Mapping,
     key: &Value,
     local: Vec<Value>,
-    touched: &mut BTreeMap<String, Vec<String>>,
+    overrides: &mut LocalOverrides,
 ) -> Result<()> {
     let slot = root
         .entry(key.clone())
@@ -137,14 +156,24 @@ fn merge_forwards(
         let position = base
             .iter()
             .position(|e| e.as_mapping().and_then(forward_key).as_deref() == Some(&name));
+        let parent = ["portforwards".into(), name.clone()];
         if remove {
             if let Some(position) = position {
                 base.remove(position);
             }
-            touched.remove(&name);
+            overrides.portforwards.remove(&name);
+            overrides.fields.retain(|path| !path.starts_with(&parent));
             continue;
         }
-        touched.insert(name, field_names(&entry, &["name"]));
+        for (key, value) in &entry {
+            record_fields(&mut overrides.fields, &parent, key, value);
+        }
+        let fields = overrides.portforwards.entry(name).or_default();
+        for field in field_names(&entry, &["name"]) {
+            if !fields.contains(&field) {
+                fields.push(field);
+            }
+        }
         match position.and_then(|p| base[p].as_mapping_mut()) {
             Some(existing) => merge_mapping(existing, entry),
             None => {

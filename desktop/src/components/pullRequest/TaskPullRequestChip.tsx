@@ -16,34 +16,24 @@ import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 
 import { ArchiveMergedTaskDialog } from "./ArchiveMergedTaskDialog";
-import { KeeperDot, withKeeperLabel } from "./KeeperDot";
+import { KEEPER_WORST_META, withKeeperLabel } from "./KeeperDot";
 import { liveChecks, PULL_CHECKS_META, PULL_STATE_META, pullRequestSummary } from "./meta";
 import { openPullRequest, openTaskPullRequest } from "./taskPullRequestNavigation";
 
 const CHIP =
   "flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-px text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
+function Led({ className, ...rest }: { className: string; [data: `data-${string}`]: string }) {
+  return <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", className)} {...rest} />;
+}
+
 /**
  * The open task's pull request in the header: state and checks, opening the
  * review inside Warpforge. Once it is merged, the next step is offered beside
  * it — archive the task and remove its worktree, after a confirmation.
  */
-export function TaskPullRequestChip({
-  task,
-  compact = false,
-}: {
-  task: TaskInfo;
-  compact?: boolean;
-}) {
-  return compact ? <ChipContent task={task} compact /> : <RefreshingChip task={task} />;
-}
-
-function RefreshingChip({ task }: { task: TaskInfo }) {
+export function TaskPullRequestChip({ task }: { task: TaskInfo }) {
   useOpenTaskPullRequestRefresh(task.id);
-  return <ChipContent task={task} compact={false} />;
-}
-
-function ChipContent({ task, compact }: { task: TaskInfo; compact: boolean }) {
   const pr = useTaskPullRequest(task.id);
   const keepers = keeperWorst(useTaskKeepers(task.id));
   const [confirming, setConfirming] = useState(false);
@@ -51,42 +41,44 @@ function ChipContent({ task, compact }: { task: TaskInfo; compact: boolean }) {
   const state = PULL_STATE_META[pr.state];
   const checks = liveChecks(pr);
   const StateIcon = state.icon;
-  const ChecksIcon = checks ? PULL_CHECKS_META[checks].icon : null;
   const summary = withKeeperLabel(pullRequestSummary(pr), keepers);
+  const failed = checks === "failing" ? (pr.failedChecks?.length ?? 0) : 0;
 
   return (
     <>
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          <span className="inline-flex shrink-0">
+          <span className="group inline-flex shrink-0 items-center rounded border border-border text-[11px] text-muted-foreground transition-colors hover:border-foreground/20">
             <button
               type="button"
               data-task-pr={pr.state}
               aria-label={`${summary}: open in Warpforge`}
-              title={pr.title}
+              title={`${pr.title}\n${summary}\n⌘-click to open on GitHub`}
               onClick={(event) => openPullRequest(task.id, pr.url, event)}
-              className={CHIP}
+              className="flex items-center gap-1.5 rounded-l py-px pr-1 pl-1.5 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <span className="relative inline-flex shrink-0">
-                <StateIcon aria-hidden className={cn("size-3", state.toneClass)} />
-                <KeeperDot worst={keepers} />
-              </span>
-              <span className="tnum">#{pr.number}</span>
-              {state.label}
-              {checks && ChecksIcon && (
-                <span
+              <StateIcon aria-hidden className={cn("size-3 shrink-0", state.toneClass)} />
+              <span className="font-mono tnum">#{pr.number}</span>
+              {pr.state !== "open" && <span>{state.label}</span>}
+              {checks && (
+                <Led
                   data-task-pr-checks={checks}
-                  className={cn("flex items-center gap-0.5", PULL_CHECKS_META[checks].toneClass)}
-                >
-                  <ChecksIcon aria-hidden className="size-3 shrink-0" />
-                  {PULL_CHECKS_META[checks].label}
-                </span>
+                  className={cn(
+                    PULL_CHECKS_META[checks].dotClass,
+                    checks === "pending" && "motion-safe:animate-pulse",
+                  )}
+                />
+              )}
+              {failed > 0 && <span className="font-mono text-destructive">{failed} failing</span>}
+              {keepers && (
+                <Led data-task-keepers={keepers} className={KEEPER_WORST_META[keepers].dotClass} />
               )}
             </button>
             <button
               type="button"
               aria-label="Open on GitHub"
-              className={CHIP}
+              title="Open on GitHub"
+              className="grid max-w-0 self-stretch place-items-center overflow-hidden rounded-r px-0 opacity-0 transition-all group-hover:max-w-6 group-hover:px-1 group-hover:opacity-100 hover:bg-accent hover:text-foreground focus-visible:max-w-6 focus-visible:px-1 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               onClick={() => void openExternalLink(pr.url)}
             >
               <ArrowUpRight aria-hidden className="size-3" />
@@ -105,7 +97,7 @@ function ChipContent({ task, compact }: { task: TaskInfo; compact: boolean }) {
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-      {!compact && pr.state === "merged" && task.worktree && (
+      {pr.state === "merged" && task.worktree && (
         <>
           <button type="button" onClick={() => setConfirming(true)} className={CHIP}>
             <Archive aria-hidden className="size-3 shrink-0" />

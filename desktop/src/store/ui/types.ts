@@ -1,9 +1,9 @@
 import type { StateCreator } from "zustand";
 
 import type { EditHunk } from "../../protocol";
+import type { DevicePreferences } from "./devicePreferences";
 import type { LayoutState } from "./layout";
 import type { NavState } from "./nav";
-import type { PinnedState } from "./pinned";
 import type { SettingsState } from "./settings";
 
 /**
@@ -12,22 +12,23 @@ import type { SettingsState } from "./settings";
  */
 
 /** A destination the nav can address. */
-export type GlobalView = "control" | "inbox" | "automations" | "memory" | "team";
-/** What the sidebar body shows. A mode also sets the main area; the views in
- *  `GlobalView` change only the main area. */
-export type SidebarMode = "tasks" | "inbox" | "team";
+export type GlobalView = "start" | "inbox" | "automations" | "memory" | "team";
+/** What the rail has picked. Tasks also owns the sidebar for the start view. */
+export type SidebarMode = "tasks" | Exclude<GlobalView, "memory" | "start">;
 /** What the Smiths (Team) main area shows. */
 export type TeamSelection =
   | { kind: "conversation"; key: string }
   | { kind: "teammate"; id: string; tab?: "chat" | "work" | "settings" };
 /** "project" is a subject, not a nav destination: it is reached by selecting a
- *  project in the sidebar tree, never from NAV. */
+ *  project in the sidebar tree, never from the rail’s modes. */
 export type View = GlobalView | "project";
-/** Page shown in the Settings overlay's left rail. */
+/** Page shown in Settings; the sidebar panel lists them while Settings are open. */
 export type SettingsPage =
   | "appearance"
+  | "notifications"
   | "agents"
   | "integrations"
+  | "spaces"
   | "tasks"
   | "memory"
   | "advanced";
@@ -48,20 +49,20 @@ export type TaskSurface =
 export const DEFAULT_TASK_SURFACE: TaskSurface = "diff";
 
 /** Project-page surface. */
-export type ProjectSurface = "backlog" | "pulls" | "files" | "runtime" | "terminal" | "worktrees";
+export type ProjectSurface =
+  | "backlog"
+  | "pulls"
+  | "files"
+  | "runtime"
+  | "terminal"
+  | "worktrees"
+  | "config";
 export const DEFAULT_PROJECT_SURFACE: ProjectSurface = "backlog";
 
 /** Transient intent to open a task already showing a specific file/diff. */
 export type TaskOpenNav =
   | { surface: "files"; path: string; line?: number; column?: number }
   | { surface: "diff"; path: string; hunks?: EditHunk[] };
-
-export interface PinnedTileLayout {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
 
 /** Glass tint of the chrome surfaces — 1 is opaque, below this the app is unreadable. */
 export const SIDEBAR_OPACITY_MIN = 0.6;
@@ -82,6 +83,6 @@ export function clampSidebarWidth(v: unknown): number {
   return Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, Math.round(v)));
 }
 
-export interface UiState extends NavState, LayoutState, SettingsState, PinnedState {}
+export interface UiState extends NavState, LayoutState, SettingsState, DevicePreferences {}
 
 export type UiSlice<T> = StateCreator<UiState, [["zustand/persist", unknown]], [], T>;

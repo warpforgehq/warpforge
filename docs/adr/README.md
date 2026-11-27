@@ -19,7 +19,7 @@ stale and then misleads.
 | [0002](0002-daemon-concurrency.md) | Daemon concurrency: non-blocking mailboxes, sharded per task |
 | [0002](0002-issue-tracker-integration.md) | Backlog ↔ issue trackers: one table, daemon-owned links |
 | [0003](0003-workflow-agent-loss.md) | Losing a stage's agent pauses a pipeline, it does not fail it |
-| [0004](0004-project-page-surfaces.md) | The project page is surfaces, and the backlog is a list |
+| [0004](0004-project-page-surfaces.md) | The project page is surfaces, and the backlog is a list (page shell superseded by 0033) |
 | [0005](0005-chat-transcript-scrolling.md) | The virtualiser owns the chat scroll, and the transcript arrives whole |
 | [0006](0006-explicit-port-pinning.md) | Ports are pinned explicitly, not derived from list positions |
 | [0007](0007-scheduled-automations.md) | Scheduled automations: the mirror, the run, and the tick |
@@ -43,3 +43,7 @@ stale and then misleads.
 | [0029](0029-projectless-chats.md) | A chat is a task with no project, run in its own folder |
 | [0030](0030-keepers.md) | Keepers: post-agents that keep a task's change green, before and after its pull request |
 | [0031](0031-browser-webview-ownership.md) | Browser webview ownership under wry 2.12 and agent focus restore |
+| [0032](0032-permanent-rail.md) | A permanent rail picks, the panel beside it shows; Settings replace the panel |
+| [0033](0033-project-mode.md) | A project is a mode of the Tasks panel; its sections fill the main area without tabs |
+| [0034](0034-spaces.md) | A space groups projects, and a task sees its siblings as extra folders |
+| [0035](0035-project-config-editing.md) | The project config is edited in place, from the UI or by hand, through one daemon writer |

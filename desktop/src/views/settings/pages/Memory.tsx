@@ -5,13 +5,23 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { daemon } from "@/daemon";
 
-import { Section, SettingRow, StatusStrip } from "../primitives";
+import {
+  SegmentedControl,
+  SettingsCard,
+  SettingsHeader,
+  SettingsRow,
+  StatusStrip,
+} from "../primitives";
 
 /** What the daemon needs before hybrid search can work, spelled out once. */
 const FASTEMBED_HELP =
   "Downloads a ~80 MB model (all-MiniLM-L6-v2) on first use and needs ONNX Runtime — on macOS, brew install onnxruntime. Falls back to keyword search when unavailable or offline.";
 
-export default function MemoryPage() {
+/**
+ * The Memory page header and search settings, above the memory browser.
+ * @param actions The browser's Memories/Proposals tabs, placed in the header.
+ */
+export default function MemoryPage({ actions }: { actions?: React.ReactNode } = {}) {
   const queryClient = useQueryClient();
   const [confirmingFastembed, setConfirmingFastembed] = useState(false);
   const memoryStats = useQuery({
@@ -44,84 +54,78 @@ export default function MemoryPage() {
   const hybrid = stats?.embeddingMode === "hybrid";
   const dreaming = (stats as any)?.dreaming;
 
-  return (
-    <Section title="Memory">
-      <SettingRow
-        title="Search"
-        description={
-          memoryStats.isLoading
-            ? ""
-            : hybrid
-              ? "Hybrid: keywords plus meaning."
-              : "Keywords only (FTS)."
-        }
-        hint={hybrid ? "Falls back to keyword search when offline." : FASTEMBED_HELP}
-        control={
-          <select
-            aria-label="Embedding mode"
-            value={hybrid ? "fastembed" : "none"}
-            disabled={memoryStats.isLoading}
-            onChange={(e) => {
-              // The select is controlled by the daemon's answer, so a
-              // pick that is not applied snaps back on the next render —
-              // there is nothing to undo here.
-              const mode = e.target.value;
-              if (mode === "fastembed") {
-                setConfirmingFastembed(true);
-                return;
-              }
-              void applyEmbeddingMode(mode);
-            }}
-            className="h-7 rounded-md border bg-background px-2 text-[13px]"
-          >
-            <option value="none">Keywords</option>
-            <option value="fastembed">Hybrid (~80 MB)</option>
-          </select>
-        }
-      />
+  const facts: { label: string; value: string; title: string }[] = [
+    {
+      label: "memories",
+      value: memoryStats.isLoading
+        ? "…"
+        : `${stats?.globalCount ?? 0} global · ${stats?.projectCount ?? 0} project`,
+      title: "Durable cross-session knowledge, shared across harnesses.",
+    },
+    {
+      label: "scopes",
+      value:
+        [stats?.scopesEnabled.global && "global", stats?.scopesEnabled.project && "project"]
+          .filter(Boolean)
+          .join(" · ") || "none",
+      title:
+        "Which scopes agents may store and search. Edit ~/.warpforge/config.yaml → memory.global / memory.project, then restart the daemon.",
+    },
+    {
+      label: "project db",
+      value: memoryStats.isLoading ? "…" : stats?.perProjectDbExists ? "yes" : "global only",
+      title:
+        "~/.warpforge/memory.db is global; a per-project overlay is created on the first project-scoped write.",
+    },
+    {
+      label: "dreaming",
+      value: `${dreaming?.enabled ? "on" : "off"} (${dreaming?.trigger ?? "manual"})`,
+      title:
+        "Automatic memory compaction. Edit ~/.warpforge/config.yaml → memory.dreaming, then restart the daemon. Run it by hand from Advanced.",
+    },
+  ];
 
-      {/* A failed switch is the one thing worth interrupting the layout for:
-          the select has already snapped back, so without this the screen looks
-          like nothing happened. */}
+  return (
+    <div className="flex min-w-0 flex-col">
+      <SettingsHeader page="memory" actions={actions} />
+      <SettingsCard className="mt-6">
+        <SettingsRow
+          id="embedding-mode"
+          title="Search"
+          description={
+            hybrid ? "Hybrid: keywords plus meaning. Falls back to keywords offline." : undefined
+          }
+          hint={hybrid ? undefined : FASTEMBED_HELP}
+          control={
+            <SegmentedControl
+              label="Embedding mode"
+              value={hybrid ? "fastembed" : "none"}
+              disabled={memoryStats.isLoading}
+              onChange={(mode) => {
+                // The control follows the daemon's answer, so a pick that is
+                // not applied snaps back on the next render.
+                if (mode === "fastembed") {
+                  setConfirmingFastembed(true);
+                  return;
+                }
+                void applyEmbeddingMode(mode);
+              }}
+              options={[
+                { value: "none", label: "Keywords" },
+                { value: "fastembed", label: "Hybrid (~80 MB)" },
+              ]}
+            />
+          }
+        />
+        <StatusStrip items={facts} />
+      </SettingsCard>
+
       {stats?.embeddingUnavailable && (
-        <p className="border-t border-rule bg-warn/5 px-4 py-2.5 text-[11px] text-warn">
+        <p className="mt-2 px-1 text-[0.75rem] text-warn">
           Last attempt at hybrid search failed: {stats.embeddingUnavailable}. On macOS,{" "}
           <span className="font-mono">brew install onnxruntime</span>, then pick Hybrid again.
         </p>
       )}
-
-      <StatusStrip
-        items={[
-          {
-            label: "Memories",
-            value: memoryStats.isLoading
-              ? "…"
-              : `${stats?.globalCount ?? 0} global · ${stats?.projectCount ?? 0} project`,
-            title: "Durable cross-session knowledge, shared across harnesses.",
-          },
-          {
-            label: "Scopes",
-            value:
-              [stats?.scopesEnabled.global && "global", stats?.scopesEnabled.project && "project"]
-                .filter(Boolean)
-                .join(" · ") || "none",
-            title:
-              "Which scopes agents may store and search. Edit ~/.warpforge/config.yaml → memory.global / memory.project, then restart the daemon.",
-          },
-          {
-            label: "Project DB",
-            value: memoryStats.isLoading ? "…" : stats?.perProjectDbExists ? "yes" : "global only",
-            title:
-              "~/.warpforge/memory.db is global; a per-project overlay is created on the first project-scoped write.",
-          },
-          {
-            label: "Dreaming",
-            value: `${dreaming?.enabled ? "on" : "off"} (${dreaming?.trigger ?? "manual"})`,
-            title:
-              "Automatic memory compaction. Edit ~/.warpforge/config.yaml → memory.dreaming, then restart the daemon. Run it by hand from Advanced.",
-          },
-        ]}
-      />
 
       <ConfirmDialog
         open={confirmingFastembed}
@@ -136,6 +140,6 @@ export default function MemoryPage() {
           setConfirmingFastembed(false);
         }}
       />
-    </Section>
+    </div>
   );
 }

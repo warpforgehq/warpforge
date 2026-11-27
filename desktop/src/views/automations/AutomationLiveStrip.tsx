@@ -11,6 +11,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 interface Props {
   automations: Automation[];
   runsById: Record<string, AutomationRun[]>;
+  loading: boolean;
+  failed: boolean;
   now: number;
   onOpenRun: (run: AutomationRun) => void;
 }
@@ -30,7 +32,14 @@ function nextUp(automations: Automation[]): Automation | null {
  * a marker you can click straight into. Deliberately not generated prose — the
  * markers *are* the summary, and a sentence would need reading to trust.
  */
-export function AutomationLiveStrip({ automations, runsById, now, onOpenRun }: Props) {
+export function AutomationLiveStrip({
+  automations,
+  runsById,
+  loading,
+  failed,
+  now,
+  onOpenRun,
+}: Props) {
   const next = nextUp(automations);
   const nextRunMs = (next?.nextRunAt ?? 0) * 1000;
   const windowStart = now - DAY_MS;
@@ -41,15 +50,16 @@ export function AutomationLiveStrip({ automations, runsById, now, onOpenRun }: P
   const nameOf = (run: AutomationRun) =>
     automations.find((automation) => automation.id === run.automationId)?.name ?? "automation";
   const completed = recent.filter((run) => run.status === "completed").length;
-  const failed = recent.filter((run) => run.status === "failed").length;
+  const failedCount = recent.filter((run) => run.status === "failed").length;
   const skipped = recent.filter((run) => isSkipped(run.status)).length;
+  const active = recent.length - completed - failedCount - skipped;
 
   return (
     <section
       data-testid="automation-live-strip"
       className="flex flex-col gap-4 rounded-lg border border-border bg-card px-4 py-3 lg:flex-row lg:items-center lg:gap-6"
     >
-      <div className="flex min-w-0 shrink-0 items-center gap-3 lg:w-[22rem]">
+      <div className="flex min-w-0 shrink-0 items-center gap-3 lg:w-[16rem]">
         <CalendarClock
           aria-hidden
           className={cn("size-4 shrink-0", next ? "text-primary" : "text-muted-foreground/50")}
@@ -65,7 +75,7 @@ export function AutomationLiveStrip({ automations, runsById, now, onOpenRun }: P
             </p>
           ) : (
             <p className="truncate text-sm text-muted-foreground">
-              {automations.length === 0 ? "No automations yet" : "Nothing scheduled — all paused"}
+              {automations.length === 0 ? "No automations yet" : "No upcoming runs"}
             </p>
           )}
           {next && (
@@ -82,15 +92,20 @@ export function AutomationLiveStrip({ automations, runsById, now, onOpenRun }: P
             Last 24 hours
           </p>
           <p className="tnum truncate text-[11px] text-muted-foreground">
-            {recent.length === 0
-              ? "no runs"
-              : [
-                  completed > 0 ? `${completed} completed` : null,
-                  failed > 0 ? `${failed} failed` : null,
-                  skipped > 0 ? `${skipped} skipped` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
+            {loading
+              ? "Loading runs…"
+              : failed
+                ? "Some run history could not load"
+                : recent.length === 0
+                  ? "No runs"
+                  : [
+                      completed > 0 ? `${completed} completed` : null,
+                      failedCount > 0 ? `${failedCount} failed` : null,
+                      skipped > 0 ? `${skipped} skipped` : null,
+                      active > 0 ? `${active} in progress` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
           </p>
         </div>
         <div className="relative mt-2 h-7">

@@ -86,12 +86,13 @@ afterEach(() => {
 });
 
 describe("SurfaceRail", () => {
-  it("is the only switcher: one toolbar of the conversation plus every surface", () => {
+  it("is the only switcher: one toolbar of every surface, without a conversation button", () => {
     renderRail();
 
     const rail = screen.getByRole("toolbar", { name: "Workspace rail" });
     expect(rail).toHaveAttribute("aria-orientation", "vertical");
-    expect(within(rail).getAllByRole("button")).toHaveLength(DEFAULT_SURFACE_TABS.length + 1);
+    expect(within(rail).getAllByRole("button")).toHaveLength(DEFAULT_SURFACE_TABS.length);
+    expect(within(rail).queryByRole("button", { name: /Conversation/ })).toBeNull();
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(screen.queryAllByRole("tab")).toHaveLength(0);
   });
@@ -153,7 +154,7 @@ describe("SurfaceRail", () => {
 
     const buttons = screen.getAllByRole("button");
     expect(buttons.filter((button) => button.tabIndex === 0)).toHaveLength(1);
-    expect(buttons[0]).toHaveAccessibleName(/Conversation/);
+    expect(buttons[0].tabIndex).toBe(0);
 
     buttons[0].focus();
     await userEvent.keyboard("{ArrowDown}");
@@ -165,7 +166,7 @@ describe("SurfaceRail", () => {
   describe("chat focus", () => {
     const chatFocus = { chatVisible: true, surfaceVisible: false } as const;
 
-    it("ghosts the remembered surface and parks the pill on the conversation", () => {
+    it("ghosts the remembered surface and hides the pill", () => {
       const tabs: SurfaceTab[] = DEFAULT_SURFACE_TABS.map((tab) =>
         tab.id === "diff" ? { ...tab, count: 3 } : tab,
       );
@@ -176,9 +177,8 @@ describe("SurfaceRail", () => {
       expect(diff).not.toHaveAttribute("aria-current");
       expect(diff).toHaveClass("text-foreground/80");
       expect(diff.className).not.toMatch(/(^|\s)bg-/);
-      expect(screen.getByRole("button", { name: /Conversation/ })).toHaveAttribute(
-        "aria-current",
-        "page",
+      expect(screen.queryAllByRole("button").some((b) => b.getAttribute("aria-current"))).toBe(
+        false,
       );
     });
 
@@ -190,44 +190,39 @@ describe("SurfaceRail", () => {
       expect(onSurfaceChange).toHaveBeenCalledWith("runtime");
     });
 
-    it("stays a bare strip so the rail reads as chrome, not a second pane", () => {
+    it("sits on the window chrome behind one rule, like the left rail", () => {
       renderRail(chatFocus);
-      const rail = screen.getByRole("toolbar");
+      const tokens = screen.getByRole("toolbar").className.split(/\s+/);
 
-      expect(rail.className).not.toMatch(/\bbg-/);
-      expect(rail.className).not.toContain("rounded");
-      expect(rail.className).not.toMatch(/\bborder\b/);
+      expect(tokens).toContain("bg-chrome");
+      expect(tokens).toContain("border-l");
+      expect(tokens).not.toContain("rounded");
     });
   });
 
-  it("ghosts the conversation while the workspace owns the split", () => {
+  it("marks the open surface while the workspace owns the split", () => {
     renderRail({ chatVisible: false, surfaceVisible: true });
 
-    expect(screen.getByRole("button", { name: /Conversation/ })).toHaveAttribute(
-      "data-rail-ghost",
-      "",
-    );
     expect(screen.getByRole("button", { name: /^Diff/ })).toHaveAttribute("aria-current", "page");
   });
 
   describe("geometry", () => {
-    it("is exactly one button wide, with no vertical padding and a tight stack", () => {
+    it("leaves room around its buttons and keeps the stack tight", () => {
       renderRail();
       const tokens = screen.getByRole("toolbar").className.split(/\s+/);
 
-      expect(tokens).toContain("w-7");
-      expect(tokens).toContain("gap-1");
-      expect(tokens.filter((token) => /^(p|py|pt|pb|px)-/.test(token))).toEqual([]);
+      expect(tokens).toContain("w-11");
+      expect(tokens).toContain("gap-2");
       for (const button of screen.getAllByRole("button")) expect(button).toHaveClass("size-7");
     });
 
-    it("puts nothing between the conversation and the surfaces", () => {
+    it("puts nothing between the surfaces", () => {
       renderRail();
       const children = Array.from(screen.getByRole("toolbar").children).filter(
         (child) => !child.hasAttribute("data-rail-pill") && !child.classList.contains("flex-1"),
       );
 
-      expect(children).toHaveLength(DEFAULT_SURFACE_TABS.length + 1);
+      expect(children).toHaveLength(DEFAULT_SURFACE_TABS.length);
       expect(children.every((child) => child.hasAttribute("data-rail-item"))).toBe(true);
     });
   });
@@ -292,11 +287,11 @@ describe("SurfaceRail", () => {
       });
     });
 
-    it("moves to whichever item the pane hands the split to", () => {
+    it("moves to whichever surface the pane hands the split to", () => {
       geometry();
-      const { view } = renderRail({ chatVisible: true, surfaceVisible: false });
+      const { view } = renderRail({ activeSurface: "runtime" });
 
-      expect(pillOf(view.container)).toHaveStyle({ transform: at("conversation") });
+      expect(pillOf(view.container)).toHaveStyle({ transform: at("surface:runtime") });
     });
 
     it("travels under its own curve once it has been placed", () => {
@@ -414,7 +409,7 @@ describe("SurfaceRail", () => {
     it("keeps the card hidden until the group is hovered or focused, in CSS", () => {
       renderRail();
       const cards = document.querySelectorAll("[data-surface-peek]");
-      expect(cards).toHaveLength(DEFAULT_SURFACE_TABS.length + 1);
+      expect(cards).toHaveLength(DEFAULT_SURFACE_TABS.length);
       for (const card of cards) {
         const tokens = card.className.split(/\s+/);
         expect(tokens).toContain("hidden");

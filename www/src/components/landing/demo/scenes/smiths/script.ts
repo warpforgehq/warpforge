@@ -78,7 +78,7 @@ export function smithsScript(now: number): Beat[] {
     { after: 0, event: thread(oly, "waiting") },
     { after: 0, event: replying() },
 
-    { after: 2400, ui: { openTaskId: WORK_TASK_ID, sidebarMode: "tasks", teamSelection: null, view: "control" } },
+    { after: 2400, ui: { openTaskId: WORK_TASK_ID, sidebarMode: "tasks", teamSelection: null, view: "start" } },
     { after: 600, event: tool(WORK_TASK_ID, "w2", "Write api/src/export/csv.ts", "edit", "in_progress") },
     { after: 900, event: tool(WORK_TASK_ID, "w2", "Write api/src/export/csv.ts", "edit", "completed") },
     {

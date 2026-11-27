@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { SessionUpdate } from "../protocol";
-import { StreamLine } from "../views/mission-control/StreamLine";
+import { StreamLine } from "./SessionChat/StreamLine";
 
 const consultation: Extract<SessionUpdate, { kind: "advisor_consultation" }> = {
   advisor_task_id: "t_adv",
@@ -59,12 +59,5 @@ describe("advisor consultation in the transcript", () => {
     await userEvent.click(screen.getByRole("button", { name: /Asked advisor/ }));
     expect(screen.getByText("No answer")).toBeInTheDocument();
     expect(screen.getByText("The advisor timed out.")).toBeInTheDocument();
-  });
-
-  it("fits a tile as one line", () => {
-    render(<StreamLine update={consultation} compact />);
-
-    expect(screen.getByText("Asked advisor · Codex / gpt-5")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

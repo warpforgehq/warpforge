@@ -10,7 +10,7 @@ import {
 import * as React from "react";
 
 import { PULL_GROUP_ICON_CLASS, PULL_GROUP_ICONS } from "@/components/inbox/PullFilesChanged";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { countPatchStats, type PatchFileBlock } from "@/lib/pullDiff";
 import { groupPullFiles, type PullFileGroup } from "@/lib/pullFileGroups";
 import {
@@ -125,18 +125,19 @@ export function PullFilesRail({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-rule px-2">
-        <Input
+        <SearchInput
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
           placeholder="Filter files"
           aria-label="Filter changed files"
           spellCheck={false}
-          className="h-7 min-w-0 flex-1 border-transparent bg-transparent px-2 text-[13px] shadow-none focus-visible:border-border"
+          className="flex-1"
+          inputClassName="h-7"
         />
         <div
           role="group"
           aria-label="File list view"
-          className="flex shrink-0 items-center rounded border border-border p-0.5"
+          className="flex shrink-0 items-center rounded-control border border-border p-0.5"
         >
           <ViewButton
             active={view === "tree"}

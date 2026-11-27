@@ -12,27 +12,30 @@ import { RAIL_ELBOW_RADIUS, RAIL_W_ACTIVE, type RailLane, railLanes } from "./lo
  * Each lane's vertical is centred under the chevron of the ancestor at that
  * level, so the branch reads as hanging off the arrow that expands the group;
  * the connector's horizontal ends at the row's first glyph lane. Base lanes are
- * the neutral `rule`; the one lane the open task's branch runs through has
- * only its *vertical* overlaid at `RAIL_W_ACTIVE` `primary`, tracing the
- * branch without painting across the row.
+ * the neutral `rule`; the one lane the open task's branch runs through is
+ * overlaid at `RAIL_W_ACTIVE` `primary`, tracing the
+ * branch; the open task's own connector is lit to its text, while siblings
+ * the branch only passes keep a neutral horizontal.
  */
 export function RowGutter({
   depth,
   ancestorLines,
   isLast,
   activeLane,
+  onActivePath = false,
 }: {
   depth: number;
   ancestorLines: readonly boolean[];
   isLast: boolean;
   activeLane: number | null;
+  onActivePath?: boolean;
 }) {
   const lanes = railLanes(depth, ancestorLines, isLast, activeLane);
   if (lanes.length === 0) return null;
   return (
     <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0">
       {lanes.map((lane) => (
-        <Lane key={lane.level} lane={lane} />
+        <Lane key={lane.level} lane={lane} lit={onActivePath} />
       ))}
     </div>
   );
@@ -48,7 +51,11 @@ function ActiveVertical({ className }: { className?: string }) {
   );
 }
 
-function Lane({ lane }: { lane: RailLane }) {
+/** Air between a connector's end and the row's first glyph or text. */
+const CONNECTOR_GAP_PX = 6;
+
+function Lane({ lane, lit }: { lane: RailLane; lit: boolean }) {
+  const reach = Math.max(4, lane.run - CONNECTOR_GAP_PX);
   return (
     <span
       data-rail-level={lane.level}
@@ -58,20 +65,38 @@ function Lane({ lane }: { lane: RailLane }) {
       style={{ left: lane.x, width: lane.run }}
     >
       {lane.shape === "elbow" ? (
-        <>
+        lane.active && lit ? (
           <span
-            className="absolute left-0 top-0 h-1/2 w-full border-b border-l border-rule"
-            style={{ borderBottomLeftRadius: RAIL_ELBOW_RADIUS }}
+            className="absolute left-0 top-0 h-1/2 border-b-2 border-l-2 border-primary"
+            style={{ borderBottomLeftRadius: RAIL_ELBOW_RADIUS, width: reach }}
           />
-          {lane.active && <ActiveVertical className="h-1/2" />}
-        </>
+        ) : (
+          <>
+            <span
+              className="absolute left-0 top-0 h-1/2 border-b border-l border-rule"
+              style={{ borderBottomLeftRadius: RAIL_ELBOW_RADIUS, width: reach }}
+            />
+            {lane.active && <ActiveVertical className="h-1/2" />}
+          </>
+        )
       ) : (
         <>
           <span className="absolute inset-y-0 left-0 w-px bg-rule" />
-          {lane.active && <ActiveVertical className="inset-y-0" />}
-          {lane.shape === "tee" && (
-            <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-rule" />
+          {lane.active && (
+            <ActiveVertical className={lit && lane.shape === "tee" ? "h-1/2" : "inset-y-0"} />
           )}
+          {lane.shape === "tee" &&
+            (lane.active && lit ? (
+              <span
+                className="absolute left-0 top-1/2 -translate-y-1/2 bg-primary"
+                style={{ height: RAIL_W_ACTIVE, width: reach }}
+              />
+            ) : (
+              <span
+                className="absolute left-0 top-1/2 h-px -translate-y-1/2 bg-rule"
+                style={{ width: reach }}
+              />
+            ))}
         </>
       )}
     </span>

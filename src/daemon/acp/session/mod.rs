@@ -48,7 +48,7 @@ struct Session {
     permission_run_id: String,
     default_model: Option<String>,
     config_overrides: HashMap<String, String>,
-    session_meta: Option<Value>,
+    setup: Option<SessionSetup>,
 }
 
 impl Clone for Session {
@@ -75,12 +75,20 @@ impl Clone for Session {
             permission_run_id: self.permission_run_id.clone(),
             default_model: self.default_model.clone(),
             config_overrides: self.config_overrides.clone(),
-            session_meta: self.session_meta.clone(),
+            setup: self.setup.clone(),
         }
     }
 }
 
 static NEXT_RUN_ID: AtomicU64 = AtomicU64::new(1);
+
+#[derive(Clone)]
+pub(crate) struct SessionSetup {
+    /// Stable session metadata, including the Smith system prompt (ADR 0027).
+    pub(crate) meta: Option<Value>,
+    /// A task's stored sibling roots (ADR 0034).
+    pub(crate) additional_directories: Vec<String>,
+}
 
 /// Spawn an agent process and its ACP session. Returns immediately; the
 /// `initialize` → `session/new` → initial `session/prompt` handshake runs in
@@ -89,7 +97,7 @@ static NEXT_RUN_ID: AtomicU64 = AtomicU64::new(1);
 /// When `policy_tx` is provided, file write operations are gated through the
 /// daemon's policy engine before execution.
 #[allow(clippy::too_many_arguments)]
-pub fn spawn_acp_session(
+pub(crate) fn spawn_acp_session(
     task_id: String,
     command: String,
     cwd: String,
@@ -112,9 +120,7 @@ pub fn spawn_acp_session(
     // Environment changes for the agent process, layered over the daemon's own:
     // the selected account's home to set, and inherited auth variables to drop.
     env: AgentEnv,
-    // `_meta` sent on `session/new` and `session/load` alike — a Smith's
-    // system prompt (ADR 0027). It must not change for the session's life.
-    session_meta: Option<Value>,
+    setup: Option<SessionSetup>,
 ) -> anyhow::Result<AcpHandle> {
     let run_id = NEXT_RUN_ID.fetch_add(1, Ordering::Relaxed);
     let mut child_command = Command::new("sh");
@@ -245,7 +251,7 @@ pub fn spawn_acp_session(
         permission_run_id,
         default_model,
         config_overrides,
-        session_meta,
+        setup,
     };
 
     reader::spawn_reader(session.clone(), stdout, policy_tx, debug);

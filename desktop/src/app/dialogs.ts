@@ -28,8 +28,6 @@ export interface AppDialogs {
   setAddProjectOpen: (open: boolean) => void;
   wizardProject: string | null;
   setWizardProject: (project: string | null) => void;
-  settingsOpen: boolean;
-  setSettingsOpen: (open: boolean) => void;
   /** Open New Task, optionally pre-filling a project, prompt, backlog link and mode. */
   startNewTask: (
     project?: string,
@@ -43,6 +41,9 @@ export interface AppDialogs {
 
 /** Dialog open/closed state for the shell, so `App` stays a composition root. */
 export function useAppDialogs(): AppDialogs {
+  const startVisible = useUi(
+    (state) => state.view === "start" && state.openTaskId === null && !state.settingsOpen,
+  );
   const openProject = useUi((s) => s.openProject);
   const [newTaskProject, setNewTaskProject] = useState<string | null>(null);
   const [newTaskPrompt, setNewTaskPrompt] = useState<string | undefined>(undefined);
@@ -50,12 +51,11 @@ export function useAppDialogs(): AppDialogs {
   // created task can be linked back to it.
   const [newTaskBacklogItemId, setNewTaskBacklogItemId] = useState<string | null>(null);
   const [newTaskOptions, setNewTaskOptions] = useState<NewTaskOptions>({});
-  // The app launches on the new-task composer.
-  const [newTaskOpen, setNewTaskOpen] = useState(true);
+  // Explicit requests can open the composer from any view.
+  const [newTaskOpen, setNewTaskOpen] = useState(false);
   const [newTaskAddedProject, setNewTaskAddedProject] = useState<string | null>(null);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   const [wizardProject, setWizardProject] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // The composer has no close control: any navigation leaves it, including the
   // store actions sidebar rows call directly. Synchronous, so a caller that
@@ -68,7 +68,8 @@ export function useAppDialogs(): AppDialogs {
           next.openTaskId !== prev.openTaskId ||
           next.selectedProjectId !== prev.selectedProjectId ||
           next.teamSelection !== prev.teamSelection ||
-          next.attentionTargetNonce !== prev.attentionTargetNonce
+          next.attentionTargetNonce !== prev.attentionTargetNonce ||
+          (next.settingsOpen && !prev.settingsOpen)
         ) {
           setNewTaskOpen(false);
         }
@@ -83,6 +84,7 @@ export function useAppDialogs(): AppDialogs {
       setNewTaskBacklogItemId(backlogItemId ?? null);
       setNewTaskOptions(options ?? {});
       setNewTaskAddedProject(null);
+      useUi.getState().closeSettings();
       setNewTaskOpen(true);
     },
     [],
@@ -91,7 +93,7 @@ export function useAppDialogs(): AppDialogs {
   const handleProjectAdded = useCallback(
     (name: string) => {
       // Added from the composer's project picker: pick it there, keep the draft.
-      if (newTaskOpen) setNewTaskAddedProject(name);
+      if (newTaskOpen || startVisible) setNewTaskAddedProject(name);
       else openProject(name);
       toast("Project added", {
         description: `Run the setup wizard for ${name}`,
@@ -102,7 +104,7 @@ export function useAppDialogs(): AppDialogs {
         },
       });
     },
-    [newTaskOpen, openProject],
+    [newTaskOpen, openProject, startVisible],
   );
 
   return {
@@ -117,8 +119,6 @@ export function useAppDialogs(): AppDialogs {
     setAddProjectOpen,
     wizardProject,
     setWizardProject,
-    settingsOpen,
-    setSettingsOpen,
     startNewTask,
     handleProjectAdded,
   };

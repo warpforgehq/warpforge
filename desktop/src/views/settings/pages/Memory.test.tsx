@@ -31,7 +31,7 @@ describe("MemoryPage", () => {
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
     // The description stays empty; nothing was swapped in for the indicator.
     expect(screen.queryByText(/Hybrid: keywords|Keywords only/)).not.toBeInTheDocument();
-    // The disabled select is the honest signal.
-    expect(screen.getByLabelText("Embedding mode")).toBeDisabled();
+    // The disabled control is the honest signal.
+    for (const option of screen.getAllByRole("radio")) expect(option).toBeDisabled();
   });
 });

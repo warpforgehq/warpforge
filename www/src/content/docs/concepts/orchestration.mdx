@@ -33,7 +33,7 @@ With a **verify** stage, an agent tests each change in the running app before an
 
 Workflows pause at safe boundaries, survive a restart of the app, and stop for structured human input when an agent asks a question, the review limit is reached, or verification keeps failing. A pipeline also pauses **before a stage whose agent account is out of quota**, with a note in the timeline saying which account and when it resets. Press **Resume** once the limit resets — resuming checks again, and keeps the pipeline paused if the account is still exhausted. Nothing is started and no review round is used up while it waits.
 
-A pipeline Warpforge paused on its own shows up in **Needs you** with the reason: an account out of quota, a stage whose agent quit, or a restart that caught a stage mid-turn. A pause you asked for stays out of that list, since you already know it is waiting.
+A pipeline Warpforge paused on its own shows why in the task, including exhausted quota, a stage whose agent quit, or a restart that caught a stage mid-turn.
 
 Unless you ask for a pull request, a completed pipeline never commits: it lands in **Needs review** with its chats, timeline, and diff available for inspection. With **Open a draft PR when done** on, Warpforge commits the change on a fresh branch and opens a draft pull request instead — it never merges.
 

@@ -12,10 +12,21 @@ import { openPullRequest } from "./taskPullRequestNavigation";
  * dot for checks that failed or are still running. Passing checks draw no dot;
  * a row full of green dots would say nothing.
  */
-export function TaskPullRequestGlyph({ taskId, receded }: { taskId: string; receded: boolean }) {
+export function TaskPullRequestGlyph({
+  taskId,
+  receded,
+  parentTaskId,
+}: {
+  taskId: string;
+  receded: boolean;
+  /** A child that rides its parent's pull request draws nothing: the parent's row says it once. */
+  parentTaskId?: string | null;
+}) {
   const pr = useTaskPullRequest(taskId);
+  const parentPr = useTaskPullRequest(parentTaskId ?? "");
   const keepers = keeperWorst(useTaskKeepers(taskId));
   if (!pr) return null;
+  if (parentTaskId && parentPr?.url === pr.url) return null;
   const meta = PULL_STATE_META[pr.state];
   const checks = liveChecks(pr);
   const Icon = meta.icon;

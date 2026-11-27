@@ -231,7 +231,7 @@ impl Daemon {
             }
             return;
         };
-        let command = self.resolve_agent_command(project, agent);
+        let command = self.resolve_agent_command(agent);
         if let Some(reason) = self.smith_start_refusal(task_id) {
             self.drop_session(task_id);
             if let Some(task) = self.tasks.get_mut(task_id) {
@@ -332,10 +332,7 @@ impl Daemon {
             };
             format!("{memory_prefix}{pr_assistant_prefix}{RUNTIME_MCP_SYSTEM}\n\n{VISUALS_SYSTEM}\n\n{nudge}{prompt}")
         };
-        let full_prompt = match include_runtime_context
-            .then(|| self.runtime_context(project, Some(task_id)))
-            .flatten()
-        {
+        let full_prompt = match self.runtime_context(project, task_id, include_runtime_context) {
             Some(ctx) => format!("{ctx}\n\n{base_prompt}"),
             None => base_prompt,
         };
@@ -386,7 +383,12 @@ impl Daemon {
             default_model,
             config_overrides,
             env,
-            smith_meta,
+            Some(crate::daemon::acp::SessionSetup {
+                meta: smith_meta,
+                additional_directories: self.tasks.get(task_id).map_or_else(Vec::new, |task| {
+                    crate::daemon::spaces::additional_directories(&task.workspace_folders)
+                }),
+            }),
         ) {
             Ok(handle) => {
                 self.sessions.insert(task_id.to_string(), handle);

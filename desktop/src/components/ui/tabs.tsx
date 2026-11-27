@@ -28,7 +28,7 @@ const tabsTriggerVariants = cva(
       variant: {
         underline:
           "h-9 border-b-2 border-transparent px-3 data-[state=active]:border-primary data-[state=active]:text-foreground",
-        pill: "h-7 rounded-md px-2.5 data-[state=active]:bg-secondary data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+        pill: "h-7 rounded-control px-2.5 data-[state=active]:bg-secondary data-[state=active]:text-foreground data-[state=active]:shadow-sm",
       },
     },
   },

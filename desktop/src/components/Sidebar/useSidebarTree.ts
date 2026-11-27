@@ -8,29 +8,32 @@ import { usePeerAlertReasons, useTeamUnread } from "@/hooks/usePeerFeed";
 import { usePrFeedbackReasons } from "@/hooks/usePrFeedbackReasons";
 import { buildAttentionQueue } from "@/lib/attentionRail";
 import { keeperAttentionReasons } from "@/lib/keepers";
-import { buildTaskGroupIndex, isTaskGroupPinned, setTaskGroupPinned } from "@/lib/taskGroups";
+import { buildTaskForest } from "@/lib/taskGroups";
+import { isChat } from "@/lib/taskKind";
 import { boardTasks } from "@/lib/taskOrigin";
 import { useUi } from "@/store/ui";
-import type { GlobalView, SidebarMode } from "@/store/ui";
 
 import {
   ancestorIds,
   buildSidebarRows,
-  isSettledTask,
-  needsHuman,
   projectNames,
-  resolveTaskState,
   rowHeight,
   sortProjectsByActivity,
   type SidebarRow,
 } from "./logic";
 
-/** Most chips the collapsed rail shows before folding the rest into `+N`. */
-export const LIVE_LANE_MAX = 6;
-
-export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
-  const pinned = useUi((store) => store.pinnedTaskIds);
-  const setPinnedTaskIds = useUi((store) => store.setPinnedTaskIds);
+/**
+ * The task tree's rows and the counts the rail shows beside it.
+ * @param state the daemon state
+ * @param openTaskId the task on screen
+ * @param scope projects the tree is narrowed to; null lists every project and chats
+ * @returns rows, virtual range and tree actions
+ */
+export function useSidebarTree(
+  state: DaemonState,
+  openTaskId: string | null,
+  scope: readonly string[] | null = null,
+) {
   const attentionTargetId = useUi((store) => store.attentionTargetId);
   const attentionTargetNonce = useUi((store) => store.attentionTargetNonce);
   const selectedProject = useUi((store) => store.selectedProjectId);
@@ -62,7 +65,8 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     () => buildAttentionQueue(tasks, state.sessionUpdates, prFeedback, peerAlerts, keeperAlerts),
     [keeperAlerts, peerAlerts, prFeedback, state.sessionUpdates, tasks],
   );
-  const taskGroupIndex = useMemo(() => buildTaskGroupIndex(tasks), [tasks]);
+  const forest = useMemo(() => buildTaskForest(tasks), [tasks]);
+  const attentionIds = useMemo(() => new Set(queue.map(({ task }) => task.id)), [queue]);
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
   // Recomputed on task-set changes only — deliberately not on `nowSec`, so the
   // order cannot shift under the pointer on a clock tick.
@@ -74,35 +78,26 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   // the badge, the tab count and the rows never disagree.
   const inboxUnseen = useInboxUnseenCount(names);
   const teamUnread = useTeamUnread();
-  // Only the collapsed rail needs this count; expanded renders AgentUpdateBanner,
-  // which reads the same cached query.
+  // The rail's agent-update button; the panel's AgentUpdateBanner reads the
+  // same cached query.
   const agentUpdates = useAgentUpdatesCount();
+
+  const treeTasks = useMemo(
+    () => (scope ? tasks.filter((task) => scope.includes(task.project) && !isChat(task)) : tasks),
+    [scope, tasks],
+  );
+  const treeNames = useMemo(
+    () => (scope ? names.filter((name) => scope.includes(name)) : names),
+    [names, scope],
+  );
+  // One project in scope: the panel header already names it, so the tree
+  // drops its group row and never leaves it collapsed.
+  const single = scope?.length === 1;
 
   const forceVisibleTaskIds = useMemo(
     () => new Set([openTaskId, attentionTargetId].filter((id): id is string => id !== null)),
     [attentionTargetId, openTaskId],
   );
-
-  /**
-   * The collapsed rail's live lane: work in flight or waiting on a human,
-   * most-recent first. The rail's job is presence, so this is data the expanded
-   * tree already has — no separate daemon query.
-   */
-  const liveLane = useMemo(() => {
-    const attentionIds = new Set(queue.map((item) => item.task.id));
-    const live = tasks
-      .filter((task) => !isSettledTask(task))
-      .map((task) => {
-        const attention = attentionIds.has(task.id);
-        return { attention, state: resolveTaskState(task, { attention, nowSec }), task };
-      })
-      .filter(({ state: rowState }) => rowState === "working" || needsHuman(rowState))
-      .sort((a, b) => b.task.updatedAt - a.task.updatedAt || a.task.id.localeCompare(b.task.id));
-    return {
-      overflow: Math.max(0, live.length - LIVE_LANE_MAX),
-      tasks: live.slice(0, LIVE_LANE_MAX),
-    };
-  }, [nowSec, queue, tasks]);
 
   /** The open task plus every ancestor: the branch the row rails paint. */
   const activePathIds = useMemo(() => {
@@ -110,20 +105,6 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     if (openTaskId) ids.add(openTaskId);
     return ids;
   }, [openTaskId, taskById]);
-
-  /**
-   * The badge counts what genuinely wants a human right now, not the whole
-   * attention queue: that queue also holds every finished task awaiting review,
-   * so it reads in the dozens and a permanent "23" is not a signal.
-   */
-  const blockingCount = useMemo(() => {
-    const attentionIds = new Set(queue.map((item) => item.task.id));
-    return tasks.filter(
-      (task) =>
-        !isSettledTask(task) &&
-        needsHuman(resolveTaskState(task, { attention: attentionIds.has(task.id), nowSec })),
-    ).length;
-  }, [nowSec, queue, tasks]);
 
   // A task the user was sent to (toast, wizard) must be reachable even when its
   // parent group or project is collapsed.
@@ -151,35 +132,35 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     });
   }, [attentionTargetId, attentionTargetNonce, openTaskId, taskById]);
 
-  const rows = useMemo(
-    () =>
-      buildSidebarRows({
-        activePathIds,
-        collapsedProjects,
-        expandedShelves,
-        expandedTaskIds,
-        forceVisibleTaskIds,
-        forest: taskGroupIndex.forest,
-        nowSec,
-        projectOrder: names,
-        queue,
-        selectedProject,
-        tasks,
-      }),
-    [
+  const rows = useMemo(() => {
+    const built = buildSidebarRows({
       activePathIds,
-      collapsedProjects,
+      collapsedProjects: single ? new Set<string>() : collapsedProjects,
       expandedShelves,
       expandedTaskIds,
       forceVisibleTaskIds,
-      names,
+      forest,
       nowSec,
+      projectOrder: treeNames,
       queue,
       selectedProject,
-      taskGroupIndex.forest,
-      tasks,
-    ],
-  );
+      tasks: treeTasks,
+    });
+    return single ? built.filter((row) => row.kind !== "project") : built;
+  }, [
+    activePathIds,
+    collapsedProjects,
+    expandedShelves,
+    expandedTaskIds,
+    forceVisibleTaskIds,
+    treeNames,
+    nowSec,
+    queue,
+    selectedProject,
+    single,
+    forest,
+    treeTasks,
+  ]);
 
   const settleMarkedIds = useMemo(() => {
     if (!settlingProject) return null;
@@ -191,16 +172,27 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     return null;
   }, [rows, settlingProject]);
 
+  // Row heights are designed at the 14px base; ⌘+ and ⌘- scale them with the text.
+  const fontScale = useUi((state) => state.fontSize) / 14;
   const virtualizer = useVirtualizer({
     count: rows.length,
     estimateSize: (index) => {
       const row = rows[index];
-      return row ? rowHeight(row) : 34;
+      return Math.round((row ? rowHeight(row) : 34) * fontScale);
     },
     getItemKey: (index) => rows[index]?.key ?? index,
     getScrollElement: () => scrollRef.current,
     overscan: 8,
   });
+
+  useEffect(() => {
+    virtualizer.measure();
+  }, [fontScale, virtualizer]);
+
+  // The virtualizer mutates in place. Pass its render values to TaskTree so
+  // React Compiler can invalidate the JSX when the range or size changes.
+  const virtualItems = virtualizer.getVirtualItems();
+  const totalSize = virtualizer.getTotalSize();
 
   useEffect(() => {
     if (!attentionTargetId || handledTargetNonce.current === attentionTargetNonce) return;
@@ -243,56 +235,23 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     });
   }, []);
 
-  const handlePin = useCallback(
-    (taskId: string) => {
-      setPinnedTaskIds(
-        setTaskGroupPinned(
-          taskGroupIndex,
-          pinned,
-          taskId,
-          !isTaskGroupPinned(taskGroupIndex, pinned, taskId),
-        ),
-      );
-    },
-    [pinned, setPinnedTaskIds, taskGroupIndex],
-  );
-
-  const navCount = useCallback(
-    (id: GlobalView) => (id === "control" ? blockingCount : 0),
-    [blockingCount],
-  );
-
-  // The same count as Mission Control's "Needs you" tab: the attention queue
-  // without sessions lost to a restart.
-  const needsYouCount = useMemo(
-    () => queue.filter((item) => item.task.status !== "interrupted").length,
-    [queue],
-  );
-  const modeCount = useCallback(
-    (mode: SidebarMode) =>
-      mode === "tasks" ? needsYouCount : mode === "inbox" ? inboxUnseen : teamUnread,
-    [inboxUnseen, needsYouCount, teamUnread],
-  );
-
   return {
     agentUpdates,
     deletingShelf,
-    handlePin,
-    liveLane,
-    modeCount,
-    navCount,
+    attentionIds,
+    inboxUnseen,
+    teamUnread,
     nowSec,
-    pinned,
     projectNames: names,
     rows,
     scrollRef,
     setDeletingShelf,
     setSettlingProject,
     settleMarkedIds,
-    taskGroupIndex,
+    totalSize,
     toggleProject,
     toggleShelf,
     toggleTask,
-    virtualizer,
+    virtualItems,
   };
 }

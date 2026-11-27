@@ -16,7 +16,7 @@ Each occurrence becomes a **real task** — the same transcript, diff, runtime c
 
 ## Creating one
 
-Open **Automations** in the sidebar and press **New automation**. The dialog asks three things, in the order you actually think about them.
+Choose **Automations** in the left rail or press <kbd>⌥</kbd><kbd>⌘</kbd><kbd>4</kbd>. Select **Overview** in the sidebar and press **New automation**. The dialog asks three things, in the order you actually think about them.
 
 <Steps>
 
@@ -102,7 +102,7 @@ Only one run of an automation is ever in flight. If an occurrence comes due whil
 
 ## Run history
 
-The detail drawer lists every run newest-first: run number, status, when it was scheduled versus when it actually started, the task it used, and an excerpt of the agent's final message. **Open task** goes to the full transcript and diff.
+Select an automation in the sidebar to see its schedule, prompt, agent, model and run history in the main area. Runs are listed newest first. Select a run to see its outcome and an excerpt of the agent’s final message. **Open task** goes to the full transcript and diff.
 
 | Status | What it means |
 | --- | --- |
@@ -125,11 +125,11 @@ Only a known exhaustion holds a run back. An account that is merely running low,
 
 Warpforge keeps the **last 100 finished runs** per automation and prunes the rest. The tasks those runs created are not touched by pruning — they are ordinary tasks and live under their normal retention.
 
-### The live strip
+### Finding an automation
 
-Above the cards: what fires next with a countdown, and every run of the last 24 hours as a clickable marker. Click a marker to read that run's output, or go straight to its task. It is deliberately not a generated summary — the markers *are* the summary, and a sentence would need reading before you could trust it.
+The sidebar shows each automation’s state and next and last run times. Search by name or prompt, filter by state (**All states / Enabled / Paused**), or filter by last outcome (**Completed / Failed / Skipped / Never run**). When the sidebar panel is hidden, **Browse automations** opens the same list.
 
-Below it, the grid filters by state (**All / Enabled / Paused**) and by last outcome (**Completed / Failed / Skipped / Never run**), and searches names and prompts.
+Select **Overview** to see what fires next and the activity timeline for the last 24 hours. Select a marker to read that run’s output or open its task.
 
 ## Pausing and deleting
 

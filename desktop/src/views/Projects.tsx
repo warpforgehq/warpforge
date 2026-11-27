@@ -1,23 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
-import { EllipsisVertical, Factory, FolderGit2, Pencil, Square, Trash2 } from "lucide-react";
+import { FolderGit2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import type { NewTaskOptions } from "@/app/dialogs";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { SurfaceTab } from "@/components/workspace";
-import { useInboxPulls } from "@/hooks/useInboxUnseen";
 import { boardTasks } from "@/lib/taskOrigin";
-import { disposeTerminalWorkspace } from "@/lib/terminalWorkspace";
-import { DEFAULT_PROJECT_SURFACE, type ProjectSurface, useUi } from "@/store/ui";
+import { useUi } from "@/store/ui";
 
 import { BacklogView } from "../components/backlog/BacklogView";
 import { NewWorkItemDrawer } from "../components/backlog/NewWorkItemDrawer";
@@ -26,13 +15,15 @@ import { WorkItemDrawer } from "../components/backlog/WorkItemDrawer";
 import { TerminalWorkspaceView } from "../components/runtime/TerminalWorkspace";
 import { daemon } from "../daemon";
 import type { ServiceInfo, Snapshot } from "../protocol";
+import { ProjectConfigSurface } from "./projects/config/ProjectConfigSurface";
 import { FactorySettingsDialog } from "./projects/FactorySettingsDialog";
-import { PortRangeConflictCard, PortRangeSourceChip } from "./projects/PortRangeStatus";
+import { PortRangeConflictCard } from "./projects/PortRangeStatus";
 import { ProjectFilesSurface } from "./projects/ProjectFilesSurface";
 import { ProjectRuntimeSurface } from "./projects/ProjectRuntimeSurface";
-import { PROJECT_SURFACE_TABS, ProjectSurfaceBar } from "./projects/ProjectSurfaceBar";
+import { ProjectTitleBar } from "./projects/ProjectTitleBar";
 import { PullRequestSurface } from "./projects/PullRequestSurface";
-import { type ProjectLiveCounts, RemoveProjectDialog } from "./projects/RemoveProjectDialog";
+import { useRemoveProject } from "./projects/RemoveProjectHost";
+import { useProjectSection } from "./projects/sections";
 import { WorktreesSurface } from "./projects/WorktreesSurface";
 
 interface Props {
@@ -45,13 +36,23 @@ interface Props {
     options?: NewTaskOptions,
   ) => void;
   onAddProject?: () => void;
+  /** The sidebar panel is hidden, so the title row offers the sections. */
+  sectionPicker?: boolean;
 }
 
-export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject }: Props) {
+/**
+ * A project section, full size. The panel's project mode lists the sections;
+ * the title row carries the section's name and actions.
+ */
+export default function Projects({
+  snapshot,
+  onOpenTask,
+  onNewTask,
+  onAddProject,
+  sectionPicker = false,
+}: Props) {
   const selectedProjectId = useUi((state) => state.selectedProjectId);
   const openProject = useUi((state) => state.openProject);
-  const setView = useUi((state) => state.setView);
-  const [removeProject, setRemoveProject] = useState<string | null>(null);
   const [backlogOpen, setBacklogOpen] = useState(false);
   const [openItem, setOpenItem] = useState<WorkItem | null>(null);
   const [factorySettings, setFactorySettings] = useState<string | null>(null);
@@ -60,28 +61,11 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
   const project =
     snapshot.projects.find((p) => p.name === selectedProjectId) ?? snapshot.projects[0] ?? null;
   const projectName = project?.name ?? "";
-  const backlogCount = useQuery({
-    enabled: projectName.length > 0,
-    queryKey: ["backlog", projectName, "count"],
-    queryFn: () =>
-      daemon.listBacklog({
-        project: projectName,
-        page: 0,
-        pageSize: 1,
-        sortBy: "updatedAt",
-        sortDesc: true,
-      }),
-  });
-
   /* Hooks below run before the `if (!project)` guard, so nothing here may
      dereference `project`: with an empty registry it is undefined at runtime,
      which TS misses because indexing `projects[0]` is not typed as optional. */
   const declaredServices = useMemo(() => project?.declaredServices ?? [], [project]);
-  const surface = useUi(
-    (state) => state.projectSurfaceByProject[projectName] ?? DEFAULT_PROJECT_SURFACE,
-  );
-  const setProjectSurface = useUi((state) => state.setProjectSurface);
-  const clearProjectState = useUi((state) => state.clearProjectState);
+  const surface = useProjectSection(projectName);
   const services = useMemo(
     () => snapshot.services.filter((s) => s.project === projectName),
     [snapshot.services, projectName],
@@ -109,51 +93,6 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
     () => snapshot.portforwards.filter((pf) => pf.project === projectName),
     [snapshot.portforwards, projectName],
   );
-  const projectTerminals = useMemo(
-    () => snapshot.terminals.filter((terminal) => terminal.project === projectName),
-    [snapshot.terminals, projectName],
-  );
-  const surfaceTabs = useMemo<readonly SurfaceTab<ProjectSurface>[]>(() => {
-    const backlogTotal = backlogCount.data?.total || undefined;
-    const runtimeCount = runtimeServices.length + pfs.length || undefined;
-    const terminalCount = projectTerminals.length || undefined;
-    return PROJECT_SURFACE_TABS.map((tab) => {
-      if (tab.id === "backlog") return { ...tab, count: backlogTotal };
-      if (tab.id === "runtime") return { ...tab, count: runtimeCount };
-      if (tab.id === "terminal") return { ...tab, count: terminalCount };
-      return tab;
-    });
-  }, [backlogCount.data?.total, pfs.length, projectTerminals.length, runtimeServices.length]);
-
-  // The Pull Requests tab's count rides the inbox poll cache — free here,
-  // and it only shows once there is something to count. An empty project
-  // name (no registered projects) polls nothing at all.
-  const pullsListing = useInboxPulls(projectName ? [projectName] : []);
-  const pullCount = pullsListing.data?.length;
-  const surfaceTabsWithPulls = useMemo<readonly SurfaceTab<ProjectSurface>[]>(() => {
-    return surfaceTabs.map((tab) => {
-      if (tab.id === "pulls") return { ...tab, count: pullCount };
-      return tab;
-    });
-  }, [pullCount, surfaceTabs]);
-  const removeLiveCounts = useMemo<ProjectLiveCounts>(() => {
-    if (!removeProject) return { services: 0, portforwards: 0, terminals: 0 };
-    return {
-      services: snapshot.services.filter(
-        (service) =>
-          service.project === removeProject &&
-          (service.status === "running" || service.status === "starting"),
-      ).length,
-      portforwards: snapshot.portforwards.filter(
-        (forward) =>
-          forward.project === removeProject &&
-          (forward.status === "active" ||
-            forward.status === "starting" ||
-            forward.status === "restarting"),
-      ).length,
-      terminals: snapshot.terminals.filter((terminal) => terminal.project === removeProject).length,
-    };
-  }, [removeProject, snapshot.portforwards, snapshot.services, snapshot.terminals]);
 
   const linkedTask = useMemo(
     () => snapshot.tasks.find((task) => task.id === openItem?.taskId) ?? null,
@@ -202,28 +141,6 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
     [onOpenTask],
   );
 
-  const confirmProjectRemoval = useCallback(async () => {
-    if (!removeProject) return;
-    const remainingProjects = snapshot.projects.filter((item) => item.name !== removeProject);
-    await daemon.removeProject(removeProject, true);
-    disposeTerminalWorkspace(removeProject);
-    clearProjectState(removeProject);
-    setRemoveProject(null);
-    if (selectedProjectId !== removeProject) return;
-    const next = remainingProjects[0]?.name;
-    // Nothing left to be the subject of this view, and no nav item to fall
-    // back to: the app has to leave the project page entirely.
-    if (next) openProject(next);
-    else setView("control");
-  }, [
-    clearProjectState,
-    openProject,
-    removeProject,
-    selectedProjectId,
-    setView,
-    snapshot.projects,
-  ]);
-
   if (!project) {
     return (
       <EmptyState
@@ -243,85 +160,21 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      <header className="flex min-h-12 shrink-0 flex-wrap items-end justify-between gap-x-4 gap-y-2 px-1 pb-3 pt-2">
-        <div className="min-w-0 space-y-1.5">
-          <div className="flex items-baseline gap-2.5">
-            <h1 className="truncate text-xl font-semibold leading-none tracking-tight">
-              {project.name}
-            </h1>
-          </div>
-          <p className="flex items-center gap-1.5 truncate text-[11px] text-muted-foreground">
-            <span className="truncate" title={project.path}>
-              {project.path}
-            </span>
-            <span aria-hidden className="text-border">
-              ·
-            </span>
-            <span className="tnum shrink-0">
-              ports {project.portRange[0]}–{project.portRange[1]}
-            </span>
-            <PortRangeSourceChip project={project} />
-          </p>
-          {project.portRangeConflict && (
-            <div className="mt-2">
-              <PortRangeConflictCard project={project} />
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-label="Project menu"
-                title={`Actions for ${project.name}`}
-                className="h-8 w-8 gap-0 px-0 text-muted-foreground"
-              >
-                <EllipsisVertical className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled>
-                <Pencil className="size-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setFactorySettings(project.name)}>
-                <Factory className="size-4" />
-                Factory settings…
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setStoppingAll(project.name)}>
-                <Square className="size-4" />
-                Stop all Factory tasks
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onSelect={() => setRemoveProject(project.name)}
-              >
-                <Trash2 className="size-4" />
-                Remove project
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            type="button"
-            size="sm"
-            aria-label={`New work item in ${project.name}`}
-            onClick={() => setBacklogOpen(true)}
-            className="h-8 gap-1.5 px-2.5"
-          >
-            + New work item
-          </Button>
-        </div>
-      </header>
-
-      <ProjectSurfaceBar
-        activeSurface={surface}
-        onSurfaceChange={(next) => setProjectSurface(project.name, next)}
-        tabs={surfaceTabsWithPulls}
+      <ProjectTitleBar
+        project={project}
+        section={surface}
+        sectionPicker={sectionPicker}
+        onSection={(next) => openProject(project.name, next)}
+        onNewWorkItem={() => setBacklogOpen(true)}
+        onFactorySettings={() => setFactorySettings(project.name)}
+        onStopAll={() => setStoppingAll(project.name)}
+        onRemove={() => useRemoveProject.getState().open(project.name)}
       />
+      {project.portRangeConflict && (
+        <div className="shrink-0 px-1 pb-2">
+          <PortRangeConflictCard project={project} />
+        </div>
+      )}
 
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         {surface === "files" ? (
@@ -335,6 +188,13 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
             portforwards={pfs}
             localConfigError={project.localConfigError}
             onAppendToChat={(context) => onNewTask(project.name, context.body)}
+          />
+        ) : surface === "config" ? (
+          <ProjectConfigSurface
+            key={project.name}
+            project={project.name}
+            rootPath={project.path}
+            services={runtimeServices}
           />
         ) : surface === "worktrees" ? (
           <WorktreesSurface project={project.name} />
@@ -358,13 +218,6 @@ export default function Projects({ snapshot, onOpenTask, onNewTask, onAddProject
           </div>
         )}
       </div>
-
-      <RemoveProjectDialog
-        project={removeProject}
-        liveCounts={removeLiveCounts}
-        onCancel={() => setRemoveProject(null)}
-        onConfirm={confirmProjectRemoval}
-      />
 
       <FactorySettingsDialog
         project={factorySettings}

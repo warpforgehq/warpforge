@@ -45,12 +45,21 @@ function mockDaemon() {
   vi.spyOn(daemon, "getState").mockReturnValue(state);
 }
 
-function renderHeader(
-  openTask: TaskInfo | null,
-  view: "control" | "project" | "inbox" = "project",
-) {
+function renderHeader(openTask: TaskInfo | null, view: "start" | "project" | "inbox" = "project") {
+  const snapshot = {
+    ...daemon.getState().snapshot,
+    tasks: openTask ? [openTask] : [],
+  };
   return render(
-    <AppHeader view={view} openTask={openTask} onAddProject={() => {}} onCloseTask={() => {}} />,
+    <AppHeader
+      view={view}
+      openTask={openTask}
+      snapshot={snapshot}
+      windowButtonsInset={false}
+      composing={false}
+      onOpenTask={() => {}}
+      onCloseTask={() => {}}
+    />,
   );
 }
 
@@ -61,7 +70,7 @@ afterEach(() => {
 describe("AppHeader without a task", () => {
   it("shows no account control on a view with no agent in focus", () => {
     mockDaemon();
-    renderHeader(null, "control");
+    renderHeader(null, "start");
 
     expect(screen.queryByRole("button", { name: /account$/ })).toBeNull();
     expect(screen.queryByText("Personal")).toBeNull();
@@ -87,10 +96,13 @@ describe("AppHeader with an open task", () => {
     mockDaemon();
     renderHeader(task({ worktree: "/tmp/wt/fix-header" }));
 
-    expect(screen.getByTitle("/tmp/wt/fix-header")).toHaveTextContent("Git Worktree");
+    expect(screen.getByLabelText("Runs in a git worktree")).toHaveAttribute(
+      "title",
+      "Git worktree: /tmp/wt/fix-header",
+    );
   });
 
-  it("names the Smith a task runs as before its title and opens its page", async () => {
+  it("names the Smith a task runs and opens its page", async () => {
     mockDaemon();
     useSmithsStore.getState().upsert(smithFixture());
     renderHeader(task({ smithId: "sm_1" }));

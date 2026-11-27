@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { usePickerAgents } from "@/lib/pickerPreferences";
 
 import { daemon } from "../daemon";
 import type { AgentConfig } from "../protocol";
@@ -136,7 +137,7 @@ function PathRow({
 }
 
 export default function BootstrapWizard({ project, agents, open, onOpenChange, onStarted }: Props) {
-  const enabledAgents = useMemo(() => agents.filter((agent) => agent.enabled), [agents]);
+  const enabledAgents = usePickerAgents(agents);
   const agentOptions = useMemo(
     () => enabledAgents.map((agent) => ({ label: agent.displayName, value: agent.id })),
     [enabledAgents],

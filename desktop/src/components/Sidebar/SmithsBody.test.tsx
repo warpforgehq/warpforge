@@ -84,7 +84,7 @@ describe("SmithsBody", () => {
       selectedProjectId: null,
       smithsProject: null,
       teamSelection: null,
-      view: "control",
+      view: "start",
     });
   });
 
@@ -177,7 +177,7 @@ describe("SmithsBody", () => {
 
   it("highlights the selection only while the Smiths area is showing", () => {
     setSmiths([smithFixture()]);
-    useUi.setState({ teamSelection: { id: "sm_1", kind: "teammate" }, view: "control" });
+    useUi.setState({ teamSelection: { id: "sm_1", kind: "teammate" }, view: "start" });
     const { rerender } = show();
     expect(screen.getByRole("button", { name: /Ada/ })).not.toHaveAttribute("aria-current");
     useUi.setState({ view: "team" });
