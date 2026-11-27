@@ -90,8 +90,8 @@ export function TaskTab({
       className={cn(
         "group relative flex h-7 min-w-24 max-w-52 flex-1 basis-52 cursor-default select-none items-center gap-1.5 rounded-md border pl-2.5 pr-1.5 text-[0.75rem] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
         active
-          ? "border-border/60 bg-background text-foreground shadow-[0_1px_2px_hsl(var(--foreground)/0.08)]"
-          : "border-transparent text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground",
+          ? "border-transparent bg-foreground/[0.09] font-medium text-foreground"
+          : "border-transparent text-muted-foreground/75 hover:bg-foreground/[0.05] hover:text-foreground",
       )}
     >
       <TaskAgentMark task={task} className="size-3.5 shrink-0" />

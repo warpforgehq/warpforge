@@ -17,6 +17,11 @@
  *   bg-primary, text-foreground, border-border, etc.
  * ============================================================ */
 @theme {
+  /* Geist is variable: half a step heavier than CSS defaults so text holds up
+     on the dark themes, with the same gaps between weights. */
+  --font-weight-normal: 450;
+  --font-weight-medium: 550;
+  --font-weight-semibold: 650;
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
 
@@ -385,6 +390,7 @@ body {
     -apple-system,
     sans-serif;
   font-size: 0.875rem;
+  font-weight: var(--font-weight-normal);
   -webkit-font-smoothing: antialiased;
 }
 
