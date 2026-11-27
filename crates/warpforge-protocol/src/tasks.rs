@@ -8,6 +8,16 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
+/// A sibling folder a task's agent was given alongside its own project.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceFolderInfo {
+    pub name: String,
+    pub path: String,
+    /// The folder is a git checkout.
+    pub git: bool,
+}
+
 /// A task on the board: one agent session working on one prompt in one project.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -89,6 +99,10 @@ pub struct TaskInfo {
     pub origin: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    /// Sibling folders of the task's space, captured when the task was
+    /// created (ADR 0034). Empty outside a space.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub workspace_folders: Vec<WorkspaceFolderInfo>,
     /// True while a permission prompt for this task is unanswered. Computed
     /// daemon-side at snapshot time so clients can badge "needs you" without
     /// holding any transcript (see `docs/adr/0005`).

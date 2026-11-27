@@ -536,6 +536,7 @@ fn project_config_changed_event_roundtrip() {
             declared_services: vec!["web".into()],
             agent_templates: HashMap::new(),
             local_config_error: None,
+            linked: Vec::new(),
         },
         services: vec![ServiceInfo {
             project: "demo".into(),

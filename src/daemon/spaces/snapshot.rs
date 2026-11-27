@@ -17,6 +17,30 @@ pub(crate) struct WorkspaceFolder {
     pub(super) git: bool,
 }
 
+impl WorkspaceFolder {
+    /// The folder as clients see it on a task.
+    pub(crate) fn info(&self) -> warpforge_protocol::WorkspaceFolderInfo {
+        warpforge_protocol::WorkspaceFolderInfo {
+            name: self.name.clone(),
+            path: self.path.clone(),
+            git: self.git,
+        }
+    }
+}
+
+/// `root/link` with `..` resolved lexically, as linked members are compared.
+pub(crate) fn linked_path(root: &Path, link: &Path) -> String {
+    let mut clean = PathBuf::new();
+    for component in root.join(link).components() {
+        if component == Component::ParentDir {
+            clean.pop();
+        } else {
+            clean.push(component);
+        }
+    }
+    clean.to_string_lossy().into_owned()
+}
+
 pub(super) fn readable_directory(path: &Path) -> Result<PathBuf> {
     if !path.is_absolute() {
         bail!("folder path must be absolute");

@@ -13,7 +13,9 @@ mod snapshot;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use snapshot::{additional_directories, workspace_folders, WorkspaceFolder};
+pub(crate) use snapshot::{
+    additional_directories, linked_path, workspace_folders, WorkspaceFolder,
+};
 
 #[derive(Default, Serialize, Deserialize)]
 pub(crate) struct Spaces {

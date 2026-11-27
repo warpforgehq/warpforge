@@ -290,6 +290,20 @@ impl Daemon {
                 declared_services,
                 agent_templates,
                 local_config_error: config.and_then(|c| c.local_error.clone()),
+                linked: config
+                    .map(|c| {
+                        c.linked
+                            .iter()
+                            .filter(|link| link.is_relative())
+                            .map(|link| {
+                                crate::daemon::spaces::linked_path(
+                                    std::path::Path::new(&project.path),
+                                    link,
+                                )
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default(),
             },
             services,
             portforwards,

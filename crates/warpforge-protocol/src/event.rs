@@ -330,4 +330,8 @@ pub struct ProjectInfo {
     /// applies or does not exist.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub local_config_error: Option<String>,
+    /// `linked:` entries of the project's workspace.yaml, joined onto its
+    /// path with `..` resolved lexically (ADR 0034).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub linked: Vec<String>,
 }
