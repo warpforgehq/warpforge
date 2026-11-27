@@ -155,14 +155,13 @@ fn forward_is_removed_with_remove_true() {
 #[test]
 fn top_level_maps_merge_per_key_and_scalars_replace() {
     let config = load(
-        "name: mine\nports:\n  range: 4500-4599\nworktree:\n  setup: bun i --frozen-lockfile\nagentTemplates:\n  dev:\n    command: claude\n",
+        "name: mine\nports:\n  range: 4500-4599\nworktree:\n  setup: bun i --frozen-lockfile\n",
     );
     assert_eq!(config.name.as_deref(), Some("mine"));
     assert_eq!(config.ports.unwrap().range, "4500-4599");
     let worktree = config.worktree.unwrap();
     assert_eq!(worktree.copy, [".env"]);
     assert_eq!(worktree.setup.as_deref(), Some("bun i --frozen-lockfile"));
-    assert_eq!(config.agent_templates.unwrap()["dev"].command, "claude");
 }
 
 #[test]
@@ -321,4 +320,27 @@ fn fixing_or_removing_the_local_file_clears_the_error() {
     let config = try_load_workspace_config(dir.path()).unwrap().unwrap();
     assert_eq!(config.local_error, None);
     assert!(config.services.contains_key("db"));
+}
+
+#[test]
+fn legacy_agent_templates_are_ignored_in_shared_and_local_files() {
+    let dir = tempfile::tempdir().unwrap();
+    write(
+        dir.path(),
+        ".warpforge/workspace.yaml",
+        "services: {web: {command: bun dev}}\nagentTemplates: {old: {command: old-agent}}\n",
+    );
+    write(
+        dir.path(),
+        ".warpforge/workspace.local.yaml",
+        "services: {web: {port: 5173}}\nagentTemplates: {old: {command: local-agent}}\n",
+    );
+    let config = try_load_workspace_config(dir.path()).unwrap().unwrap();
+    assert_eq!(config.services["web"].command, "bun dev");
+    assert_eq!(config.services["web"].port, Some(5173));
+    assert!(config.local_error.is_none());
+    assert!(serde_yaml::to_value(config)
+        .unwrap()
+        .get("agentTemplates")
+        .is_none());
 }

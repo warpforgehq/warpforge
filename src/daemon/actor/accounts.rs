@@ -4,8 +4,6 @@ use anyhow::Result;
 
 use warpforge_protocol as wire;
 
-use crate::config::load_workspace_config;
-
 use crate::daemon::actor::{Daemon, Event};
 use crate::daemon::runtime::Ask as PersistAsk;
 
@@ -36,8 +34,8 @@ impl Daemon {
     }
 
     /// Resolve a task's `agent` to a spawnable ACP command.
-    /// Priority: global agent registry → project agentTemplates → raw command.
-    pub(crate) fn resolve_agent_command(&self, project: &str, agent: &str) -> String {
+    /// Priority: global agent registry → raw command.
+    pub(crate) fn resolve_agent_command(&self, agent: &str) -> String {
         // 1. Global registry (configured via setup wizard / settings).
         if let Some(cfg) = self
             .configured_agents
@@ -46,15 +44,6 @@ impl Daemon {
         {
             return cfg.acp_command.clone();
         }
-        // 2. Per-project agentTemplates override (legacy / power-user).
-        if let Some(path) = self.project_path(project) {
-            if let Some(config) = load_workspace_config(std::path::Path::new(&path)) {
-                if let Some(tmpl) = config.agent_templates.and_then(|m| m.get(agent).cloned()) {
-                    return tmpl.command;
-                }
-            }
-        }
-        // 3. Treat as raw ACP command.
         agent.to_string()
     }
 

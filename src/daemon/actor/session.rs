@@ -231,7 +231,7 @@ impl Daemon {
             }
             return;
         };
-        let command = self.resolve_agent_command(project, agent);
+        let command = self.resolve_agent_command(agent);
         if let Some(reason) = self.smith_start_refusal(task_id) {
             self.drop_session(task_id);
             if let Some(task) = self.tasks.get_mut(task_id) {

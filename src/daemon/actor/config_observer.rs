@@ -185,16 +185,6 @@ impl Daemon {
             })
             .unwrap_or((wire::PortRangeSource::Auto, None));
         let declared_services = config.map(sorted_services).unwrap_or_default();
-        let agent_templates = config
-            .and_then(|c| c.agent_templates.as_ref())
-            .map(|templates| {
-                templates
-                    .iter()
-                    .map(|(name, template)| (name.clone(), template.command.clone()))
-                    .collect()
-            })
-            .unwrap_or_default();
-
         // Start from every declared service in a stopped state, then overlay a
         // matching live process. This lets clients render Start controls before
         // a service has ever been launched.
@@ -326,7 +316,6 @@ impl Daemon {
                 port_range_source,
                 port_range_conflict,
                 declared_services,
-                agent_templates,
                 config_error: self.config_observer.errors.get(project_name).cloned(),
                 local_config_error: config.and_then(|c| c.local_error.clone()),
                 linked: config

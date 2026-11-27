@@ -70,7 +70,6 @@ mod tests {
                 port_range_source: PortRangeSource::Auto,
                 port_range_conflict: None,
                 declared_services: vec!["web".into()],
-                agent_templates: Default::default(),
                 local_config_error: None,
                 config_error: None,
                 linked: Vec::new(),

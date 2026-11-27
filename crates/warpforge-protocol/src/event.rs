@@ -331,7 +331,6 @@ pub struct ProjectInfo {
     pub port_range_conflict: Option<String>,
     /// Services declared in .warpforge.yaml (may not be running).
     pub declared_services: Vec<String>,
-    pub agent_templates: HashMap<String, String>,
     /// Why the personal local config file is being ignored; absent when it
     /// applies or does not exist.
     #[serde(default, skip_serializing_if = "Option::is_none")]

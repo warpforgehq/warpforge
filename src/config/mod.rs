@@ -53,12 +53,6 @@ pub struct PortsConfig {
     pub range: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AgentTemplate {
-    pub command: String,
-    pub description: Option<String>,
-}
-
 /// One kubectl port-forward entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PortForwardConfig {
@@ -81,8 +75,6 @@ pub struct WorkspaceConfig {
     pub linked: Vec<std::path::PathBuf>,
     #[serde(default)]
     pub services: HashMap<String, ServiceConfig>,
-    #[serde(rename = "agentTemplates")]
-    pub agent_templates: Option<HashMap<String, AgentTemplate>>,
     #[serde(default)]
     pub portforwards: Vec<PortForwardConfig>,
     #[serde(default)]
@@ -218,7 +210,6 @@ fn auto_detect(project_path: &Path) -> Option<WorkspaceConfig> {
     Some(WorkspaceConfig {
         name: None,
         services,
-        agent_templates: None,
         portforwards: vec![],
         ports: None,
         worktree: None,
@@ -269,10 +260,6 @@ services:
     #   url: http://localhost:${{app.port}}/api/health
     #   interval: 5s
 
-# agentTemplates:
-#   dev:
-#     command: claude
-#     description: "Interactive development session"
 "#
         )
     };

@@ -191,7 +191,6 @@ impl Daemon {
                     "services": config.services,
                     "worktree": config.worktree,
                     "ports": config.ports,
-                    "agentTemplates": config.agent_templates.unwrap_or_default(),
                     "portforwards": config.portforwards,
                     "linked": config.linked,
                     "localFields": config.local.fields
