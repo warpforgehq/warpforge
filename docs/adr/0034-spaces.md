@@ -11,11 +11,9 @@ owner's work setup restricts Claude to the repository it was launched in,
 which makes cross-repo changes (an API change plus its Helm values) a manual
 relay between sessions.
 
-t3code solved the agent half in November 2026 (PR #35925): a project has a
-home folder plus tracked folders, the home folder is the agent's cwd, and the
-others are passed to the agent as extra roots and listed in its instructions.
-Synara has nothing comparable; its "spaces" only group projects in the
-sidebar.
+A known shape for the agent half: a project has a home folder plus tracked
+folders, the home folder is the agent's cwd, and the others are passed to the
+agent as extra roots and listed in its instructions.
 
 Two facts make the agent half cheap here:
 
@@ -33,7 +31,7 @@ folders.** It is not a new kind of project: each member keeps its own
 services, ports, backlog, worktrees and pull requests. A loose folder is a
 path that is not worth registering (a schemas checkout with no services); it
 can be promoted to a project later. *Rejected:* a project with tracked folders
-(t3code's shape) as the only model — the owner already has the member repos
+(the home-plus-tracked-folders shape) as the only model — the owner already has the member repos
 registered as projects with their own services, and folding them into one
 project would throw that away.
 
@@ -124,5 +122,5 @@ members that come from `linked:` (`ProjectInfo.linked`, resolved paths).
    on tasks, `additionalDirectories` + prompt block, space in project mode,
    space pins. *(this record)*
 2. Per-repository sections in the Changes rail and diff for siblings.
-3. Optional per-task worktrees for sibling repositories, mirroring t3code's
-   task folder.
+3. Optional per-task worktrees for sibling repositories, one task folder
+   holding every repository's worktree.
