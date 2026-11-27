@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { boardTasks } from "@/lib/taskOrigin";
 import { disposeTerminalWorkspace } from "@/lib/terminalWorkspace";
-import { DEFAULT_PROJECT_SURFACE, useUi } from "@/store/ui";
+import { useUi } from "@/store/ui";
 
 import { BacklogView } from "../components/backlog/BacklogView";
 import { NewWorkItemDrawer } from "../components/backlog/NewWorkItemDrawer";
@@ -23,6 +23,7 @@ import { ProjectRuntimeSurface } from "./projects/ProjectRuntimeSurface";
 import { ProjectTitleBar } from "./projects/ProjectTitleBar";
 import { PullRequestSurface } from "./projects/PullRequestSurface";
 import { type ProjectLiveCounts, RemoveProjectDialog } from "./projects/RemoveProjectDialog";
+import { useProjectSection } from "./projects/sections";
 import { WorktreesSurface } from "./projects/WorktreesSurface";
 
 interface Props {
@@ -66,9 +67,7 @@ export default function Projects({
      dereference `project`: with an empty registry it is undefined at runtime,
      which TS misses because indexing `projects[0]` is not typed as optional. */
   const declaredServices = useMemo(() => project?.declaredServices ?? [], [project]);
-  const surface = useUi(
-    (state) => state.projectSurfaceByProject[projectName] ?? DEFAULT_PROJECT_SURFACE,
-  );
+  const surface = useProjectSection(projectName);
   const clearProjectState = useUi((state) => state.clearProjectState);
   const services = useMemo(
     () => snapshot.services.filter((s) => s.project === projectName),

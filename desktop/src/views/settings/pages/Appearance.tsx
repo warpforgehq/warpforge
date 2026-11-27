@@ -18,6 +18,7 @@ import {
   Slider,
   Toggle,
 } from "../primitives";
+import { ProjectSections } from "./appearance/ProjectSections";
 
 export default function AppearancePage() {
   const fontSize = useUi((s) => s.fontSize);
@@ -183,6 +184,7 @@ export default function AppearancePage() {
           }
         />
       </SettingsSection>
+      <ProjectSections />
       <SettingsSection title="Privacy">
         <SettingsRow
           id="theomod"

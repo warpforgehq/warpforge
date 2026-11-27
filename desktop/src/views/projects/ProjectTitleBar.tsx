@@ -15,7 +15,7 @@ import { useTitleRow } from "@/store/titleRow";
 import type { ProjectSurface } from "@/store/ui";
 
 import { PortRangeSourceChip } from "./PortRangeStatus";
-import { PROJECT_SECTIONS, sectionLabel } from "./sections";
+import { sectionLabel, useVisibleSections } from "./sections";
 
 interface Props {
   project: ProjectInfo;
@@ -44,6 +44,7 @@ export function ProjectTitleBar({
   onRemove,
 }: Props) {
   const slot = useTitleRow((state) => state.projectSlot);
+  const sections = useVisibleSections();
   if (!slot) return null;
 
   const title = <h1 className="truncate text-[1rem] font-semibold">{sectionLabel(section)}</h1>;
@@ -63,7 +64,7 @@ export function ProjectTitleBar({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
-            {PROJECT_SECTIONS.map(({ id, label, icon: Icon }) => (
+            {sections.map(({ id, label, icon: Icon }) => (
               <DropdownMenuItem key={id} onSelect={() => onSection(id)} className="gap-2">
                 <Icon className="size-4 text-muted-foreground" />
                 {label}

@@ -9,6 +9,11 @@ const index = {
     ["glass-opacity", "Glass opacity", "transparency sidebar"],
     ["blur-radius", "Blur radius", "glass background macos"],
     ["main-pane-glass", "Main pane glass", "transparent body content"],
+    [
+      "project-sections",
+      "Project sections",
+      "backlog pull requests explorer runtime terminal worktrees hide show reorder order sidebar",
+    ],
     ["theomod", "TheoMod", "privacy blur email addresses"],
   ],
   notifications: [

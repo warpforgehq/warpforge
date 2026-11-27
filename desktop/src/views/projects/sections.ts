@@ -8,9 +8,10 @@ import {
   TerminalSquare,
 } from "lucide-react";
 
-import type { ProjectSurface } from "@/store/ui";
+import { resolveSection, visibleSections } from "@/lib/projectSections";
+import { type ProjectSurface, useUi } from "@/store/ui";
 
-/** A project's sections, in the order the panel lists them. */
+/** A project's sections, in the built-in order. */
 export const PROJECT_SECTIONS: readonly { id: ProjectSurface; label: string; icon: LucideIcon }[] =
   [
     { id: "backlog", label: "Backlog", icon: ListTodo },
@@ -28,4 +29,24 @@ export const PROJECT_SECTIONS: readonly { id: ProjectSurface; label: string; ico
  */
 export function sectionLabel(id: ProjectSurface): string {
   return PROJECT_SECTIONS.find((section) => section.id === id)?.label ?? "Backlog";
+}
+
+/**
+ * The sections the panel lists, in the user's order.
+ * @returns label and icon of each visible section
+ */
+export function useVisibleSections() {
+  const prefs = useUi((state) => state.projectSections);
+  return visibleSections(prefs).map((id) => PROJECT_SECTIONS.find((section) => section.id === id)!);
+}
+
+/**
+ * The section a project shows: its remembered one unless hidden, else the first visible.
+ * @param project the project name
+ * @returns the section to render
+ */
+export function useProjectSection(project: string): ProjectSurface {
+  const remembered = useUi((state) => state.projectSurfaceByProject[project]);
+  const prefs = useUi((state) => state.projectSections);
+  return resolveSection(remembered, prefs);
 }

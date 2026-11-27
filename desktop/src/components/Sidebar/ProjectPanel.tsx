@@ -2,14 +2,8 @@ import { Layers } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { Snapshot } from "@/protocol";
-import {
-  DEFAULT_PROJECT_SURFACE,
-  type ProjectSurface,
-  spaceOfProject,
-  useUi,
-  type View,
-} from "@/store/ui";
-import { PROJECT_SECTIONS } from "@/views/projects/sections";
+import { type ProjectSurface, spaceOfProject, useUi, type View } from "@/store/ui";
+import { useProjectSection, useVisibleSections } from "@/views/projects/sections";
 import { useProjectSectionStatus } from "@/views/projects/useProjectSectionStatus";
 
 import { ScopeHeader, ScopeTasks } from "./ScopeChrome";
@@ -49,7 +43,8 @@ export function ProjectPanel({
 }: Props) {
   const openSpace = useUi((s) => s.openSpace);
   const space = spaceOfProject(project, snapshot.spaces ?? []);
-  const surface = useUi((s) => s.projectSurfaceByProject[project] ?? DEFAULT_PROJECT_SURFACE);
+  const surface = useProjectSection(project);
+  const sections = useVisibleSections();
   const status = useProjectSectionStatus(project, snapshot);
   const onSection = view === "project" && !openTaskId;
 
@@ -75,7 +70,7 @@ export function ProjectPanel({
       )}
 
       <nav aria-label={`${project} sections`} className="flex shrink-0 flex-col gap-px px-2 pt-2">
-        {PROJECT_SECTIONS.map(({ id, label, icon: Icon }) => {
+        {sections.map(({ id, label, icon: Icon }) => {
           const active = onSection && surface === id;
           const count = status.counts[id];
           return (

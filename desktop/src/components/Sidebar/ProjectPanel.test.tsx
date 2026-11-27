@@ -86,7 +86,7 @@ vi.mock("@tanstack/react-virtual", () => ({
 }));
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -294,4 +294,17 @@ it("returns to every project from the Tasks rail button", () => {
   fireEvent.click(within(modes).getByRole("button", { name: /^Tasks/ }));
   expect(useUi.getState().panelScope).toBeNull();
   expect(screen.getByText("Task b-1")).toBeInTheDocument();
+});
+
+it("drops hidden sections and moves off a hidden open section", () => {
+  enterAlphaFromTree();
+  act(() => useUi.getState().setProjectSectionHidden("backlog", true));
+
+  const nav = sections();
+  expect(within(nav).queryByRole("button", { name: /Backlog/ })).not.toBeInTheDocument();
+  expect(within(nav).getAllByRole("button")[0]).toHaveAccessibleName(/Pull requests/);
+  expect(within(nav).getByRole("button", { name: /Pull requests/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
 });
