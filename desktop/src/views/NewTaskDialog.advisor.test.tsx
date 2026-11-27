@@ -37,7 +37,6 @@ const snapshot: Snapshot = {
   portforwards: [],
   projects: [
     {
-      agentTemplates: {},
       declaredServices: [],
       name: "warpforge",
       path: "/workspace/warpforge",

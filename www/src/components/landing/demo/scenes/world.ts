@@ -9,7 +9,6 @@ export const PROJECT = "atlas";
 export const T0 = Date.UTC(2026, 0, 14, 9, 12, 0);
 
 export const project: ProjectInfo = {
-  agentTemplates: {},
   declaredServices: ["api", "web"],
   name: PROJECT,
   path: "/Users/dev/code/atlas",

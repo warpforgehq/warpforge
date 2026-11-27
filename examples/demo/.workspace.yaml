@@ -17,8 +17,3 @@ services:
       done
     port: 3000
     dependsOn: [api]
-
-agentTemplates:
-  dev:
-    command: npx @agentclientprotocol/claude-agent-acp@latest --acp
-    description: "dev session"

@@ -64,7 +64,6 @@ const snapshot: Snapshot = {
   ],
   projects: [
     {
-      agentTemplates: {},
       declaredServices: [],
       name: "warpforge",
       path: "/tmp/warpforge",

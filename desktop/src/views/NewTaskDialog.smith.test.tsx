@@ -19,7 +19,6 @@ const claude: AgentConfig = {
 };
 
 const project = (name: string) => ({
-  agentTemplates: {},
   declaredServices: [],
   name,
   path: `/workspace/${name}`,

@@ -1,6 +1,6 @@
 ---
 title: Workspace configuration
-description: Full schema for .warpforge/workspace.yaml — services, ports, port-forwards, worktree setup, and agent templates.
+description: Full schema for .warpforge/workspace.yaml — services, ports, port-forwards, and worktree setup.
 sidebar:
   order: 1
   label: Configuration
@@ -40,11 +40,6 @@ portforwards:
 worktree:
   copy: [".env*", "config/local.json"]
   setup: bun install
-
-agentTemplates:
-  custom:
-    command: my-acp-agent
-    description: Custom project agent
 ```
 
 ## `name`
@@ -148,15 +143,6 @@ worktree:
 - It has 10 minutes. Its output is written to a log you can read from the project's [Worktrees section](/guides/projects-and-runtime/#the-worktrees-section).
 - If copying or setup fails, the task does not start its agent. It appears as blocked in the sidebar with the reason, including the last lines of the command's output, and the worktree is kept. Send a message to work in the worktree anyway, or delete the task. A [workflow](/concepts/orchestration/#workflow-pipelines) that hits the failure ends with the error.
 
-## `agentTemplates`
-
-A map of template name → agent template, for adding a custom ACP-compatible agent beyond the [built-in ones](/concepts/agents/) — globally or per project.
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `command` | string | yes | The command Warpforge spawns to speak ACP over stdio. |
-| `description` | string | no | Shown in the agent picker. |
-
 ## Personal overrides: `workspace.local.yaml`
 
 Keep your own variations — a dependency pointed at a port-forward instead of a local service, a different port, an extra service only you run — in `.warpforge/workspace.local.yaml`, beside the shared config. It is yours alone: Warpforge adds it to git's ignore list the first time it sees it, so it never shows up as an untracked file and is never committed. Projects still on a legacy root config use a sibling name instead: `.warpforge.local.yaml`, `.wf.local.yaml`, or `.workspace.local.yaml`.
@@ -166,7 +152,7 @@ The local file uses the same schema as the shared one and is laid over it, not s
 | Rule | Behaviour |
 | --- | --- |
 | Fields | A field you set replaces the shared value. Everything you leave out stays as shared. |
-| Maps (`services`, `env`, `ports`, `worktree`, `agentTemplates`) | Merged key by key, to any depth. A service present only in your file is added. |
+| Maps (`services`, `env`, `ports`, `worktree`) | Merged key by key, to any depth. A service present only in your file is added. |
 | Lists (`dependsOn`, `worktree.copy`, …) | Replaced as a whole — list everything you want, not just the additions. |
 | `null` | Removes a key. `db: null` under `services` removes that service; `MODE: null` under `env` unsets that variable. |
 | `portforwards` | Entries are matched by `name`: matching ones are merged field by field, new ones are appended. To remove a shared forward, list it with `remove: true`. |

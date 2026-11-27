@@ -13,7 +13,6 @@ import SpacesPage from "./Spaces";
 
 function project(name: string, linked?: string[]): ProjectInfo {
   return {
-    agentTemplates: {},
     declaredServices: [],
     linked,
     name,

@@ -115,7 +115,6 @@ function task(id: string, project: string): TaskInfo {
 
 function project(name: string): ProjectInfo {
   return {
-    agentTemplates: {},
     declaredServices: [],
     name,
     path: `~/workspace/${name}`,

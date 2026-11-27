@@ -51,7 +51,6 @@ interface MockXterm {
 }
 
 const warpforgeProject: ProjectInfo = {
-  agentTemplates: {},
   declaredServices: [],
   name: "warpforge",
   path: "/workspace/warpforge",

@@ -201,7 +201,6 @@ export interface ProjectInfo {
   /** Name of the project whose declared range this one collides with. */
   portRangeConflict?: string | null;
   declaredServices: string[];
-  agentTemplates: Record<string, string>;
   /** Why the personal local config file is being ignored; absent when it applies. */
   localConfigError?: string | null;
   configError?: ProjectConfigError | null;

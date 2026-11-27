@@ -11,7 +11,6 @@ import { useUi } from "../store/ui";
 import NewTaskDialog from "./NewTaskDialog";
 
 const project = {
-  agentTemplates: {},
   declaredServices: [],
   name: "warpforge",
   path: "/workspace/warpforge",

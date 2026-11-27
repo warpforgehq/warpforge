@@ -54,7 +54,6 @@ function renderBar(props: Partial<Parameters<typeof TaskComposeBar>[0]> = {}) {
       project="warpforge"
       projects={[
         {
-          agentTemplates: {},
           declaredServices: [],
           name: "warpforge",
           path: "/tmp/warpforge",

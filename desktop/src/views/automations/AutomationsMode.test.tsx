@@ -63,7 +63,6 @@ const state: DaemonState = {
     terminals: [],
     projects: [
       {
-        agentTemplates: {},
         declaredServices: [],
         name: "warpforge",
         path: "/workspace/warpforge",

@@ -20,7 +20,6 @@ beforeEach(() => {
       ...EMPTY_SNAPSHOT,
       projects: [
         {
-          agentTemplates: {},
           declaredServices: [],
           name: "api",
           path: "/work/api",

@@ -116,7 +116,6 @@ function task(id: string, projectName: string): TaskInfo {
 
 function project(name: string): ProjectInfo {
   return {
-    agentTemplates: {},
     declaredServices: [],
     name,
     path: `/work/${name}`,

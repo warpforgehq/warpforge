@@ -17,12 +17,3 @@ services:
     command: docker compose up postgres
     port: 5432
     readyPattern: "database system is ready to accept connections"
-
-# Optional: predefined agent templates
-agentTemplates:
-  review:
-    command: claude --print
-    description: "Quick code review"
-  dev:
-    command: claude
-    description: "Interactive development session"

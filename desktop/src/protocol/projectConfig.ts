@@ -43,7 +43,6 @@ export interface EffectiveProjectConfig {
   services: Record<string, ProjectConfigService>;
   worktree: { copy: string[]; setup: string | null } | null;
   ports: { range: string } | null;
-  agentTemplates: Record<string, { command: string; description: string | null }>;
   portforwards: ProjectConfigForward[];
   linked: string[];
   /** Key paths supplied by local YAML. Forwards use name or namespace:pod as the key. */

@@ -114,14 +114,12 @@ describe("DaemonClient connection state", () => {
       portforwards: [],
       projects: [
         {
-          agentTemplates: {},
           declaredServices: ["old"],
           name: "demo",
           path: "/demo",
           portRange: [4000, 4099],
         },
         {
-          agentTemplates: {},
           declaredServices: ["api"],
           name: "other",
           path: "/other",
@@ -218,14 +216,12 @@ describe("DaemonClient connection state", () => {
       snapshot: {
         projects: [
           {
-            agentTemplates: {},
             declaredServices: ["web"],
             name: "demo",
             path: "/demo",
             portRange: [4000, 4099],
           },
           {
-            agentTemplates: {},
             declaredServices: [],
             name: "other",
             path: "/other",

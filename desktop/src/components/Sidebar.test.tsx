@@ -125,7 +125,6 @@ function task(id: string, overrides: Partial<TaskInfo> = {}): TaskInfo {
 
 function project(name: string): ProjectInfo {
   return {
-    agentTemplates: {},
     declaredServices: [],
     name,
     path: `~/workspace/${name}`,
