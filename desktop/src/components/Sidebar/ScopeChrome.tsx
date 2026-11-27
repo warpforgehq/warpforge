@@ -35,8 +35,11 @@ export function ScopeHeader({
   snapshot,
   onOpenProject,
   onAddProject,
+  back,
 }: {
   title: string;
+  /** Where the back chevron goes instead of every project. */
+  back?: { label: string; onClick: () => void };
   /** The scope shown, so the switcher can tick it. */
   current: { kind: "project" | "space"; id: string };
   snapshot: Snapshot;
@@ -60,9 +63,9 @@ export function ScopeHeader({
     >
       <button
         type="button"
-        onClick={exitPanelScope}
-        aria-label="Back to all projects"
-        title="All projects"
+        onClick={back?.onClick ?? exitPanelScope}
+        aria-label={back ? `Back to ${back.label}` : "Back to all projects"}
+        title={back?.label ?? "All projects"}
         className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <ChevronLeft aria-hidden className="size-4" />

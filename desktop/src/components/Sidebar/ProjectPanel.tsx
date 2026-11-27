@@ -1,5 +1,3 @@
-import { Layers } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 import type { Snapshot } from "@/protocol";
 import { type ProjectSurface, spaceOfProject, useUi, type View } from "@/store/ui";
@@ -27,7 +25,7 @@ const row =
 
 /**
  * The Tasks panel narrowed to one project: its sections, then its tasks.
- * The back chevron returns the panel to every project.
+ * The back chevron returns the panel to the project's space, or to every project.
  */
 export function ProjectPanel({
   project,
@@ -56,18 +54,8 @@ export function ProjectPanel({
         snapshot={snapshot}
         onOpenProject={onOpenProject}
         onAddProject={onAddProject}
+        back={space ? { label: space.name, onClick: () => openSpace(space.id) } : undefined}
       />
-      {space && (
-        <button
-          type="button"
-          onClick={() => openSpace(space.id)}
-          title={`Back to ${space.name}`}
-          className="mx-4 -mt-0.5 flex w-fit max-w-[calc(100%-2rem)] items-center gap-1 rounded px-1 text-[0.75rem] text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          <Layers aria-hidden className="size-3 shrink-0" />
-          <span className="truncate">in {space.name}</span>
-        </button>
-      )}
 
       <nav aria-label={`${project} sections`} className="flex shrink-0 flex-col gap-px px-2 pt-2">
         {sections.map(({ id, label, icon: Icon }) => {
