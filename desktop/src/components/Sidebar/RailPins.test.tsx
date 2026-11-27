@@ -94,7 +94,7 @@ describe("RailPins", () => {
     act(() => useUi.setState({ openTaskId: "t_triage" }));
     expect(lit()).toBe(true);
 
-    act(() => useUi.getState().exitPanelScope());
+    act(() => useUi.getState().setTaskListView("tasks"));
     expect(lit()).toBe(false);
   });
 
@@ -124,7 +124,7 @@ describe("RailPins", () => {
     expect(useUi.getState().panelScope).toEqual({ kind: "space", id: "s-1" });
     expect(pin()?.className).toContain("ring-primary");
 
-    act(() => useUi.getState().exitPanelScope());
+    act(() => useUi.getState().setTaskListView("tasks"));
     expect(pin()?.className).not.toContain("ring-primary");
   });
 
@@ -159,7 +159,7 @@ describe("RailPins", () => {
     expect(lit()).toBe(true);
     expect(document.querySelector('[data-pin="project:warpforge"]')).toBeNull();
 
-    act(() => useUi.getState().exitPanelScope());
+    act(() => useUi.getState().setTaskListView("tasks"));
     expect(lit()).toBe(false);
   });
 

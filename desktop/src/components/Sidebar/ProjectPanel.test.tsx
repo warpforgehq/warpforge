@@ -277,10 +277,11 @@ it("starts a task in the project from the Tasks label", () => {
   expect(onNewTask).toHaveBeenCalledWith("alpha");
 });
 
-it("returns to every project from the back chevron", () => {
+it("has no back chevron and returns to every project from the switcher", () => {
   enterAlphaFromTree();
 
-  fireEvent.click(screen.getByRole("button", { name: "Back to all projects" }));
+  expect(screen.queryByRole("button", { name: /^Back to/ })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("menuitem", { name: /^Tasks/ }));
   expect(useUi.getState().panelScope).toBeNull();
   expect(screen.getByText("Task b-1")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Tasks", level: 2 })).toBeInTheDocument();

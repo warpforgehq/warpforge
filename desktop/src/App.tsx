@@ -97,9 +97,10 @@ export default function App() {
   };
 
   const handleSelectMode = (mode: SidebarMode) => {
-    setSidebarMode(mode);
+    // The segment reads the mode it is leaving, so it goes first.
     if (mode === "tasks") handleSelectTasksSegment();
-    else handleSelectView(mode);
+    setSidebarMode(mode);
+    if (mode !== "tasks") handleSelectView(mode);
   };
 
   const handleOpenProject = (name: string, section?: ProjectSurface) => {
@@ -155,6 +156,7 @@ export default function App() {
     connection,
     connectionError,
     onNewTask: (project?: string) => startNewTask(project),
+    onNewChat: () => startNewTask(undefined, undefined, undefined, { chat: true }),
     settingsOpen,
     onOpenSettings: openSettings,
     onCloseSettings: closeSettings,

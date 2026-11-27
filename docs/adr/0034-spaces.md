@@ -91,7 +91,7 @@ the task's root. The Explorer does not browse sibling folders in phase 1.
 scope with several projects (`panelScope: { kind: "space"; id }`): its panel
 lists the member projects, each opening that project's mode, and the loose
 folders as plain rows, then the tasks of all member projects grouped by
-project. A project in a space shows an "in <space>" link back to it. Sections
+project. The space is reached again from the panel switcher. Sections
 stay per project rather than being repeated for every member. A space can be
 pinned to the rail like a project. New Task inside a space asks for the
 primary project, defaulting to the one you came from. A task with sibling

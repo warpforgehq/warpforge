@@ -7,7 +7,7 @@ import type { SidebarRow } from "./row";
 import { needsHuman, resolveTaskState } from "./taskState";
 import { isSettledTree } from "./tree";
 
-/** The group key chats collapse and shelve under: their project, which is empty. */
+/** The group key chats shelve under: their project, which is empty. */
 export const CHATS_GROUP = "";
 
 export interface SidebarRowsInput {
@@ -31,6 +31,8 @@ export interface SidebarRowsInput {
    *  `primary`. Computed once by the caller so the tree stays a pure function. */
   activePathIds: ReadonlySet<string>;
   nowSec: number;
+  /** List chats alone, flat and newest first, instead of project tasks. */
+  chats?: boolean;
 }
 
 /**
@@ -60,7 +62,7 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
   const stateOf = (task: TaskInfo) =>
     resolveTaskState(task, { attention: attentionIds.has(task.id), nowSec });
 
-  if (input.projectOrder.length === 0 && !tasks.some(isChat)) {
+  if (!input.chats && input.projectOrder.length === 0) {
     rows.push({
       hint: "Add one to get started",
       key: "empty:workspace",
@@ -125,7 +127,11 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
   };
 
   /** Rows under a group header; chats are the group whose project is `CHATS_GROUP`. */
-  const pushGroup = (name: string, groupTasks: readonly TaskInfo[]) => {
+  const pushGroup = (
+    name: string,
+    groupTasks: readonly TaskInfo[],
+    order: (a: TaskTree, b: TaskTree) => number = byPriority,
+  ) => {
     const roots = forest.filter(
       (tree) => tree.task.project === name && isChat(tree.task) === (name === CHATS_GROUP),
     );
@@ -137,7 +143,7 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
     const shelved: TaskTree[] = [];
     const active: TaskTree[] = [];
     for (const tree of roots) (isSettledTree(tree) ? shelved : active).push(tree);
-    pushRoots(active, byPriority);
+    pushRoots(active, order);
     if (shelved.length === 0) return;
 
     const forced = shelved.some((tree) =>
@@ -164,18 +170,14 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
     pushRoots(shelved, byRecency);
   };
 
-  const chats = tasks.filter(isChat);
-  if (chats.length > 0) {
-    const live = chats.filter((task) => !isSettledTask(task));
-    const expanded = !collapsedProjects.has(CHATS_GROUP);
-    rows.push({
-      attentionCount: live.filter((task) => needsHuman(stateOf(task))).length,
-      count: live.length,
-      expanded,
-      key: "chats",
-      kind: "chats",
-    });
-    if (expanded) pushGroup(CHATS_GROUP, chats);
+  if (input.chats) {
+    const chats = tasks.filter(isChat);
+    if (chats.length === 0) {
+      rows.push({ hint: null, key: "empty:chats", kind: "empty", label: "No chats yet" });
+    } else {
+      pushGroup(CHATS_GROUP, chats, byRecency);
+    }
+    return rows;
   }
 
   for (const name of input.projectOrder) {

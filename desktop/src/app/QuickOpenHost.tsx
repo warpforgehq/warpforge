@@ -52,7 +52,6 @@ export function QuickOpenHost({
   const filesQuery = taskId ? taskFilesQuery : projectFilesQuery;
   const openTaskThroughNav = useUi((s) => s.openTaskWithNav);
   const openProject = useUi((s) => s.openProject);
-  const setProjectSurface = useUi((s) => s.setProjectSurface);
   const hasSubject = Boolean(taskId || projectName);
 
   useQuickOpenShortcut(() => {
@@ -97,11 +96,10 @@ export function QuickOpenHost({
         return;
       }
       if (!projectName) return;
-      openProject(projectName);
-      setProjectSurface(projectName, "files");
+      openProject(projectName, "files");
       requestProjectFile({ project: projectName, path, ...location });
     },
-    [openProject, openTaskThroughNav, projectName, setProjectSurface, taskId],
+    [openProject, openTaskThroughNav, projectName, taskId],
   );
   const persistFind = useCallback(
     (session: { query: string; activeIndex: number }) => {

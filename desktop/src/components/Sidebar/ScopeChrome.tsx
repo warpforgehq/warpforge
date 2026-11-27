@@ -1,124 +1,53 @@
-import {
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  FolderGit2,
-  Layers,
-  Pin,
-  PinOff,
-  Plus,
-} from "lucide-react";
+import { Pin, PinOff, Plus } from "lucide-react";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import type { Snapshot } from "@/protocol";
 import { pinKey, usePins } from "@/store/pins";
-import { useUi } from "@/store/ui";
+import type { TaskListView } from "@/store/ui";
 
+import { PanelSwitcher } from "./PanelSwitcher";
 import { usePinContextMenu } from "./RailPins";
 import { TaskTree } from "./TaskTree";
 import type { useSidebarTree } from "./useSidebarTree";
 
 /**
- * The scoped panel's title row: back to every project, then the scope's name
- * as a switcher over spaces and projects.
+ * The scoped panel's title row: the panel switcher on the scope's name, and
+ * for a space a pin toggle.
  */
 export function ScopeHeader({
   title,
   current,
   snapshot,
+  attention,
   onOpenProject,
   onAddProject,
-  back,
 }: {
   title: string;
-  /** Where the back chevron goes instead of every project. */
-  back?: { label: string; onClick: () => void };
   /** The scope shown, so the switcher can tick it. */
   current: { kind: "project" | "space"; id: string };
   snapshot: Snapshot;
+  attention: Record<TaskListView, number>;
   onOpenProject: (name: string) => void;
   onAddProject: () => void;
 }) {
-  const exitPanelScope = useUi((s) => s.exitPanelScope);
-  const openSpace = useUi((s) => s.openSpace);
   const pinMenu = usePinContextMenu();
   const pin = { id: current.id, kind: current.kind } as const;
   const pinned = usePins((s) => s.pins.some((candidate) => pinKey(candidate) === pinKey(pin)));
   const togglePin = usePins((s) => s.toggle);
-  const spaces = snapshot.spaces ?? [];
-  const tick = (kind: "project" | "space", id: string) =>
-    current.kind === kind && current.id === id && <Check className="size-4 text-primary" />;
 
   return (
     <div
       data-tauri-drag-region="deep"
-      className="group/scope flex h-10 shrink-0 items-center gap-0.5 pl-9 pr-3 pt-2"
+      className="group/scope flex h-10 shrink-0 items-center gap-0.5 pl-6 pr-3 pt-2"
     >
-      <button
-        type="button"
-        onClick={back?.onClick ?? exitPanelScope}
-        aria-label={back ? `Back to ${back.label}` : "Back to all projects"}
-        title={back?.label ?? "All projects"}
-        className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      >
-        <ChevronLeft aria-hidden className="size-4" />
-      </button>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            aria-label={current.kind === "space" ? "Switch space" : "Switch project"}
-            onContextMenu={(event) => pinMenu(event, pin)}
-            className="flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-foreground transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          >
-            <h2 className="truncate text-[1rem] font-semibold">{title}</h2>
-            <ChevronDown aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-60">
-          {spaces.length > 0 && (
-            <>
-              <DropdownMenuLabel className="text-[0.75rem] font-normal text-muted-foreground">
-                Spaces
-              </DropdownMenuLabel>
-              {spaces.map((space) => (
-                <DropdownMenuItem
-                  key={space.id}
-                  onSelect={() => openSpace(space.id)}
-                  className="gap-2"
-                >
-                  <Layers className="size-4 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate">{space.name}</span>
-                  {tick("space", space.id)}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[0.75rem] font-normal text-muted-foreground">
-                Projects
-              </DropdownMenuLabel>
-            </>
-          )}
-          {snapshot.projects.map((p) => (
-            <DropdownMenuItem key={p.name} onSelect={() => onOpenProject(p.name)} className="gap-2">
-              <FolderGit2 className="size-4 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate">{p.name}</span>
-              {tick("project", p.name)}
-            </DropdownMenuItem>
-          ))}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={onAddProject} className="gap-2">
-            <FolderGit2 className="size-4 text-muted-foreground" />
-            Add project
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <PanelSwitcher
+        title={title}
+        current={current}
+        snapshot={snapshot}
+        attention={attention}
+        onOpenProject={onOpenProject}
+        onAddProject={onAddProject}
+        onContextMenu={(event) => pinMenu(event, pin)}
+      />
       {current.kind === "space" && (
         <button
           type="button"

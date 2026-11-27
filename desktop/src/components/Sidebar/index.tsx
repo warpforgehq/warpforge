@@ -16,6 +16,7 @@ import { Rail } from "./Rail";
 import { SettingsNav } from "./SettingsNav";
 import { SmithsBody } from "./SmithsBody";
 import { SpacePanel } from "./SpacePanel";
+import { TaskListHeader } from "./TaskListHeader";
 import { TaskTree } from "./TaskTree";
 import { useSidebarTree } from "./useSidebarTree";
 
@@ -42,6 +43,8 @@ interface SidebarProps {
   onOpenTask: (id: string) => void;
   /** Start a new task, preselecting `project` when given. */
   onNewTask: (project?: string) => void;
+  /** Start a chat with no project; absent, the Chats list offers no +. */
+  onNewChat?: () => void;
   /** Enter a project's mode, optionally on a given section. */
   onOpenProject: (name: string, section?: ProjectSurface) => void;
   onAddProject: () => void;
@@ -85,6 +88,7 @@ function Sidebar({
   onSelectMode,
   onOpenTask,
   onNewTask,
+  onNewChat,
   onOpenProject,
   onAddProject,
   onOpenSettings,
@@ -100,7 +104,8 @@ function Sidebar({
   // A space that is gone scopes nothing: the panel shows every project.
   const liveScope = panelScope?.kind === "space" && !scopedSpace ? null : panelScope;
   const scope = useMemo(() => scopeProjects(liveScope, spaces ?? []), [liveScope, spaces]);
-  const tree = useSidebarTree(state, openTaskId, scope);
+  const taskListView = useUi((s) => s.taskListView);
+  const tree = useSidebarTree(state, openTaskId, scope, taskListView === "chats");
   // An existing session can have Automations open with an older sidebar mode.
   const panelMode =
     view === "automations" && !openTaskId ? "automations" : mode === "automations" ? "tasks" : mode;
@@ -175,6 +180,25 @@ function Sidebar({
               onAddProject={onAddProject}
               onSettleFinishedTurns={onSettleFinishedTurns}
             />
+          ) : panelMode === "tasks" ? (
+            <>
+              <TaskListHeader
+                snapshot={state.snapshot}
+                attention={tree.listAttention}
+                onOpenProject={onOpenProject}
+                onAddProject={onAddProject}
+                onNewChat={onNewChat}
+              />
+              <TaskTree
+                onNewTaskIn={onNewTask}
+                tree={tree}
+                openTaskId={openTaskId}
+                onOpenTask={onOpenTask}
+                onOpenProject={onOpenProject}
+                onAddProject={onAddProject}
+                onSettleFinishedTurns={onSettleFinishedTurns}
+              />
+            </>
           ) : (
             <>
               <PanelHeader title={modeLabel} />
@@ -194,20 +218,10 @@ function Sidebar({
                 <div id={SIDEBAR_BODY_ID} className="min-h-0 flex-1">
                   {connection === "connected" && <AutomationList />}
                 </div>
-              ) : panelMode === "team" ? (
+              ) : (
                 <div id={SIDEBAR_BODY_ID} className="min-h-0 flex-1 overflow-y-auto">
                   <SmithsBody projects={tree.projectNames} tasks={state.snapshot.tasks} />
                 </div>
-              ) : (
-                <TaskTree
-                  onNewTaskIn={onNewTask}
-                  tree={tree}
-                  openTaskId={openTaskId}
-                  onOpenTask={onOpenTask}
-                  onOpenProject={onOpenProject}
-                  onAddProject={onAddProject}
-                  onSettleFinishedTurns={onSettleFinishedTurns}
-                />
               )}
             </>
           )}

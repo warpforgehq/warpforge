@@ -53,6 +53,7 @@ export function SpacePanel({
         title={space.name}
         current={{ kind: "space", id: space.id }}
         snapshot={snapshot}
+        attention={tree.listAttention}
         onOpenProject={onOpenProject}
         onAddProject={onAddProject}
       />

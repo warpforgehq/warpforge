@@ -6,6 +6,7 @@ import { usePins } from "@/store/pins";
 import { createDevicePreferences, devicePreferenceDefaults } from "./devicePreferences";
 import { createLayoutSlice } from "./layout";
 import { createNavSlice } from "./nav";
+import { createProjectNavSlice } from "./projectNav";
 import { createSettingsSlice } from "./settings";
 import { clampSidebarWidth, SIDEBAR_OPACITY_MIN, type UiState } from "./types";
 
@@ -13,6 +14,7 @@ export const useUi = create<UiState>()(
   persist(
     (...args) => ({
       ...createNavSlice(...args),
+      ...createProjectNavSlice(...args),
       ...createLayoutSlice(...args),
       ...createSettingsSlice(...args),
       ...createDevicePreferences(...args),

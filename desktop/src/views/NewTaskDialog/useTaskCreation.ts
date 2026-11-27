@@ -85,6 +85,7 @@ export function useTaskCreation({
 }) {
   const queryClient = useQueryClient();
   const openTask = useUi((s) => s.openTask);
+  const setTaskListView = useUi((s) => s.setTaskListView);
   const autoNameTasks = useUi((s) => s.autoNameTasks);
   const textGenAgentId = useUi((s) => s.textGenAgentId);
   const textGenModel = useUi((s) => s.textGenModel);
@@ -163,7 +164,9 @@ export function useTaskCreation({
       }
     }
     onCreated?.(taskId);
-    openTask(taskId);
+    // The snapshot may not list the new task yet, so its list is set here.
+    if (chat) setTaskListView("chats");
+    openTask(taskId, chat ? undefined : project);
     toast.success(
       queued ? "Queued in Factory" : selectedWorkflow ? "Factory task started" : "Task started",
       {

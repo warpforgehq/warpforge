@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { usePins } from "@/store/pins";
 
 import { SIDEBAR_BODY_ID } from "./modes";
-import { ChatsRow, EmptyRow, ProjectRow, ShelfRow } from "./rows";
+import { EmptyRow, ProjectRow, ShelfRow } from "./rows";
 import type { useSidebarTree } from "./useSidebarTree";
 
 type Tree = ReturnType<typeof useSidebarTree>;
@@ -82,8 +82,6 @@ export function TaskTree({
                       : undefined
                   }
                 />
-              ) : row.kind === "chats" ? (
-                <ChatsRow row={row} onToggle={toggleProject} />
               ) : row.kind === "shelf" ? (
                 <ShelfRow row={row} onToggle={toggleShelf} onDelete={setDeletingShelf} />
               ) : (

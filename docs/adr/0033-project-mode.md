@@ -16,8 +16,9 @@ carry.
 
 **Project mode narrows the Tasks panel.** The UI store holds
 `panelScope: { kind: "project"; name } | null`. While it is set and the rail is
-on Tasks, the panel shows `ProjectPanel`: the project name with a switcher and
-a back chevron, the project's sections as rows (counts for Backlog, Pull
+on Tasks, the panel shows `ProjectPanel`: the project name as the panel
+switcher (`PanelSwitcher`, the same menu the unscoped panel shows: Tasks, Chats,
+spaces, projects), the project's sections as rows (counts for Backlog, Pull
 requests and Terminal, a status light on Runtime), then a "Tasks" label with
 +New task and the same virtualised `TaskTree`, filtered to the scope. With one
 project in scope the tree drops that project's group row, since the header
@@ -33,14 +34,17 @@ becomes a section picker, so sections stay reachable.
 
 **Enter and exit rules.**
 - `openProject(name)` enters the mode. If the open task belongs to that
-  project it stays on screen; otherwise the project's remembered section
-  (`projectSurfaceByProject`, default Backlog) shows.
+  project it stays on screen; otherwise the project's last place shows: the
+  task opened there last (`lastTaskByProject`) if it still exists and is not
+  archived, else the remembered section (`projectSurfaceByProject`, default
+  Backlog). Picking a section clears the remembered task, so the later wins.
 - `openProject(name, section)` always shows that section.
 - Opening a task of a scoped project keeps the mode; opening a task outside
   the scope (a toast, Quick Open, the inbox) leaves it.
-- The back chevron (`exitPanelScope`) and the Tasks rail button
-  (`selectTasksSegment`) return to every project. The view leaves `project`;
-  an open task stays open.
+- Picking Tasks or Chats in the switcher (`setTaskListView`), or the Tasks
+  rail button while already in Tasks (`selectTasksSegment`), returns to that
+  list. The view leaves `project`; an open task stays open. There is no back
+  chevron: the switcher is the one way between places.
 - Removing the scoped project clears the scope.
 - A pinned project is lit while its mode is active, open task included.
 
