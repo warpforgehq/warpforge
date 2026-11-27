@@ -12,6 +12,7 @@ mod browser_capture;
 mod context_menu;
 mod daemon;
 mod desktop_env;
+mod dictation;
 mod focus_guard;
 mod html_render;
 #[cfg(target_os = "macos")]
@@ -112,6 +113,7 @@ fn main() {
             };
             app.manage(daemon::start(app.handle(), &sidecar_log));
             app.manage(html_render::PreviewPages::default());
+            app.manage(dictation::Dictation::default());
             Ok(())
         })
         .register_asynchronous_uri_scheme_protocol(html_render::SCHEME, html_render::serve)
@@ -155,7 +157,14 @@ fn main() {
             browser::browser_capture_element,
             browser_agent::browser_agent_call,
             browser_agent::browser_agent_screenshot,
-            html_render::preview::html_preview
+            html_render::preview::html_preview,
+            dictation::commands::dictation_models,
+            dictation::commands::dictation_devices,
+            dictation::commands::dictation_start,
+            dictation::commands::dictation_stop,
+            dictation::commands::dictation_cancel,
+            dictation::commands::dictation_download,
+            dictation::commands::dictation_delete_model
         ])
         .plugin(tauri_plugin_dialog::init())
         .build(tauri::generate_context!())
