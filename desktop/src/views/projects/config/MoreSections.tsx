@@ -1,4 +1,4 @@
-import { Plus, Trash2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import type { EffectiveProjectConfig } from "@/protocol";
 import { useUi } from "@/store/ui";
 import { settingsControl, SettingsNote, SettingsSection } from "@/views/settings/primitives";
 
-import { clearEdits, FieldRow, OnlyMeBadge, setEdits, TextField, useFieldScope } from "./fields";
+import { clearEdits, FieldRow, setEdits, TextField, useFieldScope } from "./fields";
 import type { ConfigEdit } from "./useProjectConfig";
 
 interface Props {
@@ -78,7 +78,6 @@ export function WorktreeSection(props: Props) {
             />
           )}
         </div>
-        {scope.local && <OnlyMeBadge />}
       </FieldRow>
       <TextField
         {...props}
@@ -89,90 +88,6 @@ export function WorktreeSection(props: Props) {
         value={view.worktree?.setup ?? null}
         mono
       />
-    </SettingsSection>
-  );
-}
-
-/** Named agent commands offered when starting a task. */
-export function AgentTemplatesSection(props: Props) {
-  const { view, edit, readOnly } = props;
-  const [name, setName] = useState("");
-  const [command, setCommand] = useState("");
-  const names = Object.keys(view.agentTemplates).sort();
-  const valid = name.trim() && command.trim() && !names.includes(name.trim());
-  return (
-    <SettingsSection id="config-agent-templates" title="Agent templates">
-      {names.length === 0 && <SettingsNote>No agent templates.</SettingsNote>}
-      {names.map((template) => (
-        <div key={template} className="px-3.5 py-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[0.8125rem] font-medium">{template}</span>
-            {!readOnly && (
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                aria-label={`Remove ${template}`}
-                className="size-7 text-muted-foreground hover:text-destructive"
-                onClick={() => edit(clearEdits(["agentTemplates", template]))}
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
-            )}
-          </div>
-          <TextField
-            {...props}
-            path={["agentTemplates", template, "command"]}
-            label="Command"
-            value={view.agentTemplates[template]!.command}
-            mono
-          />
-          <TextField
-            {...props}
-            path={["agentTemplates", template, "description"]}
-            label="Description"
-            value={view.agentTemplates[template]!.description}
-          />
-        </div>
-      ))}
-      {!readOnly && (
-        <form
-          className="flex items-center gap-2 px-3.5 py-2.5"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!valid) return;
-            edit(
-              setEdits(
-                view,
-                ["agentTemplates", name.trim()],
-                { command: command.trim() },
-                "shared",
-              ),
-            );
-            setName("");
-            setCommand("");
-          }}
-        >
-          <input
-            aria-label="New template name"
-            placeholder="name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={cn(settingsControl, "w-32 shrink-0")}
-          />
-          <input
-            aria-label="New template command"
-            placeholder="command"
-            value={command}
-            onChange={(event) => setCommand(event.target.value)}
-            className={cn(settingsControl, "w-full font-mono text-[0.75rem]")}
-          />
-          <Button type="submit" size="sm" variant="outline" className="h-8 gap-1" disabled={!valid}>
-            <Plus className="size-3.5" />
-            Add
-          </Button>
-        </form>
-      )}
     </SettingsSection>
   );
 }

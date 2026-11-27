@@ -143,15 +143,6 @@ export function toEffective(
   const worktree = isMap(merged.worktree) ? merged.worktree : null;
   const ports = asMap(merged.ports);
   return {
-    agentTemplates: Object.fromEntries(
-      Object.entries(asMap(merged.agentTemplates)).map(([key, value]) => [
-        key,
-        {
-          command: asText(asMap(value).command) ?? "",
-          description: asText(asMap(value).description),
-        },
-      ]),
-    ),
     linked: asList(merged.linked).map(String),
     localFields,
     name: asText(merged.name) ?? name,

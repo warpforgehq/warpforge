@@ -10,12 +10,7 @@ import { useUi } from "@/store/ui";
 
 import { ConflictList } from "./ConflictList";
 import { ForwardsSection } from "./ForwardsSection";
-import {
-  AgentTemplatesSection,
-  LinkedSection,
-  PortsSection,
-  WorktreeSection,
-} from "./MoreSections";
+import { LinkedSection, PortsSection, WorktreeSection } from "./MoreSections";
 import { ServicesSection } from "./ServicesSection";
 import { useProjectConfig } from "./useProjectConfig";
 
@@ -171,7 +166,6 @@ export function ProjectConfigSurface({ project, rootPath, services }: Props) {
         <ForwardsSection data={data} {...common} />
         <PortsSection {...common} />
         <WorktreeSection {...common} />
-        <AgentTemplatesSection {...common} />
         <LinkedSection linked={view.linked} />
         <p className="mt-6 px-1 text-[0.75rem] leading-relaxed text-muted-foreground">
           Shared values are saved to the config file and committed with the project. Only me values

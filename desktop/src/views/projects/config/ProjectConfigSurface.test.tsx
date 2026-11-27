@@ -19,7 +19,6 @@ function read(shared = SHARED, fingerprint = "fp1"): ReadProjectConfigResult {
   return {
     configError: null,
     effective: {
-      agentTemplates: {},
       linked: [],
       localFields: [],
       name: "demo",
@@ -191,3 +190,26 @@ const SERVICE = {
   readyPattern: null,
   readyTimeout: null,
 };
+
+it("marks Only me values on the summary row and on the field's toggle, not twice", async () => {
+  const base = read();
+  vi.mocked(daemon.readProjectConfig).mockResolvedValue({
+    ...base,
+    local: {
+      ...base.local,
+      exists: true,
+      fingerprint: "l1",
+      text: "services:\n  api:\n    port: 3100\n",
+    },
+  });
+  renderPage();
+
+  expect(await screen.findByText("Only me", { selector: "span" })).toBeInTheDocument();
+  await expandApi();
+  expect(screen.getAllByText("Only me", { selector: "span" })).toHaveLength(1);
+  const port = screen.getByRole("radiogroup", { name: "Save Port to" });
+  expect(within(port).getByRole("radio", { name: "Only me" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+});
