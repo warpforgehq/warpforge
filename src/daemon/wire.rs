@@ -326,6 +326,7 @@ pub fn to_wire(ev: &Event) -> Option<wire::Event> {
         Event::ProjectConfigChanged(state) => {
             Some(wire::Event::ProjectConfigChanged(state.clone()))
         }
+        Event::SpacesChanged(spaces) => Some(wire::Event::SpacesChanged(spaces.clone())),
         Event::LspMessage { server_id, payload } => Some(wire::Event::LspMessage {
             server_id: server_id.clone(),
             payload: payload.clone(),

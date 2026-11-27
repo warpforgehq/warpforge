@@ -30,6 +30,8 @@ pub enum Event {
     /// config-derived slice of client state; task/session history is untouched.
     #[serde(rename = "project.configChanged")]
     ProjectConfigChanged(ProjectConfigState),
+    #[serde(rename = "spaces.changed")]
+    SpacesChanged(Vec<crate::Space>),
 
     #[serde(rename = "agentLimits.updated")]
     AgentLimitsUpdated { accounts: Vec<AgentAccountLimits> },
@@ -285,6 +287,8 @@ pub enum Event {
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot {
     pub projects: Vec<ProjectInfo>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub spaces: Vec<crate::Space>,
     pub services: Vec<ServiceInfo>,
     pub portforwards: Vec<PortForwardInfo>,
     pub tasks: Vec<TaskInfo>,

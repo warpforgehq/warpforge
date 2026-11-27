@@ -2,7 +2,7 @@ use crate::daemon::actor::PendingSessionStart;
 use crate::daemon::actor::ResumeReplayGuard;
 use crate::daemon::actor::{Command, Daemon, Event};
 use crate::daemon::runtime::{Ask as PersistAsk, Write as PersistWrite};
-use crate::daemon::task::{Task, TaskStatus};
+use crate::daemon::task::TaskStatus;
 use crate::daemon::workflow::WorkflowOutcome;
 
 impl Daemon {
@@ -34,7 +34,7 @@ impl Daemon {
                     .iter()
                     .find_map(|t| t.strip_prefix("branched-from:"))
                     .map(str::to_string);
-                let mut task = Task::new(&project, &prompt, &agent, tags);
+                let mut task = self.new_task(&project, &prompt, &agent, tags);
                 if kind == warpforge_protocol::TaskKind::Chat {
                     Self::make_chat(&mut task);
                 }

@@ -85,6 +85,7 @@ impl Daemon {
         // holds no transcript in memory to fold here.
         wire::Snapshot {
             projects,
+            spaces: self.load_spaces(),
             services,
             portforwards,
             tasks,
@@ -142,6 +143,7 @@ impl Daemon {
         // Resolve every project's port range before anything can start (and,
         // for registry entries predating stored ranges, freeze their migration).
         self.recompute_port_ranges();
+        self.load_linked_spaces();
 
         let mut config_poll = tokio::time::interval(CONFIG_POLL_INTERVAL);
         config_poll.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -238,6 +240,9 @@ impl Daemon {
                 Err(_) => continue,
             };
             crate::config_local::ensure_local_ignored(Path::new(&project_path));
+            if let Some(config) = &config {
+                self.merge_space_links([(project_name.clone(), config.linked.clone())]);
+            }
 
             self.remove_undeclared_runtime(&project_name, config.as_ref())
                 .await;

@@ -57,6 +57,7 @@ pub enum Event {
         name: String,
     },
     ProjectConfigChanged(wire::ProjectConfigState),
+    SpacesChanged(Vec<wire::Space>),
     AgentsSetupNeeded {
         detected: Vec<wire::DetectedAgent>,
     },

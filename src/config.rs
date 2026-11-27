@@ -69,6 +69,8 @@ pub struct PortForwardConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkspaceConfig {
     pub name: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub linked: Vec<std::path::PathBuf>,
     #[serde(default)]
     pub services: HashMap<String, ServiceConfig>,
     #[serde(rename = "agentTemplates")]
@@ -281,6 +283,7 @@ fn auto_detect(project_path: &Path) -> Option<WorkspaceConfig> {
         portforwards: vec![],
         ports: None,
         worktree: None,
+        linked: Vec::new(),
         local: Default::default(),
         local_error: None,
     })

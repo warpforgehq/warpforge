@@ -40,6 +40,7 @@ pub mod search;
 pub mod server;
 pub mod sessions;
 pub mod smiths;
+mod spaces;
 pub mod spend;
 pub mod store;
 pub mod task;

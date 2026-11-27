@@ -25,3 +25,4 @@ export * from "./peers";
 export * from "./channels";
 export * from "./smiths";
 export * from "./keepers";
+export * from "./spaces";

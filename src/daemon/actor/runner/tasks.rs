@@ -9,7 +9,7 @@ use warpforge_protocol as wire;
 use super::now_secs;
 use crate::daemon::actor::{Command, Daemon, Event};
 use crate::daemon::runner::{self as logic, next_position, RUNNER_TAG};
-use crate::daemon::task::{derive_title, Task, TaskStatus};
+use crate::daemon::task::{derive_title, TaskStatus};
 
 /// One Factory task to create.
 #[derive(Debug, Default)]
@@ -112,7 +112,7 @@ impl Daemon {
         tags.retain(|t| t != RUNNER_TAG && !t.starts_with("workflow:"));
         tags.push(RUNNER_TAG.to_string());
         tags.push(format!("workflow:{workflow}"));
-        let mut task = Task::new(&new.project, &prompt, &agent, tags);
+        let mut task = self.new_task(&new.project, &prompt, &agent, tags);
         task.write_limit = self.inherited_write_limit(new.origin_task.as_deref());
         task.title = match item {
             Some(item) => item.title.trim().to_string(),

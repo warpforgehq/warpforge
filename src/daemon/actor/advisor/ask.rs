@@ -11,7 +11,7 @@ use super::{
 };
 use crate::daemon::acp::TurnInitiator;
 use crate::daemon::actor::{Command, Daemon, Event};
-use crate::daemon::task::{Task, TaskStatus};
+use crate::daemon::task::TaskStatus;
 
 const GIT_STATUS_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -198,7 +198,7 @@ impl Daemon {
             "" => "Advisor".to_string(),
             title => format!("Advisor · {title}"),
         };
-        let mut task = Task::new(&project, &text, &advisor.agent, vec![ADVISOR_ORIGIN.into()]);
+        let mut task = self.new_task(&project, &text, &advisor.agent, vec![ADVISOR_ORIGIN.into()]);
         task.title = title;
         task.parent_task_id = Some(executor.to_string());
         task.origin = Some(ADVISOR_ORIGIN.to_string());

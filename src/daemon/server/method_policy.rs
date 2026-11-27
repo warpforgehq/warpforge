@@ -115,6 +115,7 @@ pub(super) fn method_is_mutation(method: &wire::Method) -> bool {
             | PortForwardLogs { .. }
             | RuntimeList { .. }
             | HtmlPreview { .. }
+            | SpaceList {}
             | TaskListWorktrees { .. }
             | WorktreeList { .. }
             | WorktreeSetupLog { .. }

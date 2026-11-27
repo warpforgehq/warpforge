@@ -212,6 +212,10 @@ pub(super) fn init(conn: &Connection) -> Result<()> {
     );
     // Migration: a task's keeper switches, as JSON (ADR 0030).
     let _ = conn.execute("ALTER TABLE tasks ADD COLUMN keepers TEXT", []);
+    let _ = conn.execute(
+        "ALTER TABLE tasks ADD COLUMN workspace_folders TEXT NOT NULL DEFAULT '[]'",
+        [],
+    );
     super::runner::init(conn)?;
     super::peers::init(conn)?;
     super::keepers::init(conn)?;

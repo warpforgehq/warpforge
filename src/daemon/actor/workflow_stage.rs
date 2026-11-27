@@ -6,7 +6,7 @@ use warpforge_protocol as wire;
 
 use crate::daemon::actor::transcript::StageText;
 use crate::daemon::actor::{Daemon, Event};
-use crate::daemon::task::{Task, TaskStatus};
+use crate::daemon::task::TaskStatus;
 use crate::daemon::workflow::{
     self, FindingsSource, RunState, StageKind, StageSignal, WorkflowOutcome,
 };
@@ -297,7 +297,7 @@ impl Daemon {
         include_runtime_context: bool,
         config_overrides: HashMap<String, String>,
     ) -> Result<String, String> {
-        let mut task = Task::new(project, &prompt, agent, vec!["workflow-stage".to_string()]);
+        let mut task = self.new_task(project, &prompt, agent, vec!["workflow-stage".to_string()]);
         task.write_limit = self.inherited_write_limit(Some(parent_id));
         task.parent_task_id = Some(parent_id.to_string());
         task.worktree = worktree;

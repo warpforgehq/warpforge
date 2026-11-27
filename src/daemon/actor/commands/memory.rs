@@ -1,5 +1,4 @@
 use crate::daemon::actor::{Command, Daemon, Event};
-use crate::daemon::task::Task;
 
 impl Daemon {
     pub(crate) async fn handle_memory_command(&mut self, cmd: Command) {
@@ -198,7 +197,7 @@ impl Daemon {
                                 pid, v
                             );
                             let mut task =
-                                Task::new(&pid, &prompt, &cfg.agent, vec!["dreaming".into()]);
+                                self.new_task(&pid, &prompt, &cfg.agent, vec!["dreaming".into()]);
                             task.title = title;
                             // Dreaming is already done — proposals are in DB. Don't spawn agent;
                             // mark Waiting so board shows review-needed, not spinner/“warming up”.

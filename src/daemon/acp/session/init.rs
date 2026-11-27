@@ -73,16 +73,16 @@ pub(super) async fn handshake(session: &Session, agent_name: &str) -> Result<Ini
         return Err(());
     }
     session.initialized.store(true, Ordering::Release);
-    let load_supported = init
-        .get("result")
-        .and_then(|r| r.get("agentCapabilities"))
+    let capabilities = init.get("result").and_then(|r| r.get("agentCapabilities"));
+    let load_supported = capabilities
         .and_then(|c| c.get("loadSession"))
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
-    let prompt_caps = init
-        .get("result")
-        .and_then(|r| r.get("agentCapabilities"))
-        .and_then(|c| c.get("promptCapabilities"));
+    let prompt_caps = capabilities.and_then(|c| c.get("promptCapabilities"));
+    let additional_directories_supported = capabilities
+        .and_then(|c| c.get("sessionCapabilities"))
+        .and_then(|c| c.get("additionalDirectories"))
+        .is_some_and(Value::is_object);
     let image_supported = prompt_caps
         .and_then(|c| c.get("image"))
         .and_then(Value::as_bool)
@@ -105,6 +105,7 @@ pub(super) async fn handshake(session: &Session, agent_name: &str) -> Result<Ini
     // Resume an existing session (session/load) or start a fresh one
     // (session/new). Resume replays history back as session/update.
     let mut fresh_config_options: Vec<wire::ConfigOption> = Vec::new();
+    let params = session_params(session, additional_directories_supported);
     let session_id = if let Some(ref sid) = session.resume {
         if !load_supported {
             session.reporter.report(format!(
@@ -125,12 +126,7 @@ pub(super) async fn handshake(session: &Session, agent_name: &str) -> Result<Ini
                 &session.pending,
                 &session.next_id,
                 "session/load",
-                with_meta(
-                    json!({
-                        "sessionId": sid, "cwd": session.cwd, "mcpServers": session.mcp_servers
-                    }),
-                    session,
-                ),
+                params,
                 &mut driver_exit_rx,
             ),
         )
@@ -191,10 +187,7 @@ pub(super) async fn handshake(session: &Session, agent_name: &str) -> Result<Ini
                 &session.pending,
                 &session.next_id,
                 "session/new",
-                with_meta(
-                    json!({ "cwd": session.cwd, "mcpServers": session.mcp_servers }),
-                    session,
-                ),
+                params,
                 &mut driver_exit_rx,
             ),
         )
@@ -401,11 +394,20 @@ pub(super) async fn handshake(session: &Session, agent_name: &str) -> Result<Ini
     })
 }
 
-/// The same `_meta` on `session/new` and `session/load`: the Claude adapter
-/// rebuilds a session whose `systemPrompt` differs (ADR 0027 invariant 4).
-fn with_meta(mut params: serde_json::Value, session: &Session) -> serde_json::Value {
-    if let Some(meta) = &session.session_meta {
-        params["_meta"] = meta.clone();
+/// Keep the same metadata and sibling directories on new and load so the
+/// Claude adapter can reuse its session (ADRs 0027 and 0034).
+fn session_params(session: &Session, additional_directories_supported: bool) -> Value {
+    let mut params = json!({ "cwd": session.cwd, "mcpServers": session.mcp_servers });
+    if let Some(id) = &session.resume {
+        params["sessionId"] = json!(id);
+    }
+    if let Some(setup) = &session.setup {
+        if let Some(meta) = &setup.meta {
+            params["_meta"] = meta.clone();
+        }
+        if additional_directories_supported && !setup.additional_directories.is_empty() {
+            params["additionalDirectories"] = json!(setup.additional_directories);
+        }
     }
     params
 }

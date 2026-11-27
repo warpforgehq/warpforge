@@ -282,7 +282,7 @@ impl Daemon {
         prompt: &str,
     ) -> String {
         let tags = vec![format!("keeper:{}", definition.id)];
-        let mut checker = Task::new(&task.project, prompt, agent, tags);
+        let mut checker = self.new_task(&task.project, prompt, agent, tags);
         checker.title = match task.title.trim() {
             "" => definition.name.clone(),
             title => format!("{} · {title}", definition.name),

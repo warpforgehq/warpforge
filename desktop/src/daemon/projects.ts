@@ -1,8 +1,33 @@
+import type { Space, SpaceMember, SpaceMemberKey } from "../protocol";
 import type { CoreClient } from "./client";
 import type { Constructor } from "./types";
 
 export function ProjectMethods<TBase extends Constructor<CoreClient>>(Base: TBase) {
   return class extends Base {
+    async listSpaces(): Promise<Space[]> {
+      return (await this.request("space.list", {})) as Space[];
+    }
+
+    async createSpace(name: string): Promise<Space> {
+      return (await this.request("space.create", { name })) as Space;
+    }
+
+    async renameSpace(id: string, name: string): Promise<Space> {
+      return (await this.request("space.rename", { id, name })) as Space;
+    }
+
+    async deleteSpace(id: string): Promise<Space> {
+      return (await this.request("space.delete", { id })) as Space;
+    }
+
+    async addSpaceMember(id: string, member: SpaceMember): Promise<Space> {
+      return (await this.request("space.addMember", { id, member })) as Space;
+    }
+
+    async removeSpaceMember(id: string, member: SpaceMemberKey): Promise<Space> {
+      return (await this.request("space.removeMember", { id, member })) as Space;
+    }
+
     /**
      * Register a folder as a project, optionally assigning its starting
      * ("sticky") port range — the same slot `warpforge add --ports` uses, not

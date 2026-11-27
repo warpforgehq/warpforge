@@ -88,6 +88,7 @@ impl Daemon {
         // Add to in-memory list.
         self.projects.push(entry.clone());
         self.config_observer.track(&entry);
+        self.load_linked_spaces();
         // The new project may relocate other projects' sticky ranges; every
         // moved project must be broadcast, not just the new one.
         let mut affected = self.recompute_port_ranges();
@@ -266,7 +267,26 @@ impl Daemon {
     /// For a task that runs in its own worktree the block says plainly that the
     /// services serve the main checkout, not the worktree, so the agent does not
     /// read a restart as having picked up its edits.
-    pub(crate) fn runtime_context(&self, project: &str, task_id: Option<&str>) -> Option<String> {
+    pub(crate) fn runtime_context(
+        &self,
+        project: &str,
+        task_id: &str,
+        include_services: bool,
+    ) -> Option<String> {
+        let folders = self
+            .tasks
+            .get(task_id)
+            .and_then(|task| crate::daemon::spaces::workspace_folders(&task.workspace_folders));
+        let services = include_services
+            .then(|| self.runtime_services(project, task_id))
+            .flatten();
+        match (folders, services) {
+            (Some(folders), Some(services)) => Some(format!("{folders}\n\n{services}")),
+            (folders, services) => folders.or(services),
+        }
+    }
+
+    fn runtime_services(&self, project: &str, task_id: &str) -> Option<String> {
         let mut lines: Vec<String> = self
             .services
             .all()
@@ -291,8 +311,8 @@ impl Daemon {
 
     /// Where a worktree task's services actually run. `None` when the task does
     /// not run in a worktree, so the services are its own checkout.
-    fn runtime_checkout(&self, project: &str, task_id: Option<&str>) -> Option<RuntimeCheckout> {
-        let task = task_id.and_then(|id| self.tasks.get(id))?;
+    fn runtime_checkout(&self, project: &str, task_id: &str) -> Option<RuntimeCheckout> {
+        let task = self.tasks.get(task_id)?;
         let worktree = task.worktree.as_deref()?;
         let root = self.project_path(project)?;
         Some(RuntimeCheckout {

@@ -52,6 +52,24 @@ fn default_page_size() -> u32 {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "method", content = "params", rename_all = "camelCase")]
 pub enum Method {
+    #[serde(rename = "space.list")]
+    SpaceList {},
+    #[serde(rename = "space.create")]
+    SpaceCreate { name: String },
+    #[serde(rename = "space.rename")]
+    SpaceRename { id: String, name: String },
+    #[serde(rename = "space.delete")]
+    SpaceDelete { id: String },
+    #[serde(rename = "space.addMember")]
+    SpaceAddMember {
+        id: String,
+        member: crate::SpaceMember,
+    },
+    #[serde(rename = "space.removeMember")]
+    SpaceRemoveMember {
+        id: String,
+        member: crate::SpaceMemberKey,
+    },
     /// Negotiate the wire contract before a client enables mutations.
     #[serde(rename = "system.handshake")]
     SystemHandshake {

@@ -24,6 +24,7 @@ import type {
   TerminalScreen,
 } from "./runtime";
 import type { Smith } from "./smiths";
+import type { Space } from "./spaces";
 import type { SessionUpdate, TaskInfo } from "./tasks";
 
 // ── Events ──────────────────────────────────────────────────────────────────
@@ -33,6 +34,7 @@ export type DaemonEvent =
   | { event: "project.added"; data: ProjectInfo }
   | { event: "project.removed"; data: { name: string } }
   | { event: "project.configChanged"; data: ProjectConfigState }
+  | { event: "spaces.changed"; data: Space[] }
   | {
       event: "service.status";
       data: {
@@ -166,6 +168,7 @@ export type DaemonEvent =
 
 export interface Snapshot {
   projects: ProjectInfo[];
+  spaces?: Space[];
   services: ServiceInfo[];
   portforwards: PortForwardInfo[];
   tasks: TaskInfo[];

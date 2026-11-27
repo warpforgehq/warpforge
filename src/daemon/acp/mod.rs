@@ -34,7 +34,7 @@ mod tests;
 pub use handle::AcpHandle;
 pub use model::parse_config_options;
 pub use process::STOP_GRACE;
-pub use session::spawn_acp_session;
+pub(crate) use session::{spawn_acp_session, SessionSetup};
 pub use tool::pretty_mcp_tool_label;
 
 pub(crate) use model::{is_model_selector, model_fits};

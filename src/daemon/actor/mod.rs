@@ -62,6 +62,7 @@ pub(crate) mod runner;
 mod service_start;
 mod session;
 pub(crate) mod smiths;
+pub(crate) mod spaces;
 mod spawn;
 mod start_mode;
 mod transcript;
@@ -365,6 +366,7 @@ impl Daemon {
             Command::Peers(cmd) => self.handle_peer_command(cmd).await,
             Command::Smiths(cmd) => self.handle_smith_command(cmd).await,
             Command::Keepers(cmd) => self.handle_keeper_command(cmd).await,
+            Command::Spaces(cmd) => self.handle_space_command(cmd),
             #[cfg(test)]
             Command::InjectAcpUpdate { task_id, update } => {
                 self.handle_acp_update(task_id, update).await

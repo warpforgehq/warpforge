@@ -26,6 +26,9 @@ mod memory;
 mod orchestration;
 mod peers;
 mod project;
+mod spaces;
+
+use crate::daemon::actor::spaces::SpaceChange;
 mod runner;
 mod runtime;
 mod sessions;
@@ -206,6 +209,12 @@ pub(super) async fn dispatch(
         WorkflowDecide { task, decision, rounds, note, barrier_id } => workflow::workflow_decide(handle, task, decision, rounds, note, barrier_id).await,
         WorkflowEvidence { task, name } => workflow::workflow_evidence(task, name).await,
         ProjectAdd { path, name, port_range, } => project::project_add(handle, path, name, port_range).await,
+        SpaceList {} => spaces::list(handle).await,
+        SpaceCreate { name } => spaces::change(handle, SpaceChange::Create(name)).await,
+        SpaceRename { id, name } => spaces::change(handle, SpaceChange::Rename { id, name }).await,
+        SpaceDelete { id } => spaces::change(handle, SpaceChange::Delete(id)).await,
+        SpaceAddMember { id, member } => spaces::change(handle, SpaceChange::AddMember { id, member }).await,
+        SpaceRemoveMember { id, member } => spaces::change(handle, SpaceChange::RemoveMember { id, member }).await,
         ProjectRemove { name, stop_resources, } => project::project_remove(handle, name, stop_resources).await,
         ProjectSetPortRange { project, range } => project::project_set_port_range(handle, project, range).await,
         BootstrapStart { project, answers } => project::bootstrap_start(handle, project, answers).await,
