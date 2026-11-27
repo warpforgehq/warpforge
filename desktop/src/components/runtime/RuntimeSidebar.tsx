@@ -148,6 +148,14 @@ const ServiceRow = memo(function ServiceRow({
         <StatusDot variant={badge.variant} />
         <span className="min-w-0 flex-1 truncate font-medium">{service.name}</span>
         {service.local && <LocalBadge name={service.name} fields={service.localFields} />}
+        {service.needsRestart && (
+          <span
+            title={`${service.name}'s config changed. Restart it to apply.`}
+            className="shrink-0 whitespace-nowrap rounded bg-warn/10 px-1 py-px text-[0.625rem] leading-none text-warn"
+          >
+            Restart to apply
+          </span>
+        )}
         {service.portWarning && (
           <span title={portWarningText(service.portWarning)}>
             <TriangleAlert

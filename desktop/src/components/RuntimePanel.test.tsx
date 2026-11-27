@@ -256,6 +256,19 @@ describe("RuntimePanel — service controls", () => {
     expect(screen.queryByLabelText(/restart api/i)).not.toBeInTheDocument();
   });
 
+  it("marks a service running on old config", () => {
+    vi.spyOn(daemon, "fetchServiceLogs").mockReturnValue(new Promise(() => {}));
+    render(
+      <RuntimePanel
+        project="warpforge"
+        services={[{ ...webService, needsRestart: true }]}
+        portforwards={[]}
+      />,
+    );
+    expect(screen.getByText("Restart to apply")).toBeInTheDocument();
+    expect(screen.getByLabelText(/restart web/i)).toBeInTheDocument();
+  });
+
   it("shows Stop + Restart for running service, no Start", () => {
     vi.spyOn(daemon, "fetchServiceLogs").mockReturnValue(new Promise(() => {}));
     render(<RuntimePanel project="warpforge" services={[webService]} portforwards={[]} />);
