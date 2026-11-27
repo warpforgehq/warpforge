@@ -236,12 +236,17 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   openSpace: (id) =>
     set((s) => {
       const scope: PanelScope = { kind: "space", id };
+      const members = scopeProjects(scope) ?? [];
       const keepTask =
-        s.openTaskId !== null &&
-        (scopeProjects(scope) ?? []).includes(taskProject(s.openTaskId) ?? "");
+        s.openTaskId !== null && members.includes(taskProject(s.openTaskId) ?? "");
+      const selectedProjectId =
+        s.selectedProjectId && members.includes(s.selectedProjectId)
+          ? s.selectedProjectId
+          : (members[0] ?? s.selectedProjectId);
       return {
         ...(keepTask ? {} : { openTaskId: null, openTaskNav: null }),
         panelScope: scope,
+        selectedProjectId,
         settingsOpen: false,
         sidebarMode: "tasks",
         view: "start",

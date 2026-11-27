@@ -254,6 +254,15 @@ it("switches to a space from a project's switcher", () => {
   expect(screen.queryByRole("button", { name: /^in / })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("menuitem", { name: /Payments/ }));
   expect(useUi.getState().panelScope).toEqual({ kind: "space", id: "s1" });
+  expect(useUi.getState().selectedProjectId).toBe("alpha");
+});
+
+it("keeps the selected project when it is already in the space", () => {
+  act(() => {
+    useUi.setState({ selectedProjectId: "beta" });
+    useUi.getState().openSpace("s1");
+  });
+  expect(useUi.getState().selectedProjectId).toBe("beta");
 });
 
 it("pins and unpins the space from its header", () => {
