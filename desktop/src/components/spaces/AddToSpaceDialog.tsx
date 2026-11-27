@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { pinNewSpace } from "@/store/pins";
 import { settingsControl } from "@/views/settings/primitives";
 
-import { useAddToSpace } from "./addToSpace";
+import { moveProjectToSpace, useAddToSpace } from "./addToSpace";
 
 const NEW = "__new__";
 
@@ -23,13 +23,14 @@ const NEW = "__new__";
 export function AddToSpaceDialog() {
   const project = useAddToSpace((s) => s.project);
   const close = useAddToSpace((s) => s.close);
+  const newSpace = useAddToSpace((s) => s.newSpace);
   const { snapshot } = useSyncExternalStore(daemon.subscribe, daemon.getState);
   const spaces = snapshot.spaces ?? [];
   const [choice, setChoice] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const target = choice ?? spaces[0]?.id ?? NEW;
+  const target = choice ?? (newSpace ? NEW : (spaces[0]?.id ?? NEW));
 
   const reset = () => {
     setChoice(null);
@@ -48,7 +49,7 @@ export function AddToSpaceDialog() {
         id = (await daemon.createSpace(name.trim())).id;
         pinNewSpace(id);
       }
-      await daemon.addSpaceMember(id, { kind: "project", name: project });
+      await moveProjectToSpace(project, id, spaces);
       reset();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));

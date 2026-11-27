@@ -6,6 +6,7 @@ import type { ConnectionState, DaemonState } from "@/daemon";
 import { cn } from "@/lib/utils";
 import { type ProjectSurface, scopeProjects, type SidebarMode, useUi, type View } from "@/store/ui";
 import { AutomationList } from "@/views/automations/AutomationList";
+import { RemoveProjectHost } from "@/views/projects/RemoveProjectHost";
 
 import { DeleteShelfDialog } from "./DeleteShelfDialog";
 import { railSelection, SIDEBAR_BODY_ID, SIDEBAR_MODES } from "./modes";
@@ -123,6 +124,7 @@ function Sidebar({
         onToggleCollapsed={onToggleCollapsed}
         onSelectMode={onSelectMode}
         onNewTask={() => onNewTask()}
+        onNewTaskIn={onNewTask}
         onOpenTask={onOpenTask}
         onOpenSettings={onOpenSettings}
         onCloseSettings={onCloseSettings}
@@ -194,6 +196,7 @@ function Sidebar({
                 </div>
               ) : (
                 <TaskTree
+                  onNewTaskIn={onNewTask}
                   tree={tree}
                   openTaskId={openTaskId}
                   onOpenTask={onOpenTask}
@@ -209,6 +212,7 @@ function Sidebar({
       )}
 
       <AddToSpaceDialog />
+      <RemoveProjectHost snapshot={state.snapshot} />
       <DeleteShelfDialog
         row={tree.deletingShelf}
         onCancel={() => tree.setDeletingShelf(null)}

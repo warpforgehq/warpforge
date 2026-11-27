@@ -44,6 +44,7 @@ function pins(state: DaemonState, attentionIds: ReadonlySet<string> = new Set())
         attentionIds={attentionIds}
         nowSec={1}
         onOpenTask={useUi.getState().openTask}
+        onNewTaskIn={() => {}}
         roving={roving}
       />
     </TooltipProvider>

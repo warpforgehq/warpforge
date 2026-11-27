@@ -55,3 +55,21 @@ it("shows the one-space-per-project refusal inline", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent('already belongs to space "Core"');
   expect(useAddToSpace.getState().project).toBe("api");
 });
+
+it("opens on New space and moves the project out of its current space", async () => {
+  vi.mocked(daemon.getState).mockReturnValue({
+    snapshot: {
+      ...EMPTY_SNAPSHOT,
+      spaces: [{ ...payments, members: [{ kind: "project", name: "api" }] }],
+    },
+  } as unknown as DaemonState);
+  const remove = vi.spyOn(daemon, "removeSpaceMember").mockResolvedValue(payments);
+  render(<AddToSpaceDialog />);
+  act(() => useAddToSpace.getState().open("api", true));
+
+  await userEvent.type(screen.getByRole("textbox", { name: "New space name" }), "Infra");
+  await userEvent.click(screen.getByRole("button", { name: "Add to space" }));
+
+  expect(remove).toHaveBeenCalledWith("s1", { kind: "project", name: "api" });
+  expect(daemon.addSpaceMember).toHaveBeenCalledWith("s2", { kind: "project", name: "api" });
+});

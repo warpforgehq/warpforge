@@ -15,6 +15,7 @@ export function TaskTree({
   onOpenTask,
   onOpenProject,
   onAddProject,
+  onNewTaskIn,
   onSettleFinishedTurns,
 }: {
   tree: Tree;
@@ -22,6 +23,8 @@ export function TaskTree({
   onOpenTask: (id: string) => void;
   onOpenProject: (name: string) => void;
   onAddProject: () => void;
+  /** Starts a task in a project, from a project row's context menu. */
+  onNewTaskIn: (project: string) => void;
   onSettleFinishedTurns?: (ids: string[]) => void;
 }) {
   const {
@@ -68,6 +71,7 @@ export function TaskTree({
                 />
               ) : row.kind === "project" ? (
                 <ProjectRow
+                  onNewTaskIn={onNewTaskIn}
                   row={row}
                   onToggle={toggleProject}
                   onOpenProject={onOpenProject}

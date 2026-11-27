@@ -109,6 +109,7 @@ export function ProjectPanel({
       </nav>
 
       <ScopeTasks
+        onNewTaskIn={onNewTask}
         newTaskLabel={`New task in ${project}`}
         tree={tree}
         openTaskId={openTaskId}

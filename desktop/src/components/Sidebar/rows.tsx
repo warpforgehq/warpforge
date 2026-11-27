@@ -113,6 +113,7 @@ export function ProjectRow({
   onOpenProject,
   onSettle,
   onSettleHover,
+  onNewTaskIn,
 }: {
   row: Extract<SidebarRow, { kind: "project" }>;
   onToggle: (name: string) => void;
@@ -121,8 +122,10 @@ export function ProjectRow({
   /** True while the pointer (or focus) is on the bulk-settle button, so the
    *  tree can highlight exactly the rows it would settle. */
   onSettleHover?: (hovering: boolean) => void;
+  /** Starts a task in the project, from its context menu. */
+  onNewTaskIn: (project: string) => void;
 }) {
-  const projectMenu = useProjectContextMenu();
+  const projectMenu = useProjectContextMenu(onNewTaskIn);
   const settle = row.settleIds.length > 0;
   const preview = row.settlePreview.some(Boolean) ? ` — ${row.settlePreview.join(", ")}` : "";
   const settleTitle = `Settle ${row.settleIds.length} finished turn${

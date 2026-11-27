@@ -165,6 +165,7 @@ export function ScopeLabel({
 /** "Tasks" with its + and the scope's task tree. */
 export function ScopeTasks({
   newTaskLabel,
+  onNewTaskIn,
   tree,
   openTaskId,
   onNewTask,
@@ -174,6 +175,8 @@ export function ScopeTasks({
   onSettleFinishedTurns,
 }: {
   newTaskLabel: string;
+  /** Starts a task in a project, from a project row's context menu. */
+  onNewTaskIn: (project: string) => void;
   tree: ReturnType<typeof useSidebarTree>;
   openTaskId: string | null;
   onNewTask: () => void;
@@ -186,6 +189,7 @@ export function ScopeTasks({
     <>
       <ScopeLabel label="Tasks" action={{ label: newTaskLabel, onClick: onNewTask }} />
       <TaskTree
+        onNewTaskIn={onNewTaskIn}
         tree={tree}
         openTaskId={openTaskId}
         onOpenTask={onOpenTask}

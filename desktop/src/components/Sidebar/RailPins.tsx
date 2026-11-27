@@ -2,6 +2,7 @@ import { Hash } from "lucide-react";
 import { useEffect, useMemo, type DragEvent, type MouseEvent } from "react";
 
 import { SmithAvatar } from "@/components/SmithAvatar";
+import { useProjectContextMenu } from "@/components/spaces/projectMenu";
 import { TaskAgentMark } from "@/components/TaskSmith";
 import type { DaemonState } from "@/daemon";
 import { useContextMenu } from "@/hooks/useContextMenu";
@@ -109,6 +110,7 @@ function PinButton({
   attention,
   nowSec,
   onOpenTask,
+  onNewTaskIn,
 }: {
   pin: Pin;
   index: number;
@@ -117,11 +119,13 @@ function PinButton({
   attention: boolean;
   nowSec: number;
   onOpenTask: (id: string) => void;
+  onNewTaskIn: (project: string) => void;
   roving: (key: string) => { onFocus: () => void; tabIndex: number };
 }) {
   const smith = useSmithsStore((s) => (pin.kind === "smith" ? s.smiths[pin.id] : undefined));
   const active = usePinActive(pin);
   const openContextMenu = useContextMenu();
+  const projectMenu = useProjectContextMenu(onNewTaskIn);
   const key = pinKey(pin);
 
   const status = task
@@ -183,6 +187,10 @@ function PinButton({
         if (dragged && dragged !== key) usePins.getState().move(dragged, index);
       }}
       onContextMenu={(event) => {
+        if (pin.kind === "project") {
+          projectMenu(event, pin.id);
+          return;
+        }
         event.preventDefault();
         openContextMenu({
           at: { x: event.clientX, y: event.clientY },
@@ -241,11 +249,14 @@ export function RailPins({
   attentionIds,
   nowSec,
   onOpenTask,
+  onNewTaskIn,
 }: {
   state: DaemonState;
   attentionIds: ReadonlySet<string>;
   nowSec: number;
   onOpenTask: (id: string) => void;
+  /** Starts a task in a project, from a project pin's context menu. */
+  onNewTaskIn: (project: string) => void;
   roving: (key: string) => { onFocus: () => void; tabIndex: number };
 }) {
   const pins = usePins((s) => s.pins);
@@ -294,6 +305,7 @@ export function RailPins({
             attention={!!task && attentionIds.has(task.id)}
             nowSec={nowSec}
             onOpenTask={onOpenTask}
+            onNewTaskIn={onNewTaskIn}
             roving={roving}
           />
         );

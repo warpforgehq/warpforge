@@ -43,6 +43,7 @@ import type { ProjectInfo, Snapshot, TaskInfo, TerminalInfo } from "../protocol"
 import { useTitleRow } from "../store/titleRow";
 import { useUi } from "../store/ui";
 import Projects from "./Projects";
+import { RemoveProjectHost } from "./projects/RemoveProjectHost";
 
 interface MockXterm {
   element: HTMLElement;
@@ -97,6 +98,7 @@ function renderProjects(
         onAddProject={vi.fn<() => void>()}
         sectionPicker
       />
+      <RemoveProjectHost snapshot={projectSnapshot} />
     </QueryClientProvider>,
   );
 }

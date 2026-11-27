@@ -31,6 +31,8 @@ export interface RailProps {
   onToggleCollapsed: () => void;
   onSelectMode: (mode: SidebarMode) => void;
   onNewTask: () => void;
+  /** Starts a task in a project, from a project pin's context menu. */
+  onNewTaskIn: (project: string) => void;
   onOpenTask: (id: string) => void;
   onOpenSettings: () => void;
   onCloseSettings: () => void;
@@ -60,6 +62,7 @@ export function Rail({
   onToggleCollapsed,
   onSelectMode,
   onNewTask,
+  onNewTaskIn,
   onOpenTask,
   onOpenSettings,
   onCloseSettings,
@@ -167,6 +170,7 @@ export function Rail({
           attentionIds={attentionIds}
           nowSec={nowSec}
           onOpenTask={onOpenTask}
+          onNewTaskIn={onNewTaskIn}
           roving={roving}
         />
       </div>

@@ -87,6 +87,7 @@ export function SpacePanel({
         )}
       </ul>
       <ScopeTasks
+        onNewTaskIn={onNewTask}
         newTaskLabel={`New task in ${space.name}`}
         tree={tree}
         openTaskId={openTaskId}

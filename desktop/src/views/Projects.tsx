@@ -6,7 +6,6 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { boardTasks } from "@/lib/taskOrigin";
-import { disposeTerminalWorkspace } from "@/lib/terminalWorkspace";
 import { useUi } from "@/store/ui";
 
 import { BacklogView } from "../components/backlog/BacklogView";
@@ -22,7 +21,7 @@ import { ProjectFilesSurface } from "./projects/ProjectFilesSurface";
 import { ProjectRuntimeSurface } from "./projects/ProjectRuntimeSurface";
 import { ProjectTitleBar } from "./projects/ProjectTitleBar";
 import { PullRequestSurface } from "./projects/PullRequestSurface";
-import { type ProjectLiveCounts, RemoveProjectDialog } from "./projects/RemoveProjectDialog";
+import { useRemoveProject } from "./projects/RemoveProjectHost";
 import { useProjectSection } from "./projects/sections";
 import { WorktreesSurface } from "./projects/WorktreesSurface";
 
@@ -53,8 +52,6 @@ export default function Projects({
 }: Props) {
   const selectedProjectId = useUi((state) => state.selectedProjectId);
   const openProject = useUi((state) => state.openProject);
-  const setView = useUi((state) => state.setView);
-  const [removeProject, setRemoveProject] = useState<string | null>(null);
   const [backlogOpen, setBacklogOpen] = useState(false);
   const [openItem, setOpenItem] = useState<WorkItem | null>(null);
   const [factorySettings, setFactorySettings] = useState<string | null>(null);
@@ -68,7 +65,6 @@ export default function Projects({
      which TS misses because indexing `projects[0]` is not typed as optional. */
   const declaredServices = useMemo(() => project?.declaredServices ?? [], [project]);
   const surface = useProjectSection(projectName);
-  const clearProjectState = useUi((state) => state.clearProjectState);
   const services = useMemo(
     () => snapshot.services.filter((s) => s.project === projectName),
     [snapshot.services, projectName],
@@ -96,25 +92,6 @@ export default function Projects({
     () => snapshot.portforwards.filter((pf) => pf.project === projectName),
     [snapshot.portforwards, projectName],
   );
-
-  const removeLiveCounts = useMemo<ProjectLiveCounts>(() => {
-    if (!removeProject) return { services: 0, portforwards: 0, terminals: 0 };
-    return {
-      services: snapshot.services.filter(
-        (service) =>
-          service.project === removeProject &&
-          (service.status === "running" || service.status === "starting"),
-      ).length,
-      portforwards: snapshot.portforwards.filter(
-        (forward) =>
-          forward.project === removeProject &&
-          (forward.status === "active" ||
-            forward.status === "starting" ||
-            forward.status === "restarting"),
-      ).length,
-      terminals: snapshot.terminals.filter((terminal) => terminal.project === removeProject).length,
-    };
-  }, [removeProject, snapshot.portforwards, snapshot.services, snapshot.terminals]);
 
   const linkedTask = useMemo(
     () => snapshot.tasks.find((task) => task.id === openItem?.taskId) ?? null,
@@ -163,28 +140,6 @@ export default function Projects({
     [onOpenTask],
   );
 
-  const confirmProjectRemoval = useCallback(async () => {
-    if (!removeProject) return;
-    const remainingProjects = snapshot.projects.filter((item) => item.name !== removeProject);
-    await daemon.removeProject(removeProject, true);
-    disposeTerminalWorkspace(removeProject);
-    clearProjectState(removeProject);
-    setRemoveProject(null);
-    if (selectedProjectId !== removeProject) return;
-    const next = remainingProjects[0]?.name;
-    // Nothing left to be the subject of this view, and no nav item to fall
-    // back to: the app has to leave the project page entirely.
-    if (next) openProject(next);
-    else setView("start");
-  }, [
-    clearProjectState,
-    openProject,
-    removeProject,
-    selectedProjectId,
-    setView,
-    snapshot.projects,
-  ]);
-
   if (!project) {
     return (
       <EmptyState
@@ -212,7 +167,7 @@ export default function Projects({
         onNewWorkItem={() => setBacklogOpen(true)}
         onFactorySettings={() => setFactorySettings(project.name)}
         onStopAll={() => setStoppingAll(project.name)}
-        onRemove={() => setRemoveProject(project.name)}
+        onRemove={() => useRemoveProject.getState().open(project.name)}
       />
       {project.portRangeConflict && (
         <div className="shrink-0 px-1 pb-2">
@@ -255,13 +210,6 @@ export default function Projects({
           </div>
         )}
       </div>
-
-      <RemoveProjectDialog
-        project={removeProject}
-        liveCounts={removeLiveCounts}
-        onCancel={() => setRemoveProject(null)}
-        onConfirm={confirmProjectRemoval}
-      />
 
       <FactorySettingsDialog
         project={factorySettings}
