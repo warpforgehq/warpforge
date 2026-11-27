@@ -117,7 +117,11 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  useUi.setState({ openTaskId: null, pickers: devicePreferenceDefaults.pickers });
+  useUi.setState({
+    openTaskId: null,
+    panelScope: null,
+    pickers: devicePreferenceDefaults.pickers,
+  });
 });
 
 describe("NewTaskDialog", () => {
@@ -453,5 +457,27 @@ describe("NewTaskDialog", () => {
         expect.objectContaining({ worktree_base: { kind: "pullRequest", number: 42 } }),
       ),
     );
+  });
+
+  it("offers only a space's projects and opens on one of them", async () => {
+    const user = userEvent.setup();
+    useUi.setState({
+      panelScope: { kind: "space", id: "s1" },
+      selectedProjectId: "warpforge",
+    });
+    const spaced: Snapshot = {
+      ...snapshot,
+      spaces: [{ id: "s1", name: "Work", members: [{ kind: "project", name: "lingoverse" }] }],
+    };
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NewTaskDialog defaultProject={null} onOpenChange={vi.fn<() => void>()} open snapshot={spaced} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole("heading")).toHaveTextContent("What should we build in lingoverse?");
+    await user.click(screen.getByRole("button", { name: "Project" }));
+    expect(screen.getByRole("menuitem", { name: "lingoverse" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "warpforge" })).not.toBeInTheDocument();
   });
 });

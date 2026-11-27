@@ -112,6 +112,12 @@ export function AppContent({
   const settingsOpen = useUi((state) => state.settingsOpen);
   const closeSettings = useUi((state) => state.closeSettings);
 
+  const panelScope = useUi((state) => state.panelScope);
+  const scopeKey = panelScope
+    ? panelScope.kind === "space"
+      ? `space:${panelScope.id}`
+      : `project:${panelScope.name}`
+    : "all";
   const composing = newTaskOpen || (view === "start" && !openTask);
   const seededComposer =
     newTaskOpen &&
@@ -179,7 +185,7 @@ export function AppContent({
                 </div>
               ) : composing ? (
                 <NewTaskComposer
-                  key={seededComposer ? "seeded" : "composer"}
+                  key={seededComposer ? "seeded" : `composer:${scopeKey}`}
                   open
                   onOpenChange={onNewTaskOpenChange}
                   snapshot={snapshot}
