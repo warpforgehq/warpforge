@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.33.0
+
+### Minor Changes
+
+- [#68](https://github.com/warpforgehq/warpforge/pull/68) [`8df4cd2`](https://github.com/warpforgehq/warpforge/commit/8df4cd2121bceddf31df0181d82106cc9f3d0f05) Thanks [@ephor](https://github.com/ephor)! - **Set up a project without touching YAML.** Open a project and pick **Config**, or right-click it and choose **Edit project**, to change services, environment variables, port forwards, the port range and worktree setup. The page and `workspace.yaml` stay in sync both ways: edit the file by hand and the page updates, with your comments kept; save from the page and the file changes. If the same value changed in both places, you choose which one wins.
+
+  Each value is either **Shared** with your team through the committed file or kept **Only me** on this machine. New environment variables start as Only me, and Warpforge asks before a secret-looking value goes into the shared file. A broken file shows the exact line to fix, and services whose setup changed are marked **Restart to apply**.
+
+  Per-project agent templates are retired; agents use the commands set in Settings → Agents.
+
+- [#68](https://github.com/warpforgehq/warpforge/pull/68) [`8df4cd2`](https://github.com/warpforgehq/warpforge/commit/8df4cd2121bceddf31df0181d82106cc9f3d0f05) Thanks [@ephor](https://github.com/ephor)! - **A redesigned Warpforge.** The whole app has a new shape, built for juggling many agents at once without losing your place.
+
+  - **Tabs for your tasks.** Every task you open gets a tab in the title bar, right beside the window buttons. Drag to reorder, middle-click to close, ⌃Tab to cycle, ⌘⇧T to bring back the last one. Closing a tab never stops the task.
+  - **A rail that's always there.** New task, Tasks, Inbox, Smiths and Automations live in a slim rail on the left, with badges when something needs you. Pin the tasks, projects, Smiths and channels you keep coming back to, and drag pins to reorder them. ⌘\ folds the panel away and leaves the rail.
+  - **Projects you can focus on.** Open a project and the sidebar narrows to it: Backlog, Pull requests, Explorer, Runtime and Terminal as one-click sections with live counts, and only that project's tasks below. Each section fills the window. Hide the sections you don't use or reorder them in Settings → Appearance. Right-click a project for everything else: a new task there, Finder, copy path, pin, remove.
+  - **More room for the work.** The conversation and the diff sit side by side under one title row, with their controls moved up into it. Text is easier to read, the task list breathes, and every search box, menu and button shares one look.
+  - **Automations get a home of their own.** Find a schedule by name or prompt, filter by state or last outcome, and see its settings and run history in one place (⌥⌘4).
+  - **Settings, rebuilt.** Search finds any setting and jumps to it. Every page has a clear title, tidy cards and the same controls throughout. Each agent is one row with its version, an Update button and its models, and you choose which alerts and confirmations you get.
+
+  Mission Control is gone: running and blocked tasks now show where you already work, in the task list, the tabs and the rail.
+
+- [#68](https://github.com/warpforgehq/warpforge/pull/68) [`8df4cd2`](https://github.com/warpforgehq/warpforge/commit/8df4cd2121bceddf31df0181d82106cc9f3d0f05) Thanks [@ephor](https://github.com/ephor)! - **Spaces: one product, many repositories.** When your app lives in a monorepo, a couple of infra repos and a schemas repo, group them into a space and agents see all of them at once. Start a task in any project of the space and its agent can read and change the others too, and knows where each one is. The task shows **+N repos** in the title bar so you always know what it can reach.
+
+  Create a space in Settings → Spaces & repos, or right-click a project and choose **Add to space**. A repository can also list its siblings under `linked:` in its `workspace.yaml`, so the whole team gets the same space. Open a space to see its projects and the tasks of all of them in one place, and pin it to the rail. New Task in a space offers only its projects.
+
+### Patch Changes
+
+- [#67](https://github.com/warpforgehq/warpforge/pull/67) [`487694c`](https://github.com/warpforgehq/warpforge/commit/487694cb072e4417712983903081ae97c0230e7f) Thanks [@ephor](https://github.com/ephor)! - Fixed a crash that could close Warpforge after you reloaded a page in the built-in browser several times, or after an agent took browser screenshots during a long session.
+
 ## 0.32.1
 
 ### Patch Changes
