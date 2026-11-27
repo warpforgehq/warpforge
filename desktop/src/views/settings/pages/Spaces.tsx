@@ -2,6 +2,7 @@ import { useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import { daemon } from "@/daemon";
+import { pinNewSpace } from "@/store/pins";
 import { spaceProjectNames } from "@/store/ui";
 
 import { settingsControl, SettingsPage, SettingsSection } from "../primitives";
@@ -21,7 +22,7 @@ export default function SpacesPage() {
   const create = async () => {
     setError(null);
     try {
-      await daemon.createSpace(name.trim());
+      pinNewSpace((await daemon.createSpace(name.trim())).id);
       setName("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));

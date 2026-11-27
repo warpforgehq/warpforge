@@ -6,6 +6,8 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn<() => Promise<string |
 
 import { daemon, type DaemonState } from "@/daemon";
 import { EMPTY_SNAPSHOT, type ProjectInfo, type Space } from "@/protocol";
+import { usePins } from "@/store/pins";
+import { useUi } from "@/store/ui";
 
 import SpacesPage from "./Spaces";
 
@@ -44,7 +46,10 @@ beforeEach(() => {
   vi.spyOn(daemon, "removeSpaceMember").mockResolvedValue(payments);
 });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  usePins.setState({ pins: [] });
+});
 
 function section(name: string) {
   return screen.getByRole("heading", { name, level: 2 }).closest("section")!;
@@ -111,4 +116,35 @@ it("shows the one-space-per-project refusal inline", async () => {
   const card = within(section("Payments"));
   await userEvent.click(card.getByRole("button", { name: "Add project" }));
   expect(await card.findByRole("alert")).toHaveTextContent('already belongs to space "Core"');
+});
+
+it("pins a newly created space to the rail", async () => {
+  render(<SpacesPage />);
+  await userEvent.type(screen.getByRole("textbox", { name: "Space name" }), "Infra");
+  await userEvent.click(screen.getByRole("button", { name: "Create space" }));
+
+  expect(usePins.getState().pins).toEqual([{ id: "s3", kind: "space" }]);
+});
+
+it("opens a space in the sidebar and closes Settings", async () => {
+  useUi.setState({ settingsOpen: true });
+  render(<SpacesPage />);
+
+  await userEvent.click(within(section("Payments")).getByRole("button", { name: "Open Payments" }));
+
+  const ui = useUi.getState();
+  expect(ui.settingsOpen).toBe(false);
+  expect(ui.sidebarMode).toBe("tasks");
+  expect(ui.panelScope).toEqual({ kind: "space", id: "s1" });
+});
+
+it("pins and unpins a space from its card", async () => {
+  render(<SpacesPage />);
+  const card = within(section("Payments"));
+
+  await userEvent.click(card.getByRole("button", { name: "Pin Payments to rail" }));
+  expect(usePins.getState().pins).toEqual([{ id: "s1", kind: "space" }]);
+
+  await userEvent.click(card.getByRole("button", { name: "Unpin Payments from rail" }));
+  expect(usePins.getState().pins).toEqual([]);
 });

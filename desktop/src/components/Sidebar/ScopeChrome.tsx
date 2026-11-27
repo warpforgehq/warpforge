@@ -1,4 +1,13 @@
-import { Check, ChevronDown, ChevronLeft, FolderGit2, Layers, Plus } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  FolderGit2,
+  Layers,
+  Pin,
+  PinOff,
+  Plus,
+} from "lucide-react";
 
 import {
   DropdownMenu,
@@ -9,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Snapshot } from "@/protocol";
+import { pinKey, usePins } from "@/store/pins";
 import { useUi } from "@/store/ui";
 
 import { usePinContextMenu } from "./RailPins";
@@ -36,6 +46,9 @@ export function ScopeHeader({
   const exitPanelScope = useUi((s) => s.exitPanelScope);
   const openSpace = useUi((s) => s.openSpace);
   const pinMenu = usePinContextMenu();
+  const pin = { id: current.id, kind: current.kind } as const;
+  const pinned = usePins((s) => s.pins.some((candidate) => pinKey(candidate) === pinKey(pin)));
+  const togglePin = usePins((s) => s.toggle);
   const spaces = snapshot.spaces ?? [];
   const tick = (kind: "project" | "space", id: string) =>
     current.kind === kind && current.id === id && <Check className="size-4 text-primary" />;
@@ -43,7 +56,7 @@ export function ScopeHeader({
   return (
     <div
       data-tauri-drag-region="deep"
-      className="flex h-10 shrink-0 items-center gap-0.5 pl-9 pr-3 pt-2"
+      className="group/scope flex h-10 shrink-0 items-center gap-0.5 pl-9 pr-3 pt-2"
     >
       <button
         type="button"
@@ -59,7 +72,7 @@ export function ScopeHeader({
           <button
             type="button"
             aria-label={current.kind === "space" ? "Switch space" : "Switch project"}
-            onContextMenu={(event) => pinMenu(event, { id: current.id, kind: current.kind })}
+            onContextMenu={(event) => pinMenu(event, pin)}
             className="flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-foreground transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             <h2 className="truncate text-[1rem] font-semibold">{title}</h2>
@@ -103,6 +116,22 @@ export function ScopeHeader({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      {current.kind === "space" && (
+        <button
+          type="button"
+          aria-label={pinned ? "Unpin from rail" : "Pin to rail"}
+          title={pinned ? "Unpin from rail" : "Pin to rail"}
+          aria-pressed={pinned}
+          onClick={() => togglePin(pin)}
+          className="ml-auto flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-[opacity,color,background-color] hover:bg-accent/60 hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring group-hover/scope:opacity-100 group-focus-within/scope:opacity-100"
+        >
+          {pinned ? (
+            <PinOff aria-hidden className="size-3.5" />
+          ) : (
+            <Pin aria-hidden className="size-3.5" />
+          )}
+        </button>
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { daemon } from "@/daemon";
 import { cn } from "@/lib/utils";
+import { pinNewSpace } from "@/store/pins";
 import { settingsControl } from "@/views/settings/primitives";
 
 import { useAddToSpace } from "./addToSpace";
@@ -42,7 +43,11 @@ export function AddToSpaceDialog() {
     setBusy(true);
     setError(null);
     try {
-      const id = target === NEW ? (await daemon.createSpace(name.trim())).id : target;
+      let id = target;
+      if (target === NEW) {
+        id = (await daemon.createSpace(name.trim())).id;
+        pinNewSpace(id);
+      }
       await daemon.addSpaceMember(id, { kind: "project", name: project });
       reset();
     } catch (cause) {

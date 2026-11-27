@@ -82,3 +82,12 @@ export const usePins = create<PinsState>()(
     { name: "wf-pins", version: 1 },
   ),
 );
+
+/**
+ * Put a newly created space on the rail, so it is one click away.
+ * @param id the space id
+ */
+export function pinNewSpace(id: string): void {
+  const pin: Pin = { id, kind: "space" };
+  if (!usePins.getState().has(pin)) usePins.getState().toggle(pin);
+}

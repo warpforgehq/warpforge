@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { daemon } from "@/daemon";
 import { IS_TAURI } from "@/lib/platform";
 import type { ProjectInfo, Space, SpaceMember } from "@/protocol";
+import { pinKey, usePins } from "@/store/pins";
+import { useUi } from "@/store/ui";
 
 import { SettingsBadge, settingsControl, SettingsRow, SettingsSection } from "../../primitives";
 import { linkedBy } from "./linked";
@@ -27,6 +29,9 @@ export function SpaceSection({ space, projects, freeProjects }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [project, setProject] = useState("");
   const [folder, setFolder] = useState("");
+  const pin = { id: space.id, kind: "space" } as const;
+  const pinned = usePins((s) => s.pins.some((candidate) => pinKey(candidate) === pinKey(pin)));
+  const togglePin = usePins((s) => s.toggle);
 
   const run = async (action: () => Promise<unknown>) => {
     setError(null);
@@ -60,6 +65,26 @@ export function SpaceSection({ space, projects, freeProjects }: Props) {
       title={space.name}
       actions={
         <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-6 text-[0.75rem] text-muted-foreground"
+            aria-label={`Open ${space.name}`}
+            onClick={() => useUi.getState().openSpace(space.id)}
+          >
+            Open
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-6 text-[0.75rem] text-muted-foreground"
+            aria-label={`${pinned ? "Unpin" : "Pin"} ${space.name} ${pinned ? "from" : "to"} rail`}
+            onClick={() => togglePin(pin)}
+          >
+            {pinned ? "Unpin" : "Pin to rail"}
+          </Button>
           <Button
             type="button"
             size="sm"

@@ -92,6 +92,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { daemon, type DaemonState } from "@/daemon";
 import type { ProjectInfo, Space, TaskInfo } from "@/protocol";
+import { usePins } from "@/store/pins";
 import { useUi } from "@/store/ui";
 
 import Sidebar from ".";
@@ -245,4 +246,13 @@ it("switches to a space from a project's switcher", () => {
   expect(screen.queryByRole("button", { name: /^in / })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("menuitem", { name: /Payments/ }));
   expect(useUi.getState().panelScope).toEqual({ kind: "space", id: "s1" });
+});
+
+it("pins and unpins the space from its header", () => {
+  act(() => usePins.setState({ pins: [] }));
+  fireEvent.click(screen.getByRole("button", { name: "Pin to rail" }));
+  expect(usePins.getState().pins).toEqual([{ id: "s1", kind: "space" }]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Unpin from rail" }));
+  expect(usePins.getState().pins).toEqual([]);
 });
