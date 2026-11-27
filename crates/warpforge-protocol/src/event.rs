@@ -42,6 +42,12 @@ pub enum Event {
         service: String,
         status: ServiceStatus,
         allocated_port: u16,
+        #[serde(
+            default,
+            rename = "needsRestart",
+            skip_serializing_if = "std::ops::Not::not"
+        )]
+        needs_restart: bool,
     },
     #[serde(rename = "service.portWarning")]
     ServicePortWarning {
@@ -330,6 +336,8 @@ pub struct ProjectInfo {
     /// applies or does not exist.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub local_config_error: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config_error: Option<crate::ConfigError>,
     /// `linked:` entries of the project's workspace.yaml, joined onto its
     /// path with `..` resolved lexically (ADR 0034).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

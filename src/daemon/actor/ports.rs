@@ -6,13 +6,12 @@
 //! resolution happens; it also persists newly assigned sticky ranges so a
 //! project keeps its range across add/remove of other projects.
 
-use std::path::Path;
 #[cfg(test)]
 use std::sync::{Arc, Mutex};
 
 use warpforge_protocol as wire;
 
-use crate::config::{self, load_workspace_config, PortFallback};
+use crate::config::{self, PortFallback};
 use crate::ports::{resolve_ranges, PortPin, ProjectPortInput, RangeSource};
 use crate::registry::PortRange;
 
@@ -109,8 +108,8 @@ impl Daemon {
             .enumerate()
             .map(|(index, entry)| {
                 let local_override = entry.port_range_override.map(range_bounds);
-                let declared = load_workspace_config(Path::new(&entry.path))
-                    .and_then(|config| config.ports)
+                let declared = self.config_observer.config(&entry.name)
+                    .and_then(|config| config.ports.as_ref())
                     .and_then(|ports| match config::parse_range(&ports.range) {
                         Some(range) => Some(range),
                         None => {
@@ -225,15 +224,7 @@ impl Daemon {
     /// one shows a range the project no longer has.
     pub(crate) fn broadcast_project_config(&mut self, names: &[String]) {
         for name in names {
-            let config = load_workspace_config(Path::new(
-                &self
-                    .projects
-                    .iter()
-                    .find(|p| p.name == *name)
-                    .map(|p| p.path.clone())
-                    .unwrap_or_default(),
-            ));
-            let state = self.build_project_config_state(name, config.as_ref());
+            let state = self.build_project_config_state(name);
             self.emit(crate::daemon::actor::Event::ProjectConfigChanged(state));
         }
     }

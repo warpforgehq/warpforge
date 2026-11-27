@@ -118,6 +118,7 @@ async fn a_held_port_resolves_for_dependents_and_is_kept_at_start() {
             logs: Vec::new(),
             next_seq: 0,
             original_port: 4321,
+            env: Default::default(),
             allocated_port: 4321,
             port_pinned: false,
             port_warning: None,

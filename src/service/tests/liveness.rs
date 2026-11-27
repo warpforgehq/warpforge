@@ -14,6 +14,7 @@ fn starting(mgr: &mut ServiceManager) {
             logs: Vec::new(),
             next_seq: 0,
             original_port: 0,
+            env: Default::default(),
             allocated_port: 0,
             port_pinned: false,
             port_warning: None,

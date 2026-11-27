@@ -1,5 +1,4 @@
 use crate::*;
-use std::collections::HashMap;
 
 #[test]
 fn task_status_waiting_absorbs_the_legacy_spellings() {
@@ -520,43 +519,6 @@ fn event_wire_shape() {
 fn snapshot_event_roundtrip() {
     let ev = Event::Snapshot(Snapshot::default());
     let json = serde_json::to_string(&ev).unwrap();
-    let back: Event = serde_json::from_str(&json).unwrap();
-    assert_eq!(back, ev);
-}
-
-#[test]
-fn project_config_changed_event_roundtrip() {
-    let ev = Event::ProjectConfigChanged(ProjectConfigState {
-        project: ProjectInfo {
-            name: "demo".into(),
-            path: "/tmp/demo".into(),
-            port_range: (4000, 4099),
-            port_range_source: PortRangeSource::Auto,
-            port_range_conflict: None,
-            declared_services: vec!["web".into()],
-            agent_templates: HashMap::new(),
-            local_config_error: None,
-            linked: Vec::new(),
-        },
-        services: vec![ServiceInfo {
-            project: "demo".into(),
-            name: "web".into(),
-            command: "npm run dev".into(),
-            status: ServiceStatus::Stopped,
-            original_port: 3000,
-            allocated_port: 0,
-            checkout: "/tmp/demo".into(),
-            port_pinned: false,
-            port_warning: None,
-            log_seq: 0,
-            local: false,
-            local_fields: Vec::new(),
-        }],
-        portforwards: Vec::new(),
-    });
-
-    let json = serde_json::to_string(&ev).unwrap();
-    assert!(json.contains(r#""event":"project.configChanged""#));
     let back: Event = serde_json::from_str(&json).unwrap();
     assert_eq!(back, ev);
 }

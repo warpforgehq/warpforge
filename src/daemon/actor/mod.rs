@@ -56,6 +56,7 @@ mod policy;
 mod ports;
 mod pr_assistant;
 pub(crate) mod project;
+pub(crate) mod project_config;
 mod prompt;
 mod run;
 pub(crate) mod runner;
@@ -366,6 +367,7 @@ impl Daemon {
             Command::Peers(cmd) => self.handle_peer_command(cmd).await,
             Command::Smiths(cmd) => self.handle_smith_command(cmd).await,
             Command::Keepers(cmd) => self.handle_keeper_command(cmd).await,
+            Command::ProjectConfig(cmd) => self.handle_project_config_command(cmd).await,
             Command::Spaces(cmd) => self.handle_space_command(cmd),
             #[cfg(test)]
             Command::InjectAcpUpdate { task_id, update } => {

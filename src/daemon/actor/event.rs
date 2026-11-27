@@ -31,6 +31,7 @@ pub enum Event {
         service: String,
         status: ServiceStatus,
         allocated_port: u16,
+        needs_restart: bool,
     },
     ServicePortWarning {
         project: String,

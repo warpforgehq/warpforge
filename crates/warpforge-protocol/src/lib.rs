@@ -56,6 +56,9 @@ pub use method::*;
 pub mod peers;
 pub use peers::*;
 
+mod project_config;
+pub use project_config::*;
+
 pub mod project;
 pub use project::*;
 
@@ -130,16 +133,26 @@ pub enum ServerMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RpcError {
+    #[serde(flatten)]
     pub code: ErrorCode,
     pub message: String,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "code", rename_all = "snake_case")]
 pub enum ErrorCode {
     InvalidRequest,
     NotFound,
     Conflict,
+    ConfigChanged {
+        fingerprint: Option<String>,
+    },
+    ConfigInvalid {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        line: Option<usize>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        column: Option<usize>,
+    },
     /// The permission request was already answered by someone else; answers are
     /// first-writer-wins, so this one changed nothing.
     PermissionAlreadyResolved,

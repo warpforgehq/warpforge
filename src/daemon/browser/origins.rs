@@ -104,6 +104,7 @@ mod tests {
             log_seq: 0,
             local: false,
             local_fields: Vec::new(),
+            needs_restart: false,
         }
     }
 

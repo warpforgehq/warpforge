@@ -97,8 +97,7 @@ impl Daemon {
         }
 
         // Broadcast to all subscribed clients.
-        let config = load_workspace_config(std::path::Path::new(&entry.path));
-        let state = self.build_project_config_state(&entry.name, config.as_ref());
+        let state = self.build_project_config_state(&entry.name);
         self.emit(Event::ProjectAdded(state.project.clone()));
         self.broadcast_project_config(&affected);
 
@@ -337,6 +336,7 @@ impl Daemon {
                 service: service.to_string(),
                 status: svc.status.clone(),
                 allocated_port: svc.allocated_port,
+                needs_restart: self.service_needs_restart(project, svc),
             });
             self.emit_port_warning(project, service);
         }

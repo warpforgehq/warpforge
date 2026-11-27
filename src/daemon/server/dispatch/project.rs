@@ -127,34 +127,3 @@ pub(super) async fn bootstrap_finalize(
     let issues = validate_issues(&yaml);
     Ok(json!({ "yaml": yaml, "issues": issues }))
 }
-
-pub(super) async fn bootstrap_read_config(
-    handle: &DaemonHandle,
-    project: String,
-) -> Result<serde_json::Value, wire::RpcError> {
-    let path = project_path(handle, &project).await?;
-    let target = crate::config::find_config_file(std::path::Path::new(&path));
-    let yaml = std::fs::read_to_string(&target).unwrap_or_default();
-    let issues = validate_issues(&yaml);
-    Ok(json!({ "yaml": yaml, "issues": issues }))
-}
-
-pub(super) async fn bootstrap_write_config(
-    handle: &DaemonHandle,
-    project: String,
-    yaml: String,
-) -> Result<serde_json::Value, wire::RpcError> {
-    let path = project_path(handle, &project).await?;
-    let target = crate::config::find_config_file(std::path::Path::new(&path));
-    if let Some(parent) = target.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| wire::RpcError {
-            code: wire::ErrorCode::Internal,
-            message: format!("create {}: {e}", parent.display()),
-        })?;
-    }
-    std::fs::write(&target, yaml).map_err(|e| wire::RpcError {
-        code: wire::ErrorCode::Internal,
-        message: format!("write {}: {e}", target.display()),
-    })?;
-    Ok(json!({ "ok": true, "path": target.to_string_lossy() }))
-}

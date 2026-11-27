@@ -1,8 +1,15 @@
-use anyhow::{Context, Result};
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+
+mod load;
+pub(crate) use load::{
+    find_config_file, load_local, load_shared, read_config_text, resolve_config_path,
+    validate_worktree, CONFIG_NAMES,
+};
+pub use load::{load_workspace_config, try_load_workspace_config};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceHealthcheck {
@@ -66,9 +73,10 @@ pub struct PortForwardConfig {
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct WorkspaceConfig {
-    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub linked: Vec<std::path::PathBuf>,
     #[serde(default)]
@@ -124,77 +132,8 @@ pub fn sorted_services(config: &WorkspaceConfig) -> Vec<String> {
     result
 }
 
-/// Config file names in priority order: new → legacy. `.warpforge/` is the
-/// preferred home for warpforge files (workspace config, workflows); the
-/// root-level names keep working for existing projects.
-pub(crate) const CONFIG_NAMES: &[&str] = &[
-    ".warpforge/workspace.yaml",
-    ".warpforge.yaml",
-    ".wf.yaml",
-    ".workspace.yaml",
-];
-
-/// Load a project's config while preserving the distinction between a missing
-/// config and an existing file that could not be read or parsed.
-///
-/// Config observers use this to avoid replacing the last good UI state while
-/// an editor is in the middle of writing invalid YAML.
-pub fn try_load_workspace_config(project_path: &Path) -> Result<Option<WorkspaceConfig>> {
-    for name in CONFIG_NAMES {
-        let config_path = project_path.join(name);
-        if config_path.exists() {
-            let text = fs::read_to_string(&config_path)
-                .with_context(|| format!("reading {}", config_path.display()))?;
-            let config = serde_yaml::from_str(&text)
-                .with_context(|| format!("parsing {}", config_path.display()))?;
-            validate_worktree(&config, &config_path)?;
-            return crate::config_local::overlay(project_path, &config_path, Some(&text), config)
-                .map(Some);
-        }
-    }
-    match auto_detect(project_path) {
-        Some(config) => {
-            let default_path = project_path.join(CONFIG_NAMES[0]);
-            crate::config_local::overlay(project_path, &default_path, None, config).map(Some)
-        }
-        None => Ok(None),
-    }
-}
-
-pub(crate) fn validate_worktree(config: &WorkspaceConfig, path: &Path) -> Result<()> {
-    match &config.worktree {
-        Some(wt) => wt
-            .validate()
-            .with_context(|| format!("validating {}", path.display())),
-        None => Ok(()),
-    }
-}
-
-pub fn load_workspace_config(project_path: &Path) -> Option<WorkspaceConfig> {
-    try_load_workspace_config(project_path).ok().flatten()
-}
-
-/// Return the first existing config file path, or the default
-/// `.warpforge/workspace.yaml` for projects that have no config yet. Callers
-/// writing to the returned path must create its parent directory first.
-pub fn find_config_file(project_path: &Path) -> std::path::PathBuf {
-    for name in CONFIG_NAMES {
-        let p = project_path.join(name);
-        if p.exists() {
-            return p;
-        }
-    }
-    project_path.join(CONFIG_NAMES[0])
-}
-
 fn auto_detect(project_path: &Path) -> Option<WorkspaceConfig> {
     let mut services = HashMap::new();
-    let name = project_path
-        .file_name()
-        .unwrap_or_default()
-        .to_string_lossy()
-        .to_string();
-
     // Detect package.json dev script
     let pkg_path = project_path.join("package.json");
     if pkg_path.exists() {
@@ -277,7 +216,7 @@ fn auto_detect(project_path: &Path) -> Option<WorkspaceConfig> {
     }
 
     Some(WorkspaceConfig {
-        name,
+        name: None,
         services,
         agent_templates: None,
         portforwards: vec![],
@@ -295,7 +234,7 @@ fn auto_detect(project_path: &Path) -> Option<WorkspaceConfig> {
 pub fn generate_workspace_yaml(project_path: &Path) -> anyhow::Result<()> {
     for name in CONFIG_NAMES {
         let existing = project_path.join(name);
-        if existing.exists() {
+        if load::config_present(&existing) {
             anyhow::bail!("config already exists at {}", existing.display());
         }
     }
@@ -309,7 +248,8 @@ pub fn generate_workspace_yaml(project_path: &Path) -> anyhow::Result<()> {
         .to_string_lossy()
         .to_string();
 
-    let content = if let Some(config) = auto_detect(project_path) {
+    let content = if let Some(mut config) = auto_detect(project_path) {
+        config.name = Some(name);
         // Serialize detected config
         let yaml = serde_yaml::to_string(&config)?;
         format!("# .warpforge/workspace.yaml — auto-detected by warpforge\n{yaml}")

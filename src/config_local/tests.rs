@@ -157,7 +157,7 @@ fn top_level_maps_merge_per_key_and_scalars_replace() {
     let config = load(
         "name: mine\nports:\n  range: 4500-4599\nworktree:\n  setup: bun i --frozen-lockfile\nagentTemplates:\n  dev:\n    command: claude\n",
     );
-    assert_eq!(config.name, "mine");
+    assert_eq!(config.name.as_deref(), Some("mine"));
     assert_eq!(config.ports.unwrap().range, "4500-4599");
     let worktree = config.worktree.unwrap();
     assert_eq!(worktree.copy, [".env"]);

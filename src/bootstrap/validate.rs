@@ -11,10 +11,14 @@ pub fn validate_config_yaml(
         serde_yaml::from_str(yaml_str).map_err(|e| format!("YAML parse error: {e}"))?;
 
     let mut issues = Vec::new();
-    if config.name.trim().is_empty() {
+    if config
+        .name
+        .as_deref()
+        .is_some_and(|name| name.trim().is_empty())
+    {
         issues.push(ValidationIssue {
             severity: IssueSeverity::Error,
-            message: "Project name is required and cannot be blank.".into(),
+            message: "Project name cannot be blank.".into(),
         });
     }
     if config.services.is_empty() {

@@ -173,11 +173,13 @@ pub fn to_wire(ev: &Event) -> Option<wire::Event> {
             service,
             status,
             allocated_port,
+            needs_restart,
         } => Some(wire::Event::ServiceStatus {
             project: project.clone(),
             service: service.clone(),
             status: service_status(status),
             allocated_port: *allocated_port,
+            needs_restart: *needs_restart,
         }),
         Event::ServicePortWarning {
             project,

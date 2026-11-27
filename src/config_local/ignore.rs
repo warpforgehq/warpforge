@@ -26,7 +26,9 @@ pub(crate) fn ensure_local_ignored(project_path: &Path) {
 fn ignore(project_path: &Path, local: &Path) -> Result<()> {
     let file_name = local.file_name().unwrap_or_default().to_string_lossy();
     if local.parent() == Some(&project_path.join(".warpforge")) {
-        return ignore_beside(local, &file_name);
+        let gitignore =
+            crate::config::resolve_config_path(project_path, &local.with_file_name(".gitignore"))?;
+        return ignore_beside(&gitignore, &file_name);
     }
     match exclude_file(project_path)? {
         Some(exclude) => append_line(&exclude, &format!("/{file_name}")),
@@ -34,14 +36,13 @@ fn ignore(project_path: &Path, local: &Path) -> Result<()> {
     }
 }
 
-fn ignore_beside(local: &Path, file_name: &str) -> Result<()> {
-    let gitignore = local.with_file_name(".gitignore");
+fn ignore_beside(gitignore: &Path, file_name: &str) -> Result<()> {
     if !gitignore.exists() {
         let content = format!("{HEADER}{file_name}\n.gitignore\n");
-        return fs::write(&gitignore, content)
+        return fs::write(gitignore, content)
             .with_context(|| format!("writing {}", gitignore.display()));
     }
-    append_line(&gitignore, file_name)
+    append_line(gitignore, file_name)
 }
 
 fn append_line(path: &Path, line: &str) -> Result<()> {

@@ -144,7 +144,7 @@ pub(super) fn method_is_mutation(method: &wire::Method) -> bool {
             | OrchestrateGetConfig {}
             | WorkflowList { .. }
             | BootstrapFinalize { .. }
-            | BootstrapReadConfig { .. }
+            | ProjectConfigRead { .. }
             | WorkItemList { .. }
             | LspStart { .. }
             | LspSend { .. }

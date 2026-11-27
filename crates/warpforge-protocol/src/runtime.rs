@@ -49,6 +49,8 @@ pub struct ServiceInfo {
     pub port_warning: Option<PortWarning>,
     /// Sequence number of the newest retained log line.
     pub log_seq: u64,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub needs_restart: bool,
     /// True when the personal local config file added or changed this service.
     #[serde(default)]
     pub local: bool,

@@ -134,6 +134,11 @@ pub enum Method {
         range: Option<String>,
     },
 
+    #[serde(rename = "project.config.read")]
+    ProjectConfigRead { project: String },
+    #[serde(rename = "project.config.write")]
+    ProjectConfigWrite(crate::ProjectConfigWrite),
+
     // ── Runtime lifecycle ──
     /// Stop all running dev services and port-forwards without shutting down
     /// the daemon or killing agent sessions.
@@ -1166,16 +1171,6 @@ pub enum Method {
     /// `{ yaml, issues: [{ severity, message }] }`.
     #[serde(rename = "bootstrap.finalize")]
     BootstrapFinalize { response: String },
-    /// Read the project's current config file and validate it. Used after a
-    /// bootstrap task to review what the agent wrote. Returns
-    /// `{ yaml, issues: [{ severity, message }] }`.
-    #[serde(rename = "bootstrap.readConfig")]
-    BootstrapReadConfig { project: String },
-    /// Write the accepted YAML to the project's config file. Returns
-    /// `{ ok, path }`.
-    #[serde(rename = "bootstrap.writeConfig")]
-    BootstrapWriteConfig { project: String, yaml: String },
-
     // ── LSP ──
     /// Ensure a language server is running for a task's workspace + language.
     /// Reuses an existing server for the same (workspace, language). Returns
