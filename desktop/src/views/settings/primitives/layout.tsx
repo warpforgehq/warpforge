@@ -67,7 +67,7 @@ export function SettingsCard({
   return (
     <div
       className={cn(
-        "divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-foreground/[0.02]",
+        "divide-y divide-rule overflow-hidden rounded-xl border border-border bg-foreground/[0.02]",
         className,
       )}
     >

@@ -59,7 +59,7 @@ export default function AppearancePage() {
                 className={`flex cursor-pointer flex-col items-start gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
                   active
                     ? "border-ring bg-foreground/[0.06]"
-                    : "border-border/60 bg-background hover:border-border"
+                    : "border-border bg-background hover:border-edge"
                 }`}
               >
                 <span className="flex items-center gap-1.5">

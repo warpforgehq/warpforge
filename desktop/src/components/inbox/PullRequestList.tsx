@@ -2,7 +2,7 @@ import { FolderGit2, GitPullRequest } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import type { InboxScope } from "@/lib/inboxFilters";
 import type { PrAssistantState } from "@/lib/taskOrigin";
 import { cn } from "@/lib/utils";
@@ -128,16 +128,13 @@ export function InboxToolbar({
 }) {
   return (
     <div className="flex h-9 shrink-0 items-center gap-1.5 px-2 pt-1">
-      {/* `text-[13px]!` because the shared `Input` ships `md:text-sm`, which
-          outranks a plain utility and left the placeholder visibly larger
-          than every row around it in the sidebar. */}
-      <Input
+      <SearchInput
         value={search}
         onChange={(event) => onSearch(event.target.value)}
         placeholder="Filter pull requests"
         aria-label="Filter pull requests"
         spellCheck={false}
-        className="h-7 min-w-0 flex-1 border-transparent bg-transparent px-2 text-[13px]! shadow-none focus-visible:border-border"
+        className="flex-1"
       />
       <InboxViewMenu
         scope={scope}

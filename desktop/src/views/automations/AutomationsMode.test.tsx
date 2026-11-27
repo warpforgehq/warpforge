@@ -163,7 +163,7 @@ describe("Automations mode", () => {
     expect(enabled).toHaveTextContent(/Enabled.*Next.*Last/);
     expect(panel.getByRole("button", { name: /Dependency audit/ })).toHaveTextContent("Paused");
 
-    const search = panel.getByRole("textbox", { name: "Search automations" });
+    const search = panel.getByRole("searchbox", { name: "Search automations" });
     fireEvent.change(search, { target: { value: "PULL REQUESTS" } });
     expect(enabled).toBeInTheDocument();
     expect(panel.queryByRole("button", { name: /Dependency audit/ })).not.toBeInTheDocument();

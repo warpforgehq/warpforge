@@ -76,6 +76,9 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
+  /* Inputs, select triggers, segmented controls and small buttons share one
+     radius; search fields are pills (`rounded-full`). */
+  --radius-control: 0.5rem;
 
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 

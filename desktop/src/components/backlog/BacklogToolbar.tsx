@@ -2,7 +2,7 @@ import { ArrowDownNarrowWide, ArrowUpNarrowWide, RefreshCw, X } from "lucide-rea
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput as SearchField } from "@/components/ui/search-input";
 import {
   Select,
   SelectContent,
@@ -236,12 +236,12 @@ function SearchInput({ value, onChange }: { value: string; onChange: (value: str
   }, [draft, onChange, value]);
 
   return (
-    <Input
+    <SearchField
       aria-label="Search backlog"
       placeholder="Search title or body..."
       value={draft}
       onChange={(event) => setDraft(event.target.value)}
-      className="h-7 w-44 lg:w-64"
+      className="w-44 lg:w-64"
     />
   );
 }

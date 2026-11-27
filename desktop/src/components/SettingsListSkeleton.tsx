@@ -21,7 +21,7 @@ export function SettingsListSkeleton({
         <div
           key={row}
           data-testid={`${testId}-row`}
-          className="flex items-center justify-between gap-4 border-t border-border/60 px-3.5 py-3 first:border-t-0"
+          className="flex items-center justify-between gap-4 border-t border-rule px-3.5 py-3 first:border-t-0"
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <SkeletonBar className="size-4 shrink-0" />

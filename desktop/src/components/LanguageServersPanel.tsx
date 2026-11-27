@@ -87,7 +87,7 @@ export default function LanguageServersPanel() {
 
   return (
     <div className="flex flex-col">
-      <div className="divide-y divide-border/60">
+      <div className="divide-y divide-rule">
         {servers.map((server) => {
           const isBusy = busy.has(server.id);
           const behind = server.status === "behind";
@@ -145,7 +145,7 @@ export default function LanguageServersPanel() {
           );
         })}
       </div>
-      <div className="flex items-center gap-2 border-t border-border/60 px-3.5 py-2.5">
+      <div className="flex items-center gap-2 border-t border-rule px-3.5 py-2.5">
         <Button
           type="button"
           size="sm"

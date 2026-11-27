@@ -289,7 +289,7 @@ export default function AgentSetupPanel({ detected, onSaved, modelLists }: Props
 
   return (
     <>
-      <div className="divide-y divide-border/60">
+      <div className="divide-y divide-rule">
         {agents.map((agent) => {
           const savedConfig = configured?.find((c) => c.id === agent.id);
           // A result recorded in this panel wins over the daemon's mark; an
@@ -332,7 +332,7 @@ export default function AgentSetupPanel({ detected, onSaved, modelLists }: Props
           );
         })}
       </div>
-      <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 border-t border-border/60 px-3.5 py-2.5">
+      <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 border-t border-rule px-3.5 py-2.5">
         <span className="mr-auto text-[0.75rem] text-muted-foreground">
           Enable the agents you want available for new tasks, then Save.
         </span>

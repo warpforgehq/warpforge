@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 /** Class for native `<select>` and text `<input>` controls on settings rows. */
 export const settingsControl =
-  "h-7 min-w-0 max-w-full rounded-md border border-border/60 bg-background px-2 text-[0.8125rem] text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 hover:border-border focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+  "h-8 min-w-0 max-w-full rounded-control border border-border bg-background px-2 text-[0.8125rem] text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 hover:border-edge focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 /**
  * Wrap an HSL triplet token in `hsl()`.
@@ -33,7 +33,7 @@ export function NumberInput({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="flex h-7 items-center rounded-md border border-border/60 bg-background">
+    <div className="flex h-8 items-center rounded-control border border-border bg-background">
       <Button
         type="button"
         size="sm"
@@ -180,7 +180,7 @@ export function SegmentedControl<T extends string>({
       role="radiogroup"
       aria-label={label}
       aria-disabled={disabled || undefined}
-      className="inline-flex h-7 shrink-0 items-center rounded-md border border-border/60 bg-background p-0.5"
+      className="inline-flex h-8 shrink-0 items-center rounded-control border border-border bg-background p-0.5"
     >
       {options.map((option) => {
         const active = option.value === value;
@@ -193,7 +193,7 @@ export function SegmentedControl<T extends string>({
             disabled={disabled}
             onClick={() => !active && onChange(option.value)}
             className={cn(
-              "h-full cursor-pointer rounded-[0.3rem] px-2.5 text-[0.75rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+              "h-full cursor-pointer rounded-[calc(var(--radius-control)-0.125rem)] px-2.5 text-[0.75rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
               active
                 ? "bg-foreground/10 text-foreground"
                 : "text-muted-foreground hover:text-foreground",

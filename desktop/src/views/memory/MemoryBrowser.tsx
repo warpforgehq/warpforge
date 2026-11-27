@@ -3,10 +3,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { SkeletonBlock } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { Memory } from "@/protocol";
+import { settingsControl } from "@/views/settings/primitives";
 
 import { collectTags, MEMORY_KINDS, type ScopeFilter } from "./labels";
 import { MemoryRow } from "./MemoryRow";
@@ -18,7 +19,7 @@ const SCOPES: { id: ScopeFilter; label: string }[] = [
   { id: "project", label: "Project" },
 ];
 
-const SELECT_CLASS = "h-7 min-w-0 flex-1 rounded-md border bg-background px-1.5 text-[12px]";
+const SELECT_CLASS = `${settingsControl} flex-1`;
 
 /** How close to the bottom (px) the list gets before the next page is fetched. */
 const NEAR_END_PX = 240;
@@ -89,21 +90,18 @@ export function MemoryBrowser({
 
   return (
     <section aria-label="Memories" className="flex min-h-0 w-[22.5rem] shrink-0 flex-col gap-2">
-      <div className="relative">
-        <Search
-          aria-hidden
-          className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/70"
-        />
-        <Input
-          aria-label="Search memories"
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="Search memories"
-          className="h-8 pl-7 text-[13px]"
-        />
-      </div>
+      <SearchInput
+        aria-label="Search memories"
+        value={input}
+        onChange={(event) => setInput(event.target.value)}
+        placeholder="Search memories"
+      />
       <div className="flex items-center gap-1.5">
-        <div role="group" aria-label="Scope" className="flex shrink-0 rounded-md bg-muted/70 p-0.5">
+        <div
+          role="group"
+          aria-label="Scope"
+          className="flex h-8 shrink-0 items-center rounded-control border border-border bg-background p-0.5"
+        >
           {SCOPES.map((item) => (
             <button
               key={item.id}
@@ -111,8 +109,8 @@ export function MemoryBrowser({
               aria-pressed={scope === item.id}
               onClick={() => setScope(item.id)}
               className={cn(
-                "h-6 rounded px-2 text-[12px] text-muted-foreground transition-colors hover:text-foreground",
-                scope === item.id && "bg-secondary font-medium text-foreground shadow-sm",
+                "h-full rounded-[calc(var(--radius-control)-0.125rem)] px-2.5 text-[0.75rem] font-medium text-muted-foreground transition-colors hover:text-foreground",
+                scope === item.id && "bg-foreground/10 text-foreground",
               )}
             >
               {item.label}

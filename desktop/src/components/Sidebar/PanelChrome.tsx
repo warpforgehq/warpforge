@@ -18,20 +18,18 @@ export function PanelHeader({
     return (
       <div
         data-tauri-drag-region="deep"
-        className="flex h-14 shrink-0 items-end gap-1 pb-1 pl-5 pr-3 pt-2"
+        className="flex h-10 shrink-0 items-center gap-0.5 pl-5 pr-3 pt-2"
       >
         <button
           type="button"
           onClick={onBack}
           aria-label="Back from Settings"
           title="Back (Esc)"
-          className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <ChevronLeft aria-hidden className="size-4" />
         </button>
-        <h2 className="select-none pb-px text-[1.25rem] font-semibold tracking-tight text-foreground">
-          {title}
-        </h2>
+        <h2 className="select-none text-[1rem] font-semibold text-foreground">{title}</h2>
       </div>
     );
   }
@@ -41,12 +39,10 @@ export function PanelHeader({
       data-tauri-drag-region="deep"
       className="flex h-10 shrink-0 items-center gap-1.5 pl-7 pr-3 pt-2"
     >
-      <h2 className="select-none text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-foreground">
-        {title}
-      </h2>
+      <h2 className="select-none text-[1rem] font-semibold text-foreground">{title}</h2>
       <span className="flex-1" />
       {count !== undefined && count > 0 && (
-        <span className="font-mono text-[0.6875rem] tabular-nums text-warn">{count}</span>
+        <span className="font-mono text-[0.75rem] tabular-nums text-warn">{count}</span>
       )}
     </div>
   );

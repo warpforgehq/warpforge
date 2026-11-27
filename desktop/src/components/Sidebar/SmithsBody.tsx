@@ -53,9 +53,7 @@ function Section({
   return (
     <section aria-label={title} className="space-y-px">
       <div className="flex items-center justify-between px-2 pb-1">
-        <h2 className="text-[0.6875rem] font-medium uppercase tracking-wide text-muted-foreground">
-          {title}
-        </h2>
+        <h2 className="text-[0.75rem] font-medium text-muted-foreground">{title}</h2>
         {action}
       </div>
       {children}
@@ -192,7 +190,7 @@ export function SmithsBody({ projects, tasks }: Props) {
       <Select value={project} onValueChange={setSmithsProject}>
         <SelectTrigger
           aria-label="Project"
-          className="h-9 w-full bg-card px-2 font-medium transition-colors hover:bg-accent/60 [&>span]:line-clamp-none [&>span]:min-w-0 [&>span]:flex-1"
+          className="h-8 w-full bg-card px-2 font-medium transition-colors hover:bg-accent/60 [&>span]:line-clamp-none [&>span]:min-w-0 [&>span]:flex-1"
         >
           <SelectValue>
             <span className="flex min-w-0 items-center gap-2">

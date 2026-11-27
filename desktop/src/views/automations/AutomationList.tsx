@@ -1,11 +1,11 @@
-import { Search } from "lucide-react";
 import { useState } from "react";
 
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { useAutomationsQuery } from "@/hooks/useAutomations";
 import { cn } from "@/lib/utils";
 import type { Automation } from "@/protocol";
 import { useUi } from "@/store/ui";
+import { settingsControl } from "@/views/settings/primitives";
 
 import { isSkipped, runStatusMeta } from "./labels";
 
@@ -127,19 +127,12 @@ export function AutomationList({ onNavigate }: { onNavigate?: () => void }) {
       >
         Overview
       </button>
-      <div className="relative">
-        <Search
-          aria-hidden
-          className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-        />
-        <Input
-          aria-label="Search automations"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search name or prompt"
-          className="h-8 pl-7 text-[13px]"
-        />
-      </div>
+      <SearchInput
+        aria-label="Search automations"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder="Search name or prompt"
+      />
       <div className="grid grid-cols-2 gap-2">
         <Filter
           label="Automation state"
@@ -198,7 +191,7 @@ function Filter({
       aria-label={label}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="h-7 min-w-0 rounded-md border border-input bg-background px-1.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className={settingsControl}
     >
       {Object.entries(options).map(([id, name]) => (
         <option key={id} value={id}>

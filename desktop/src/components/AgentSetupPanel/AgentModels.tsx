@@ -34,7 +34,7 @@ export function AgentModels({ agent }: { agent: AgentConfig }) {
       className="bg-foreground/[0.015] pb-2.5 pl-11 pr-3.5"
     >
       {models.length > 0 ? (
-        <ul className="divide-y divide-border/40">
+        <ul className="divide-y divide-rule">
           {models.map(({ value, name }) => (
             <li key={value} className="flex min-h-9 items-center gap-2 py-1.5">
               <span className="min-w-0 flex-1">

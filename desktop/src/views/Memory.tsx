@@ -89,7 +89,7 @@ export default function Memory({ snapshot, onOpenTask, header }: Props) {
               aria-label="Memory detail"
               className={cn(
                 "min-h-0 min-w-0 flex-1 overflow-y-auto",
-                selected && "rounded-xl border border-border/60 bg-foreground/[0.02] p-4",
+                selected && "rounded-xl border border-border bg-foreground/[0.02] p-4",
               )}
             >
               {selected ? (

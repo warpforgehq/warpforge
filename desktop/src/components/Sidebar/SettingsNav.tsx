@@ -1,6 +1,6 @@
-import { Search } from "lucide-react";
 import { useState } from "react";
 
+import { SearchInput } from "@/components/ui/search-input";
 import { cn } from "@/lib/utils";
 import { useUi } from "@/store/ui";
 import { SETTINGS_GROUPS, SETTINGS_PAGES } from "@/views/settings/nav";
@@ -27,30 +27,23 @@ export function SettingsNav({ inline = false }: { inline?: boolean }) {
         inline ? "shrink-0 border-b border-rule" : "flex-1 overflow-y-auto",
       )}
     >
-      <div className="relative shrink-0">
-        <Search
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 left-3 top-0 my-auto size-4 text-muted-foreground"
-        />
-        <input
-          type="search"
-          aria-label="Search settings"
-          placeholder="Search settings"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape" && query) {
-              event.preventDefault();
-              setQuery("");
-            }
-            if (event.key === "Enter" && results[0]) {
-              setPage(results[0].page, results[0].id);
-              setQuery("");
-            }
-          }}
-          className="h-9 w-full rounded-full border border-border/60 bg-foreground/[0.03] pl-9 pr-3 text-[0.8125rem] outline-none transition-colors placeholder:text-muted-foreground/80 hover:border-border focus-visible:border-border focus-visible:ring-1 focus-visible:ring-ring [&::-webkit-search-cancel-button]:hidden"
-        />
-      </div>
+      <SearchInput
+        className="shrink-0"
+        aria-label="Search settings"
+        placeholder="Search settings"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && query) {
+            event.preventDefault();
+            setQuery("");
+          }
+          if (event.key === "Enter" && results[0]) {
+            setPage(results[0].page, results[0].id);
+            setQuery("");
+          }
+        }}
+      />
       {searching ? (
         <div className={cn("flex flex-col", inline && "max-h-48 overflow-y-auto")}>
           {results.map((row) => (

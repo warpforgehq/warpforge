@@ -318,7 +318,7 @@ function PermissionsCard({ detail }: { detail: SmithDetail }) {
           <Input
             aria-label="Add a path"
             placeholder="src/ — Enter to add"
-            className="h-7 w-48 font-mono text-xs"
+            className="h-8 w-48 font-mono text-xs"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {

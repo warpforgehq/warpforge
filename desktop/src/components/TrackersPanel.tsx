@@ -93,7 +93,7 @@ export default function TrackersPanel() {
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
               placeholder="lin_api_…"
-              className="h-7 flex-1 text-[0.8125rem]"
+              className="h-8 flex-1 text-[0.8125rem]"
               aria-label="Linear API key"
             />
             <Button
@@ -128,7 +128,7 @@ export default function TrackersPanel() {
           </button>
         </p>
         {linear?.connected && snapshot.projects.length > 0 && (
-          <div className="space-y-1.5 rounded-lg border border-border/60 p-2.5">
+          <div className="space-y-1.5 rounded-lg border border-border p-2.5">
             <p className="text-[0.6875rem] font-medium text-muted-foreground">
               Which team each project imports from
             </p>
@@ -145,7 +145,7 @@ export default function TrackersPanel() {
       </div>
 
       {/* ── GitHub ── */}
-      <div id="github" tabIndex={-1} className="space-y-2 border-t border-border/60 pt-4">
+      <div id="github" tabIndex={-1} className="space-y-2 border-t border-rule pt-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <h3 className="text-[0.8125rem] font-medium text-foreground">GitHub</h3>
@@ -177,7 +177,7 @@ export default function TrackersPanel() {
               value={githubToken}
               onChange={(e) => setGithubToken(e.target.value)}
               placeholder={github?.connected ? "replace token (ghp_…)" : "ghp_… or github_pat_…"}
-              className="h-7 flex-1 text-[0.8125rem]"
+              className="h-8 flex-1 text-[0.8125rem]"
               aria-label="GitHub token"
             />
             <Button
