@@ -186,7 +186,7 @@ afterEach(() => {
   onNewChat.mockReset();
 });
 
-const switcher = () => screen.getByRole("button", { name: /^Switch list/ });
+const switcher = () => screen.getByRole("button", { name: /^Switch view/ });
 
 it("shows project tasks without chats under Tasks", () => {
   renderSidebar([task("a-1"), chat("c-1")]);
@@ -220,7 +220,7 @@ it("flags a chat that needs you while Tasks is shown", () => {
   renderSidebar([task("a-1"), chat("c-1", { status: "blocked" })]);
 
   expect(screen.getByTestId("task-list-attention")).toBeInTheDocument();
-  expect(switcher()).toHaveAccessibleName("Switch list: Tasks, chats 1 needs you");
+  expect(switcher()).toHaveAccessibleName("Switch view: Tasks, chats 1 needs you");
   expect(screen.getByRole("menuitem", { name: /^Chats/ })).toHaveTextContent("1");
 
   fireEvent.click(screen.getByRole("menuitem", { name: /^Chats/ }));
@@ -236,13 +236,25 @@ it("opening a chat flips the panel to Chats and a project task flips it back", (
   expect(screen.getByRole("heading", { name: "Tasks", level: 2 })).toBeInTheDocument();
 });
 
-it("opens a project from the menu and back returns to the last list", () => {
-  useUi.setState({ taskListView: "chats" });
-  renderSidebar([task("a-1"), chat("c-1")]);
+it("offers the same menu inside a project, ticking the project", () => {
+  renderSidebar([task("a-1"), chat("c-1", { status: "blocked" })]);
+  const entries = () => screen.getAllByRole("menuitem").map((item) => item.textContent);
+  const unscoped = entries();
 
   fireEvent.click(screen.getByRole("menuitem", { name: "alpha" }));
   expect(screen.getByRole("heading", { name: "alpha", level: 2 })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Back to chats" }));
+  expect(screen.queryByRole("button", { name: /^Back to/ })).not.toBeInTheDocument();
+  expect(entries()).toEqual(unscoped);
+  expect(
+    screen.getByRole("menuitem", { name: "alpha" }).querySelector("svg.text-primary"),
+  ).not.toBeNull();
+  expect(
+    screen.getByRole("menuitem", { name: /^Tasks/ }).querySelector("svg.text-primary"),
+  ).toBeNull();
+  expect(screen.getByTestId("task-list-attention")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("menuitem", { name: /^Chats/ }));
+  expect(useUi.getState().panelScope).toBeNull();
   expect(screen.getByRole("heading", { name: "Chats", level: 2 })).toBeInTheDocument();
 });
 

@@ -65,7 +65,8 @@ export interface NavState {
   setView: (v: GlobalView) => void;
   /** Land on the Tasks half of the sidebar: `validTaskId` if the caller found
    *  it still in the daemon snapshot, else the selected project, else the
-   *  composer. A stale id is dropped rather than reopened. */
+   *  composer. A stale id is dropped rather than reopened. Already in Tasks
+   *  inside a project or space, it only returns to the list. */
   selectTasksSegment: (validTaskId: string | null) => void;
   /** Open a task; `project` names its project when the snapshot may not list it yet. */
   openTask: (id: string | null, project?: string) => void;
@@ -156,6 +157,9 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   selectAutomation: (selectedAutomationId) => set({ selectedAutomationId }),
   selectTasksSegment: (validTaskId) =>
     set((s) => {
+      if (s.sidebarMode === "tasks" && s.panelScope && !s.settingsOpen) {
+        return { panelScope: null, view: s.view === "project" ? "start" : s.view };
+      }
       const view: View = "start";
       if (!validTaskId)
         return {

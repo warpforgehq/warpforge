@@ -82,10 +82,10 @@ it("stays in project mode for its own tasks and leaves it for another project's"
   expect(useUi.getState().view).toBe("start");
 });
 
-it("exits to every project's tasks, keeping an open task on screen", () => {
+it("Tasks on the rail leaves the scope, keeping an open task on screen", () => {
   useUi.getState().openProject("alpha");
   useUi.getState().openTask("a-1");
-  useUi.getState().exitPanelScope();
+  useUi.getState().selectTasksSegment("a-1");
 
   const ui = useUi.getState();
   expect(ui.panelScope).toBeNull();

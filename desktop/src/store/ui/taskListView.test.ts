@@ -58,14 +58,36 @@ it("keeps the list for a task the snapshot does not know yet", () => {
   expect(useUi.getState().taskListView).toBe("chats");
 });
 
-it("back from a project returns to the last list", () => {
+it("Tasks on the rail inside a project returns to the list, open task kept", () => {
   useUi.getState().setTaskListView("chats");
   useUi.getState().openProject("alpha");
-  useUi.getState().exitPanelScope();
+  useUi.getState().openTask("a-1");
+  useUi.getState().selectTasksSegment("a-1");
 
   const ui = useUi.getState();
   expect(ui.panelScope).toBeNull();
+  expect(ui.openTaskId).toBe("a-1");
+  expect(ui.taskListView).toBe("tasks");
+});
+
+it("Tasks on the rail inside a project keeps the last list", () => {
+  useUi.getState().setTaskListView("chats");
+  useUi.getState().openProject("alpha");
+  useUi.getState().selectTasksSegment(null);
+
+  const ui = useUi.getState();
+  expect(ui.panelScope).toBeNull();
+  expect(ui.view).toBe("start");
   expect(ui.taskListView).toBe("chats");
+});
+
+it("Tasks on the rail from another mode restores the last task", () => {
+  useUi.getState().openProject("alpha");
+  useUi.getState().setSidebarMode("team");
+  useUi.getState().selectTasksSegment("a-1");
+
+  expect(useUi.getState().openTaskId).toBe("a-1");
+  expect(useUi.getState().panelScope).toBeNull();
 });
 
 it("picking a list leaves a project scope", () => {

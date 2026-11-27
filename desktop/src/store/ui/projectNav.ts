@@ -29,8 +29,6 @@ export interface ProjectNavState {
   backlogParamsByProject: Record<string, BacklogParams>;
   /** What the Tasks panel is narrowed to; null shows every project. Persisted. */
   panelScope: PanelScope | null;
-  /** Return the Tasks panel to every project. */
-  exitPanelScope: () => void;
   /** The unscoped panel's list; back from a project or space returns to it. Persisted. */
   taskListView: TaskListView;
   /** Show project tasks or chats, leaving any project or space scope. */
@@ -52,16 +50,6 @@ export interface ProjectNavState {
   resetBacklogParams: (project: string) => void;
   /** Forget every per-project memory — for a project that was removed. */
   clearProjectState: (project: string) => void;
-}
-
-/** The space to return to when `project` is opened from inside it. */
-function viaSpace(scope: PanelScope | null, project: string): { via?: string } {
-  const space =
-    scope?.kind === "space" ? scope.id : scope?.kind === "project" ? scope.via : undefined;
-  if (!space) return {};
-  return (scopeProjects({ kind: "space", id: space }) ?? []).includes(project)
-    ? { via: space }
-    : {};
 }
 
 /** The remembered task, if it is still on the board and not archived. */
@@ -123,11 +111,7 @@ export const createProjectNavSlice: UiSlice<ProjectNavState> = (set) => ({
           lastTaskByProject: withoutKey(s.lastTaskByProject, selectedProjectId),
           projectSurfaceByProject: { ...s.projectSurfaceByProject, [selectedProjectId]: section },
         }),
-        panelScope: {
-          kind: "project",
-          name: selectedProjectId,
-          ...viaSpace(s.panelScope, selectedProjectId),
-        },
+        panelScope: { kind: "project", name: selectedProjectId },
         selectedProjectId,
         settingsOpen: false,
         sidebarMode: "tasks",
@@ -152,8 +136,6 @@ export const createProjectNavSlice: UiSlice<ProjectNavState> = (set) => ({
         view: "start",
       };
     }),
-  exitPanelScope: () =>
-    set((s) => ({ panelScope: null, view: s.view === "project" ? "start" : s.view })),
   setTaskListView: (taskListView) =>
     set((s) => ({
       panelScope: null,
