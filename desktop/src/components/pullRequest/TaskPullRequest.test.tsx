@@ -63,6 +63,18 @@ describe("task pull request", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("leaves a child's glyph to its parent when both ride the same pull request", () => {
+    const { container } = render(
+      <TaskPullRequestGlyph taskId="child" receded={false} parentTaskId="t1" />,
+    );
+    push(pr(), "t1");
+    push(pr(), "child");
+    expect(container).toBeEmptyDOMElement();
+
+    push(pr({ number: 13, url: "https://github.com/acme/widgets/pull/13" }), "child");
+    expect(container.querySelector("[data-task-pr='open']")).not.toBeNull();
+  });
+
   it("marks failing checks on the sidebar glyph and leaves passing ones quiet", () => {
     const { container } = render(<TaskPullRequestGlyph taskId="t1" receded={false} />);
     push(pr({ checks: "failing" }));

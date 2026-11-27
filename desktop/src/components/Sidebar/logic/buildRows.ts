@@ -89,6 +89,7 @@ export function buildSidebarRows(input: SidebarRowsInput): SidebarRow[] {
     const attention = attentionIds.has(tree.task.id);
     rows.push({
       activeLane,
+      onActivePath: activePathIds.has(tree.task.id),
       ancestorLines,
       attention,
       childCount: tree.children.length,

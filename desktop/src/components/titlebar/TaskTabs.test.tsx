@@ -26,7 +26,10 @@ const snapshot = {
 
 function renderBar(
   openTaskId: string | null,
-  handlers = { open: vi.fn<(id: string) => void>(), closeActive: vi.fn<(id: string | null) => void>() },
+  handlers = {
+    open: vi.fn<(id: string) => void>(),
+    closeActive: vi.fn<(id: string | null) => void>(),
+  },
 ) {
   const view = render(
     <TaskTabs

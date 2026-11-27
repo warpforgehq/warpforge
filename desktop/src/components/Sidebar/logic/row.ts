@@ -160,6 +160,8 @@ export type SidebarRow =
       /** The lane level that carries the open task's branch past or into this
        *  row, painted `primary`; null when the branch does not cross it. */
       activeLane: number | null;
+      /** The open task, or an ancestor of it: its own connector is lit too. */
+      onActivePath: boolean;
       childCount: number;
       expanded: boolean;
       attention: boolean;

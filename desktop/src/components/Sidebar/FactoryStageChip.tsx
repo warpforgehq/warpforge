@@ -18,6 +18,17 @@ import type { TaskInfo } from "@/protocol";
  * @param props.task A Factory task.
  * @param props.receded Whether the row is history.
  */
+/**
+ * Whether `FactoryStageChip` draws anything for `task`.
+ * @param task a Factory task
+ * @returns true when the row shows a stage or pull-request chip
+ */
+export function useFactoryChipShown(task: TaskInfo): boolean {
+  const { entry } = useFactoryEntry(task);
+  const pr = useTaskPullRequest(task.id);
+  return pr !== null || Boolean(factoryStage(task, entry, null));
+}
+
 export function FactoryStageChip({ task, receded }: { task: TaskInfo; receded: boolean }) {
   const { entry, status } = useFactoryEntry(task);
   const pr = useTaskPullRequest(task.id);

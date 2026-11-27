@@ -85,7 +85,7 @@ export function TaskTree({
               ) : (
                 <div
                   className={cn(
-                    "transition-opacity",
+                    "h-full transition-opacity",
                     settleMarkedIds?.has(row.task.id) && "opacity-40",
                   )}
                 >
@@ -96,6 +96,7 @@ export function TaskTree({
                     ancestorLines={row.ancestorLines}
                     isLast={row.isLast}
                     activeLane={row.activeLane}
+                    onActivePath={row.onActivePath}
                     active={openTaskId === row.task.id}
                     childCount={row.childCount}
                     expanded={row.expanded}

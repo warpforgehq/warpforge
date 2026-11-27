@@ -64,6 +64,7 @@ export function TaskTab({
       tabIndex={active ? 0 : -1}
       title={`${label}\n${task.project || "Chat"} · ${meta.label}\nDouble-click to rename`}
       data-task-tab={task.id}
+      data-active={active || undefined}
       draggable={!editing}
       onDragStart={(event: DragEvent) => {
         event.dataTransfer.setData(TAB_DRAG_MIME, task.id);
@@ -88,7 +89,7 @@ export function TaskTab({
         }
       }}
       className={cn(
-        "group relative flex h-7 min-w-24 max-w-52 flex-1 basis-52 cursor-default select-none items-center gap-1.5 rounded-md border pl-2.5 pr-1.5 text-[0.75rem] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
+        "group relative flex h-7 w-44 shrink-0 cursor-default select-none items-center gap-1.5 rounded-md border pl-2.5 pr-1.5 text-[0.75rem] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
         active
           ? "border-transparent bg-foreground/[0.09] font-medium text-foreground"
           : "border-transparent text-muted-foreground/75 hover:bg-foreground/[0.05] hover:text-foreground",

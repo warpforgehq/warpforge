@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 import { resolveTaskState } from "@/components/Sidebar/logic";
 import type { Snapshot, TaskInfo } from "@/protocol";
@@ -75,6 +75,33 @@ export function TaskTabs({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, openTaskId, onOpenTask, reopen, byId]);
 
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const measureEdges = useCallback(() => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    const left = strip.scrollLeft > 1;
+    const right = strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 1;
+    setEdges((current) =>
+      current.left === left && current.right === right ? current : { left, right },
+    );
+  }, []);
+
+  useEffect(() => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    measureEdges();
+    const observer = new ResizeObserver(measureEdges);
+    observer.observe(strip);
+    return () => observer.disconnect();
+  }, [measureEdges, open.length]);
+
+  useEffect(() => {
+    if (!openTaskId) return;
+    const tab = stripRef.current?.querySelector<HTMLElement>(`[data-task-tab="${openTaskId}"]`);
+    tab?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [openTaskId, open.length]);
+
   const tabs = open.flatMap((id) => {
     const task = byId.get(id);
     return task ? [task] : [];
@@ -83,8 +110,16 @@ export function TaskTabs({
 
   return (
     <div
+      ref={stripRef}
       role="tablist"
       aria-label="Open tasks"
+      onScroll={measureEdges}
+      onWheel={(event) => {
+        const strip = stripRef.current;
+        if (!strip || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+        strip.scrollLeft += event.deltaY;
+      }}
+      style={fadeMask(edges)}
       className="flex min-w-0 flex-1 items-center gap-1 self-stretch overflow-x-auto [scrollbar-width:none]"
     >
       {tabs.map((task, index) => (
@@ -101,4 +136,13 @@ export function TaskTabs({
       <span data-tauri-drag-region className="h-full min-w-6 flex-1" />
     </div>
   );
+}
+
+/** A soft fade on whichever edge has tabs scrolled past it. */
+function fadeMask(edges: { left: boolean; right: boolean }): CSSProperties | undefined {
+  if (!edges.left && !edges.right) return undefined;
+  const left = edges.left ? "transparent, black 24px" : "black";
+  const right = edges.right ? "black calc(100% - 32px), transparent" : "black";
+  const mask = `linear-gradient(to right, ${left}, ${right})`;
+  return { maskImage: mask, WebkitMaskImage: mask };
 }
