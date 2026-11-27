@@ -12,18 +12,16 @@ const RING_TONE: Record<LimitRamp, string> = {
 
 const SIZE = 26;
 const STROKE = 2;
-const INNER_STROKE = 1.25;
+const GAP = 1.5;
 
 function Arc({
   window,
   radius,
   width,
-  inner = false,
 }: {
   window: AgentLimitWindow;
   radius: number;
   width: number;
-  inner?: boolean;
 }) {
   const circumference = 2 * Math.PI * radius;
   const left = window.usedPercent >= 100 ? 0 : percentLeft(window.usedPercent);
@@ -35,7 +33,7 @@ function Arc({
         r={radius}
         fill="none"
         strokeWidth={width}
-        className={inner ? "stroke-muted/60" : "stroke-muted"}
+        className="stroke-muted"
       />
       <circle
         cx={SIZE / 2}
@@ -47,7 +45,7 @@ function Arc({
         strokeLinecap="round"
         strokeDasharray={`${(left / 100) * circumference} ${circumference}`}
         transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
-        className={cn(RING_TONE[limitRamp(window.usedPercent)], inner && "opacity-60")}
+        className={RING_TONE[limitRamp(window.usedPercent)]}
         data-window={window.id}
       />
     </>
@@ -76,7 +74,7 @@ export function UsageRing({
     <span className={cn("relative grid size-[26px] place-items-center", className)}>
       <svg aria-hidden width={SIZE} height={SIZE} className="absolute inset-0">
         {outer && <Arc window={outer} radius={SIZE / 2 - STROKE / 2} width={STROKE} />}
-        {inner && <Arc window={inner} radius={SIZE / 2 - STROKE * 2} width={INNER_STROKE} inner />}
+        {inner && <Arc window={inner} radius={SIZE / 2 - STROKE * 1.5 - GAP} width={STROKE} />}
       </svg>
       {children}
     </span>
