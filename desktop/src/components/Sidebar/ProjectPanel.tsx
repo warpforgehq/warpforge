@@ -58,7 +58,7 @@ export function ProjectPanel({
         back={space ? { label: space.name, onClick: () => openSpace(space.id) } : undefined}
       />
 
-      <nav aria-label={`${project} sections`} className="flex shrink-0 flex-col gap-px px-2 pt-2">
+      <nav aria-label={`${project} sections`} className="flex shrink-0 flex-col gap-px px-2 pt-0.5">
         {sections.map(({ id, label, icon: Icon }) => {
           const active = onSection && surface === id;
           const count = status.counts[id];

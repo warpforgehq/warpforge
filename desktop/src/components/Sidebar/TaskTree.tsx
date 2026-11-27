@@ -48,7 +48,7 @@ export function TaskTree({
     <div
       ref={scrollRef}
       id={SIDEBAR_BODY_ID}
-      className="min-h-0 flex-1 overflow-y-auto px-2 py-2 [scrollbar-gutter:stable]"
+      className="min-h-0 flex-1 overflow-y-auto px-2 pb-2 [scrollbar-gutter:stable]"
     >
       <div className="relative w-full" style={{ height: totalSize }}>
         {virtualItems.map((virtualRow) => {
