@@ -116,17 +116,6 @@ export function AutomationList({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 px-2 pb-2">
-      <button
-        type="button"
-        aria-current={selectedId === null || undefined}
-        onClick={() => select(null)}
-        className={cn(
-          "rounded-md px-2 py-1.5 text-left text-[13px] font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
-          selectedId === null ? "bg-accent text-accent-foreground" : "hover:bg-accent/60",
-        )}
-      >
-        Overview
-      </button>
       <SearchInput
         aria-label="Search automations"
         value={search}
@@ -162,7 +151,7 @@ export function AutomationList({ onNavigate }: { onNavigate?: () => void }) {
               key={automation.id}
               automation={automation}
               selected={selectedId === automation.id}
-              onSelect={() => select(automation.id)}
+              onSelect={() => select(selectedId === automation.id ? null : automation.id)}
             />
           ))}
         </ul>

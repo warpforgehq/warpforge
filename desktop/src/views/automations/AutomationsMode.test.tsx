@@ -204,7 +204,7 @@ describe("Automations mode", () => {
       expect(main.getByRole("button", { name })).toBeEnabled();
     }
 
-    fireEvent.click(screen.getByRole("button", { name: "Overview" }));
+    fireEvent.click(row);
     expect(main.getByRole("heading", { name: "Automations overview" })).toBeInTheDocument();
     expect(row).not.toHaveAttribute("aria-current");
   });
