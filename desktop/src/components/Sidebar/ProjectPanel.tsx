@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { Snapshot } from "@/protocol";
-import { type ProjectSurface, spaceOfProject, useUi, type View } from "@/store/ui";
+import { type ProjectSurface, useUi, type View } from "@/store/ui";
 import { useProjectSection, useVisibleSections } from "@/views/projects/sections";
 import { useProjectSectionStatus } from "@/views/projects/useProjectSectionStatus";
 
@@ -25,7 +25,7 @@ const row =
 
 /**
  * The Tasks panel narrowed to one project: its sections, then its tasks.
- * The back chevron returns the panel to the project's space, or to every project.
+ * The back chevron returns to the space the project was opened from, or to every project.
  */
 export function ProjectPanel({
   project,
@@ -40,7 +40,8 @@ export function ProjectPanel({
   onSettleFinishedTurns,
 }: Props) {
   const openSpace = useUi((s) => s.openSpace);
-  const space = spaceOfProject(project, snapshot.spaces ?? []);
+  const via = useUi((s) => (s.panelScope?.kind === "project" ? s.panelScope.via : undefined));
+  const space = via ? (snapshot.spaces ?? []).find((candidate) => candidate.id === via) : undefined;
   const surface = useProjectSection(project);
   const sections = useVisibleSections();
   const status = useProjectSectionStatus(project, snapshot);

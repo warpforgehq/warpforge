@@ -1,8 +1,13 @@
 import { daemon } from "@/daemon";
 import type { Space } from "@/protocol";
 
-/** What the sidebar panel is narrowed to: one project, or a space of several. */
-export type PanelScope = { kind: "project"; name: string } | { kind: "space"; id: string };
+/**
+ * What the sidebar panel is narrowed to: one project, or a space of several.
+ * `via` is the space a project was opened from, so back returns there.
+ */
+export type PanelScope =
+  | { kind: "project"; name: string; via?: string }
+  | { kind: "space"; id: string };
 
 function knownSpaces(): Space[] {
   return daemon.getState?.().snapshot?.spaces ?? [];

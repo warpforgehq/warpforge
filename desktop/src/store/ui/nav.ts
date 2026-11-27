@@ -20,6 +20,16 @@ import {
   type View,
 } from "./types";
 
+/** The space to return to when `project` is opened from inside it. */
+function viaSpace(scope: PanelScope | null, project: string): { via?: string } {
+  const space =
+    scope?.kind === "space" ? scope.id : scope?.kind === "project" ? scope.via : undefined;
+  if (!space) return {};
+  return (scopeProjects({ kind: "space", id: space }) ?? []).includes(project)
+    ? { via: space }
+    : {};
+}
+
 export interface NavState {
   // Navigation
   view: View;
@@ -212,7 +222,11 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
         ...(section && {
           projectSurfaceByProject: { ...s.projectSurfaceByProject, [selectedProjectId]: section },
         }),
-        panelScope: { kind: "project", name: selectedProjectId },
+        panelScope: {
+          kind: "project",
+          name: selectedProjectId,
+          ...viaSpace(s.panelScope, selectedProjectId),
+        },
         selectedProjectId,
         settingsOpen: false,
         sidebarMode: "tasks",

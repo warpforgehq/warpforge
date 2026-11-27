@@ -221,12 +221,21 @@ it("lists the space's members and its projects' tasks, grouped by project", () =
 it("opens a member project's mode, whose back chevron returns to the space", () => {
   const members = screen.getByRole("list", { name: "Payments members" });
   fireEvent.click(within(members).getByRole("button", { name: /beta/ }));
-  expect(useUi.getState().panelScope).toEqual({ kind: "project", name: "beta" });
+  expect(useUi.getState().panelScope).toEqual({ kind: "project", name: "beta", via: "s1" });
   expect(screen.queryByText("Task a-1")).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "Back to Payments" }));
   expect(useUi.getState().panelScope).toEqual({ kind: "space", id: "s1" });
   expect(screen.getByText("Task a-1")).toBeInTheDocument();
+});
+
+it("returns a space member opened from every project to every project", () => {
+  act(() => {
+    useUi.getState().exitPanelScope();
+    useUi.getState().openProject("beta");
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Back to all projects" }));
+  expect(useUi.getState().panelScope).toBeNull();
 });
 
 it("starts a new task in the project you came from", () => {
