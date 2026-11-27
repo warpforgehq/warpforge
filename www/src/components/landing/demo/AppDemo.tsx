@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import AppHeader from "@app/components/AppHeader";
 import Sidebar from "@app/components/Sidebar";
 import { RAIL_WIDTH } from "@app/components/Sidebar/Rail";
+import { SplitLine } from "@app/components/titlebar/SplitLine";
 import { TooltipProvider } from "@app/components/ui/tooltip";
 import { daemon } from "@app/daemon";
 import { useChannelsSync, usePeerFeedSync } from "@app/hooks/usePeerFeed";
@@ -13,7 +14,8 @@ import { DEFAULT_INBOX_FILTERS } from "@app/lib/inboxFilters";
 import { usePeersStore } from "@app/store/peers";
 import { usePrFeedbackStore } from "@app/store/prFeedback";
 import { useSmithsStore } from "@app/store/smiths";
-import { DEFAULT_TASK_SURFACE, SIDEBAR_WIDTH_MIN, useUi } from "@app/store/ui";
+import { useTabs } from "@app/store/tabs";
+import { DEFAULT_TASK_SURFACE, SIDEBAR_WIDTH_MIN, type SidebarMode, useUi } from "@app/store/ui";
 import InboxView from "@app/views/InboxView";
 import TaskDetail from "@app/views/TaskDetail";
 import Team from "@app/views/Team";
@@ -68,6 +70,8 @@ function startScene(scene: Scene, replay = false) {
     useUi.setState(nav);
     return;
   }
+  // The tab strip persists on the landing page's origin; each scene starts bare.
+  useTabs.setState({ closed: [], open: [] });
   // The app's own defaults, minus the two that only make sense at desk
   // width: side-by-side diff needs more room than this frame has, and the
   // nav rail is wound down to the narrowest the app itself allows.
@@ -79,6 +83,8 @@ function startScene(scene: Scene, replay = false) {
     // one, which it never can here. The app's own off switch avoids the nag.
     lspEnabled: false,
     openTaskNav: null,
+    panelScope: null,
+    settingsOpen: false,
     sidebarWidth: SIDEBAR_WIDTH_MIN,
     ...scene.ui,
   });
@@ -252,14 +258,26 @@ export default function AppDemo() {
   const openTaskInDemo = (id: string) => useUi.getState().openTask(id);
   const noop = () => {};
 
+  const closeTask = () => useUi.getState().openTask(null);
+  // `App`'s mode switch, minus Automations: the demo has no view for it.
+  const selectMode = (mode: SidebarMode) => {
+    if (mode === "automations") return;
+    const ui = useUi.getState();
+    ui.setSidebarMode(mode);
+    if (mode === "tasks") {
+      const last = live.tasks.some((task) => task.id === ui.lastTaskId) ? ui.lastTaskId : null;
+      ui.selectTasksSegment(last ?? scene.openTaskId);
+    } else ui.setView(mode);
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={300}>
-        <div
-          className="flex h-full w-full overflow-hidden bg-background text-foreground"
-        >
-          <aside style={{ width: RAIL_WIDTH + SIDEBAR_WIDTH_MIN }}
-            className="flex shrink-0 flex-col overflow-hidden">
+        <div className="flex h-full w-full overflow-hidden bg-chrome text-foreground">
+          <aside
+            style={{ width: RAIL_WIDTH + SIDEBAR_WIDTH_MIN }}
+            className="flex h-full min-h-0 shrink-0 flex-col overflow-hidden"
+          >
             <Sidebar
               collapsed={false}
               connection="connected"
@@ -269,47 +287,55 @@ export default function AppDemo() {
               onOpenProject={noop}
               onOpenSettings={noop}
               onOpenTask={openTaskInDemo}
-              onSelectMode={noop}
+              onSelectMode={selectMode}
               onToggleCollapsed={noop}
               openTaskId={openTaskId}
               state={daemon.getState()}
               view={view}
             />
           </aside>
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
             <AppHeader
               composing={false}
-              onAddProject={noop}
-              onCloseTask={noop}
+              onCloseTask={closeTask}
               onOpenTask={openTaskInDemo}
               openTask={openTask}
               snapshot={live}
               view={view}
               windowButtonsInset={false}
             />
-            <main className="min-h-0 flex-1 overflow-hidden p-2">
-              {openTask ? (
-                <TaskDetail
-                  key={openTask.id}
-                  onOpenPush={noop}
-                  onOpenTask={openTaskInDemo}
-                  snapshot={live}
-                  task={openTask}
-                />
-              ) : view === "team" ? (
-                <Team
-                  onNewTask={noop}
-                  onOpenTask={(id) => useUi.getState().revealTask(id)}
-                  snapshot={live}
-                />
-              ) : view === "inbox" ? (
-                <InboxView
-                  listInSidebar={sidebarMode === "inbox"}
-                  onAddProject={noop}
-                  projects={projectNames}
-                />
-              ) : null}
-            </main>
+            {openTask && <SplitLine />}
+            {/* `AppContent`'s card, inlined: importing that module would pull
+                every lazy route, Settings and project config included. */}
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-l border-t border-border/70 bg-background">
+              <main
+                className={
+                  openTask ? "min-h-0 flex-1 overflow-hidden" : "min-h-0 flex-1 overflow-hidden p-2"
+                }
+              >
+                {openTask ? (
+                  <TaskDetail
+                    key={openTask.id}
+                    onOpenPush={noop}
+                    onOpenTask={openTaskInDemo}
+                    snapshot={live}
+                    task={openTask}
+                  />
+                ) : view === "team" ? (
+                  <Team
+                    onNewTask={noop}
+                    onOpenTask={(id) => useUi.getState().revealTask(id)}
+                    snapshot={live}
+                  />
+                ) : view === "inbox" ? (
+                  <InboxView
+                    listInSidebar={sidebarMode === "inbox"}
+                    onAddProject={noop}
+                    projects={projectNames}
+                  />
+                ) : null}
+              </main>
+            </div>
           </div>
         </div>
       </TooltipProvider>
