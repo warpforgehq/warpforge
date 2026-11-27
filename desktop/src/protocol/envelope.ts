@@ -1,4 +1,5 @@
 import type { DaemonEvent } from "./events";
+import type { ProjectConfigRpcError } from "./projectConfig";
 
 // ── Envelope ────────────────────────────────────────────────────────────────
 
@@ -13,18 +14,20 @@ export type ServerMessage =
   | { id: number; error: RpcError }
   | DaemonEvent;
 
-export interface RpcError {
-  code:
-    | "invalid_request"
-    | "not_found"
-    | "conflict"
-    | "permission_already_resolved"
-    | "agent_unavailable"
-    | "agent_broken_install"
-    | "internal"
-    | "updating";
-  message: string;
-}
+export type RpcError =
+  | ProjectConfigRpcError
+  | {
+      code:
+        | "invalid_request"
+        | "not_found"
+        | "conflict"
+        | "permission_already_resolved"
+        | "agent_unavailable"
+        | "agent_broken_install"
+        | "internal"
+        | "updating";
+      message: string;
+    };
 
 export function isEvent(msg: ServerMessage): msg is DaemonEvent {
   return "event" in msg;

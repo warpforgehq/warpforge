@@ -25,6 +25,7 @@ export interface ServiceInfo {
   /** Set while the service is up but nothing answers on its allocated port. */
   portWarning?: PortWarning;
   logSeq: number;
+  needsRestart?: boolean;
   /** True when the personal local config file added or changed this service. */
   local?: boolean;
   /** Fields the local config file set on this service. */

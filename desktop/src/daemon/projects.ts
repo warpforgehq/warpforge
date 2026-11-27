@@ -1,9 +1,24 @@
-import type { Space, SpaceMember, SpaceMemberKey } from "../protocol";
+import type {
+  ReadProjectConfigResult,
+  Space,
+  SpaceMember,
+  SpaceMemberKey,
+  WriteProjectConfigParams,
+  WriteProjectConfigResult,
+} from "../protocol";
 import type { CoreClient } from "./client";
 import type { Constructor } from "./types";
 
 export function ProjectMethods<TBase extends Constructor<CoreClient>>(Base: TBase) {
   return class extends Base {
+    async readProjectConfig(project: string): Promise<ReadProjectConfigResult> {
+      return (await this.request("project.config.read", { project })) as ReadProjectConfigResult;
+    }
+
+    async writeProjectConfig(params: WriteProjectConfigParams): Promise<WriteProjectConfigResult> {
+      return (await this.request("project.config.write", params)) as WriteProjectConfigResult;
+    }
+
     async listSpaces(): Promise<Space[]> {
       return (await this.request("space.list", {})) as Space[];
     }

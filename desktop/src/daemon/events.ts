@@ -127,7 +127,12 @@ export class DaemonEvents extends DaemonStore {
         const services = exists
           ? snap.services.map((s) =>
               s.project === ev.data.project && s.name === ev.data.service
-                ? { ...s, allocatedPort: ev.data.allocated_port, status: ev.data.status }
+                ? {
+                    ...s,
+                    allocatedPort: ev.data.allocated_port,
+                    status: ev.data.status,
+                    needsRestart: ev.data.needsRestart,
+                  }
                 : s,
             )
           : // A service started after we subscribed — add it. command/originalPort
@@ -138,6 +143,7 @@ export class DaemonEvents extends DaemonStore {
                 allocatedPort: ev.data.allocated_port,
                 command: "",
                 logSeq: 0,
+                needsRestart: ev.data.needsRestart,
                 name: ev.data.service,
                 originalPort: 0,
                 project: ev.data.project,

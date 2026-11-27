@@ -163,7 +163,7 @@ export class CoreClient extends DaemonDemo {
     this.pending.delete(msg.id);
     window.clearTimeout(pending.timer);
     if ("error" in msg) {
-      pending.reject(new DaemonRpcError(msg.error.code, msg.error.message));
+      pending.reject(new DaemonRpcError(msg.error.code, msg.error.message, msg.error));
     } else {
       pending.resolve(msg.result);
     }
