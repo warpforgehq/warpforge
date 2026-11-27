@@ -129,7 +129,6 @@ export function AppContent({
       snapshot={snapshot}
       windowButtonsInset={windowButtonsInset}
       composing={composing || settingsOpen}
-      onAddProject={onAddProject}
       onOpenTask={onOpenTask}
       onCloseTask={onCloseTask}
     />
@@ -208,6 +207,7 @@ export function AppContent({
                   onOpenTask={onOpenTask}
                   onNewTask={onNewTask}
                   onAddProject={onAddProject}
+                  sectionPicker={!showPersistent || sidebarCollapsed}
                 />
               ) : view === "inbox" ? (
                 <InboxView

@@ -19,7 +19,7 @@ export const useUi = create<UiState>()(
     }),
     {
       name: "wf-ui",
-      version: 14,
+      version: 15,
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
         if (version === 0 && state && "sidebarWidth" in state) {
@@ -126,6 +126,15 @@ export const useUi = create<UiState>()(
             state = { ...state, pickers: rest };
           }
           if (state.settingsPage === "models") state = { ...state, settingsPage: "agents" };
+        }
+        // The project page became the panel's project mode; a session left
+        // on a project reopens inside that project's mode.
+        if (
+          version < 15 &&
+          state.view === "project" &&
+          typeof state.selectedProjectId === "string"
+        ) {
+          state = { ...state, panelScope: { kind: "project", name: state.selectedProjectId } };
         }
         return state;
       },

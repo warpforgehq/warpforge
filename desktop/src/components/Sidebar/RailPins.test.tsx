@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -56,7 +56,7 @@ function renderPins() {
 
 beforeEach(() => {
   usePins.setState({ pins: [] });
-  useUi.setState({ openTaskId: null, settingsOpen: false, view: "start" });
+  useUi.setState({ openTaskId: null, panelScope: null, settingsOpen: false, view: "start" });
 });
 
 describe("RailPins", () => {
@@ -78,6 +78,23 @@ describe("RailPins", () => {
     expect(document.querySelector('[data-pin="project:warpforge"]')?.className).toContain(
       "ring-primary",
     );
+  });
+
+  it("stays lit through the project's mode, open tasks included, and goes dark on exit", () => {
+    usePins.setState({ pins: [{ kind: "project", id: "warpforge" }] });
+    renderPins();
+    const lit = () =>
+      document.querySelector('[data-pin="project:warpforge"]')?.className.includes("ring-primary");
+
+    fireEvent.click(screen.getByRole("button", { name: "warpforge" }));
+    expect(useUi.getState().panelScope).toEqual({ kind: "project", name: "warpforge" });
+    expect(lit()).toBe(true);
+
+    act(() => useUi.setState({ openTaskId: "t_triage" }));
+    expect(lit()).toBe(true);
+
+    act(() => useUi.getState().exitPanelScope());
+    expect(lit()).toBe(false);
   });
 
   it("opens a pinned channel as a team conversation", () => {

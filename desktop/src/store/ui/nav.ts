@@ -4,6 +4,7 @@ import { useSmithsStore } from "@/store/smiths";
 import { browser } from "@/views/task-detail/browser/browserClient";
 import { clearBrowserSession } from "@/views/task-detail/browser/browserSession";
 
+import { type PanelScope, scopeHolds, taskProject } from "./panelScope";
 import {
   DEFAULT_TASK_SURFACE,
   type DiffView,
@@ -61,6 +62,10 @@ export interface NavState {
   teamSeenAt: number;
   /** The sidebar body's mode. Persisted: the app reopens on the same body. */
   sidebarMode: SidebarMode;
+  /** What the Tasks panel is narrowed to; null shows every project. Persisted. */
+  panelScope: PanelScope | null;
+  /** Return the Tasks panel to every project. */
+  exitPanelScope: () => void;
   /** Settings fill the main area and the sidebar panel. Transient: any
    *  navigation leaves them. */
   settingsOpen: boolean;
@@ -87,8 +92,11 @@ export interface NavState {
   /** Open a task and immediately surface a specific file/diff in its workspace. */
   openTaskWithNav: (id: string, nav: TaskOpenNav) => void;
   clearOpenTaskNav: () => void;
-  /** Make a project the subject the content column is showing. */
-  openProject: (id: string) => void;
+  /**
+   * Enter a project's mode. Without `section`, an open task of that project
+   * stays on screen; otherwise the project's remembered section shows.
+   */
+  openProject: (id: string, section?: ProjectSurface) => void;
   /**
    * Open a task from outside the sidebar body (a notification, toast or link) and switch the sidebar to the mode that shows it: a
    * Smith's thread opens that Smith in Smiths mode, any other task opens in
@@ -122,6 +130,15 @@ export interface NavState {
   closeNewSmith: () => void;
 }
 
+/** Opening a task outside the panel's scope returns the panel to every project. */
+function leaveScopeFor(
+  s: Pick<NavState, "panelScope" | "view">,
+  taskId: string | null,
+): Partial<NavState> {
+  if (!taskId || scopeHolds(s.panelScope, taskId)) return {};
+  return { panelScope: null, view: s.view === "project" ? "start" : s.view };
+}
+
 export const createNavSlice: UiSlice<NavState> = (set) => ({
   view: "start",
   openTaskId: null,
@@ -140,6 +157,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
   backlogParamsByProject: {},
   teamSeenAt: 0,
   sidebarMode: "tasks",
+  panelScope: null,
   settingsOpen: false,
   teamSelection: null,
   selectedAutomationId: null,
@@ -158,12 +176,20 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
     })),
   selectAutomation: (selectedAutomationId) => set({ selectedAutomationId }),
   selectTasksSegment: (validTaskId) =>
-    set((s) => {
-      const view: View = s.selectedProjectId ? "project" : "start";
+    set(() => {
+      const view: View = "start";
       if (!validTaskId)
-        return { lastTaskId: null, openTaskId: null, openTaskNav: null, settingsOpen: false, view };
+        return {
+          lastTaskId: null,
+          openTaskId: null,
+          openTaskNav: null,
+          panelScope: null,
+          settingsOpen: false,
+          view,
+        };
       return {
         activeSurface: DEFAULT_TASK_SURFACE,
+        panelScope: null,
         settingsOpen: false,
         lastTaskId: validTaskId,
         openTaskId: validTaskId,
@@ -172,19 +198,30 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
         view,
       };
     }),
-  openProject: (selectedProjectId) =>
-    set({
-      openTaskId: null,
-      openTaskNav: null,
-      settingsOpen: false,
-      view: "project",
-      selectedProjectId,
+  openProject: (selectedProjectId, section) =>
+    set((s) => {
+      const keepTask =
+        !section && s.openTaskId !== null && taskProject(s.openTaskId) === selectedProjectId;
+      return {
+        ...(keepTask ? {} : { openTaskId: null, openTaskNav: null }),
+        ...(section && {
+          projectSurfaceByProject: { ...s.projectSurfaceByProject, [selectedProjectId]: section },
+        }),
+        panelScope: { kind: "project", name: selectedProjectId },
+        selectedProjectId,
+        settingsOpen: false,
+        sidebarMode: "tasks",
+        view: "project",
+      };
     }),
+  exitPanelScope: () =>
+    set((s) => ({ panelScope: null, view: s.view === "project" ? "start" : s.view })),
   // Contextual task tools must not leak from one task into the next.
   // Project-scoped layout preferences remain persisted.
   // Closing a task keeps `lastTaskId`: that is what the Tasks segment returns to.
   openTask: (openTaskId) =>
     set((s) => ({
+      ...leaveScopeFor(s, openTaskId),
       openTaskId,
       openTaskNav: null,
       rightPanel: null,
@@ -193,14 +230,15 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       settingsOpen: openTaskId ? false : s.settingsOpen,
     })),
   openTaskWithNav: (openTaskId, openTaskNav) =>
-    set({
+    set((s) => ({
+      ...leaveScopeFor(s, openTaskId),
       openTaskId,
       openTaskNav,
       rightPanel: null,
       activeSurface: openTaskNav.surface,
       lastTaskId: openTaskId,
       settingsOpen: false,
-    }),
+    })),
   clearOpenTaskNav: () => set({ openTaskNav: null }),
   setSmithsProject: (smithsProject) => set({ smithsProject }),
   openNewSmith: () => set({ newSmithOpen: true }),
@@ -230,6 +268,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
       return;
     }
     set((s) => ({
+      ...leaveScopeFor(s, id),
       activeSurface: nav?.surface ?? DEFAULT_TASK_SURFACE,
       attentionTargetId: id,
       attentionTargetNonce: s.attentionTargetNonce + 1,
@@ -288,6 +327,7 @@ export const createNavSlice: UiSlice<NavState> = (set) => ({
         backlogParamsByProject,
         projectSurfaceByProject,
         selectedProjectId: s.selectedProjectId === project ? null : s.selectedProjectId,
+        ...(s.panelScope?.name === project && { panelScope: null }),
       };
     }),
 });

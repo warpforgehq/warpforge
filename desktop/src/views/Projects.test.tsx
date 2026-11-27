@@ -32,7 +32,7 @@ vi.mock("@xterm/addon-fit", () => {
 });
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -40,6 +40,7 @@ import { TerminalWorkspaceView } from "../components/runtime/TerminalWorkspace";
 import { daemon } from "../daemon";
 import { disposeTerminalWorkspace, getTerminalWorkspace } from "../lib/terminalWorkspace";
 import type { ProjectInfo, Snapshot, TaskInfo, TerminalInfo } from "../protocol";
+import { useTitleRow } from "../store/titleRow";
 import { useUi } from "../store/ui";
 import Projects from "./Projects";
 
@@ -88,20 +89,39 @@ function renderProjects(
   });
   return render(
     <QueryClientProvider client={queryClient}>
+      <TitleRowSlot />
       <Projects
         snapshot={projectSnapshot}
         onOpenTask={vi.fn<(id: string) => void>()}
         onNewTask={onNewTask}
         onAddProject={vi.fn<() => void>()}
+        sectionPicker
       />
     </QueryClientProvider>,
   );
 }
 
-/** Radix tabs select on mousedown, which `fireEvent.click` does not send. */
+/** The window title row's project slot, which the section portals into. */
+function TitleRowSlot() {
+  const setProjectSlot = useTitleRow((state) => state.setProjectSlot);
+  return <div ref={setProjectSlot} data-testid="title-row" />;
+}
+
+/** Pick a section from the title row, as with the panel hidden. */
 async function openSurface(label: RegExp) {
   const user = userEvent.setup({ pointerEventsCheck: 0 });
-  await user.click(screen.getByRole("tab", { name: label }));
+  await user.click(await screen.findByRole("button", { name: "Switch section" }));
+  await user.click(await screen.findByRole("menuitem", { name: label }));
+}
+
+/** The project menu holds the path, port range and its source. */
+async function openProjectMenu() {
+  const user = userEvent.setup({ pointerEventsCheck: 0 });
+  await user.click(await screen.findByRole("button", { name: "Project menu" }));
+}
+
+function sectionTitle(name: string) {
+  return screen.findByRole("heading", { name, level: 1 });
 }
 
 function taskInfo(overrides: Partial<TaskInfo> = {}): TaskInfo {
@@ -161,12 +181,14 @@ afterEach(() => {
 });
 
 describe("Projects", () => {
-  it("renders project context in the shared workspace surface", () => {
+  it("titles the section in the title row, with no tab bar", async () => {
     renderProjects();
 
-    expect(screen.getByRole("heading", { name: "warpforge" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Backlog/ })).toHaveAttribute("data-state", "active");
-    expect(screen.getByRole("tab", { name: /Runtime/ })).toBeInTheDocument();
+    expect(await sectionTitle("Backlog")).toBeInTheDocument();
+    expect(screen.getByTestId("title-row")).toContainElement(
+      screen.getByRole("button", { name: "Project menu" }),
+    );
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
   });
 
   it("remembers the surface each project was left on", async () => {
@@ -180,7 +202,7 @@ describe("Projects", () => {
     // A project that was never switched falls back to Backlog rather than
     // inheriting the surface of the one before it.
     act(() => useUi.setState({ selectedProjectId: "other" }));
-    expect(screen.getByRole("tab", { name: /Backlog/ })).toHaveAttribute("data-state", "active");
+    expect(await sectionTitle("Backlog")).toBeInTheDocument();
   });
 
   // Hooks run before the `if (!project)` guard, so an empty registry used to
@@ -263,7 +285,7 @@ describe("Projects", () => {
     await waitFor(() => expect(useUi.getState().view).toBe("start"));
   });
 
-  it("opens the new work item drawer for the selected project", () => {
+  it("opens the new work item drawer for the selected project", async () => {
     const otherProject: ProjectInfo = {
       ...warpforgeProject,
       name: "other",
@@ -272,10 +294,10 @@ describe("Projects", () => {
     currentSnapshot = { ...snapshot, projects: [warpforgeProject, otherProject] };
 
     renderProjects(currentSnapshot);
-    fireEvent.click(screen.getByRole("button", { name: "New work item in warpforge" }));
+    fireEvent.click(await screen.findByRole("button", { name: "New work item in warpforge" }));
 
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText("New work item")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("New work item")).toBeInTheDocument();
     expect(screen.getByText(/Create a task in warpforge/)).toBeInTheDocument();
   });
 
@@ -385,7 +407,7 @@ describe("Projects", () => {
     expect(screen.getByTestId("alpha-1")).toBeInTheDocument();
 
     act(() => useUi.setState({ selectedProjectId: "beta" }));
-    expect(screen.getByRole("tab", { name: /Backlog/ })).toHaveAttribute("data-state", "active");
+    expect(await sectionTitle("Backlog")).toBeInTheDocument();
     expect(screen.queryByTestId("alpha-1")).not.toBeInTheDocument();
 
     await openSurface(/Terminal/);
@@ -397,7 +419,7 @@ describe("Projects", () => {
 
     act(() => useUi.setState({ selectedProjectId: "alpha" }));
     await waitFor(() => expect(screen.getByTestId("alpha-1")).toBeInTheDocument());
-    expect(screen.getByRole("tab", { name: /Terminal/ })).toHaveAttribute("data-state", "active");
+    expect(await sectionTitle("Terminal")).toBeInTheDocument();
   });
 
   it("reattaches the same project terminal when moving from a task Terminal to Projects", async () => {
@@ -425,37 +447,28 @@ describe("Projects", () => {
 });
 
 describe("Projects — port range source", () => {
-  it("labels each of the four range sources", () => {
+  it("labels each of the four range sources", async () => {
     const sources: [NonNullable<ProjectInfo["portRangeSource"]>, string][] = [
       ["auto", "auto-assigned"],
       ["sticky", "auto-assigned (kept)"],
       ["declared", "from team config"],
       ["localOverride", "local override"],
     ];
-    const { rerender } = renderProjects();
     for (const [source, label] of sources) {
-      rerender(
-        <QueryClientProvider
-          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-        >
-          <Projects
-            snapshot={{
-              ...snapshot,
-              projects: [{ ...warpforgeProject, portRangeSource: source }],
-            }}
-            onOpenTask={vi.fn<(id: string) => void>()}
-            onNewTask={vi.fn<(project?: string, prompt?: string) => void>()}
-            onAddProject={vi.fn<() => void>()}
-          />
-        </QueryClientProvider>,
-      );
+      const { unmount } = renderProjects({
+        ...snapshot,
+        projects: [{ ...warpforgeProject, portRangeSource: source }],
+      });
+      await openProjectMenu();
       expect(screen.getByText(label)).toBeInTheDocument();
+      unmount();
     }
   });
 
-  it("leaves the label off when an older daemon sends no source", () => {
+  it("leaves the label off when an older daemon sends no source", async () => {
     renderProjects();
-    expect(screen.getByText(/ports 4000–4099/)).toBeInTheDocument();
+    await openProjectMenu();
+    expect(screen.getByText(/Ports 4000–4099/)).toBeInTheDocument();
     expect(screen.queryByText("auto-assigned")).not.toBeInTheDocument();
   });
 });
@@ -526,7 +539,9 @@ describe("Projects — port range conflict", () => {
       ],
     });
 
+    await openProjectMenu();
     expect(screen.getByText("local override")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Clear override" }));
     expect(daemon.setProjectPortRange).toHaveBeenCalledWith("warpforge", null);
   });

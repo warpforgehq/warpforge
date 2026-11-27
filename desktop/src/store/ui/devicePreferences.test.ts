@@ -33,7 +33,7 @@ it("migrates version 11 settings and keeps the last section and theme", async ()
       customModels: {},
     },
   });
-  expect(JSON.parse(localStorage.getItem("wf-ui") ?? "{}")).toHaveProperty("version", 14);
+  expect(JSON.parse(localStorage.getItem("wf-ui") ?? "{}")).toHaveProperty("version", 15);
 });
 
 it("drops the hidden-agents list and the Models page in version 14", async () => {
@@ -53,6 +53,16 @@ it("drops the hidden-agents list and the Models page in version 14", async () =>
   expect(settingsPage).toBe("agents");
   expect(pickers.defaultAgent).toBe("codex");
   expect(pickers).not.toHaveProperty("hiddenAgents");
+});
+
+it("reopens a session left on a project inside that project's mode", async () => {
+  localStorage.setItem(
+    "wf-ui",
+    JSON.stringify({ version: 14, state: { selectedProjectId: "alpha", view: "project" } }),
+  );
+  await useUi.persist.rehydrate();
+
+  expect(useUi.getState().panelScope).toEqual({ kind: "project", name: "alpha" });
 });
 
 it("persists preferences without persisting a search target", async () => {

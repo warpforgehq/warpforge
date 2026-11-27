@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import type { TaskInfo } from "@/protocol";
 import { pinKey, usePins, type Pin } from "@/store/pins";
 import { useSmithsStore } from "@/store/smiths";
-import { useUi } from "@/store/ui";
+import { scopeProjects, useUi } from "@/store/ui";
 
 import { SIDEBAR_STATE_META } from "./logic/stateMeta";
 import { resolveTaskState } from "./logic/taskState";
@@ -54,8 +54,10 @@ function usePinActive(pin: Pin): boolean {
   return useUi((s) => {
     if (s.settingsOpen) return false;
     if (pin.kind === "task") return s.openTaskId === pin.id;
+    if (pin.kind === "project") {
+      return s.sidebarMode === "tasks" && (scopeProjects(s.panelScope)?.includes(pin.id) ?? false);
+    }
     if (s.openTaskId) return false;
-    if (pin.kind === "project") return s.view === "project" && s.selectedProjectId === pin.id;
     const selection = s.view === "team" ? s.teamSelection : null;
     if (!selection) return false;
     return pin.kind === "smith"
@@ -106,7 +108,6 @@ function PinButton({
       ui.setSidebarMode("tasks");
       onOpenTask(pin.id);
     } else if (pin.kind === "project") {
-      ui.setSidebarMode("tasks");
       ui.openProject(pin.id);
     } else {
       ui.setSidebarMode("team");

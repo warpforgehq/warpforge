@@ -1,14 +1,15 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { InboxListPane } from "@/components/inbox/InboxListPane";
 import type { ConnectionState, DaemonState } from "@/daemon";
 import { cn } from "@/lib/utils";
-import type { SidebarMode, View } from "@/store/ui";
+import { type ProjectSurface, scopeProjects, type SidebarMode, useUi, type View } from "@/store/ui";
 import { AutomationList } from "@/views/automations/AutomationList";
 
 import { DeleteShelfDialog } from "./DeleteShelfDialog";
 import { railSelection, SIDEBAR_BODY_ID, SIDEBAR_MODES } from "./modes";
 import { PanelFooter, PanelHeader } from "./PanelChrome";
+import { ProjectPanel } from "./ProjectPanel";
 import { Rail } from "./Rail";
 import { SettingsNav } from "./SettingsNav";
 import { SmithsBody } from "./SmithsBody";
@@ -36,8 +37,10 @@ interface SidebarProps {
    *  restores the last task it can still find, else the selected project. */
   onSelectMode: (mode: SidebarMode) => void;
   onOpenTask: (id: string) => void;
-  onNewTask: () => void;
-  onOpenProject: (name: string) => void;
+  /** Start a new task, preselecting `project` when given. */
+  onNewTask: (project?: string) => void;
+  /** Enter a project's mode, optionally on a given section. */
+  onOpenProject: (name: string, section?: ProjectSurface) => void;
   onAddProject: () => void;
   onOpenSettings: () => void;
   onCloseSettings?: () => void;
@@ -84,7 +87,9 @@ function Sidebar({
   onSettleFinishedTurns,
   onDeleteSettledShelf,
 }: SidebarProps) {
-  const tree = useSidebarTree(state, openTaskId);
+  const panelScope = useUi((s) => s.panelScope);
+  const scope = useMemo(() => scopeProjects(panelScope), [panelScope]);
+  const tree = useSidebarTree(state, openTaskId, scope);
   // An existing session can have Automations open with an older sidebar mode.
   const panelMode =
     view === "automations" && !openTaskId ? "automations" : mode === "automations" ? "tasks" : mode;
@@ -110,7 +115,7 @@ function Sidebar({
         teamUnread={tree.teamUnread}
         onToggleCollapsed={onToggleCollapsed}
         onSelectMode={onSelectMode}
-        onNewTask={onNewTask}
+        onNewTask={() => onNewTask()}
         onOpenTask={onOpenTask}
         onOpenSettings={onOpenSettings}
         onCloseSettings={onCloseSettings}
@@ -131,6 +136,19 @@ function Sidebar({
               <PanelHeader title="Settings" onBack={onCloseSettings} />
               <SettingsNav />
             </>
+          ) : panelMode === "tasks" && panelScope ? (
+            <ProjectPanel
+              project={panelScope.name}
+              snapshot={state.snapshot}
+              tree={tree}
+              view={view}
+              openTaskId={openTaskId}
+              onOpenProject={onOpenProject}
+              onOpenTask={onOpenTask}
+              onNewTask={onNewTask}
+              onAddProject={onAddProject}
+              onSettleFinishedTurns={onSettleFinishedTurns}
+            />
           ) : (
             <>
               <PanelHeader title={modeLabel} />

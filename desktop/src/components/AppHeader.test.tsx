@@ -45,10 +45,7 @@ function mockDaemon() {
   vi.spyOn(daemon, "getState").mockReturnValue(state);
 }
 
-function renderHeader(
-  openTask: TaskInfo | null,
-  view: "start" | "project" | "inbox" = "project",
-) {
+function renderHeader(openTask: TaskInfo | null, view: "start" | "project" | "inbox" = "project") {
   const snapshot = {
     ...daemon.getState().snapshot,
     tasks: openTask ? [openTask] : [],
@@ -60,7 +57,6 @@ function renderHeader(
       snapshot={snapshot}
       windowButtonsInset={false}
       composing={false}
-      onAddProject={() => {}}
       onOpenTask={() => {}}
       onCloseTask={() => {}}
     />,

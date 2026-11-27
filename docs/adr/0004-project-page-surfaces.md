@@ -1,6 +1,6 @@
 # 0004 — The project page is surfaces, and the backlog is a list
 
-**Status:** accepted (2026-08-21)
+**Status:** accepted (2026-08-21) · page shell superseded by [0033](0033-project-mode.md) (2026-11-27): sections live in the Tasks panel's project mode; the backlog decisions below still hold
 
 Supersedes the presentation half of [0002](0002-issue-tracker-integration.md).
 Its decisions about *where backlog data comes from* (one normalized `WorkItem`,

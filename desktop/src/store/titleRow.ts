@@ -17,6 +17,8 @@ interface TitleRowState {
   paneFull: boolean;
   /** Element the side pane's window controls portal into, at the row's end. */
   paneSlot: HTMLElement | null;
+  /** Element a project section's title and actions portal into. */
+  projectSlot: HTMLElement | null;
   /** The split handle is hovered or dragged; the row lights its line too. */
   splitHot: boolean;
   setSplitX: (x: number | null) => void;
@@ -26,6 +28,7 @@ interface TitleRowState {
   setSplitHot: (hot: boolean) => void;
   setPaneSlot: (slot: HTMLElement | null) => void;
   setPaneFull: (full: boolean) => void;
+  setProjectSlot: (slot: HTMLElement | null) => void;
 }
 
 export const useTitleRow = create<TitleRowState>()((set) => ({
@@ -36,6 +39,7 @@ export const useTitleRow = create<TitleRowState>()((set) => ({
   splitHot: false,
   paneSlot: null,
   paneFull: false,
+  projectSlot: null,
   setSplitX: (splitX) => set({ splitX }),
   setSlot: (slot) => set({ slot }),
   setSurfaceSlot: (surfaceSlot) => set({ surfaceSlot }),
@@ -43,4 +47,5 @@ export const useTitleRow = create<TitleRowState>()((set) => ({
   setSplitHot: (splitHot) => set({ splitHot }),
   setPaneSlot: (paneSlot) => set({ paneSlot }),
   setPaneFull: (paneFull) => set({ paneFull }),
+  setProjectSlot: (projectSlot) => set({ projectSlot }),
 }));

@@ -63,7 +63,7 @@ store/
   ui.ts               — Zustand store (UI state: view, panels, toggles)
 views/
   NewTaskDialog/      — New task composer, also the start view
-  Projects.tsx        — Project list + surface tabs (backlog, runtime, files, PRs)
+  Projects.tsx        — The open project section (backlog, PRs, files, runtime…); the panel lists sections (ADR 0033)
   TaskDetail.tsx      — Task detail: chat + changes rail + runtime panel
   Settings.tsx        — Settings view
 components/

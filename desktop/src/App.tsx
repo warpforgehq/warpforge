@@ -8,6 +8,7 @@ import { daemon } from "@/daemon";
 import { HAS_NATIVE_GLASS, IS_MAC } from "@/lib/platform";
 import {
   type GlobalView,
+  type ProjectSurface,
   type SidebarMode,
   SIDEBAR_WIDTH_DEFAULT,
   SIDEBAR_WIDTH_MAX,
@@ -101,9 +102,9 @@ export default function App() {
     else handleSelectView(mode);
   };
 
-  const handleOpenProject = (name: string) => {
+  const handleOpenProject = (name: string, section?: ProjectSurface) => {
     setNewTaskOpen(false);
-    openProject(name);
+    openProject(name, section);
   };
 
   const openTask = snapshot.tasks.find((t) => t.id === openTaskId) ?? null;
@@ -153,7 +154,7 @@ export default function App() {
     collapsed: sidebarCollapsed,
     connection,
     connectionError,
-    onNewTask: () => startNewTask(),
+    onNewTask: (project?: string) => startNewTask(project),
     settingsOpen,
     onOpenSettings: openSettings,
     onCloseSettings: closeSettings,

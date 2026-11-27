@@ -129,7 +129,7 @@ The base also decides what **Merge into &lt;base&gt;** merges into:
 
 Warpforge refuses a base that cannot work, in the dialog, before the task exists: a branch that is already checked out — in your project checkout or in another worktree, and the message says where — a merged pull request, or a branch that does not exist. Removing the worktree of a task on an existing branch or pull request deletes only the checkout. Your branch stays; only the task branches Warpforge creates itself are ever deleted.
 
-**Set new worktrees up automatically.** A `worktree:` section in the [project config](/reference/configuration/#worktree) copies files such as `.env` into each new worktree and runs a setup command there. The project's **Worktrees** tab lists every worktree; see [Worktrees tab](/guides/projects-and-runtime/#the-worktrees-tab).
+**Set new worktrees up automatically.** A `worktree:` section in the [project config](/reference/configuration/#worktree) copies files such as `.env` into each new worktree and runs a setup command there. The project's **Worktrees** section lists every worktree; see [Worktrees](/guides/projects-and-runtime/#the-worktrees-section).
 
 If the worktree cannot be created — a full disk, say — the task does not quietly fall back to your checkout. The task appears as blocked in the sidebar and shows Git’s error. Send a message to run it in the project checkout instead, or delete it. Deleting a task removes its worktree, including after Warpforge restarts or updates.
 

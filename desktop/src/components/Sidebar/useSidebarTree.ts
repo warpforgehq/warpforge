@@ -9,6 +9,7 @@ import { usePrFeedbackReasons } from "@/hooks/usePrFeedbackReasons";
 import { buildAttentionQueue } from "@/lib/attentionRail";
 import { keeperAttentionReasons } from "@/lib/keepers";
 import { buildTaskForest } from "@/lib/taskGroups";
+import { isChat } from "@/lib/taskKind";
 import { boardTasks } from "@/lib/taskOrigin";
 import { useUi } from "@/store/ui";
 
@@ -21,7 +22,18 @@ import {
   type SidebarRow,
 } from "./logic";
 
-export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
+/**
+ * The task tree's rows and the counts the rail shows beside it.
+ * @param state the daemon state
+ * @param openTaskId the task on screen
+ * @param scope projects the tree is narrowed to; null lists every project and chats
+ * @returns rows, virtual range and tree actions
+ */
+export function useSidebarTree(
+  state: DaemonState,
+  openTaskId: string | null,
+  scope: readonly string[] | null = null,
+) {
   const attentionTargetId = useUi((store) => store.attentionTargetId);
   const attentionTargetNonce = useUi((store) => store.attentionTargetNonce);
   const selectedProject = useUi((store) => store.selectedProjectId);
@@ -70,6 +82,18 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
   // same cached query.
   const agentUpdates = useAgentUpdatesCount();
 
+  const treeTasks = useMemo(
+    () => (scope ? tasks.filter((task) => scope.includes(task.project) && !isChat(task)) : tasks),
+    [scope, tasks],
+  );
+  const treeNames = useMemo(
+    () => (scope ? names.filter((name) => scope.includes(name)) : names),
+    [names, scope],
+  );
+  // One project in scope: the panel header already names it, so the tree
+  // drops its group row and never leaves it collapsed.
+  const single = scope?.length === 1;
+
   const forceVisibleTaskIds = useMemo(
     () => new Set([openTaskId, attentionTargetId].filter((id): id is string => id !== null)),
     [attentionTargetId, openTaskId],
@@ -108,35 +132,35 @@ export function useSidebarTree(state: DaemonState, openTaskId: string | null) {
     });
   }, [attentionTargetId, attentionTargetNonce, openTaskId, taskById]);
 
-  const rows = useMemo(
-    () =>
-      buildSidebarRows({
-        activePathIds,
-        collapsedProjects,
-        expandedShelves,
-        expandedTaskIds,
-        forceVisibleTaskIds,
-        forest,
-        nowSec,
-        projectOrder: names,
-        queue,
-        selectedProject,
-        tasks,
-      }),
-    [
+  const rows = useMemo(() => {
+    const built = buildSidebarRows({
       activePathIds,
-      collapsedProjects,
+      collapsedProjects: single ? new Set<string>() : collapsedProjects,
       expandedShelves,
       expandedTaskIds,
       forceVisibleTaskIds,
-      names,
+      forest,
       nowSec,
+      projectOrder: treeNames,
       queue,
       selectedProject,
-      forest,
-      tasks,
-    ],
-  );
+      tasks: treeTasks,
+    });
+    return single ? built.filter((row) => row.kind !== "project") : built;
+  }, [
+    activePathIds,
+    collapsedProjects,
+    expandedShelves,
+    expandedTaskIds,
+    forceVisibleTaskIds,
+    treeNames,
+    nowSec,
+    queue,
+    selectedProject,
+    single,
+    forest,
+    treeTasks,
+  ]);
 
   const settleMarkedIds = useMemo(() => {
     if (!settlingProject) return null;
