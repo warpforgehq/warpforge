@@ -21,7 +21,7 @@ it("hides a section from its switch", async () => {
 it("disables the switch of the last visible section", () => {
   useUi.setState({
     projectSections: {
-      hidden: ["backlog", "pulls", "files", "runtime", "terminal"],
+      hidden: ["backlog", "pulls", "files", "runtime", "terminal", "config"],
       order: [],
     },
   });

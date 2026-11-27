@@ -15,6 +15,7 @@ import { WorkItemDrawer } from "../components/backlog/WorkItemDrawer";
 import { TerminalWorkspaceView } from "../components/runtime/TerminalWorkspace";
 import { daemon } from "../daemon";
 import type { ServiceInfo, Snapshot } from "../protocol";
+import { ProjectConfigSurface } from "./projects/config/ProjectConfigSurface";
 import { FactorySettingsDialog } from "./projects/FactorySettingsDialog";
 import { PortRangeConflictCard } from "./projects/PortRangeStatus";
 import { ProjectFilesSurface } from "./projects/ProjectFilesSurface";
@@ -187,6 +188,13 @@ export default function Projects({
             portforwards={pfs}
             localConfigError={project.localConfigError}
             onAppendToChat={(context) => onNewTask(project.name, context.body)}
+          />
+        ) : surface === "config" ? (
+          <ProjectConfigSurface
+            key={project.name}
+            project={project.name}
+            rootPath={project.path}
+            services={runtimeServices}
           />
         ) : surface === "worktrees" ? (
           <WorktreesSurface project={project.name} />

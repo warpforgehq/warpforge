@@ -35,6 +35,7 @@ export function projectMenu(
 
   const items: ContextMenuEntry[] = [
     { type: "item", id: "new-task", label: `New task in ${project}` },
+    { type: "item", id: "edit", label: "Edit project" },
     { type: "item", id: "reveal", label: "Open in Finder", disabled: !IS_TAURI || !path },
     { type: "item", id: "copy-path", label: "Copy path", disabled: !path },
     { type: "separator" },
@@ -69,6 +70,7 @@ export function projectMenu(
 
   const handlers = new Map<string, () => void>([
     ["new-task", () => onNewTask(project)],
+    ["edit", () => useUi.getState().openProject(project, "config")],
     [
       "reveal",
       () =>

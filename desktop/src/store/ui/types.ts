@@ -49,7 +49,14 @@ export type TaskSurface =
 export const DEFAULT_TASK_SURFACE: TaskSurface = "diff";
 
 /** Project-page surface. */
-export type ProjectSurface = "backlog" | "pulls" | "files" | "runtime" | "terminal" | "worktrees";
+export type ProjectSurface =
+  | "backlog"
+  | "pulls"
+  | "files"
+  | "runtime"
+  | "terminal"
+  | "worktrees"
+  | "config";
 export const DEFAULT_PROJECT_SURFACE: ProjectSurface = "backlog";
 
 /** Transient intent to open a task already showing a specific file/diff. */

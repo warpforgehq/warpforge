@@ -8,6 +8,7 @@ export const PROJECT_SECTION_IDS: readonly ProjectSurface[] = [
   "runtime",
   "terminal",
   "worktrees",
+  "config",
 ];
 
 /** Which project sections the panel lists, and in what order. One global preference. */

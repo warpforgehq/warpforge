@@ -5,6 +5,7 @@ import {
   ListTodo,
   type LucideIcon,
   Server,
+  SlidersHorizontal,
   TerminalSquare,
 } from "lucide-react";
 
@@ -20,6 +21,7 @@ export const PROJECT_SECTIONS: readonly { id: ProjectSurface; label: string; ico
     { id: "runtime", label: "Runtime", icon: Server },
     { id: "terminal", label: "Terminal", icon: TerminalSquare },
     { id: "worktrees", label: "Worktrees", icon: GitBranch },
+    { id: "config", label: "Config", icon: SlidersHorizontal },
   ];
 
 /**

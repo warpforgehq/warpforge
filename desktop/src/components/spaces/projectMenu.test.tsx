@@ -5,6 +5,7 @@ import { daemon, type DaemonState } from "@/daemon";
 import { type ContextMenuEntry, ContextMenuProvider } from "@/hooks/useContextMenu";
 import { EMPTY_SNAPSHOT, type Space } from "@/protocol";
 import { usePins } from "@/store/pins";
+import { useUi } from "@/store/ui";
 import { useRemoveProject } from "@/views/projects/RemoveProjectHost";
 
 import { useAddToSpace } from "./addToSpace";
@@ -95,6 +96,16 @@ it("starts a task, pins, and asks before removing", () => {
   expect(usePins.getState().pins).toEqual([{ id: "api", kind: "project" }]);
   handlers.get("remove")!();
   expect(useRemoveProject.getState().project).toBe("api");
+});
+
+it("opens the project's Config section from Edit project", () => {
+  const { items, handlers } = projectMenu("api", () => {});
+  expect(items[1]).toEqual({ type: "item", id: "edit", label: "Edit project" });
+
+  handlers.get("edit")!();
+  const ui = useUi.getState();
+  expect(ui.view).toBe("project");
+  expect(ui.projectSurfaceByProject.api).toBe("config");
 });
 
 function Row() {
