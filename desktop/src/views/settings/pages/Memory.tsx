@@ -17,7 +17,11 @@ import {
 const FASTEMBED_HELP =
   "Downloads a ~80 MB model (all-MiniLM-L6-v2) on first use and needs ONNX Runtime — on macOS, brew install onnxruntime. Falls back to keyword search when unavailable or offline.";
 
-export default function MemoryPage() {
+/**
+ * The Memory page header and search settings, above the memory browser.
+ * @param actions The browser's Memories/Proposals tabs, placed in the header.
+ */
+export default function MemoryPage({ actions }: { actions?: React.ReactNode } = {}) {
   const queryClient = useQueryClient();
   const [confirmingFastembed, setConfirmingFastembed] = useState(false);
   const memoryStats = useQuery({
@@ -82,8 +86,8 @@ export default function MemoryPage() {
   ];
 
   return (
-    <div className="flex min-w-0 flex-col pb-4">
-      <SettingsHeader page="memory" />
+    <div className="flex min-w-0 flex-col">
+      <SettingsHeader page="memory" actions={actions} />
       <SettingsCard className="mt-6">
         <SettingsRow
           id="embedding-mode"

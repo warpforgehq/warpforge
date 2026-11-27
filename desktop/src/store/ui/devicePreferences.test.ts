@@ -29,12 +29,30 @@ it("migrates version 11 settings and keeps the last section and theme", async ()
     pickers: {
       defaultAgent: null,
       defaultModel: null,
-      hiddenAgents: [],
       hiddenModels: {},
       customModels: {},
     },
   });
-  expect(JSON.parse(localStorage.getItem("wf-ui") ?? "{}")).toHaveProperty("version", 13);
+  expect(JSON.parse(localStorage.getItem("wf-ui") ?? "{}")).toHaveProperty("version", 14);
+});
+
+it("drops the hidden-agents list and the Models page in version 14", async () => {
+  localStorage.setItem(
+    "wf-ui",
+    JSON.stringify({
+      version: 13,
+      state: {
+        settingsPage: "models",
+        pickers: { defaultAgent: "codex", hiddenAgents: ["claude"], hiddenModels: {} },
+      },
+    }),
+  );
+  await useUi.persist.rehydrate();
+
+  const { pickers, settingsPage } = useUi.getState();
+  expect(settingsPage).toBe("agents");
+  expect(pickers.defaultAgent).toBe("codex");
+  expect(pickers).not.toHaveProperty("hiddenAgents");
 });
 
 it("persists preferences without persisting a search target", async () => {

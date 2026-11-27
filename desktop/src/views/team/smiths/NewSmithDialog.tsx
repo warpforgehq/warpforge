@@ -68,11 +68,7 @@ export function NewSmithDialog({ snapshot, project, onClose }: Props) {
   const defaults = useSmithDefaults();
   const openTeam = useUi((state) => state.openTeam);
   const agents = usePickerAgents(snapshot.agents);
-  const hiddenAgents = useUi((state) => state.pickers.hiddenAgents);
-  const fallback =
-    !snapshot.agents?.some((agent) => agent.enabled) && !hiddenAgents.includes("claude")
-      ? "claude"
-      : "";
+  const fallback = snapshot.agents?.some((agent) => agent.enabled) ? "" : "claude";
   const projects = snapshot.projects.map((p) => p.name);
 
   const [name, setName] = useState("");

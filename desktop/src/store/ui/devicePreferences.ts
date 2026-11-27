@@ -16,7 +16,6 @@ export const confirmationDefaults = {
 export interface PickerPreferences {
   defaultAgent: string | null;
   defaultModel: string | null;
-  hiddenAgents: string[];
   hiddenModels: Record<string, string[]>;
   customModels: Record<string, string[]>;
 }
@@ -27,7 +26,6 @@ export const devicePreferenceDefaults = {
   pickers: {
     defaultAgent: null,
     defaultModel: null,
-    hiddenAgents: [],
     hiddenModels: {},
     customModels: {},
   } as PickerPreferences,
@@ -41,7 +39,6 @@ export interface DevicePreferences {
   setConfirmation: (key: keyof typeof confirmationDefaults, enabled: boolean) => void;
   setDefaultAgent: (agent: string | null) => void;
   setDefaultModel: (model: string | null) => void;
-  setAgentHidden: (agent: string, hidden: boolean) => void;
   setModelHidden: (agent: string, model: string, hidden: boolean) => void;
   setCustomModel: (agent: string, model: string, present: boolean) => void;
 }
@@ -65,10 +62,6 @@ export const createDevicePreferences: UiSlice<DevicePreferences> = (set) => ({
     set(({ pickers }) => ({ pickers: { ...pickers, defaultAgent, defaultModel: null } })),
   setDefaultModel: (defaultModel) =>
     set(({ pickers }) => ({ pickers: { ...pickers, defaultModel } })),
-  setAgentHidden: (agent, hidden) =>
-    set(({ pickers }) => ({
-      pickers: { ...pickers, hiddenAgents: setMembership(pickers.hiddenAgents, agent, hidden) },
-    })),
   setModelHidden: (agent, model, hidden) =>
     set(({ pickers }) => ({
       pickers: {

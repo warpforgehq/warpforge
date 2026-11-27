@@ -9,7 +9,7 @@ import { searchSettings } from "@/views/settings/search";
 import { SIDEBAR_BODY_ID } from "./modes";
 
 const navButton =
-  "flex min-h-7 items-center gap-2 rounded-md px-2.5 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring";
+  "flex h-8 items-center gap-2.5 rounded-md px-2.5 text-left text-[0.8125rem] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring";
 
 export function SettingsNav({ inline = false }: { inline?: boolean }) {
   const page = useUi((s) => s.settingsPage);
@@ -23,14 +23,14 @@ export function SettingsNav({ inline = false }: { inline?: boolean }) {
       id={inline ? undefined : SIDEBAR_BODY_ID}
       aria-label="Settings sections"
       className={cn(
-        "flex min-h-0 flex-col gap-2 px-2 py-2",
+        "flex min-h-0 flex-col gap-3 px-3 py-2",
         inline ? "shrink-0 border-b border-rule" : "flex-1 overflow-y-auto",
       )}
     >
       <div className="relative shrink-0">
         <Search
           aria-hidden
-          className="pointer-events-none absolute bottom-0 left-2.5 top-0 my-auto size-3.5 text-muted-foreground"
+          className="pointer-events-none absolute bottom-0 left-3 top-0 my-auto size-4 text-muted-foreground"
         />
         <input
           type="search"
@@ -48,7 +48,7 @@ export function SettingsNav({ inline = false }: { inline?: boolean }) {
               setQuery("");
             }
           }}
-          className="min-h-7 w-full rounded-md border border-border bg-foreground/[0.02] pl-8 pr-2 text-xs outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="h-9 w-full rounded-full border border-border/60 bg-foreground/[0.03] pl-9 pr-3 text-[0.8125rem] outline-none transition-colors placeholder:text-muted-foreground/80 hover:border-border focus-visible:border-border focus-visible:ring-1 focus-visible:ring-ring [&::-webkit-search-cancel-button]:hidden"
         />
       </div>
       {searching ? (
@@ -64,17 +64,19 @@ export function SettingsNav({ inline = false }: { inline?: boolean }) {
               className={cn(navButton, "justify-between hover:bg-accent/40")}
             >
               <span>{row.title}</span>
-              <span className="shrink-0 text-[0.6875rem] text-muted-foreground">
+              <span className="shrink-0 text-[0.75rem] text-muted-foreground">
                 {SETTINGS_PAGES.find((item) => item.id === row.page)?.label}
               </span>
             </button>
           ))}
           {results.length === 0 && (
-            <p className="px-2.5 py-1 text-xs text-muted-foreground">No settings found</p>
+            <p className="px-2.5 py-1.5 text-[0.8125rem] text-muted-foreground">
+              No settings found
+            </p>
           )}
         </div>
       ) : (
-        <div className={cn("flex gap-2", inline ? "overflow-x-auto" : "flex-col")}>
+        <div className={cn("flex", inline ? "gap-2 overflow-x-auto" : "flex-col gap-5")}>
           {SETTINGS_GROUPS.map((group) => (
             <section
               key={group.label}
@@ -84,7 +86,7 @@ export function SettingsNav({ inline = false }: { inline?: boolean }) {
                 inline && "border-r border-rule pr-2 last:border-0 last:pr-0",
               )}
             >
-              <h2 className="px-2.5 text-[0.6875rem] font-medium text-muted-foreground">
+              <h2 className="mb-1 px-2.5 text-[0.75rem] font-medium text-muted-foreground">
                 {group.label}
               </h2>
               <div className={cn("flex gap-px", !inline && "flex-col")}>
@@ -109,7 +111,7 @@ export function SettingsNav({ inline = false }: { inline?: boolean }) {
                       />
                     )}
                     <Icon
-                      className={cn("size-3.5 shrink-0", id === page && "text-primary")}
+                      className={cn("size-4 shrink-0", id === page && "text-primary")}
                       aria-hidden
                     />
                     {label}

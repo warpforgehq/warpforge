@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render as renderBare, screen } from "@testing-library/react";
+import { act, render as renderBare, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { PropsWithChildren, ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -76,7 +76,7 @@ describe("AgentSetupPanel", () => {
     store.state = daemonState;
   });
 
-  it("enables an agent and hides it from pickers from the same row", async () => {
+  it("has one switch per agent and expands a row to its models", async () => {
     store.state = {
       snapshot: {
         agents: [
@@ -85,7 +85,15 @@ describe("AgentSetupPanel", () => {
             displayName: "Claude",
             enabled: true,
             id: "claude",
-            models: [],
+            models: [
+              {
+                id: "model",
+                name: "Model",
+                category: "model",
+                currentValue: "opus",
+                options: [{ value: "opus", name: "Opus" }],
+              },
+            ],
           },
         ],
       },
@@ -93,18 +101,34 @@ describe("AgentSetupPanel", () => {
     queryClient.setQueryData(agentUpdatesQueryKey, [
       agent("claude", { installed: true, version: "1.0.0" }),
     ]);
-    render(<AgentSetupPanel pickerVisibility />);
+    render(<AgentSetupPanel modelLists />);
 
+    expect(screen.getAllByRole("switch")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /in agent pickers/ })).not.toBeInTheDocument();
     const enabled = screen.getByRole("switch", { name: "Enable Claude" });
-    expect(enabled).toBeChecked();
     await userEvent.click(enabled);
     expect(enabled).not.toBeChecked();
+    expect(screen.queryByRole("region", { name: "Claude models" })).not.toBeInTheDocument();
 
-    const shown = screen.getByRole("button", { name: "Show Claude in agent pickers" });
-    expect(shown).toHaveAttribute("aria-pressed", "true");
-    await userEvent.click(shown);
-    expect(useUi.getState().pickers.hiddenAgents).toContain("claude");
-    useUi.getState().setAgentHidden("claude", false);
+    await userEvent.click(screen.getByText("Claude"));
+    const models = screen.getByRole("region", { name: "Claude models" });
+    expect(within(models).getByText("Opus")).toBeVisible();
+    expect(
+      within(models).getByRole("switch", { name: "Show opus in model pickers" }),
+    ).toBeChecked();
+
+    await userEvent.type(
+      within(models).getByRole("textbox", { name: "Add model id for Claude" }),
+      "provider/custom",
+    );
+    await userEvent.click(within(models).getByRole("button", { name: "Add" }));
+    expect(useUi.getState().pickers.customModels.claude).toContain("provider/custom");
+    expect(within(models).getByText("custom")).toBeVisible();
+    await userEvent.click(within(models).getByRole("button", { name: "Remove provider/custom" }));
+    expect(useUi.getState().pickers.customModels.claude).not.toContain("provider/custom");
+
+    await userEvent.click(screen.getByRole("button", { name: "Claude models" }));
+    expect(screen.queryByRole("region", { name: "Claude models" })).not.toBeInTheDocument();
   });
 
   it("seeds the list from the app-wide detection, skipping the detecting skeleton", () => {

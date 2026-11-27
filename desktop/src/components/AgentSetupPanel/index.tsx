@@ -9,7 +9,6 @@ import { DaemonRpcError } from "@/daemon/rpcError";
 import { agentUpdatesQueryKey } from "@/hooks/useAgentUpdates";
 import { configRole } from "@/lib/configRole";
 import type { AgentConfig, DetectedAgent } from "@/protocol";
-import { useUi } from "@/store/ui";
 
 import { AgentRow, type BrokenInstall } from "./AgentRow";
 
@@ -18,8 +17,8 @@ interface Props {
   detected?: DetectedAgent[];
   /** Fired after a successful save — the onboarding dialog uses it to close. */
   onSaved?: () => void;
-  /** Let each row also hide or show its agent in pickers (Settings only). */
-  pickerVisibility?: boolean;
+  /** Let configured rows expand to their model lists (Settings only). */
+  modelLists?: boolean;
 }
 
 /** How an ACP agent reports that it needs a login before it can start. */
@@ -49,13 +48,11 @@ function fromConfig(agent: AgentConfig): DetectedAgent {
   };
 }
 
-export default function AgentSetupPanel({ detected, onSaved, pickerVisibility }: Props) {
+export default function AgentSetupPanel({ detected, onSaved, modelLists }: Props) {
   const state = useSyncExternalStore(daemon.subscribe, daemon.getState);
   const configured = state.snapshot.agents;
   const health = state.agentHealth ?? {};
   const queryClient = useQueryClient();
-  const hiddenAgents = useUi((s) => s.pickers.hiddenAgents);
-  const setAgentHidden = useUi((s) => s.setAgentHidden);
   // The app-wide agent poll already detects on connect; seeding from its cache
   // means Settings renders rows immediately instead of its detecting skeleton.
   const cachedAgents = () => queryClient.getQueryData<DetectedAgent[]>(agentUpdatesQueryKey);
@@ -324,14 +321,7 @@ export default function AgentSetupPanel({ detected, onSaved, pickerVisibility }:
               }
               error={errors[agent.id]}
               note={notes[agent.id]}
-              picker={
-                pickerVisibility && savedConfig
-                  ? {
-                      shown: !hiddenAgents.includes(agent.id),
-                      onChange: (shown) => setAgentHidden(agent.id, !shown),
-                    }
-                  : undefined
-              }
+              models={modelLists ? savedConfig : undefined}
               onToggle={() => toggle(agent.id)}
               onManage={(clean) => void manage(agent.id, clean)}
               onSignedIn={(error) => {

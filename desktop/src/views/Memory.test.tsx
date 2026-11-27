@@ -8,6 +8,7 @@ import type { Memory as MemoryItem, MemoryProposal, Snapshot } from "@/protocol"
 import { EMPTY_SNAPSHOT } from "@/protocol";
 
 import Memory from "./Memory";
+import MemoryPage from "./settings/pages/Memory";
 
 function memory(patch: Partial<MemoryItem> = {}): MemoryItem {
   return {
@@ -34,11 +35,15 @@ const proposal: MemoryProposal = {
 
 const snapshot: Snapshot = { ...EMPTY_SNAPSHOT };
 
-function renderMemory() {
+function renderMemory(inSettings = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <Memory snapshot={snapshot} onOpenTask={vi.fn<(id: string) => void>()} />
+      <Memory
+        snapshot={snapshot}
+        onOpenTask={vi.fn<(id: string) => void>()}
+        header={inSettings ? (tabs) => <MemoryPage actions={tabs} /> : undefined}
+      />
     </QueryClientProvider>,
   );
 }
@@ -67,6 +72,16 @@ describe("Memory screen", () => {
     expect(await screen.findByText("The API listens on port 8080")).toBeInTheDocument();
     expect(screen.getByText("Deploys go through CI")).toBeInTheDocument();
     expect(await screen.findByRole("tab", { name: /Proposals\s*1/ })).toBeInTheDocument();
+  });
+
+  it("puts the Memories/Proposals tabs in the settings page header", async () => {
+    renderMemory(true);
+
+    const header = screen.getByRole("heading", { name: "Memory", level: 1 }).closest("header");
+    expect(header).not.toBeNull();
+    expect(within(header!).getByRole("tab", { name: "Memories" })).toBeInTheDocument();
+    expect(await within(header!).findByRole("tab", { name: /Proposals\s*1/ })).toBeInTheDocument();
+    expect(screen.getByText("Select a memory to read, edit or link it.")).toBeInTheDocument();
   });
 
   it("searches with the raw text, including a hash", async () => {

@@ -21,7 +21,6 @@ import { configRole } from "@/lib/configRole";
 import { usePickerAgents, usePickerOptions } from "@/lib/pickerPreferences";
 import { cn } from "@/lib/utils";
 import type { Automation, Snapshot } from "@/protocol";
-import { useUi } from "@/store/ui";
 
 import {
   type AutomationForm,
@@ -58,13 +57,9 @@ export function AutomationDialog({
   const queryClient = useQueryClient();
   const now = useTicker(30_000);
   const agents = usePickerAgents(snapshot.agents);
-  const hiddenAgents = useUi((state) => state.pickers.hiddenAgents);
   const fallback = snapshot.agents?.[0]?.id ?? "claude";
   const initialAgent =
-    agents[0]?.id ??
-    (!snapshot.agents?.some((agent) => agent.enabled) && !hiddenAgents.includes(fallback)
-      ? fallback
-      : "");
+    agents[0]?.id ?? (snapshot.agents?.some((agent) => agent.enabled) ? "" : fallback);
   const [form, setForm] = useState<AutomationForm>(() =>
     automation
       ? formFromAutomation(automation)

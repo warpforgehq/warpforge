@@ -1,10 +1,14 @@
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
+import { useState } from "react";
 
 import { AgentLogo } from "@/components/AgentLogo";
 import { AgentSignIn } from "@/components/AgentSignIn";
 import { Button } from "@/components/ui/button";
-import type { DetectedAgent } from "@/protocol";
+import { cn } from "@/lib/utils";
+import type { AgentConfig, DetectedAgent } from "@/protocol";
 import { SettingsBadge, SettingsRow, Toggle } from "@/views/settings/primitives";
+
+import { AgentModels } from "./AgentModels";
 
 /** An installed agent that cannot start. `summary` is the one-line reason,
  *  `full` the untruncated text for a tooltip. */
@@ -24,8 +28,8 @@ interface Props {
   signedOut: boolean;
   error?: string;
   note?: string;
-  /** Present when the row also controls whether pickers list the agent. */
-  picker?: { shown: boolean; onChange: (shown: boolean) => void };
+  /** The saved config; when present the row expands to its model list. */
+  models?: AgentConfig;
   onToggle: () => void;
   onManage: (clean: boolean) => void;
   onSignedIn: (error: string | null) => void;
@@ -45,7 +49,7 @@ export function AgentRow({
   signedOut,
   error,
   note,
-  picker,
+  models,
   onToggle,
   onManage,
   onSignedIn,
@@ -105,49 +109,62 @@ export function AgentRow({
     </>
   );
 
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <SettingsRow
-      icon={<AgentLogo agentId={agent.id} displayName={agent.displayName} />}
-      title={agent.displayName}
-      meta={meta}
-      description={description}
-      control={
-        <>
-          {agent.installed && signedOut && (
-            <AgentSignIn agentId={agent.id} displayName={agent.displayName} onDone={onSignedIn} />
-          )}
-          {isBroken && broken.canReinstall && (
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => onManage(true)}>
-              {busy ? busyLabel : "Reinstall"}
-            </Button>
-          )}
-          {agent.canManage && !isBroken && (!agent.installed || behind) && (
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => onManage(false)}>
-              {busy ? busyLabel : agent.installed ? "Update" : "Install"}
-            </Button>
-          )}
-          {picker && (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="w-7 p-0 text-muted-foreground"
-              aria-pressed={picker.shown}
-              aria-label={`Show ${agent.displayName} in agent pickers`}
-              title={picker.shown ? "Shown in agent pickers" : "Hidden from agent pickers"}
-              onClick={() => picker.onChange(!picker.shown)}
-            >
-              {picker.shown ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
-            </Button>
-          )}
-          <Toggle
-            id={`agent-enabled-${agent.id}`}
-            label={`Enable ${agent.displayName}`}
-            checked={enabled}
-            onChange={onToggle}
-          />
-        </>
-      }
-    />
+    <div
+      onClick={(event) => {
+        if (!models || (event.target as Element).closest("button, input, label, a, form")) return;
+        setExpanded((open) => !open);
+      }}
+      className={cn(models && "cursor-pointer", expanded && "bg-foreground/[0.015]")}
+    >
+      <SettingsRow
+        icon={<AgentLogo agentId={agent.id} displayName={agent.displayName} />}
+        title={agent.displayName}
+        meta={meta}
+        description={description}
+        control={
+          <>
+            {agent.installed && signedOut && (
+              <AgentSignIn agentId={agent.id} displayName={agent.displayName} onDone={onSignedIn} />
+            )}
+            {isBroken && broken.canReinstall && (
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => onManage(true)}>
+                {busy ? busyLabel : "Reinstall"}
+              </Button>
+            )}
+            {agent.canManage && !isBroken && (!agent.installed || behind) && (
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => onManage(false)}>
+                {busy ? busyLabel : agent.installed ? "Update" : "Install"}
+              </Button>
+            )}
+            <Toggle
+              id={`agent-enabled-${agent.id}`}
+              label={`Enable ${agent.displayName}`}
+              checked={enabled}
+              onChange={onToggle}
+            />
+            {models && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="-mr-1.5 w-7 p-0 text-muted-foreground"
+                aria-expanded={expanded}
+                aria-label={`${agent.displayName} models`}
+                title={expanded ? "Hide models" : "Show models"}
+                onClick={() => setExpanded((open) => !open)}
+              >
+                <ChevronRight
+                  className={cn("size-4 transition-transform", expanded && "rotate-90")}
+                />
+              </Button>
+            )}
+          </>
+        }
+      />
+      {models && expanded && <AgentModels agent={models} />}
+    </div>
   );
 }

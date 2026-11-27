@@ -7,6 +7,7 @@ import type { Snapshot } from "@/protocol";
 import { useUi } from "@/store/ui";
 
 import SettingsView from ".";
+import { searchSettings } from "./search";
 
 const snapshot: Snapshot = {
   portforwards: [],
@@ -63,3 +64,11 @@ it.each([true, false])(
     }
   },
 );
+
+it("has no Models page and finds model settings on the agent list", () => {
+  render(<SettingsNav />);
+  expect(screen.queryByRole("button", { name: "Models" })).not.toBeInTheDocument();
+  expect(searchSettings("custom model").map((row) => [row.page, row.id])).toEqual([
+    ["agents", "agent-setup"],
+  ]);
+});

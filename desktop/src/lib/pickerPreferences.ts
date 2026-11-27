@@ -53,9 +53,8 @@ export function usePickerOptions(
 export function usePickerAgents(agents?: readonly AgentConfig[]) {
   const preferences = useUi((s) => s.pickers);
   return useMemo(() => {
-    const hidden = new Set(preferences.hiddenAgents);
     return (agents ?? [])
-      .filter((agent) => agent.enabled && !hidden.has(agent.id))
+      .filter((agent) => agent.enabled)
       .map((agent) => ({
         ...agent,
         models: modelOptionsForPicker(agent.models, agent.id, preferences),

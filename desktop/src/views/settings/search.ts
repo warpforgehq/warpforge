@@ -34,15 +34,10 @@ const index = {
     ["default-model", "Default model", "new task preselect default agent start"],
     [
       "agent-setup",
-      "Install and update agents",
-      "enable disable refresh detect probe pickers hide show visibility Claude Codex OpenCode Pi",
+      "Agents and their models",
+      "install update enable disable refresh detect probe Claude Codex OpenCode Pi models model list custom model ids add remove provider pickers hide show visibility",
     ],
     ["accounts", "Accounts & usage", "import login authentication switch quota spending"],
-  ],
-  models: [
-    ["model-agent", "Model list by agent", "select choose harness catalog"],
-    ["custom-models", "Custom model IDs", "add remove manual free-text provider model"],
-    ["visible-models", "Models in pickers", "hide show visibility filter model list"],
   ],
   tasks: [
     ["confirm-delete-task", "Confirm before deleting a task", "delete confirmation remove chat"],

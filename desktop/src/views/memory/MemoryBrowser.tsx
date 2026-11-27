@@ -88,7 +88,7 @@ export function MemoryBrowser({
   }, [wantMore, tag, items.length, fetchNextPage]);
 
   return (
-    <section aria-label="Memories" className="flex min-h-0 w-[24rem] shrink-0 flex-col gap-2">
+    <section aria-label="Memories" className="flex min-h-0 w-[22.5rem] shrink-0 flex-col gap-2">
       <div className="relative">
         <Search
           aria-hidden

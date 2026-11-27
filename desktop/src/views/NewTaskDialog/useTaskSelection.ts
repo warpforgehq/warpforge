@@ -41,10 +41,8 @@ export function useTaskSelection({
 
   const firstProjectName = snapshot.projects[0]?.name ?? "";
   const enabledAgents = usePickerAgents(snapshot.agents);
-  const { defaultAgent, defaultModel, hiddenAgents } = useUi((state) => state.pickers);
-  const allowFallback =
-    !snapshot.agents?.some((candidate) => candidate.enabled) &&
-    !hiddenAgents.includes(fallbackAgent.id);
+  const { defaultAgent, defaultModel } = useUi((state) => state.pickers);
+  const allowFallback = !snapshot.agents?.some((candidate) => candidate.enabled);
   const fallbackOptions = usePickerOptions(
     allowFallback ? fallbackAgent.id : null,
     fallbackAgent.models,

@@ -1,14 +1,4 @@
-import {
-  Bell,
-  Bot,
-  Brain,
-  Cpu,
-  ListChecks,
-  Palette,
-  Plug,
-  Wrench,
-  type LucideIcon,
-} from "lucide-react";
+import { Bell, Bot, Brain, ListChecks, Palette, Plug, Wrench, type LucideIcon } from "lucide-react";
 
 import type { SettingsPage } from "@/store/ui";
 
@@ -44,14 +34,8 @@ export const SETTINGS_GROUPS: { label: string; pages: SectionLink[] }[] = [
       {
         id: "agents",
         label: "Agents & accounts",
-        description: "Install, update and sign in to the coding agents Warpforge runs.",
+        description: "Install, update and sign in to agents, and choose the models they offer.",
         icon: Bot,
-      },
-      {
-        id: "models",
-        label: "Models",
-        description: "Pick which models each agent offers, and add your own.",
-        icon: Cpu,
       },
       {
         id: "tasks",

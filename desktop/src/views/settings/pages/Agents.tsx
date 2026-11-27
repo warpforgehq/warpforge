@@ -14,7 +14,7 @@ export default function AgentsPage() {
     <SettingsPage page="agents">
       <AgentDefaults agents={snapshot.agents} />
       <SettingsSection id="agent-setup" title="Agents">
-        <AgentSetupPanel pickerVisibility />
+        <AgentSetupPanel modelLists />
       </SettingsSection>
       <SettingsSection id="accounts" title="Accounts & usage">
         <AccountsPanel />

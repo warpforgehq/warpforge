@@ -14,35 +14,39 @@ export function PanelHeader({
   /** Shown as a back control, for Settings. */
   onBack?: () => void;
 }) {
-  return (
-    <div
-      data-tauri-drag-region="deep"
-      className="flex h-10 shrink-0 items-center gap-1.5 pl-7 pr-3 pt-2"
-    >
-      {onBack ? (
+  if (onBack) {
+    return (
+      <div
+        data-tauri-drag-region="deep"
+        className="flex h-14 shrink-0 items-end gap-1 pb-1 pl-5 pr-3 pt-2"
+      >
         <button
           type="button"
           onClick={onBack}
           aria-label="Back from Settings"
           title="Back (Esc)"
-          className="-ml-1.5 flex h-6 items-center gap-1 rounded px-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-foreground transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
-          <ChevronLeft aria-hidden className="size-3.5 text-muted-foreground" />
-          {title}
+          <ChevronLeft aria-hidden className="size-4" />
         </button>
-      ) : (
-        <h2 className="select-none text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-foreground">
+        <h2 className="select-none pb-px text-[1.25rem] font-semibold tracking-tight text-foreground">
           {title}
         </h2>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      data-tauri-drag-region="deep"
+      className="flex h-10 shrink-0 items-center gap-1.5 pl-7 pr-3 pt-2"
+    >
+      <h2 className="select-none text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-foreground">
+        {title}
+      </h2>
       <span className="flex-1" />
       {count !== undefined && count > 0 && (
         <span className="font-mono text-[0.6875rem] tabular-nums text-warn">{count}</span>
-      )}
-      {onBack && (
-        <kbd className="rounded border border-rule px-1 font-mono text-[0.625rem] text-muted-foreground/70">
-          esc
-        </kbd>
       )}
     </div>
   );

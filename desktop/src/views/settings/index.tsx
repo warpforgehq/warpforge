@@ -12,20 +12,20 @@ import AgentsPage from "./pages/Agents";
 import AppearancePage from "./pages/Appearance";
 import IntegrationsPage from "./pages/Integrations";
 import MemoryPage from "./pages/Memory";
-import ModelsPage from "./pages/Models";
 import NotificationsPage from "./pages/Notifications";
 import TasksPage from "./pages/Tasks";
 
 const PAGES: Record<SettingsPage, () => React.ReactElement> = {
   appearance: AppearancePage,
   notifications: NotificationsPage,
-  models: ModelsPage,
   agents: AgentsPage,
   integrations: IntegrationsPage,
   tasks: TasksPage,
   memory: MemoryPage,
   advanced: AdvancedPage,
 };
+
+const memoryHeader = (tabs: React.ReactNode) => <MemoryPage actions={tabs} />;
 
 interface Props {
   /** The sidebar panel is hidden, so the sections render here as tabs. */
@@ -97,8 +97,10 @@ export default function SettingsView({ showNav, snapshot, onOpenTask, onClose }:
       </div>
       {showNav && <SettingsNav inline />}
       {page === "memory" ? (
-        <main className="flex min-h-0 flex-1 flex-col px-6 pt-2">
-          <MemoryBrowserView snapshot={snapshot} onOpenTask={onOpenTask} header={<Page />} />
+        <main className="flex min-h-0 flex-1 flex-col">
+          <div className="mx-auto flex min-h-0 w-full max-w-[960px] flex-1 flex-col px-6 pb-4 pt-6">
+            <MemoryBrowserView snapshot={snapshot} onOpenTask={onOpenTask} header={memoryHeader} />
+          </div>
         </main>
       ) : (
         <main className="min-h-0 flex-1 overflow-y-auto">

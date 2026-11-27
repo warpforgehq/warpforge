@@ -19,7 +19,7 @@ export const useUi = create<UiState>()(
     }),
     {
       name: "wf-ui",
-      version: 13,
+      version: 14,
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
         if (version === 0 && state && "sidebarWidth" in state) {
@@ -116,6 +116,16 @@ export const useUi = create<UiState>()(
             ...(rest.view === "control" && { view: "start" }),
             ...(rest.sidebarMode === "control" && { sidebarMode: "tasks" }),
           };
+        }
+        // Agents are hidden from pickers by disabling them; the per-device
+        // hide list and the separate Models page are gone.
+        if (version < 14) {
+          const pickers = state.pickers as Record<string, unknown> | undefined;
+          if (pickers && "hiddenAgents" in pickers) {
+            const { hiddenAgents: _hiddenAgents, ...rest } = pickers;
+            state = { ...state, pickers: rest };
+          }
+          if (state.settingsPage === "models") state = { ...state, settingsPage: "agents" };
         }
         return state;
       },

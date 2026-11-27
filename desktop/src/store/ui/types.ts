@@ -27,7 +27,6 @@ export type SettingsPage =
   | "appearance"
   | "notifications"
   | "agents"
-  | "models"
   | "integrations"
   | "tasks"
   | "memory"
