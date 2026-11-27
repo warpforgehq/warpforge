@@ -1,18 +1,17 @@
 import LanguageServersPanel from "@/components/LanguageServersPanel";
 import TrackersPanel from "@/components/TrackersPanel";
 
-import { Section } from "../primitives";
+import { SettingsPage, SettingsSection } from "../primitives";
 
 export default function IntegrationsPage() {
   return (
-    <div className="flex flex-col gap-8">
-      <Section id="language-servers" title="Language servers">
+    <SettingsPage page="integrations">
+      <SettingsSection id="language-servers" title="Language servers">
         <LanguageServersPanel />
-      </Section>
-
-      <Section title="Issue trackers" padded>
+      </SettingsSection>
+      <SettingsSection title="Issue trackers" padded>
         <TrackersPanel />
-      </Section>
-    </div>
+      </SettingsSection>
+    </SettingsPage>
   );
 }

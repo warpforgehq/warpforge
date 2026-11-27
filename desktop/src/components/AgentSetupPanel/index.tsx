@@ -1,24 +1,25 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Download, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { SettingsListSkeleton } from "@/components/SettingsListSkeleton";
 import { Button } from "@/components/ui/button";
+import { daemon } from "@/daemon";
+import { DaemonRpcError } from "@/daemon/rpcError";
 import { agentUpdatesQueryKey } from "@/hooks/useAgentUpdates";
 import { configRole } from "@/lib/configRole";
-import { cn } from "@/lib/utils";
+import type { AgentConfig, DetectedAgent } from "@/protocol";
+import { useUi } from "@/store/ui";
 
-import { daemon } from "../daemon";
-import { DaemonRpcError } from "../daemon/rpcError";
-import type { AgentConfig, DetectedAgent } from "../protocol";
-import { AgentLogo } from "./AgentLogo";
-import { AgentSignIn } from "./AgentSignIn";
-import { SettingsListSkeleton } from "./SettingsListSkeleton";
+import { AgentRow, type BrokenInstall } from "./AgentRow";
 
 interface Props {
   /** Pre-loaded agents (dialog path: pendingAgentSetup already resolved). */
   detected?: DetectedAgent[];
   /** Fired after a successful save — the onboarding dialog uses it to close. */
   onSaved?: () => void;
+  /** Let each row also hide or show its agent in pickers (Settings only). */
+  pickerVisibility?: boolean;
 }
 
 /** How an ACP agent reports that it needs a login before it can start. */
@@ -28,14 +29,6 @@ const SIGNED_OUT = /authentication required/i;
 function lastLine(output: string): string {
   const lines = output.trim().split("\n");
   return lines[lines.length - 1]?.trim() ?? "";
-}
-
-/** An installed agent that cannot start. `summary` is the one-line reason,
- *  `full` the untruncated text for a tooltip. */
-interface BrokenInstall {
-  summary: string;
-  full: string;
-  canReinstall: boolean;
 }
 
 /**
@@ -56,11 +49,13 @@ function fromConfig(agent: AgentConfig): DetectedAgent {
   };
 }
 
-export default function AgentSetupPanel({ detected, onSaved }: Props) {
+export default function AgentSetupPanel({ detected, onSaved, pickerVisibility }: Props) {
   const state = useSyncExternalStore(daemon.subscribe, daemon.getState);
   const configured = state.snapshot.agents;
   const health = state.agentHealth ?? {};
   const queryClient = useQueryClient();
+  const hiddenAgents = useUi((s) => s.pickers.hiddenAgents);
+  const setAgentHidden = useUi((s) => s.setAgentHidden);
   // The app-wide agent poll already detects on connect; seeding from its cache
   // means Settings renders rows immediately instead of its detecting skeleton.
   const cachedAgents = () => queryClient.getQueryData<DetectedAgent[]>(agentUpdatesQueryKey);
@@ -297,15 +292,9 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
 
   return (
     <>
-      <div className="flex flex-col">
+      <div className="divide-y divide-border/60">
         {agents.map((agent) => {
-          const on = enabled.has(agent.id);
-          const isBusy = busy.has(agent.id);
-          const behind = agent.status === "behind";
           const savedConfig = configured?.find((c) => c.id === agent.id);
-          const modelCount = savedConfig?.models.find((o) => configRole(o) === "model")?.options
-            .length;
-          const isProbing = probing.has(agent.id);
           // A result recorded in this panel wins over the daemon's mark; an
           // agent this detection reports uninstalled carries no stale mark.
           const mark = agent.id in health ? health[agent.id] : agent.brokenInstall;
@@ -318,181 +307,71 @@ export default function AgentSetupPanel({ detected, onSaved }: Props) {
                 }
               : undefined;
           const brokenInfo = broken[agent.id] ?? healthBroken;
-          const signedOut =
-            agent.id === "antigravity" &&
-            SIGNED_OUT.test(`${brokenInfo?.full ?? ""} ${notes[agent.id] ?? ""}`);
-          const isBroken = brokenInfo !== undefined && !signedOut;
           return (
-            <div
+            <AgentRow
               key={agent.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => toggle(agent.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  toggle(agent.id);
-                }
+              agent={agent}
+              enabled={enabled.has(agent.id)}
+              busy={busy.has(agent.id)}
+              probing={probing.has(agent.id)}
+              modelCount={
+                savedConfig?.models.find((o) => configRole(o) === "model")?.options.length
+              }
+              broken={brokenInfo}
+              signedOut={
+                agent.id === "antigravity" &&
+                SIGNED_OUT.test(`${brokenInfo?.full ?? ""} ${notes[agent.id] ?? ""}`)
+              }
+              error={errors[agent.id]}
+              note={notes[agent.id]}
+              picker={
+                pickerVisibility && savedConfig
+                  ? {
+                      shown: !hiddenAgents.includes(agent.id),
+                      onChange: (shown) => setAgentHidden(agent.id, !shown),
+                    }
+                  : undefined
+              }
+              onToggle={() => toggle(agent.id)}
+              onManage={(clean) => void manage(agent.id, clean)}
+              onSignedIn={(error) => {
+                clearAgentState(agent.id);
+                setNotes((prev) => ({ ...prev, [agent.id]: error ?? "Signed in with Google." }));
               }}
-              className={cn(
-                "flex cursor-pointer items-start gap-3 border-t border-rule px-4 py-2.5 text-left transition-colors first:border-t-0",
-                on ? "bg-primary/5" : "hover:bg-muted/30",
-              )}
-            >
-              <div
-                className={cn(
-                  "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border",
-                  on ? "border-primary bg-primary" : "border-muted-foreground",
-                )}
-              >
-                {on && <div className="size-2 rounded-sm bg-primary-foreground" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-2 text-[0.9375rem] font-medium">
-                  <AgentLogo agentId={agent.id} displayName={agent.displayName} />
-                  <span className="truncate">{agent.displayName}</span>
-                  {agent.installed ? (
-                    signedOut ? (
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-warn">
-                        signed out
-                      </span>
-                    ) : isBroken ? (
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-warn">
-                        {brokenInfo.canReinstall ? "needs reinstall" : "cannot start"}
-                      </span>
-                    ) : behind ? (
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-warn/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-warn">
-                        update available
-                      </span>
-                    ) : (
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-ok/15 px-1.5 py-0.5 text-[0.6875rem] font-medium text-ok">
-                        {agent.version ? `v${agent.version}` : "installed"}
-                      </span>
-                    )
-                  ) : (
-                    <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-muted px-1.5 py-0.5 text-[0.6875rem] text-muted-foreground">
-                      <Download className="size-2.5" />
-                      not found
-                    </span>
-                  )}
-                </div>
-                <p className="mt-0.5 font-mono text-[0.6875rem] text-muted-foreground">
-                  {agent.defaultAcpCommand}
-                  {isProbing ? (
-                    <span className="font-sans"> · reloading models…</span>
-                  ) : (
-                    modelCount !== undefined && (
-                      <span className="font-sans"> · {modelCount} models</span>
-                    )
-                  )}
-                </p>
-                {behind && agent.latestVersion && (
-                  <p className="mt-0.5 text-[0.6875rem] text-warn">
-                    v{agent.version} → v{agent.latestVersion}
-                  </p>
-                )}
-                {!agent.installed && !agent.canManage && (
-                  <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
-                    Install: <span className="font-mono">{agent.installHint}</span>
-                  </p>
-                )}
-                {errors[agent.id] && (
-                  <p className="mt-0.5 font-mono text-[0.6875rem] text-destructive">
-                    {errors[agent.id]}
-                  </p>
-                )}
-                {signedOut && (
-                  <p className="mt-0.5 text-[0.6875rem] text-warn" title={brokenInfo?.full}>
-                    Sign in before starting a task with this agent.
-                  </p>
-                )}
-                {brokenInfo && !signedOut && (
-                  <p className="mt-0.5 text-[0.6875rem] text-warn" title={brokenInfo.full}>
-                    {brokenInfo.summary}
-                  </p>
-                )}
-                {notes[agent.id] && !signedOut && (
-                  <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">{notes[agent.id]}</p>
-                )}
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                {agent.installed && signedOut && (
-                  <AgentSignIn
-                    agentId={agent.id}
-                    displayName={agent.displayName}
-                    onDone={(error) => {
-                      clearAgentState(agent.id);
-                      setNotes((prev) => ({
-                        ...prev,
-                        [agent.id]: error ?? "Signed in with Google.",
-                      }));
-                    }}
-                  />
-                )}
-                {isBroken && brokenInfo.canReinstall && (
-                  <Button
-                    size="sm"
-                    variant="default"
-                    className="h-7 whitespace-nowrap px-2 text-[0.8125rem]"
-                    disabled={isBusy}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void manage(agent.id, true);
-                    }}
-                  >
-                    {isBusy && <Loader2 className="size-3 animate-spin" />}
-                    {isBusy ? "Working…" : "Reinstall"}
-                  </Button>
-                )}
-                {agent.canManage && !isBroken && (!agent.installed || behind) && (
-                  <Button
-                    size="sm"
-                    variant={behind ? "default" : "secondary"}
-                    className="h-7 whitespace-nowrap px-2 text-[0.8125rem]"
-                    disabled={isBusy}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void manage(agent.id);
-                    }}
-                  >
-                    {isBusy && <Loader2 className="size-3 animate-spin" />}
-                    {isBusy ? "Working…" : agent.installed ? "Update" : "Install"}
-                  </Button>
-                )}
-              </div>
-            </div>
+            />
           );
         })}
       </div>
-      <div className="flex items-center justify-end gap-3 border-t border-rule px-4 py-2.5">
-        <span className="mr-auto text-[0.6875rem] text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 border-t border-border/60 px-3.5 py-2.5">
+        <span className="mr-auto text-[0.75rem] text-muted-foreground">
           Enable the agents you want available for new tasks, then Save.
         </span>
         {refreshing && (
-          <span className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
+          <span className="flex items-center gap-1.5 text-[0.75rem] text-muted-foreground">
             <Loader2 className="size-3 animate-spin" />
             Checking versions…
           </span>
         )}
         {loadError && !refreshing && (
-          <span className="text-[0.6875rem] text-muted-foreground">
+          <span className="text-[0.75rem] text-muted-foreground">
             Version check failed: {loadError}
           </span>
         )}
-        {saveError && <span className="text-[0.6875rem] text-destructive">{saveError}</span>}
+        {saveError && <span className="text-[0.75rem] text-destructive">{saveError}</span>}
         {/* One button for the whole list. Per-agent buttons repeated the same
             label down the column for no gain: you reload because something
             changed outside Warpforge, and you rarely know which harness saw it. */}
         {refreshableIds.length > 0 && (
           <Button
-            variant="outline"
+            size="sm"
+            variant="ghost"
             disabled={probing.size > 0}
             onClick={() => void refreshModels(refreshableIds)}
           >
             {probing.size > 0 ? "Reloading…" : "Reload models list"}
           </Button>
         )}
-        <Button onClick={() => void save()} disabled={saved}>
+        <Button size="sm" variant="secondary" onClick={() => void save()} disabled={saved}>
           {saved ? "Saved" : "Save"}
         </Button>
       </div>

@@ -5,6 +5,14 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { daemon } from "@/daemon";
 
+import {
+  SegmentedControl,
+  SettingsCard,
+  SettingsHeader,
+  SettingsRow,
+  StatusStrip,
+} from "../primitives";
+
 /** What the daemon needs before hybrid search can work, spelled out once. */
 const FASTEMBED_HELP =
   "Downloads a ~80 MB model (all-MiniLM-L6-v2) on first use and needs ONNX Runtime — on macOS, brew install onnxruntime. Falls back to keyword search when unavailable or offline.";
@@ -74,54 +82,42 @@ export default function MemoryPage() {
   ];
 
   return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <label
+    <div className="flex min-w-0 flex-col pb-4">
+      <SettingsHeader page="memory" />
+      <SettingsCard className="mt-6">
+        <SettingsRow
           id="embedding-mode"
-          tabIndex={-1}
-          className="flex items-center gap-2 text-[0.75rem] text-muted-foreground"
-          title={
-            hybrid
-              ? "Hybrid: keywords plus meaning. Falls back to keywords offline."
-              : FASTEMBED_HELP
+          title="Search"
+          description={
+            hybrid ? "Hybrid: keywords plus meaning. Falls back to keywords offline." : undefined
           }
-        >
-          Search
-          <select
-            aria-label="Embedding mode"
-            value={hybrid ? "fastembed" : "none"}
-            disabled={memoryStats.isLoading}
-            onChange={(e) => {
-              // The select is controlled by the daemon's answer, so a
-              // pick that is not applied snaps back on the next render —
-              // there is nothing to undo here.
-              const mode = e.target.value;
-              if (mode === "fastembed") {
-                setConfirmingFastembed(true);
-                return;
-              }
-              void applyEmbeddingMode(mode);
-            }}
-            className="h-7 rounded-md border bg-background px-2 text-[0.75rem] text-foreground"
-          >
-            <option value="none">Keywords</option>
-            <option value="fastembed">Hybrid (~80 MB)</option>
-          </select>
-        </label>
-        {facts.map((fact) => (
-          <span
-            key={fact.label}
-            title={fact.title}
-            className="flex items-center gap-1.5 font-mono text-[0.6875rem]"
-          >
-            <span className="text-muted-foreground/60">{fact.label}</span>
-            <span className="tabular-nums text-foreground/80">{fact.value}</span>
-          </span>
-        ))}
-      </div>
+          hint={hybrid ? undefined : FASTEMBED_HELP}
+          control={
+            <SegmentedControl
+              label="Embedding mode"
+              value={hybrid ? "fastembed" : "none"}
+              disabled={memoryStats.isLoading}
+              onChange={(mode) => {
+                // The control follows the daemon's answer, so a pick that is
+                // not applied snaps back on the next render.
+                if (mode === "fastembed") {
+                  setConfirmingFastembed(true);
+                  return;
+                }
+                void applyEmbeddingMode(mode);
+              }}
+              options={[
+                { value: "none", label: "Keywords" },
+                { value: "fastembed", label: "Hybrid (~80 MB)" },
+              ]}
+            />
+          }
+        />
+        <StatusStrip items={facts} />
+      </SettingsCard>
 
       {stats?.embeddingUnavailable && (
-        <p className="text-[0.6875rem] text-warn">
+        <p className="mt-2 px-1 text-[0.75rem] text-warn">
           Last attempt at hybrid search failed: {stats.embeddingUnavailable}. On macOS,{" "}
           <span className="font-mono">brew install onnxruntime</span>, then pick Hybrid again.
         </p>

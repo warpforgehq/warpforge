@@ -8,6 +8,7 @@ import type { InstallAgentResult } from "@/daemon/agents";
 import { DaemonRpcError } from "@/daemon/rpcError";
 import { agentUpdatesQueryKey } from "@/hooks/useAgentUpdates";
 import type { DaemonEvent, DetectedAgent } from "@/protocol";
+import { useUi } from "@/store/ui";
 
 const { daemonState, detectAgents, installAgent, probeAgent, saveAgents, store } = vi.hoisted(
   () => {
@@ -73,6 +74,37 @@ describe("AgentSetupPanel", () => {
     vi.clearAllMocks();
     queryClient.clear();
     store.state = daemonState;
+  });
+
+  it("enables an agent and hides it from pickers from the same row", async () => {
+    store.state = {
+      snapshot: {
+        agents: [
+          {
+            acpCommand: "acp-claude",
+            displayName: "Claude",
+            enabled: true,
+            id: "claude",
+            models: [],
+          },
+        ],
+      },
+    };
+    queryClient.setQueryData(agentUpdatesQueryKey, [
+      agent("claude", { installed: true, version: "1.0.0" }),
+    ]);
+    render(<AgentSetupPanel pickerVisibility />);
+
+    const enabled = screen.getByRole("switch", { name: "Enable Claude" });
+    expect(enabled).toBeChecked();
+    await userEvent.click(enabled);
+    expect(enabled).not.toBeChecked();
+
+    const shown = screen.getByRole("button", { name: "Show Claude in agent pickers" });
+    expect(shown).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(shown);
+    expect(useUi.getState().pickers.hiddenAgents).toContain("claude");
+    useUi.getState().setAgentHidden("claude", false);
   });
 
   it("seeds the list from the app-wide detection, skipping the detecting skeleton", () => {

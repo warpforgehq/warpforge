@@ -32,11 +32,10 @@ const index = {
   agents: [
     ["default-agent", "Default agent", "new task preselect harness start"],
     ["default-model", "Default model", "new task preselect default agent start"],
-    ["visible-agents", "Agents in pickers", "hide show visibility harness"],
     [
       "agent-setup",
       "Install and update agents",
-      "enable disable refresh detect probe Claude Codex OpenCode Pi",
+      "enable disable refresh detect probe pickers hide show visibility Claude Codex OpenCode Pi",
     ],
     ["accounts", "Accounts & usage", "import login authentication switch quota spending"],
   ],

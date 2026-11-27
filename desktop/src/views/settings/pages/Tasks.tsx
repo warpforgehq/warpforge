@@ -8,7 +8,14 @@ import { usePickerAgents, usePickerOptions } from "@/lib/pickerPreferences";
 import type { HistorySettings } from "@/protocol";
 import { useUi } from "@/store/ui";
 
-import { Section, SectionNote, SettingRow, Toggle } from "../primitives";
+import {
+  settingsControl,
+  SettingsNote,
+  SettingsPage,
+  SettingsRow,
+  SettingsSection,
+  Toggle,
+} from "../primitives";
 import { Confirmations } from "./Confirmations";
 
 /** The three retention windows as one sentence, so the chain they form is
@@ -60,10 +67,10 @@ export default function TasksPage() {
   });
 
   return (
-    <div className="flex flex-col gap-6">
+    <SettingsPage page="tasks">
       <Confirmations />
-      <Section title="Text generation">
-        <SettingRow
+      <SettingsSection title="Text generation">
+        <SettingsRow
           id="auto-name-tasks"
           title="Auto-name tasks"
           description="Give a new task a short title, written by the agent below."
@@ -77,7 +84,7 @@ export default function TasksPage() {
             />
           }
         />
-        <SettingRow
+        <SettingsRow
           id="text-gen-agent"
           title="Agent for git text"
           description="Drafts commit messages and PR descriptions from the diff."
@@ -87,7 +94,7 @@ export default function TasksPage() {
               aria-label="Agent for git text"
               value={textGenAgentId ?? ""}
               onChange={(e) => setTextGenAgentId(e.target.value || null)}
-              className="bg-deep-surface h-7 rounded-md border px-2 text-[0.8125rem] outline-none focus:ring-1 focus:ring-ring"
+              className={settingsControl}
             >
               <option value="">None</option>
               {textGenAgentId && !enabledAgents.some((agent) => agent.id === textGenAgentId) && (
@@ -103,7 +110,7 @@ export default function TasksPage() {
             </select>
           }
         />
-        <SettingRow
+        <SettingsRow
           id="text-gen-model"
           title="Model for git text"
           description="Choose the model that drafts task titles and git text."
@@ -113,7 +120,7 @@ export default function TasksPage() {
               value={textGenModel ?? ""}
               onChange={(e) => setTextGenModel(e.target.value || null)}
               disabled={!modelOption && !textGenModel}
-              className="bg-deep-surface h-7 max-w-56 rounded-md border px-2 text-[0.8125rem] outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+              className={`${settingsControl} max-w-56`}
             >
               <option value="">Agent default</option>
               {textGenModel && !modelOption?.options.some((o) => o.value === textGenModel) && (
@@ -129,10 +136,10 @@ export default function TasksPage() {
             </select>
           }
         />
-      </Section>
+      </SettingsSection>
 
-      <Section title="Task history">
-        <SettingRow
+      <SettingsSection title="Task history">
+        <SettingsRow
           id="transcript-retention"
           title="Keep transcripts for"
           description="How long a closed task keeps its conversation."
@@ -145,7 +152,7 @@ export default function TasksPage() {
               onChange={(event) =>
                 applyRetention.mutate({ retentionDays: Number(event.target.value) })
               }
-              className="h-7 rounded-md border bg-background px-2 text-[0.8125rem]"
+              className={settingsControl}
             >
               <option value={15}>15 days</option>
               <option value={30}>30 days</option>
@@ -154,7 +161,7 @@ export default function TasksPage() {
             </select>
           }
         />
-        <SettingRow
+        <SettingsRow
           id="auto-settle"
           title="Settle ignored tasks after"
           description="An untouched finished turn closes itself."
@@ -167,7 +174,7 @@ export default function TasksPage() {
               onChange={(event) =>
                 applyRetention.mutate({ settleIgnoredAfterDays: Number(event.target.value) })
               }
-              className="h-7 rounded-md border bg-background px-2 text-[0.8125rem]"
+              className={settingsControl}
             >
               <option value={7}>7 days</option>
               <option value={14}>14 days</option>
@@ -176,7 +183,7 @@ export default function TasksPage() {
             </select>
           }
         />
-        <SettingRow
+        <SettingsRow
           id="closed-task-expiry"
           title="Delete closed tasks after"
           description="Removes the task, its chat and its worktree."
@@ -189,7 +196,7 @@ export default function TasksPage() {
               onChange={(event) =>
                 applyRetention.mutate({ deleteClosedAfterDays: Number(event.target.value) })
               }
-              className="h-7 rounded-md border bg-background px-2 text-[0.8125rem]"
+              className={settingsControl}
             >
               <option value={60}>60 days</option>
               <option value={90}>90 days</option>
@@ -198,14 +205,14 @@ export default function TasksPage() {
             </select>
           }
         />
-        <SectionNote>
+        <SettingsNote>
           {lifecycleSentence(
             historySettings.data?.settleIgnoredAfterDays ?? 14,
             historySettings.data?.retentionDays ?? 30,
             historySettings.data?.deleteClosedAfterDays ?? 90,
           )}
-        </SectionNote>
-      </Section>
-    </div>
+        </SettingsNote>
+      </SettingsSection>
+    </SettingsPage>
   );
 }

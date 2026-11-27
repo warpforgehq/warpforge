@@ -17,6 +17,7 @@ import {
 import { agentDisplayName } from "@/lib/agentNames";
 import { cn } from "@/lib/utils";
 import type { AgentAccountLimits, AgentSpend } from "@/protocol";
+import { settingsControl } from "@/views/settings/primitives";
 
 /** Agents that support several logins. Others simply have no accounts UI. */
 const ACCOUNT_AGENTS = ["claude", "codex"];
@@ -87,15 +88,18 @@ export default function AccountsPanel() {
         const label = labels[agentId] ?? "";
 
         return (
-          <section key={agentId} className="flex flex-col border-t border-rule first:border-t-0">
-            <header className="flex items-center gap-2 px-4 pb-1.5 pt-3 text-[0.8125rem] font-semibold">
+          <section
+            key={agentId}
+            className="flex flex-col border-t border-border/60 first:border-t-0"
+          >
+            <header className="flex items-center gap-2.5 px-3.5 pb-1.5 pt-3 text-[0.8125rem] font-medium">
               <AgentLogo agentId={agentId} displayName={displayName} />
               {displayName}
               <SpendSummary spend={spend?.find((s) => s.agentId === agentId) ?? null} />
             </header>
 
             {own.length === 0 && strays.length === 0 ? (
-              <p className="px-4 pb-2 text-[0.8125rem] text-muted-foreground">
+              <p className="px-3.5 pb-2 text-[0.75rem] leading-relaxed text-muted-foreground">
                 No accounts yet. Sign in to {displayName}, then import the login below.
               </p>
             ) : (
@@ -133,7 +137,7 @@ export default function AccountsPanel() {
 
             {manageable && (
               <form
-                className="flex items-center gap-2 px-4 pb-3 pt-1"
+                className="flex items-center gap-2 px-3.5 pb-3 pt-1"
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!label.trim()) return;
@@ -148,13 +152,12 @@ export default function AccountsPanel() {
                   onChange={(e) => setLabels((prev) => ({ ...prev, [agentId]: e.target.value }))}
                   placeholder="personal"
                   aria-label={`New ${displayName} account name`}
-                  className="bg-deep-surface h-7 w-40 rounded-md border px-2 text-[0.8125rem] outline-none focus:ring-1 focus:ring-ring"
+                  className={`${settingsControl} w-40`}
                 />
                 <Button
                   type="submit"
                   size="sm"
                   variant="outline"
-                  className="h-7 gap-1.5 text-[0.8125rem]"
                   disabled={!label.trim() || busy !== null}
                 >
                   {busy === `import:${agentId}` ? (
@@ -171,23 +174,23 @@ export default function AccountsPanel() {
       })}
 
       {error && (
-        <p className="border-t border-rule px-4 py-2 text-[0.8125rem] text-warn" role="status">
+        <p className="border-t border-border/60 px-3.5 py-2 text-[0.75rem] text-warn" role="status">
           {error}
         </p>
       )}
 
-      <div className="flex items-center gap-2 border-t border-rule px-4 py-2.5">
+      <div className="flex items-center gap-2 border-t border-border/60 px-3.5 py-2.5">
         {spend && spend.length > 0 && (
-          <span className="mr-auto text-[0.6875rem] text-muted-foreground/80">
+          <span className="mr-auto text-[0.75rem] text-muted-foreground/80">
             {SPEND_DISCLAIMER}
           </span>
         )}
-        {limitsError && <span className="text-[0.8125rem] text-destructive">{limitsError}</span>}
+        {limitsError && <span className="text-[0.75rem] text-destructive">{limitsError}</span>}
         <Button
           type="button"
           size="sm"
-          variant="outline"
-          className="ml-auto h-7 gap-1.5 text-[0.8125rem]"
+          variant="ghost"
+          className="ml-auto"
           disabled={refreshing}
           onClick={() => {
             setRefreshing(true);
@@ -255,7 +258,7 @@ function AccountRow({
   const nowSec = Math.floor(Date.now() / 1000);
   const outdated = limits ? isSnapshotOutdated(limits.fetchedAt, nowSec) : false;
   return (
-    <li className="flex items-center gap-2 px-4 py-1.5 hover:bg-muted/30">
+    <li className="flex items-center gap-2 px-3.5 py-1.5 hover:bg-foreground/[0.03]">
       <button
         type="button"
         onClick={onActivate}
@@ -274,7 +277,7 @@ function AccountRow({
             {outdated && limits && (
               <span
                 title={lastUpdatedSentence(limits.fetchedAt, nowSec)}
-                className="shrink-0 rounded-sm border border-warn/40 bg-warn/15 px-1 text-[0.6875rem] font-medium uppercase tracking-wide text-warn"
+                className="shrink-0 rounded bg-warn/10 px-1.5 text-[0.6875rem] font-medium text-warn"
               >
                 Outdated
               </span>

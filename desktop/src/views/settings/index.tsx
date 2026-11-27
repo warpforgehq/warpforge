@@ -7,7 +7,6 @@ import type { Snapshot } from "@/protocol";
 import { useUi, type SettingsPage } from "@/store/ui";
 import MemoryBrowserView from "@/views/Memory";
 
-import { SETTINGS_PAGES } from "./nav";
 import AdvancedPage from "./pages/Advanced";
 import AgentsPage from "./pages/Agents";
 import AppearancePage from "./pages/Appearance";
@@ -73,7 +72,6 @@ export default function SettingsView({ showNav, snapshot, onOpenTask, onClose }:
   }, [onClose]);
 
   const Page = PAGES[page] ?? AppearancePage;
-  const label = SETTINGS_PAGES.find((item) => item.id === page)?.label ?? "Appearance";
 
   return (
     <div
@@ -81,26 +79,14 @@ export default function SettingsView({ showNav, snapshot, onOpenTask, onClose }:
       ref={content}
       className="flex min-h-0 min-w-0 flex-1 flex-col [&_[data-highlighted]]:bg-primary/10 [&_[data-highlighted]]:outline-none [&_[data-highlighted]]:ring-1 [&_[data-highlighted]]:ring-inset [&_[data-highlighted]]:ring-primary"
     >
-      <header
+      <div
         data-tauri-drag-region="deep"
-        className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-card px-2.5"
+        className="flex h-10 shrink-0 items-center justify-end px-2.5"
       >
-        <nav
-          aria-label="Breadcrumb"
-          className="flex min-w-0 flex-1 items-center gap-2 text-muted-foreground"
-        >
-          <span className="text-[0.8125rem]">Settings</span>
-          <span aria-hidden className="text-[0.8125rem] text-muted-foreground/60">
-            /
-          </span>
-          <strong className="min-w-0 truncate text-[0.9375rem] font-medium text-foreground">
-            {label}
-          </strong>
-        </nav>
         <Button
           variant="ghost"
           size="icon"
-          className="size-7"
+          className="size-7 text-muted-foreground"
           onClick={onClose}
           aria-label="Close settings"
           title="Close settings (Esc)"
@@ -108,15 +94,15 @@ export default function SettingsView({ showNav, snapshot, onOpenTask, onClose }:
         >
           <X className="size-4" />
         </Button>
-      </header>
+      </div>
       {showNav && <SettingsNav inline />}
       {page === "memory" ? (
-        <main className="flex min-h-0 flex-1 flex-col px-5 pt-2">
+        <main className="flex min-h-0 flex-1 flex-col px-6 pt-2">
           <MemoryBrowserView snapshot={snapshot} onOpenTask={onOpenTask} header={<Page />} />
         </main>
       ) : (
         <main className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl px-6 pb-10 pt-6">
+          <div className="mx-auto w-full max-w-[640px] px-6 pb-16 pt-6">
             <Page />
           </div>
         </main>

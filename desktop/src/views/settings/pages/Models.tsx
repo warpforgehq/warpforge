@@ -7,7 +7,15 @@ import { modelOptionsForPicker } from "@/lib/pickerPreferences";
 import { useUi } from "@/store/ui";
 import { agentModelIds } from "@/store/ui/devicePreferences";
 
-import { Section, SettingRow, settingsSelect, Toggle } from "../primitives";
+import {
+  SettingsBadge,
+  settingsControl,
+  SettingsNote,
+  SettingsPage,
+  SettingsRow,
+  SettingsSection,
+  Toggle,
+} from "../primitives";
 
 export default function ModelsPage() {
   const { snapshot } = useSyncExternalStore(daemon.subscribe, daemon.getState);
@@ -31,9 +39,9 @@ export default function ModelsPage() {
   const exists = models.some((model) => model.value === modelId);
 
   return (
-    <div className="flex flex-col gap-6">
-      <Section title="Models">
-        <SettingRow
+    <SettingsPage page="models">
+      <SettingsSection title="Agent">
+        <SettingsRow
           id="model-agent"
           title="Model list by agent"
           description="Choose the agent whose model list you want to edit."
@@ -46,7 +54,7 @@ export default function ModelsPage() {
                 setSelectedId(event.target.value);
                 setInput("");
               }}
-              className={settingsSelect}
+              className={settingsControl}
             >
               {!agent && <option value="">No agents configured</option>}
               {agents.map(({ id, displayName }) => (
@@ -57,7 +65,7 @@ export default function ModelsPage() {
             </select>
           }
         />
-        <SettingRow
+        <SettingsRow
           id="custom-models"
           title="Custom model IDs"
           description="Add an exact model ID that your agent can run."
@@ -77,13 +85,12 @@ export default function ModelsPage() {
                 onChange={(event) => setInput(event.target.value)}
                 placeholder="provider/model"
                 disabled={!agent}
-                className={settingsSelect + " min-w-0"}
+                className={`${settingsControl} w-44`}
               />
               <Button
                 type="submit"
                 size="sm"
                 variant="outline"
-                className="h-7"
                 disabled={!agent || !modelId || exists}
               >
                 Add
@@ -91,13 +98,14 @@ export default function ModelsPage() {
             </form>
           }
         />
-      </Section>
-      <Section id="visible-models" title="Models in pickers">
+      </SettingsSection>
+      <SettingsSection id="visible-models" title="Models in pickers">
         {models.map(({ value, name }) => (
-          <SettingRow
+          <SettingsRow
             key={value}
             title={name}
-            description={custom.has(value) ? "Custom model" : value === name ? "" : value}
+            meta={custom.has(value) && <SettingsBadge>custom</SettingsBadge>}
+            description={value === name ? undefined : <span className="font-mono">{value}</span>}
             control={
               <>
                 {custom.has(value) && (
@@ -105,7 +113,7 @@ export default function ModelsPage() {
                     type="button"
                     size="sm"
                     variant="ghost"
-                    className="h-7"
+                    className="text-muted-foreground"
                     aria-label={`Remove ${value}`}
                     onClick={() => setCustomModel(agentId, value, false)}
                   >
@@ -122,12 +130,8 @@ export default function ModelsPage() {
             }
           />
         ))}
-        {!models.length && (
-          <p className="px-3 py-2 text-xs text-muted-foreground">
-            No models available for this agent.
-          </p>
-        )}
-      </Section>
-    </div>
+        {!models.length && <SettingsNote>No models available for this agent.</SettingsNote>}
+      </SettingsSection>
+    </SettingsPage>
   );
 }

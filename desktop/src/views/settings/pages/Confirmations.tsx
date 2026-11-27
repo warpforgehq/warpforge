@@ -1,7 +1,7 @@
 import { useUi } from "@/store/ui";
 import { confirmationDefaults } from "@/store/ui/devicePreferences";
 
-import { Section, SettingRow, Toggle } from "../primitives";
+import { SettingsRow, SettingsSection, Toggle } from "../primitives";
 
 const rows = [
   [
@@ -29,9 +29,9 @@ export function Confirmations() {
   const setConfirmation = useUi((s) => s.setConfirmation);
 
   return (
-    <Section title="Confirmations">
+    <SettingsSection title="Confirmations">
       {rows.map(([key, id, title, description]) => (
-        <SettingRow
+        <SettingsRow
           key={key}
           id={id}
           title={title}
@@ -46,6 +46,6 @@ export function Confirmations() {
           }
         />
       ))}
-    </Section>
+    </SettingsSection>
   );
 }

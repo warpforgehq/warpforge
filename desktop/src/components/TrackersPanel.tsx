@@ -64,7 +64,7 @@ export default function TrackersPanel() {
       <div id="linear" tabIndex={-1} className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-[0.8125rem] font-semibold text-foreground">Linear</h3>
+            <h3 className="text-[0.8125rem] font-medium text-foreground">Linear</h3>
             {linear?.connected && (
               <span className="flex items-center gap-1 text-[0.6875rem] text-ok">
                 <Check className="size-3" />
@@ -99,6 +99,7 @@ export default function TrackersPanel() {
             <Button
               type="button"
               size="sm"
+              variant="outline"
               disabled={!apiKey.trim() || busy === "linear"}
               onClick={() =>
                 void run(
@@ -115,7 +116,7 @@ export default function TrackersPanel() {
             </Button>
           </div>
         )}
-        <p className="text-[0.8125rem] text-muted-foreground/80">
+        <p className="text-[0.75rem] leading-relaxed text-muted-foreground">
           A personal API key, stored in your keychain by the daemon.{" "}
           <button
             type="button"
@@ -127,7 +128,7 @@ export default function TrackersPanel() {
           </button>
         </p>
         {linear?.connected && snapshot.projects.length > 0 && (
-          <div className="space-y-1.5 rounded-md border border-border p-2.5">
+          <div className="space-y-1.5 rounded-lg border border-border/60 p-2.5">
             <p className="text-[0.6875rem] font-medium text-muted-foreground">
               Which team each project imports from
             </p>
@@ -144,10 +145,10 @@ export default function TrackersPanel() {
       </div>
 
       {/* ── GitHub ── */}
-      <div id="github" tabIndex={-1} className="space-y-2 border-t border-rule pt-4">
+      <div id="github" tabIndex={-1} className="space-y-2 border-t border-border/60 pt-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-[0.8125rem] font-semibold text-foreground">GitHub</h3>
+            <h3 className="text-[0.8125rem] font-medium text-foreground">GitHub</h3>
             {github?.connected && (
               <span className="flex items-center gap-1 text-[0.6875rem] text-ok">
                 <Check className="size-3" />
@@ -182,6 +183,7 @@ export default function TrackersPanel() {
             <Button
               type="button"
               size="sm"
+              variant="outline"
               disabled={!githubToken.trim() || busy === "github"}
               onClick={() =>
                 void run(
@@ -203,7 +205,7 @@ export default function TrackersPanel() {
               )}
             </Button>
           </div>
-          <p className="text-[0.8125rem] text-muted-foreground/80">
+          <p className="text-[0.75rem] leading-relaxed text-muted-foreground">
             Personal access token (classic with{" "}
             <code className="rounded bg-secondary px-1">repo, read:project</code> or fine-grained).
             Stored in keychain.{" "}
@@ -221,7 +223,7 @@ export default function TrackersPanel() {
               </>
             )}
           </p>
-          {github?.warning && <p className="text-[0.8125rem] text-warn">{github.warning}</p>}
+          {github?.warning && <p className="text-[0.75rem] text-warn">{github.warning}</p>}
         </div>
       </div>
     </div>
