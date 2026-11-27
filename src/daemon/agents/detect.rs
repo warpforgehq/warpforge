@@ -225,8 +225,7 @@ pub(crate) enum PackageManager {
     Unknown,
 }
 
-/// Classify a global-install manager from the resolved binary path (mirrors
-/// t3code's path heuristics).
+/// Classify a global-install manager from the resolved binary path.
 pub(crate) fn package_manager_for_path(path: &str) -> PackageManager {
     let p = path.replace('\\', "/").to_lowercase();
     // A brew formula always lives under Cellar/Caskroom and is unambiguous —
